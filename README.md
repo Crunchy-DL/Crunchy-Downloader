@@ -36,4 +36,4 @@ For legal reasons, the CDM is not included with the software package, and you mu
 
 This tool is meant for private use only. You need a Crunchyroll Premium subscription to access premium content.
 
-You are entirely responsible for what happens when you use crunchy-cli.
+You are entirely responsible for what happens when you use crunchy-downloader.
