@@ -16,6 +16,10 @@ Add new downloads:
 ![ui_adddownload](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/0b9dc931-e439-4e96-8298-a7923d8a467a)
 Calendar:
 ![ui_calendar](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/e21610b0-f28a-4c7f-a596-eeec82622a93)
+History Overview:
+![ui_history](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/cdbe244d-3f50-40fc-9316-ef25dc9d0d39)
+History Series Overview:
+![ui_history_series](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/71e10d2f-302a-4f31-b220-f8d4f802060e)
 Settings:
 ![ui_settings](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/f8b09911-5036-43e2-907d-8b81accbf149)
 
