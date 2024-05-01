@@ -27,7 +27,7 @@ Settings:
 # 🛠️ DRM Decryption Guide
 ## Decryption Requirements
 
-- **mp4decrypt** (available at [Bento4.com](http://www.bento4.com/)) - Required for the decryption process. This tool should be placed in the `./bin/` directory.
+- **mp4decrypt** (available at [Bento4.com](http://www.bento4.com/)) - Required for the decryption process. This tool should be placed in the `./lib/` directory.
 
 ## Instructions
 
