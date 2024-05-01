@@ -21,7 +21,8 @@ History Overview:
 History Series Overview:
 ![ui_history_series](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/71e10d2f-302a-4f31-b220-f8d4f802060e)
 Settings:
-![ui_settings](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/f8b09911-5036-43e2-907d-8b81accbf149)
+![ui_settings](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/b82f801d-9b18-45e2-91cf-3a74a61ab661)
+
 
 
 # 🛠️ DRM Decryption Guide
