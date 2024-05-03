@@ -11,13 +11,13 @@ Windows 10 or Windows 11
 # 🖥️ User Interface
 
 Downloads overview:
-![ui_downloads](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/56989620-e8bf-421a-a11f-af282f8fd00b)
+![ui_downloads](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/e1284e43-0997-4528-a5de-2c9c4a2cec46)
 Add new downloads:
-![ui_adddownload](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/0b9dc931-e439-4e96-8298-a7923d8a467a)
+![ui_adddownload](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/8f2a89bc-3caa-4538-bb8a-94d837f4c424)
 Calendar:
-![ui_calendar](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/e21610b0-f28a-4c7f-a596-eeec82622a93)
+![ui_calendar](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/c5234a8e-8986-41d5-bb25-e84a85dbda9a)
 History Overview:
-![ui_history](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/cdbe244d-3f50-40fc-9316-ef25dc9d0d39)
+![ui_history](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/5ac8af06-6462-487f-a5b1-1f6b2ad3b25d)
 History Series Overview:
 ![ui_history_series](https://github.com/Crunchy-DL/Crunchy-Downloader/assets/75888166/71e10d2f-302a-4f31-b220-f8d4f802060e)
 Settings:
