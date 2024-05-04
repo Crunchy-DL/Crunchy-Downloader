@@ -1,0 +1,399 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:CRD.ViewModels"
+             xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:DataType="vm:SettingsPageViewModel"
+             x:Class="CRD.Views.SettingsPageView">
+
+    <Design.DataContext>
+        <vm:SettingsPageViewModel />
+    </Design.DataContext>
+
+
+    <ScrollViewer Padding="20 20 20 0">
+        <StackPanel Spacing="8">
+
+
+            <controls:SettingsExpander Header="Dub language"
+                                       IconSource="Speaker2"
+                                       Description="Change the selected dub language">
+                <controls:SettingsExpander.Footer>
+                    <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                              ItemsSource="{Binding DubLangList}"
+                              SelectedItem="{Binding SelectedDubLang}">
+                    </ComboBox>
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+
+
+            <controls:SettingsExpander Header="Hardsubs language"
+                                       IconSource="FontColorFilled"
+                                       Description="Change the selected hardsub language">
+                <controls:SettingsExpander.Footer>
+                    <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                              ItemsSource="{Binding HardSubLangList}"
+                              SelectedItem="{Binding SelectedHSLang}">
+                    </ComboBox>
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+
+
+            <controls:SettingsExpander Header="Softsubs language"
+                                       IconSource="FontColor"
+                                       Description="Change the selected softsubs language">
+                <controls:SettingsExpander.Footer>
+                    <StackPanel>
+                        <ToggleButton x:Name="dropdownButton" Width="210" HorizontalContentAlignment="Stretch">
+                            <ToggleButton.Content>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedSubs}"
+                                               VerticalAlignment="Center" />
+                                    <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                          VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                </Grid>
+                            </ToggleButton.Content>
+                        </ToggleButton>
+                        <Popup IsLightDismissEnabled="True"
+                               IsOpen="{Binding IsChecked, ElementName=dropdownButton, Mode=TwoWay}" Placement="Bottom"
+                               PlacementTarget="{Binding ElementName=dropdownButton}">
+                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                <ListBox x:Name="listBoxSubsSelection" SelectionMode="Multiple,Toggle" Width="210"
+                                         MaxHeight="400"
+                                         ItemsSource="{Binding SubLangList}" SelectedItems="{Binding SelectedSubLang}">
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </StackPanel>
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="History"
+                                       IconSource="Clock"
+                                       Description="Change if the download history is recorded">
+                <controls:SettingsExpander.Footer>
+                    <CheckBox IsChecked="{Binding History}"> </CheckBox>
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="Download Settings"
+                                       IconSource="Download"
+                                       Description="Adjust download settings"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Simultaneous Downloads">
+                    <controls:SettingsExpanderItem.Footer>
+                        <controls:NumberBox Minimum="0" Maximum="5"
+                                            Value="{Binding SimultaneousDownloads}"
+                                            SpinButtonPlacementMode="Inline"
+                                            HorizontalAlignment="Stretch" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Video">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadVideo}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Video Quality">
+                    <controls:SettingsExpanderItem.Footer>
+                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding VideoQualityList}"
+                                  SelectedItem="{Binding SelectedVideoQuality}">
+                        </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Audio">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadAudio}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Audio Quality">
+                    <controls:SettingsExpanderItem.Footer>
+                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding AudioQualityList}"
+                                  SelectedItem="{Binding SelectedAudioQuality}">
+                        </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Chapters">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadChapters}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpander.Footer>
+
+                </controls:SettingsExpander.Footer>
+            </controls:SettingsExpander>
+
+
+            <controls:SettingsExpander Header="Filename Settings"
+                                       IconSource="Edit"
+                                       Description="Change how the files are named"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Leading 0 for seasons and episodes">
+                    <controls:SettingsExpanderItem.Footer>
+                        <controls:NumberBox Minimum="0" Maximum="5"
+                                            Value="{Binding LeadingNumbers}"
+                                            SpinButtonPlacementMode="Inline"
+                                            HorizontalAlignment="Stretch" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Filename"
+                                               Description="${showTitle} ${seriesTitle} ${title} ${season} ${episode} ${height} ${width}">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox Name="FileNameTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding FileName}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpander.Footer>
+
+                </controls:SettingsExpander.Footer>
+            </controls:SettingsExpander>
+
+
+            <controls:SettingsExpander Header="Muxing Settings"
+                                       IconSource="Repair"
+                                       Description="MKVMerge and FFMpeg Settings"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="MP4">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Additional MKVMerge Options">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox IsEnabled="False" Name="TargetTextBox2" HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding MkvMergeOptions}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Additional FFMpeg Options">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox IsEnabled="False" Name="TargetTextBox3" HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding FfmpegOptions}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpander.Footer>
+
+                </controls:SettingsExpander.Footer>
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="App Theme"
+                                       IconSource="DarkTheme"
+                                       Description="Change the current app theme">
+
+                <controls:SettingsExpander.Footer>
+                    <ComboBox SelectedItem="{Binding CurrentAppTheme}"
+                              ItemsSource="{Binding AppThemes}"
+                              MinWidth="150" />
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="App Accent Color"
+                                       IconSource="ColorLine"
+                                       Description="Set a custom accent color for the App"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Preview">
+                    <controls:SettingsExpanderItem.Footer>
+                        <Grid RowDefinitions="*,*,*,*"
+                              ColumnDefinitions="*,*"
+                              HorizontalAlignment="Right"
+                              Grid.Column="1">
+                            <Border Background="{DynamicResource SystemAccentColor}"
+                                    Height="40" Grid.ColumnSpan="2">
+                                <TextBlock Text="SystemAccentColor"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+
+                            <Border Background="{DynamicResource SystemAccentColorLight1}"
+                                    Height="40" Width="90" Grid.Column="0" Grid.Row="1">
+                                <TextBlock Text="Light1"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <Border Background="{DynamicResource SystemAccentColorLight2}"
+                                    Height="40" Width="90" Grid.Column="0" Grid.Row="2">
+                                <TextBlock Text="Light2"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <Border Background="{DynamicResource SystemAccentColorLight3}"
+                                    Height="40" Width="90" Grid.Column="0" Grid.Row="3">
+                                <TextBlock Text="Light3"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+
+                            <Border Background="{DynamicResource SystemAccentColorDark1}"
+                                    Height="40" Width="90" Grid.Column="1" Grid.Row="1">
+                                <TextBlock Text="Dark1"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <Border Background="{DynamicResource SystemAccentColorDark2}"
+                                    Height="40" Width="90" Grid.Column="1" Grid.Row="2">
+                                <TextBlock Text="Dark2"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <Border Background="{DynamicResource SystemAccentColorDark3}"
+                                    Height="40" Width="90" Grid.Column="1" Grid.Row="3">
+                                <TextBlock Text="Dark3"
+                                           Foreground="{DynamicResource TextOnAccentFillColorPrimaryBrush}"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                        </Grid>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem>
+                    <CheckBox Content="Use Custom Accent Color?"
+                              IsChecked="{Binding UseCustomAccent}"
+                              HorizontalAlignment="Right" />
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel>
+                            <TextBlock Text="Pre-set Colors"
+                                       Margin="24 24 0 0"
+                                       IsVisible="{Binding UseCustomAccent}" />
+
+                            <ListBox ItemsSource="{Binding PredefinedColors}"
+                                     SelectedItem="{Binding ListBoxColor}"
+                                     MaxWidth="441"
+                                     AutoScrollToSelectedItem="False"
+                                     Margin="24 0 24 12"
+                                     HorizontalAlignment="Left"
+                                     IsVisible="{Binding UseCustomAccent}">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+
+                                <ListBox.Styles>
+                                    <Style Selector="ListBoxItem">
+                                        <Setter Property="Width" Value="48" />
+                                        <Setter Property="Height" Value="48" />
+                                        <Setter Property="MinWidth" Value="0" />
+                                        <Setter Property="Margin" Value="1 1 0 0" />
+                                        <Setter Property="Template">
+                                            <ControlTemplate>
+                                                <Panel>
+                                                    <Border CornerRadius="{StaticResource ControlCornerRadius}"
+                                                            BorderThickness="2"
+                                                            Name="Root">
+                                                        <Border.Background>
+                                                            <SolidColorBrush Color="{Binding}" />
+                                                        </Border.Background>
+                                                    </Border>
+
+                                                    <Border Name="Check"
+                                                            Background="{DynamicResource FocusStrokeColorOuter}"
+                                                            Width="20" Height="20"
+                                                            HorizontalAlignment="Right"
+                                                            VerticalAlignment="Top"
+                                                            Margin="0 2 2 0">
+                                                        <controls:SymbolIcon Symbol="Checkmark"
+                                                                             Foreground="{DynamicResource SystemAccentColor}"
+                                                                             FontSize="18" />
+                                                    </Border>
+                                                </Panel>
+                                            </ControlTemplate>
+                                        </Setter>
+                                    </Style>
+                                    <Style Selector="ListBoxItem /template/ Border#Check">
+                                        <Setter Property="IsVisible" Value="False" />
+                                    </Style>
+                                    <Style Selector="ListBoxItem:pointerover /template/ Border#Root">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource FocusStrokeColorOuter}" />
+                                    </Style>
+
+                                    <Style Selector="ListBoxItem:selected /template/ Border#Root">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource FocusStrokeColorOuter}" />
+                                    </Style>
+                                    <Style Selector="ListBoxItem:selected /template/ Border#Check">
+                                        <Setter Property="IsVisible" Value="True" />
+                                    </Style>
+                                </ListBox.Styles>
+
+                            </ListBox>
+
+                            <Rectangle Fill="{DynamicResource ApplicationPageBackgroundThemeBrush}"
+                                       Height="1"
+                                       IsVisible="{Binding UseCustomAccent}" />
+
+                            <DockPanel LastChildFill="False" Margin="24 6 0 0"
+                                       IsVisible="{Binding UseCustomAccent}">
+                                <TextBlock Text="Custom Color"
+                                           VerticalAlignment="Center"
+                                           DockPanel.Dock="Left" />
+
+                                <controls:ColorPickerButton Color="{Binding CustomAccentColor}"
+                                                            IsMoreButtonVisible="True"
+                                                            UseSpectrum="True"
+                                                            UseColorWheel="False"
+                                                            UseColorTriangle="False"
+                                                            UseColorPalette="False"
+                                                            IsCompact="True" ShowAcceptDismissButtons="True"
+                                                            DockPanel.Dock="Right" />
+                            </DockPanel>
+                        </StackPanel>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+            </controls:SettingsExpander>
+
+
+            <Grid Margin="0 0 0 10"
+                  ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">
+
+                <DockPanel HorizontalAlignment="Center">
+                    <Image Source="/Assets/app_icon.ico"
+                           DockPanel.Dock="Left"
+                           Height="78"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+
+                    <StackPanel Spacing="0" Margin="12 0">
+                        <TextBlock Text="Crunchy-Downloader"
+                                   Theme="{StaticResource TitleTextBlockStyle}" />
+
+                        <TextBlock Text="{Binding CurrentVersion}"
+                                   Theme="{StaticResource BodyTextBlockStyle}" />
+
+                        <TextBlock Theme="{StaticResource CaptionTextBlockStyle}"
+                                   Text="https://github.com/Crunchy-DL/Crunchy-Downloader"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </DockPanel>
+
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+
+
+</UserControl>

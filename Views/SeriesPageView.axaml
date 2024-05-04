@@ -1,0 +1,139 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:vm="clr-namespace:CRD.ViewModels"
+             xmlns:ui="clr-namespace:CRD.Utils.UI"
+             xmlns:downloader="clr-namespace:CRD.Downloader"
+             x:DataType="vm:SeriesPageViewModel"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="CRD.Views.SeriesPageView">
+    
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Row="0" Grid.Column="0" Command="{Binding NavBack}" Margin="0 0 0  10">Back</Button>
+
+        <Image Grid.Row="1" Grid.Column="0" Margin="10" Source="{Binding SelectedSeries.ThumbnailImage}" Width="240"
+               Height="360">
+        </Image>
+
+     
+
+            <Grid Grid.Row="1" Grid.Column="1">
+                
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" FontSize="50" Text="{Binding SelectedSeries.SeriesTitle}"></TextBlock>
+                <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}"></TextBlock>
+                <Button Grid.Row="3"  Command="{Binding UpdateData}" Margin="0 0 0  10">Fetch Series</Button>
+            </Grid>
+            
+      
+
+            
+  
+
+
+        <ScrollViewer Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
+            <ItemsControl ItemsSource="{Binding SelectedSeries.Seasons}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+
+                        <controls:SettingsExpander
+                            Header="{Binding CombinedProperty}"
+                            ItemsSource="{Binding EpisodesList}"
+                          
+                            Description="{Binding SeasonTitle}"
+                            IsExpanded="False">
+                            
+                            
+
+                            <controls:SettingsExpander.ItemTemplate>
+                                <DataTemplate>
+
+                                    <Grid VerticalAlignment="Center">
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="E"></TextBlock>
+                                            <TextBlock Text="{Binding Episode}"></TextBlock>
+                                            <TextBlock Text=" - "></TextBlock>
+                                            <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent" BorderThickness="0" CornerRadius="50" IsVisible="{Binding !WasDownloaded}" Command="{Binding $parent[controls:SettingsExpander].((downloader:HistorySeason)DataContext).UpdateDownloaded}"  CommandParameter="{Binding EpisodeId}">
+                                                <Grid  >
+                                                    <Ellipse Width="25" Height="25" Fill="Gray" />
+                                                    <controls:SymbolIcon  Symbol="Checkmark" FontSize="18" />
+                                                </Grid>
+                                            </Button>
+
+                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent" BorderThickness="0" CornerRadius="50" IsVisible="{Binding WasDownloaded}" Command="{Binding $parent[controls:SettingsExpander].((downloader:HistorySeason)DataContext).UpdateDownloaded}"  CommandParameter="{Binding EpisodeId}">
+                                                <Grid >
+                                                    <Ellipse Width="25" Height="25" Fill="#21a556" />
+                                                    <controls:SymbolIcon Symbol="Checkmark" FontSize="18" />
+                                                </Grid>
+                                            </Button>
+           
+                                            <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
+                                                    VerticalAlignment="Center" Command="{Binding DownloadEpisode}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <controls:SymbolIcon Symbol="Download" FontSize="18" />
+                                                </StackPanel>
+                                            </Button>
+
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </controls:SettingsExpander.ItemTemplate>
+
+                            <controls:SettingsExpander.Footer>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DownloadedEpisodes}" VerticalAlignment="Center"></TextBlock>
+                                    <TextBlock Text="/" VerticalAlignment="Center"></TextBlock>
+                                    <TextBlock Text="{Binding EpisodesList.Count}" VerticalAlignment="Center"></TextBlock>
+                                    <Button Margin="10 0 0 0" FontStyle="Italic" 
+                                            VerticalAlignment="Center"  Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).UpdateData}" CommandParameter="{Binding SeasonId}" >
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Fetch Season" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+                            </controls:SettingsExpander.Footer>
+
+                        </controls:SettingsExpander>
+
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+
+    </Grid>
+
+</UserControl>

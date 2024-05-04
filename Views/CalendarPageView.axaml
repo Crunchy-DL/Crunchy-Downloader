@@ -1,0 +1,143 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:vm="clr-namespace:CRD.ViewModels"
+             x:DataType="vm:CalendarPageViewModel"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="CRD.Views.CalendarPageView">
+
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /> <!-- For the button  -->
+            <RowDefinition Height="*" />    <!-- For the ListBox to take remaining space -->
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" /> <!-- Takes up most space for the title -->
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" /> <!-- Takes up most space for the title -->
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Row="0" Grid.Column="0" Margin="10 10 0 0" HorizontalAlignment="Center" Command="{Binding  PrevWeek}">
+            <StackPanel Orientation="Horizontal">
+                <controls:SymbolIcon Symbol="ChevronLeft" FontSize="18" />
+            </StackPanel>
+        </Button>
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 10 0 0">
+            <Button HorizontalAlignment="Center" Command="{Binding  Refresh}">
+                <StackPanel Orientation="Horizontal">
+                    <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
+                </StackPanel>
+            </Button>
+            <ComboBox HorizontalAlignment="Center" Margin="10 0 0 0" MinWidth="200"
+                      SelectedItem="{Binding CurrentCalendarLanguage}"
+                      ItemsSource="{Binding CalendarLanguage}">
+            </ComboBox>
+        </StackPanel>
+
+
+        <Button Grid.Row="0" Grid.Column="2" Margin="0 0 10 0" HorizontalAlignment="Center" Command="{Binding  NextWeek}">
+            <StackPanel Orientation="Horizontal">
+                <controls:SymbolIcon Symbol="ChevronRight" FontSize="18" />
+            </StackPanel>
+        </Button>
+
+        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3">
+            <!-- Spinner Style ProgressBar -->
+            <ProgressBar IsIndeterminate="True"
+                         Value="50"
+                         Maximum="100"
+                         MaxWidth="100"
+                         IsVisible="{Binding ShowLoading}">
+            </ProgressBar>
+        </Grid>
+
+        <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" IsVisible="{Binding !ShowLoading}"
+                      ItemsSource="{Binding CalendarDays}">
+            <ItemsControl.ItemsPanel>
+                <!-- This UniformGrid will serve as the panel for the ItemsControl, arranging items horizontally -->
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="7" />
+                    <!-- This ensures that we have 7 columns, one for each day of the week -->
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" /> <!-- For the header with date and day name -->
+                            <RowDefinition Height="*" /> <!-- For the ListBox, taking up the rest of the space -->
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Padding="4">
+                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                <TextBlock HorizontalAlignment="Center"
+                                           Text="{Binding DateTime, StringFormat='dd.MM.yyyy'}" FontWeight="Bold" />
+                                <TextBlock HorizontalAlignment="Center" Text="{Binding DayName}" Margin="4,0,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- ListBox for episodes -->
+                        <ListBox Grid.Row="1" ItemsSource="{Binding CalendarEpisodes}"> <!-- Adjust MaxHeight as needed -->
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="10" Margin="5" Height="200">
+                                        <StackPanel Orientation="Vertical">
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       Text="{Binding DateTime, StringFormat='hh:mm tt'}"
+                                                       Margin="0,0,0,0" />
+                                            <Grid HorizontalAlignment="Center">
+                                                <Image HorizontalAlignment="Center" Source="{Binding ImageBitmap}" />
+                                                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
+                                                    <TextBlock VerticalAlignment="Center" TextAlignment="Center" Margin="0 0 5 0" Width="30" Height="30"
+                                                               Background="Black" Opacity="0.8" Text="{Binding EpisodeNumber}"
+                                                               Padding="0,5,0,0"/>
+                                                </StackPanel>
+                                                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                                                            IsVisible="{Binding IsPremiumOnly}" Margin="0,0,5,5">
+                                                    <Canvas Width="28" Height="28">
+                                                        <Ellipse Fill="#40FFFFFF" Width="28" Height="28"/>
+                                                        <Viewbox Width="24" Height="24" Stretch="Uniform" Canvas.Left="2" Canvas.Top="2">
+                                                            <Canvas Width="50" Height="50"> <!-- Ensure inner canvas is large enough to hold the path data -->
+                                                                <Path Fill="#f78c25"
+                                                                      Stroke="#f78c25"
+                                                                      StrokeThickness="1"
+                                                                      Data="M35.7,36.2H12.3c-0.7,0-1.4-0.5-1.6-1.2L6.1,18.6c-0.2-0.6,0-1.3,0.5-1.7c0.5-0.4,1.2-0.5,1.8-0.2l8.1,4.1 l6.2-8.3c0.3-0.4,0.8-0.7,1.3-0.7h0c0.5,0,1,0.2,1.3,0.7l6.2,8.3l8.2-4.1c0.6-0.3,1.3-0.2,1.8,0.2c0.5,0.4,0.7,1.1,0.5,1.7 L37.3,35C37.1,35.7,36.4,36.2,35.7,36.2z"/>
+                                                            </Canvas>
+                                                        </Viewbox>
+                                                    </Canvas>
+                                                </StackPanel>
+                                            </Grid>
+
+
+                                            <TextBlock HorizontalAlignment="Center" Text="{Binding SeasonName}"
+                                                       TextWrapping="NoWrap"
+                                                       Margin="0,0,0,0">
+
+                                                <ToolTip.Tip>
+                                                    <TextBlock Text="{Binding SeasonName}" FontSize="15" />
+                                                </ToolTip.Tip>
+
+                                            </TextBlock>
+                                            <Button HorizontalAlignment="Center" Content="Download"
+                                                    IsEnabled="{Binding HasPassed}" Command="{Binding AddEpisodeToQue}"
+                                                    CommandParameter="{Binding EpisodeUrl}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+
+    </Grid>
+
+
+</UserControl>

@@ -1,0 +1,32 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="CRD.Views.ToastNotification"
+             HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="10">
+
+    <UserControl.Styles>
+        <Style Selector="Border.info">
+            <Setter Property="Background" Value="#0078D7" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="Border.error">
+            <Setter Property="Background" Value="#D13438" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="Border.warning">
+            <Setter Property="Background" Value="#FF8C00" />
+            <Setter Property="Padding" Value="20" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- Border that will use dynamic styles -->
+    <Border x:Name="MessageBorder">
+        <TextBlock x:Name="MessageText" Foreground="White" TextWrapping="Wrap" />
+    </Border>
+
+</UserControl>

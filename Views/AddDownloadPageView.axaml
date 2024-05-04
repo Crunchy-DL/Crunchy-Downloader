@@ -1,0 +1,108 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:vm="clr-namespace:CRD.ViewModels"
+             x:DataType="vm:AddDownloadPageViewModel"
+             x:Class="CRD.Views.AddDownloadPageView">
+
+    <Design.DataContext>
+        <vm:AddDownloadPageViewModel />
+    </Design.DataContext>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" /> <!-- For the TextBox  -->
+            <RowDefinition Height="Auto" /> <!-- For Grid with buttons/checkbox -->
+            <RowDefinition Height="*" />    <!-- For the ListBox to take remaining space -->
+        </Grid.RowDefinitions>
+
+
+        <!-- Text Input Field -->
+        <TextBox Grid.Row="0" Watermark="Enter series or episode url" Text="{Binding UrlInput}" Margin="10"
+                 VerticalAlignment="Top" />
+
+        <Grid Grid.Row="1" Margin="10 0 10 0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Button -->
+
+            <Button Grid.Column="0" IsEnabled="{Binding ButtonEnabled}" Width="200" Command="{Binding OnButtonPress}"
+                    Content="{Binding ButtonText}">
+            </Button>
+
+            <CheckBox Grid.Column="1" IsEnabled="{Binding AllButtonEnabled}" IsChecked="{Binding AddAllEpisodes}"
+                      Content="All" Margin="5 0 0 0">
+            </CheckBox>
+
+            <!-- ComboBox -->
+            <ComboBox Grid.Column="2" MinWidth="200" SelectedItem="{Binding CurrentSelectedSeason}"
+                      ItemsSource="{Binding SeasonList}">
+            </ComboBox>
+
+        </Grid>
+
+
+        <Grid Grid.Row="2">
+            <!-- Spinner Style ProgressBar -->
+            <ProgressBar IsIndeterminate="True"
+                         Value="50"
+                         Maximum="100"
+                         MaxWidth="100"
+                         IsVisible="{Binding ShowLoading}"
+                         >
+            </ProgressBar>
+        </Grid>
+
+        <!-- ListBox with Custom Elements -->
+        <ListBox Grid.Row="2" Margin="10" SelectionMode="Multiple,Toggle" VerticalAlignment="Stretch"
+                 SelectedItems="{Binding SelectedItems}" ItemsSource="{Binding Items}">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:ItemModel}">
+                    <StackPanel>
+                        <Border Padding="10" Margin="5" BorderThickness="1">
+                            <Grid Margin="10" VerticalAlignment="Top">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <!-- Image -->
+                                <Image Grid.Column="0" Width="208" Height="117" Source="{Binding ImageBitmap}"
+                                       Stretch="Fill" />
+
+                                <!-- Text Content -->
+                                <Grid Grid.Column="1" Margin="10" VerticalAlignment="Top">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" /> <!-- Takes up most space for the title -->
+                                        <ColumnDefinition Width="Auto" />
+                                        <!-- Takes up space as needed for the time -->
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding TitleFull}" FontWeight="Bold"
+                                               FontSize="16"
+                                               TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Time}" FontStyle="Italic"
+                                               HorizontalAlignment="Right" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
+                                               Text="{Binding Description}"
+                                               FontStyle="Italic" Opacity="0.8" TextWrapping="Wrap" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+                        <Border Background="LightGray" Height="1" Margin="0,5" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+
+    </Grid>
+</UserControl>

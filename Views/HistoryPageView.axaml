@@ -1,0 +1,63 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+
+             xmlns:vm="clr-namespace:CRD.ViewModels"
+             xmlns:ui="clr-namespace:CRD.Utils.UI"
+             x:DataType="vm:HistoryPageViewModel"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="CRD.Views.HistoryPageView">
+
+    <UserControl.Resources>
+        <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
+    </UserControl.Resources>
+    
+    <Grid>
+        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        
+        
+        <Button Grid.Row="0" Grid.Column="0" Command="{Binding RefreshAll}" Margin="10">Refresh All</Button>
+        <Grid Grid.Row="1" Grid.Column="0">
+            <!-- Spinner Style ProgressBar -->
+            <ProgressBar IsIndeterminate="True"
+                         Value="50"
+                         Maximum="100"
+                         MaxWidth="100"
+                         IsVisible="{Binding ShowLoading}">
+            </ProgressBar>
+        </Grid>
+        
+        <ListBox Grid.Row="1" ItemsSource="{Binding Items}" IsVisible="{Binding !ShowLoading}" SelectedItem="{Binding SelectedSeries}" Margin="5">
+
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"></WrapPanel>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" MaxWidth="250" Width="250"
+                                MaxHeight="400" Height="400" Margin="5">
+                        <Grid>
+                            <Image Source="{Binding ThumbnailImage}" Width="240" Height="360"></Image>
+                            <StackPanel VerticalAlignment="Top" HorizontalAlignment="Right" IsVisible="{Binding NewEpisodes, Converter={StaticResource UiIntToVisibilityConverter}}">
+                                <TextBlock VerticalAlignment="Center" TextAlignment="Center" Margin="0 0 5 0" Width="30" Height="30"
+                                           Background="Black" Opacity="0.8" Text="{Binding NewEpisodes}"
+                                           Padding="0,5,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock HorizontalAlignment="Center" Text="{Binding SeriesTitle}" TextWrapping="NoWrap"
+                                   Margin="4,0,0,0">
+                        </TextBlock>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+
+</UserControl>

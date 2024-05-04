@@ -1,0 +1,20 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:crd="clr-namespace:CRD"
+             xmlns:sty="clr-namespace:FluentAvalonia.Styling;assembly=FluentAvalonia"
+             x:Class="CRD.App"
+             RequestedThemeVariant="Dark">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.DataTemplates>
+        <crd:ViewLocator/>
+    </Application.DataTemplates>
+             
+
+  
+    <Application.Styles>
+        <sty:FluentAvaloniaTheme/>
+        <StyleInclude Source="avares://CRD/Styling/ControlsGalleryStyles.axaml" />
+        <StyleInclude Source="avares://CRD/Assets/Icons.axaml"></StyleInclude>
+    </Application.Styles>
+</Application>

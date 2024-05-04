@@ -1,0 +1,83 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:CRD.ViewModels"
+        xmlns:ui="using:FluentAvalonia.UI.Controls"
+        xmlns:views="clr-namespace:CRD.Views"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="CRD.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/app_icon.ico"
+        Title="Crunchy-Downloader">
+
+    <Design.DataContext>
+        <vm:MainWindowViewModel />
+    </Design.DataContext>
+    <Grid>
+        <ContentControl x:Name="MainContent">
+            <Grid RowDefinitions="Auto, *">
+
+
+                <Border Grid.Row="0" Height="32">
+                    <Grid Name="TitleBarHost"
+                          ColumnDefinitions="Auto,Auto,*,Auto"
+                          Background="Transparent">
+                        <Image Margin="12 4"
+                               IsHitTestVisible="False"
+                               Source="../Assets/app_icon.ico"
+                               Width="18" Height="18"
+                               DockPanel.Dock="Left"
+                               Name="WindowIcon"
+                               RenderOptions.BitmapInterpolationMode="HighQuality">
+                            <Image.IsVisible>
+                                <OnPlatform Default="False">
+                                    <On Options="Windows" Content="True" />
+                                </OnPlatform>
+                            </Image.IsVisible>
+                        </Image>
+
+                        <TextBlock Grid.Column="1"
+                            Text="{Binding Title, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
+                            VerticalAlignment="Center"
+                            >
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+
+                <ui:NavigationView Grid.Row="1"
+                                   IsPaneOpen="False"
+                                   IsPaneToggleButtonVisible="False"
+                                   IsSettingsVisible="False"
+                                   CompactPaneLength="72"
+                                   Name="NavView"
+                                   SelectionChanged="NavView_SelectionChanged">
+                    <ui:NavigationView.MenuItems>
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Downloads" Tag="DownloadQueue"
+                                               IconSource="Download">
+                        </ui:NavigationViewItem>
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Add Download" Tag="AddDownload"
+                                               IconSource="Add" />
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Calendar" Tag="Calendar"
+                                               IconSource="Calendar" />
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="History" Tag="History"
+                                               IconSource="Library" />
+                    </ui:NavigationView.MenuItems>
+                    <ui:NavigationView.FooterMenuItems>
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Account" Tag="Account"
+                                               IconSource="Contact" />
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Settings" Tag="Settings"
+                                               IconSource="Settings" />
+                    </ui:NavigationView.FooterMenuItems>
+                </ui:NavigationView>
+
+            </Grid>
+        </ContentControl>
+
+        <!-- Your main window content -->
+        <views:ToastNotification x:Name="Toast" IsVisible="False" />
+    </Grid>
+
+
+</Window>

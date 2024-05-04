@@ -1,0 +1,32 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:CRD.ViewModels"
+             x:DataType="vm:AccountPageViewModel"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="CRD.Views.AccountPageView">
+
+    <Design.DataContext>
+        <vm:AccountPageViewModel />
+    </Design.DataContext>
+
+    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center">
+
+        <!-- Profile Image -->
+        <Image Width="170" Height="170" Margin="20"
+               Source="{Binding ProfileImage}">
+            <Image.Clip>
+                <EllipseGeometry Rect="0,0,170,170" />
+            </Image.Clip>
+        </Image>
+
+        <!-- Profile Name -->
+        <TextBlock Text="{Binding ProfileName}" TextAlignment="Center" FontSize="20" Margin="10" />
+
+        <!-- Login/Logout Button -->
+        <Button Content="{Binding LoginLogoutText}" Width="170" Margin="20" Command="{Binding Button_PressCommand}" />
+    </StackPanel>
+    
+    
+</UserControl>
