@@ -1,15 +1,22 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net.Http;
 using System.Reactive.Disposables;
+using System.Reflection;
+using System.Threading.Tasks;
 using Avalonia.Controls;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader;
+using CRD.Utils.Updater;
 using CRD.ViewModels;
 using CRD.Views.Utils;
 using FluentAvalonia.Core;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Navigation;
 using FluentAvalonia.UI.Windowing;
+using Newtonsoft.Json;
 using ReactiveUI;
 
 namespace CRD.Views;
@@ -17,9 +24,12 @@ namespace CRD.Views;
 public partial class MainWindow : AppWindow{
     private Stack<object> navigationStack = new Stack<object>();
 
+
+    private object selectedNavVieItem;
+    
     public MainWindow(){
         InitializeComponent();
-        
+
         TitleBar.ExtendsContentIntoTitleBar = true;
         TitleBar.TitleBarHitTestType = TitleBarHitTestType.Complex;
 
@@ -27,7 +37,8 @@ public partial class MainWindow : AppWindow{
         //select first element as default
         var nv = this.FindControl<NavigationView>("NavView");
         nv.SelectedItem = nv.MenuItems.ElementAt(0);
-
+        selectedNavVieItem = nv.SelectedItem;
+        
         MessageBus.Current.Listen<NavigationMessage>()
             .Subscribe(message => {
                 if (message.Refresh){
@@ -48,10 +59,8 @@ public partial class MainWindow : AppWindow{
 
         MessageBus.Current.Listen<ToastMessage>()
             .Subscribe(message => ShowToast(message.Message, message.Type, message.Seconds));
-        
-     
-        
     }
+
 
     public static void ShowError(string message){
         var window = new ErrorWindow();
@@ -63,39 +72,51 @@ public partial class MainWindow : AppWindow{
         this.FindControl<ToastNotification>("Toast").Show(message, type, durationInSeconds);
     }
 
-
+    
     private void NavView_SelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e){
         if (sender is NavigationView navView){
             var selectedItem = navView.SelectedItem as NavigationViewItem;
             if (selectedItem != null){
+               
                 switch (selectedItem.Tag){
                     case "DownloadQueue":
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
+                        navView.Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
+                        selectedNavVieItem = selectedItem;
                         break;
                     case "AddDownload":
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(AddDownloadPageViewModel));
+                        navView.Content = Activator.CreateInstance(typeof(AddDownloadPageViewModel));
+                        selectedNavVieItem = selectedItem;
                         break;
                     case "Calendar":
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(CalendarPageViewModel));
+                        navView.Content = Activator.CreateInstance(typeof(CalendarPageViewModel));
+                        selectedNavVieItem = selectedItem;
                         break;
                     case "History":
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(HistoryPageViewModel));
+                        navView.Content = Activator.CreateInstance(typeof(HistoryPageViewModel));
                         navigationStack.Clear();
-                        navigationStack.Push((sender as NavigationView).Content);
+                        navigationStack.Push(navView.Content);
+                        selectedNavVieItem = selectedItem;
                         break;
                     case "Account":
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(AccountPageViewModel));
+                        navView.Content = Activator.CreateInstance(typeof(AccountPageViewModel));
+                        selectedNavVieItem = selectedItem;
                         break;
                     case "Settings":
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(SettingsPageViewModel));
+                        navView.Content = Activator.CreateInstance(typeof(SettingsPageViewModel));
+                        selectedNavVieItem = selectedItem;
+                        break;
+                    case "UpdateAvailable":
+                        Updater.Instance.DownloadAndUpdateAsync();
                         break;
                     default:
-                        (sender as NavigationView).Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
+                        // (sender as NavigationView).Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
                         break;
                 }
             }
         }
     }
+
+
 }
 
 public class ToastMessage(string message, ToastType type, int i){

@@ -699,7 +699,7 @@ public class Crunchyroll{
 
                     StreamDetailsPop? curStream = null;
                     if (!dlFailed){
-                        // Validate or adjust options.kstream
+                        
                         options.Kstream = options.Kstream >= 1 && options.Kstream <= streams.Count
                             ? options.Kstream
                             : 1;
@@ -741,7 +741,7 @@ public class Crunchyroll{
                                 MPDParsed streamPlaylists = MPDParser.Parse(streamPlaylistsReqResponse.ResponseContent, Languages.FindLang(crLocal), matchedUrl);
 
                                 List<string> streamServers = new List<string>(streamPlaylists.Data.Keys);
-                                options.X = options.X > streamServers.Count ? 1 : options.X;
+                                options.StreamServer = options.StreamServer > streamServers.Count ? 1 : options.StreamServer;
 
                                 if (streamServers.Count == 0){
                                     return new DownloadResponse{
@@ -751,11 +751,11 @@ public class Crunchyroll{
                                     };
                                 }
 
-                                if (options.X == 0){
-                                    options.X = 1;
+                                if (options.StreamServer == 0){
+                                    options.StreamServer = 1;
                                 }
 
-                                string selectedServer = streamServers[options.X - 1];
+                                string selectedServer = streamServers[options.StreamServer - 1];
                                 ServerData selectedList = streamPlaylists.Data[selectedServer];
 
                                 var videos = selectedList.video.Select(item => new VideoItem{

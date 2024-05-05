@@ -38,9 +38,8 @@
                         </Image>
 
                         <TextBlock Grid.Column="1"
-                            Text="{Binding Title, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
-                            VerticalAlignment="Center"
-                            >
+                                   Text="{Binding Title, RelativeSource={RelativeSource FindAncestor, AncestorType=Window}}"
+                                   VerticalAlignment="Center">
                         </TextBlock>
                     </Grid>
                 </Border>
@@ -65,6 +64,8 @@
                                                IconSource="Library" />
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.FooterMenuItems>
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Update Available" Tag="UpdateAvailable"
+                                               IconSource="CloudDownload" Focusable="False" IsVisible="{Binding UpdateAvailable}" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Account" Tag="Account"
                                                IconSource="Contact" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Settings" Tag="Settings"
