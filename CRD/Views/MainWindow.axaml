@@ -65,7 +65,7 @@
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.FooterMenuItems>
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Update Available" Tag="UpdateAvailable"
-                                               IconSource="CloudDownload" Focusable="False" IsVisible="{Binding UpdateAvailable}" />
+                                               IconSource="CloudDownload" Focusable="False" IsEnabled="{Binding UpdateAvailable}" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Account" Tag="Account"
                                                IconSource="Contact" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Settings" Tag="Settings"

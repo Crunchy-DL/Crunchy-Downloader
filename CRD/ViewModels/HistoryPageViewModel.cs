@@ -42,10 +42,18 @@ public partial class HistoryPageViewModel : ViewModelBase{
     
     [RelayCommand]
     public async void RefreshAll(){
-        foreach (var historySeries in Items){
+        for (int i = 0; i < Items.Count; i++) {
             ShowLoading = true;
-            await historySeries.FetchData("");
-            historySeries.UpdateNewEpisodes();
+            await Items[i].FetchData("");
+            Items[i].UpdateNewEpisodes();
+        }
+        ShowLoading = false;
+    }
+    
+    [RelayCommand]
+    public async void AddMissingToQueue(){
+        for (int i = 0; i < Items.Count; i++) {
+            await Items[i].AddNewMissingToDownloads();
         }
         ShowLoading = false;
     }

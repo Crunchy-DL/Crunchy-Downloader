@@ -273,7 +273,7 @@ public class Crunchyroll{
         return week;
     }
 
-    public async void AddEpisodeToQue(string epId, string locale, List<string> dubLang){
+    public async Task AddEpisodeToQue(string epId, string locale, List<string> dubLang){
         await CrAuth.RefreshToken(true);
 
         var episodeL = await CrEpisode.ParseEpisodeById(epId, locale);

@@ -34,7 +34,7 @@ public class History(Crunchyroll crunInstance){
         foreach (int season in result.Keys){
             foreach (var key in result[season].Keys){
                 var s = result[season][key];
-                if (seasonId != null && s.Id != seasonId) continue;
+                if (!string.IsNullOrEmpty(seasonId) && s.Id != seasonId) continue;
                 var seasonData = await crunInstance.CrSeries.GetSeasonDataById(s);
                 UpdateWithSeasonData(seasonData);
             }
@@ -338,6 +338,28 @@ public class HistorySeries : INotifyPropertyChanged{
         NewEpisodes = count;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NewEpisodes)));
     }
+    
+    public async Task AddNewMissingToDownloads(){
+        bool foundWatched = false;
+
+        // Iterate over the Seasons list from the end to the beginning
+        for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
+
+            if (Seasons[i].SpecialSeason == true){
+                continue;
+            }
+            
+            // Iterate over the Episodes from the end to the beginning
+            for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
+                if (!Seasons[i].EpisodesList[j].WasDownloaded){
+                    //ADD to download queue
+                    await Seasons[i].EpisodesList[j].DownloadEpisode();
+                } else{
+                    foundWatched = true;
+                }
+            }
+        }
+    }
 
     public async Task FetchData(string? seasonId){
         await Crunchyroll.Instance.CrHistory.UpdateSeries(SeriesId, seasonId);
@@ -404,8 +426,8 @@ public partial class HistoryEpisode : INotifyPropertyChanged{
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
     }
 
-    public void DownloadEpisode(){
-        Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, Crunchyroll.Instance.DefaultLocale, Crunchyroll.Instance.CrunOptions.DubLang);
+    public async Task DownloadEpisode(){
+        await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, Crunchyroll.Instance.DefaultLocale, Crunchyroll.Instance.CrunOptions.DubLang);
 
     }
 }

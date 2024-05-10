@@ -21,13 +21,15 @@
             <ColumnDefinition Width="Auto" /> <!-- Takes up most space for the title -->
         </Grid.ColumnDefinitions>
 
-        <Button Grid.Row="0" Grid.Column="0" Margin="10 10 0 0" HorizontalAlignment="Center" Command="{Binding  PrevWeek}">
+        <Button Grid.Row="0" Grid.Column="0" Margin="10 10 0 0" HorizontalAlignment="Center"
+                Command="{Binding  PrevWeek}">
             <StackPanel Orientation="Horizontal">
                 <controls:SymbolIcon Symbol="ChevronLeft" FontSize="18" />
             </StackPanel>
         </Button>
 
-        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 10 0 0">
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
+                    Margin="0 10 0 0">
             <Button HorizontalAlignment="Center" Command="{Binding  Refresh}">
                 <StackPanel Orientation="Horizontal">
                     <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
@@ -40,7 +42,8 @@
         </StackPanel>
 
 
-        <Button Grid.Row="0" Grid.Column="2" Margin="0 0 10 0" HorizontalAlignment="Center" Command="{Binding  NextWeek}">
+        <Button Grid.Row="0" Grid.Column="2" Margin="0 0 10 0" HorizontalAlignment="Center"
+                Command="{Binding  NextWeek}">
             <StackPanel Orientation="Horizontal">
                 <controls:SymbolIcon Symbol="ChevronRight" FontSize="18" />
             </StackPanel>
@@ -85,7 +88,7 @@
                         <ListBox Grid.Row="1" ItemsSource="{Binding CalendarEpisodes}"> <!-- Adjust MaxHeight as needed -->
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Padding="10" Margin="5" Height="200">
+                                    <Border Padding="10" Margin="5">
                                         <StackPanel Orientation="Vertical">
                                             <TextBlock HorizontalAlignment="Center"
                                                        Text="{Binding DateTime, StringFormat='hh:mm tt'}"
@@ -93,20 +96,23 @@
                                             <Grid HorizontalAlignment="Center">
                                                 <Image HorizontalAlignment="Center" Source="{Binding ImageBitmap}" />
                                                 <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
-                                                    <TextBlock VerticalAlignment="Center" TextAlignment="Center" Margin="0 0 5 0" Width="30" Height="30"
-                                                               Background="Black" Opacity="0.8" Text="{Binding EpisodeNumber}"
-                                                               Padding="0,5,0,0"/>
+                                                    <TextBlock VerticalAlignment="Center" TextAlignment="Center"
+                                                               Margin="0 0 5 0" Width="30" Height="30"
+                                                               Background="Black" Opacity="0.8"
+                                                               Text="{Binding EpisodeNumber}"
+                                                               Padding="0,5,0,0" />
                                                 </StackPanel>
                                                 <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right"
                                                             IsVisible="{Binding IsPremiumOnly}" Margin="0,0,5,5">
                                                     <Canvas Width="28" Height="28">
-                                                        <Ellipse Fill="#40FFFFFF" Width="28" Height="28"/>
-                                                        <Viewbox Width="24" Height="24" Stretch="Uniform" Canvas.Left="2" Canvas.Top="2">
+                                                        <Ellipse Fill="#40FFFFFF" Width="28" Height="28" />
+                                                        <Viewbox Width="24" Height="24" Stretch="Uniform"
+                                                                 Canvas.Left="2" Canvas.Top="2">
                                                             <Canvas Width="50" Height="50"> <!-- Ensure inner canvas is large enough to hold the path data -->
                                                                 <Path Fill="#f78c25"
                                                                       Stroke="#f78c25"
                                                                       StrokeThickness="1"
-                                                                      Data="M35.7,36.2H12.3c-0.7,0-1.4-0.5-1.6-1.2L6.1,18.6c-0.2-0.6,0-1.3,0.5-1.7c0.5-0.4,1.2-0.5,1.8-0.2l8.1,4.1 l6.2-8.3c0.3-0.4,0.8-0.7,1.3-0.7h0c0.5,0,1,0.2,1.3,0.7l6.2,8.3l8.2-4.1c0.6-0.3,1.3-0.2,1.8,0.2c0.5,0.4,0.7,1.1,0.5,1.7 L37.3,35C37.1,35.7,36.4,36.2,35.7,36.2z"/>
+                                                                      Data="M35.7,36.2H12.3c-0.7,0-1.4-0.5-1.6-1.2L6.1,18.6c-0.2-0.6,0-1.3,0.5-1.7c0.5-0.4,1.2-0.5,1.8-0.2l8.1,4.1 l6.2-8.3c0.3-0.4,0.8-0.7,1.3-0.7h0c0.5,0,1,0.2,1.3,0.7l6.2,8.3l8.2-4.1c0.6-0.3,1.3-0.2,1.8,0.2c0.5,0.4,0.7,1.1,0.5,1.7 L37.3,35C37.1,35.7,36.4,36.2,35.7,36.2z" />
                                                             </Canvas>
                                                         </Viewbox>
                                                     </Canvas>
@@ -124,7 +130,8 @@
 
                                             </TextBlock>
                                             <Button HorizontalAlignment="Center" Content="Download"
-                                                    IsEnabled="{Binding HasPassed}" Command="{Binding AddEpisodeToQue}"
+                                                    IsEnabled="{Binding HasPassed}"
+                                                    Command="{Binding AddEpisodeToQue}"
                                                     CommandParameter="{Binding EpisodeUrl}" />
                                         </StackPanel>
                                     </Border>

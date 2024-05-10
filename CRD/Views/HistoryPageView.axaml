@@ -20,8 +20,11 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="20 0 0 0 ">
+            <Button  Command="{Binding RefreshAll}" Margin="10">Refresh All</Button>
+            <Button  Command="{Binding AddMissingToQueue}" Margin="10">Add To Queue</Button>
+        </StackPanel>
         
-        <Button Grid.Row="0" Grid.Column="0" Command="{Binding RefreshAll}" Margin="10">Refresh All</Button>
         <Grid Grid.Row="1" Grid.Column="0">
             <!-- Spinner Style ProgressBar -->
             <ProgressBar IsIndeterminate="True"
@@ -32,7 +35,7 @@
             </ProgressBar>
         </Grid>
         
-        <ListBox Grid.Row="1" ItemsSource="{Binding Items}" IsVisible="{Binding !ShowLoading}" SelectedItem="{Binding SelectedSeries}" Margin="5">
+        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Items}" IsVisible="{Binding !ShowLoading}" SelectedItem="{Binding SelectedSeries}" Margin="5">
 
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
