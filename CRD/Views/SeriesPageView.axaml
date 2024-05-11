@@ -9,7 +9,7 @@
              x:DataType="vm:SeriesPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.SeriesPageView">
-    
+
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -28,26 +28,24 @@
                Height="360">
         </Image>
 
-     
 
-            <Grid Grid.Row="1" Grid.Column="1">
-                
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" FontSize="50" Text="{Binding SelectedSeries.SeriesTitle}"></TextBlock>
-                <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}"></TextBlock>
-                <Button Grid.Row="3"  Command="{Binding UpdateData}" Margin="0 0 0  10">Fetch Series</Button>
-            </Grid>
-            
-      
+        <Grid Grid.Row="1" Grid.Column="1">
 
-            
-  
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" FontSize="50" Text="{Binding SelectedSeries.SeriesTitle}"></TextBlock>
+            <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}"></TextBlock>
+            <StackPanel Grid.Row="3" Orientation="Horizontal">
+                <Button Command="{Binding UpdateData}" Margin="0 0 5  10">Fetch Series</Button>
+                <ToggleButton IsChecked="{Binding EditMode}" Margin="0 0 0  10">Edit</ToggleButton>
+            </StackPanel>
+
+        </Grid>
 
 
         <ScrollViewer Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
@@ -58,11 +56,10 @@
                         <controls:SettingsExpander
                             Header="{Binding CombinedProperty}"
                             ItemsSource="{Binding EpisodesList}"
-                          
+
                             Description="{Binding SeasonTitle}"
                             IsExpanded="False">
-                            
-                            
+
 
                             <controls:SettingsExpander.ItemTemplate>
                                 <DataTemplate>
@@ -83,20 +80,28 @@
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
-                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent" BorderThickness="0" CornerRadius="50" IsVisible="{Binding !WasDownloaded}" Command="{Binding $parent[controls:SettingsExpander].((downloader:HistorySeason)DataContext).UpdateDownloaded}"  CommandParameter="{Binding EpisodeId}">
-                                                <Grid  >
+                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                                    BorderThickness="0" CornerRadius="50"
+                                                    IsVisible="{Binding !WasDownloaded}"
+                                                    Command="{Binding $parent[controls:SettingsExpander].((downloader:HistorySeason)DataContext).UpdateDownloaded}"
+                                                    CommandParameter="{Binding EpisodeId}">
+                                                <Grid>
                                                     <Ellipse Width="25" Height="25" Fill="Gray" />
-                                                    <controls:SymbolIcon  Symbol="Checkmark" FontSize="18" />
+                                                    <controls:SymbolIcon Symbol="Checkmark" FontSize="18" />
                                                 </Grid>
                                             </Button>
 
-                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent" BorderThickness="0" CornerRadius="50" IsVisible="{Binding WasDownloaded}" Command="{Binding $parent[controls:SettingsExpander].((downloader:HistorySeason)DataContext).UpdateDownloaded}"  CommandParameter="{Binding EpisodeId}">
-                                                <Grid >
+                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                                    BorderThickness="0" CornerRadius="50"
+                                                    IsVisible="{Binding WasDownloaded}"
+                                                    Command="{Binding $parent[controls:SettingsExpander].((downloader:HistorySeason)DataContext).UpdateDownloaded}"
+                                                    CommandParameter="{Binding EpisodeId}">
+                                                <Grid>
                                                     <Ellipse Width="25" Height="25" Fill="#21a556" />
                                                     <controls:SymbolIcon Symbol="Checkmark" FontSize="18" />
                                                 </Grid>
                                             </Button>
-           
+
                                             <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
                                                     VerticalAlignment="Center" Command="{Binding DownloadEpisode}">
                                                 <StackPanel Orientation="Horizontal">
@@ -114,13 +119,27 @@
                                     <TextBlock Text="{Binding DownloadedEpisodes}" VerticalAlignment="Center"></TextBlock>
                                     <TextBlock Text="/" VerticalAlignment="Center"></TextBlock>
                                     <TextBlock Text="{Binding EpisodesList.Count}" VerticalAlignment="Center"></TextBlock>
-                                    <Button Margin="10 0 0 0" FontStyle="Italic" 
-                                            VerticalAlignment="Center"  Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).UpdateData}" CommandParameter="{Binding SeasonId}" >
+                                    <Button Margin="10 0 0 0" FontStyle="Italic"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).UpdateData}"
+                                            CommandParameter="{Binding SeasonId}">
                                         <ToolTip.Tip>
                                             <TextBlock Text="Fetch Season" FontSize="15" />
                                         </ToolTip.Tip>
                                         <StackPanel Orientation="Horizontal">
                                             <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Margin="10 0 0 0" FontStyle="Italic"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).RemoveSeason}"
+                                            CommandParameter="{Binding SeasonId}"
+                                            IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).EditMode}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Remove Season" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:SymbolIcon Symbol="Delete" FontSize="18" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>

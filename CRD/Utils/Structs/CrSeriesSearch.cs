@@ -32,7 +32,7 @@ public struct SeriesSearchItem{
     [JsonProperty("season_number")] public int SeasonNumber{ get; set; }
     public Dictionary<object, object> Images{ get; set; }
     [JsonProperty("mature_blocked")] public bool MatureBlocked{ get; set; }
-    public List<Version> Versions{ get; set; }
+    public List<Version>? Versions{ get; set; }
     public string Title{ get; set; }
     [JsonProperty("is_subbed")] public bool IsSubbed{ get; set; }
     public string Id{ get; set; }

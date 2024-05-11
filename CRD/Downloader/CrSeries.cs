@@ -137,7 +137,7 @@ public class CrSeries(Crunchyroll crunInstance){
                 var s = result[season][key];
                 if (data?.S != null && s.Id != data.Value.S) continue;
                 int fallbackIndex = 0;
-                var seasonData = await GetSeasonDataById(s);
+                var seasonData = await GetSeasonDataById(s.Id);
                 if (seasonData.Data != null){
 
                     if (crunInstance.CrunOptions.History){
@@ -268,7 +268,7 @@ public class CrSeries(Crunchyroll crunInstance){
         return crunchySeriesList;
     }
 
-    public async Task<CrunchyEpisodeList> GetSeasonDataById(SeriesSearchItem item, bool log = false){
+    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonID, bool log = false){
         CrunchyEpisodeList episodeList = new CrunchyEpisodeList(){ Data = new List<CrunchyEpisode>(), Total = 0, Meta = new Meta() };
 
         if (crunInstance.CmsToken?.Cms == null){
@@ -277,7 +277,7 @@ public class CrSeries(Crunchyroll crunInstance){
         }
 
         if (log){
-            var showRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{item.Id}?preferred_audio_language=ja-JP", HttpMethod.Get, true, true, null);
+            var showRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}?preferred_audio_language=ja-JP", HttpMethod.Get, true, true, null);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
@@ -290,7 +290,7 @@ public class CrSeries(Crunchyroll crunInstance){
 
         //TODO
 
-        var episodeRequest = new HttpRequestMessage(HttpMethod.Get, $"{Api.Cms}/seasons/{item.Id}/episodes?preferred_audio_language=ja-JP");
+        var episodeRequest = new HttpRequestMessage(HttpMethod.Get, $"{Api.Cms}/seasons/{seasonID}/episodes?preferred_audio_language=ja-JP");
 
         episodeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", crunInstance.Token?.access_token);
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -23,9 +24,25 @@ public partial class MainWindowViewModel : ViewModelBase{
         _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
 
         Init();
+
+        CleanUpOldUpdater();
+
     }
 
+    private void CleanUpOldUpdater() {
+        string backupFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Updater.exe.bak");
 
+        if (File.Exists(backupFilePath)) {
+            try {
+                File.Delete(backupFilePath);
+                Console.WriteLine($"Deleted old updater file: {backupFilePath}");
+            } catch (Exception ex) {
+                Console.WriteLine($"Failed to delete old updater file: {ex.Message}");
+            }
+        } else {
+            Console.WriteLine("No old updater file found to delete.");
+        }
+    }
 
 
     public async void Init(){

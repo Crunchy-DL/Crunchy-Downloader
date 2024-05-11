@@ -20,7 +20,7 @@ namespace CRD.Downloader;
 public class History(Crunchyroll crunInstance){
     public async Task UpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
-
+        
         CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja");
 
         if (parsedSeries == null){
@@ -35,7 +35,20 @@ public class History(Crunchyroll crunInstance){
             foreach (var key in result[season].Keys){
                 var s = result[season][key];
                 if (!string.IsNullOrEmpty(seasonId) && s.Id != seasonId) continue;
-                var seasonData = await crunInstance.CrSeries.GetSeasonDataById(s);
+
+                var sId = s.Id;
+                if (s.Versions is{ Count: > 0 }){
+                    foreach (var sVersion in s.Versions){
+                        if (sVersion.Original == true){
+                            if (sVersion.Guid != null){
+                                sId = sVersion.Guid;
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                var seasonData = await crunInstance.CrSeries.GetSeasonDataById(sId);
                 UpdateWithSeasonData(seasonData);
             }
         }
@@ -107,7 +120,7 @@ public class History(Crunchyroll crunInstance){
 
                 historySeries.Seasons.Add(newSeason);
 
-                historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum).ToList();
+                historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0).ToList();
             }
             historySeries.UpdateNewEpisodes();
         } else{
@@ -148,15 +161,24 @@ public class History(Crunchyroll crunInstance){
 
                 if (historySeason != null){
                     foreach (var crunchyEpisode in seasonData.Data){
-                        if (historySeason.EpisodesList.All(e => e.EpisodeId != crunchyEpisode.Id)){
+
+                        var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == crunchyEpisode.Id);
+                        
+                        if (historyEpisode == null){
                             var newHistoryEpisode = new HistoryEpisode{
                                 EpisodeTitle = crunchyEpisode.Title,
                                 EpisodeId = crunchyEpisode.Id,
                                 Episode = crunchyEpisode.Episode,
+                                SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
                             };
 
                             historySeason.EpisodesList.Add(newHistoryEpisode);
+                        } else{
+                            //Update existing episode
+                            historyEpisode.EpisodeTitle = crunchyEpisode.Title;
+                            historyEpisode.SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _);
                         }
+                        
                     }
 
                     historySeason.EpisodesList.Sort(new NumericStringPropertyComparer());
@@ -167,7 +189,7 @@ public class History(Crunchyroll crunInstance){
 
                     historySeries.Seasons.Add(newSeason);
 
-                    historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum).ToList();
+                    historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0).ToList();
                 }
                 historySeries.UpdateNewEpisodes();
             } else{
@@ -190,6 +212,7 @@ public class History(Crunchyroll crunInstance){
 
 
                 newHistorySeries.Seasons.Add(newSeason);
+                
                 newHistorySeries.UpdateNewEpisodes();
             }
         }
@@ -235,6 +258,7 @@ public class History(Crunchyroll crunInstance){
                 EpisodeTitle = crunchyEpisode.Title,
                 EpisodeId = crunchyEpisode.Id,
                 Episode = crunchyEpisode.Episode,
+                SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
             };
 
             newSeason.EpisodesList.Add(newHistoryEpisode);
@@ -255,6 +279,7 @@ public class History(Crunchyroll crunInstance){
             EpisodeTitle = episode.Title,
             EpisodeId = episode.Id,
             Episode = episode.Episode,
+            SpecialEpisode = !int.TryParse(episode.Episode, out _),
         };
 
         newSeason.EpisodesList.Add(newHistoryEpisode);
@@ -269,7 +294,7 @@ public class NumericStringPropertyComparer : IComparer<HistoryEpisode>{
         if (int.TryParse(x.Episode, out int xInt) && int.TryParse(y.Episode, out int yInt)){
             return xInt.CompareTo(yInt);
         }
-
+        
         // Fall back to string comparison if not parseable as integers
         return String.Compare(x.Episode, y.Episode, StringComparison.Ordinal);
     }
@@ -328,7 +353,7 @@ public class HistorySeries : INotifyPropertyChanged{
             
             // Iterate over the Episodes from the end to the beginning
             for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (!Seasons[i].EpisodesList[j].WasDownloaded){
+                if (!Seasons[i].EpisodesList[j].WasDownloaded && !Seasons[i].EpisodesList[j].SpecialEpisode){
                     count++;
                 } else{
                     foundWatched = true;
@@ -351,7 +376,7 @@ public class HistorySeries : INotifyPropertyChanged{
             
             // Iterate over the Episodes from the end to the beginning
             for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (!Seasons[i].EpisodesList[j].WasDownloaded){
+                if (!Seasons[i].EpisodesList[j].WasDownloaded && !Seasons[i].EpisodesList[j].SpecialEpisode){
                     //ADD to download queue
                     await Seasons[i].EpisodesList[j].DownloadEpisode();
                 } else{
@@ -419,8 +444,11 @@ public partial class HistoryEpisode : INotifyPropertyChanged{
     [JsonProperty("episode_was_downloaded")]
     public bool WasDownloaded{ get; set; }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
+    [JsonProperty("episode_special_episode")]
+    public bool SpecialEpisode{ get; set; } 
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+    
     public void ToggleWasDownloaded(){
         WasDownloaded = !WasDownloaded;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
