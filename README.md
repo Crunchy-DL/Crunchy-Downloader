@@ -27,7 +27,7 @@ Settings:
 
 # 🛠️ DRM Decryption Guide
 
-Currently, this guide is not necessary as it will use non-DRM URLs if possible.
+Currently, it is not necessary to include the CDM files as it will use non-DRM URLs if possible.
 
 ## Decryption Requirements
 
