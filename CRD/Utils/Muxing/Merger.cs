@@ -33,34 +33,77 @@ public class Merger{
 
         if (!options.mp3){
             foreach (var vid in options.VideoAndAudio){
-            if (vid.Delay != null && hasVideo){
-                args.Add($"-itsoffset -{Math.Ceiling((double)vid.Delay * 1000)}ms");
-            }
+                if (vid.Delay != null && hasVideo){
+                    args.Add($"-itsoffset -{Math.Ceiling((double)vid.Delay * 1000)}ms");
+                }
 
-            args.Add($"-i \"{vid.Path}\"");
-            if (!hasVideo || options.KeepAllVideos == true){
-                metaData.Add($"-map {index}:a -map {index}:v");
-                metaData.Add($"-metadata:s:a:{audioIndex} language={vid.Language.Code}");
-                metaData.Add($"-metadata:s:v:{index} title=\"{options.VideoTitle}\"");
-                hasVideo = true;
-            } else{
-                metaData.Add($"-map {index}:a");
-                metaData.Add($"-metadata:s:a:{audioIndex} language={vid.Language.Code}");
-            }
-
-            audioIndex++;
-            index++;
-        }
-
-        foreach (var vid in options.OnlyVid){
-            if (!hasVideo || options.KeepAllVideos == true){
                 args.Add($"-i \"{vid.Path}\"");
-                metaData.Add($"-map {index} -map -{index}:a");
-                metaData.Add($"-metadata:s:v:{index} title=\"{options.VideoTitle}\"");
-                hasVideo = true;
+                if (!hasVideo || options.KeepAllVideos == true){
+                    metaData.Add($"-map {index}:a -map {index}:v");
+                    metaData.Add($"-metadata:s:a:{audioIndex} language={vid.Language.Code}");
+                    metaData.Add($"-metadata:s:v:{index} title=\"{options.VideoTitle}\"");
+                    hasVideo = true;
+                } else{
+                    metaData.Add($"-map {index}:a");
+                    metaData.Add($"-metadata:s:a:{audioIndex} language={vid.Language.Code}");
+                }
+
+                audioIndex++;
                 index++;
             }
+
+            foreach (var vid in options.OnlyVid){
+                if (!hasVideo || options.KeepAllVideos == true){
+                    args.Add($"-i \"{vid.Path}\"");
+                    metaData.Add($"-map {index} -map -{index}:a");
+                    metaData.Add($"-metadata:s:v:{index} title=\"{options.VideoTitle}\"");
+                    hasVideo = true;
+                    index++;
+                }
+            }
+
+            foreach (var aud in options.OnlyAudio){
+                args.Add($"-i \"{aud.Path}\"");
+                metaData.Add($"-map {index}");
+                metaData.Add($"-metadata:s:a:{audioIndex} language={aud.Language.Code}");
+                index++;
+                audioIndex++;
+            }
+
+            foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
+                if (sub.value.Delay != null){
+                    args.Add($"-itsoffset -{Math.Ceiling((double)sub.value.Delay * 1000)}ms");
+                }
+
+                args.Add($"-i \"{sub.value.File}\"");
+            }
+
+            if (options.Output.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)){
+                if (options.Fonts != null){
+                    int fontIndex = 0;
+                    foreach (var font in options.Fonts){
+                        args.Add($"-attach {font.Path} -metadata:s:t:{fontIndex} mimetype={font.Mime}");
+                        fontIndex++;
+                    }
+                }
+            }
+
+            args.AddRange(metaData);
+            args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
+            args.Add("-c:v copy");
+            args.Add("-c:a copy");
+            args.Add(options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");
+            args.AddRange(options.Subtitles.Select((sub, subindex) =>
+                $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
+            if (options.Options.ffmpeg?.Count > 0){
+                args.AddRange(options.Options.ffmpeg);
+            }
+
+            args.Add($"\"{options.Output}\"");
+
+            return string.Join(" ", args);
         }
+
 
         foreach (var aud in options.OnlyAudio){
             args.Add($"-i \"{aud.Path}\"");
@@ -69,42 +112,7 @@ public class Merger{
             index++;
             audioIndex++;
         }
-
-        foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
-            if (sub.value.Delay != null){
-                args.Add($"-itsoffset -{Math.Ceiling((double)sub.value.Delay * 1000)}ms");
-            }
-
-            args.Add($"-i \"{sub.value.File}\"");
-        }
-
-        if (options.Output.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)){
-            if (options.Fonts != null){
-                int fontIndex = 0;
-                foreach (var font in options.Fonts){
-                    args.Add($"-attach {font.Path} -metadata:s:t:{fontIndex} mimetype={font.Mime}");
-                    fontIndex++;
-                }
-            }
-        }
-
-        args.AddRange(metaData);
-        args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
-        args.Add("-c:v copy");
-        args.Add("-c:a copy");
-        args.Add(options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");
-        args.AddRange(options.Subtitles.Select((sub, subindex) =>
-            $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
-        if (options.Options.ffmpeg?.Count > 0){
-            args.AddRange(options.Options.ffmpeg);
-        }
-        args.Add($"\"{options.Output}\"");
-
-        return string.Join(" ", args);
-        } 
-
         
-        args.Add($"-i \"{options.OnlyAudio[0].Path}\"");
         args.Add("-acodec libmp3lame");
         args.Add("-ab 192k");
         args.Add($"\"{options.Output}\"");
@@ -389,7 +397,7 @@ public class MergerOptions{
     public bool? SkipSubMux{ get; set; }
     public MuxOptions Options{ get; set; }
     public Defaults Defaults{ get; set; }
-    
+
     public bool mp3{ get; set; }
 }
 

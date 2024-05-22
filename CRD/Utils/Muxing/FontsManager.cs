@@ -107,7 +107,9 @@ public class FontsManager{
 
         foreach (var s in subs){
             foreach (var keyValuePair in s.Fonts){
-                fontsNameList.Add(keyValuePair.Key,keyValuePair.Value);
+                if (!fontsNameList.ContainsKey(keyValuePair.Key)){
+                    fontsNameList.Add(keyValuePair.Key,keyValuePair.Value);
+                }
             }
             subsList.Add(s.Language.Locale);
         }

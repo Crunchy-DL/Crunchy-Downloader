@@ -145,11 +145,12 @@ public class Crunchyroll{
         CrunOptions.AccentColor = Colors.SlateBlue.ToString();
         CrunOptions.Theme = "System";
         CrunOptions.SelectedCalendarLanguage = "de";
+        CrunOptions.DlVideoOnce = true;
 
         CrunOptions.History = true;
 
         CfgManager.UpdateSettingsFromFile();
-
+        
         if (CrunOptions.History){
             if (File.Exists(CfgManager.PathCrHistory)){
                 HistoryList = JsonConvert.DeserializeObject<ObservableCollection<HistorySeries>>(File.ReadAllText(CfgManager.PathCrHistory)) ??[];
@@ -725,7 +726,7 @@ public class Crunchyroll{
                         if (!streamPlaylistsReqResponse.IsOk){
                             dlFailed = true;
                         }
-
+                        
                         if (dlFailed){
                             Console.WriteLine($"CAN\'T FETCH VIDEO PLAYLISTS!");
                         } else{
@@ -868,14 +869,7 @@ public class Crunchyroll{
 
                                 if (options.DlVideoOnce && dlVideoOnce){
                                     Console.WriteLine("Already downloaded video, skipping video download...");
-                                    return new DownloadResponse{
-                                        Data = files,
-                                        Error = dlFailed,
-                                        FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown"
-                                    };
-                                }
-
-                                if (options.Novids){
+                                }else if (options.Novids){
                                     Console.WriteLine("Skipping video download...");
                                 } else{
                                     var videoDownloadResult = await DownloadVideo(chosenVideoSegments, options, outFile, tsFile, tempTsFile, data);
@@ -1088,6 +1082,7 @@ public class Crunchyroll{
                                 }
                             } else if (!options.Novids){
                                 //TODO
+                                MainWindow.ShowError("Requested Video with the current settings not implemented");
                             } else if (options.Novids){
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
                                 Console.WriteLine("Downloading skipped!");
@@ -1400,11 +1395,15 @@ public class Crunchyroll{
         playbackRequestNonDrm.Headers.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
 
         var playbackRequestNonDrmResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequestNonDrm);
-
+        
         if (playbackRequestNonDrmResponse.IsOk && playbackRequestNonDrmResponse.ResponseContent != string.Empty){
             CrunchyNoDrmStream? playStream = JsonConvert.DeserializeObject<CrunchyNoDrmStream>(playbackRequestNonDrmResponse.ResponseContent, SettingsJsonSerializerSettings);
             CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
             if (playStream != null){
+                
+                var deauthVideoToken = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{currentMediaId}/{playStream.Token}/inactive", HttpMethod.Patch, true, false, null);
+                var deauthVideoTokenResponse = await HttpClientReq.Instance.SendHttpRequest(deauthVideoToken);
+                
                 if (playStream.HardSubs != null)
                     foreach (var hardsub in playStream.HardSubs){
                         var stream = hardsub.Value;

@@ -18,49 +18,73 @@ using FluentAvalonia.Styling;
 namespace CRD.ViewModels;
 
 public partial class SettingsPageViewModel : ViewModelBase{
-    [ObservableProperty] private string _currentVersion = "v1.1";
+    [ObservableProperty]
+    private string _currentVersion;
 
-    [ObservableProperty] private bool _downloadVideo = true;
+    [ObservableProperty]
+    private bool _downloadVideo = true;
 
-    [ObservableProperty] private bool _downloadAudio = true;
+    [ObservableProperty]
+    private bool _downloadAudio = true;
 
-    [ObservableProperty] private bool _downloadChapters = true;
+    [ObservableProperty]
+    private bool _downloadChapters = true;
 
-    [ObservableProperty] private bool _muxToMp4 = false;
-    
-    [ObservableProperty] private bool _history = false;
+    [ObservableProperty]
+    private bool _muxToMp4 = false;
 
-    [ObservableProperty] private int _leadingNumbers = 0;
+    [ObservableProperty]
+    private bool _history = false;
 
-    [ObservableProperty] private int _simultaneousDownloads = 0;
+    [ObservableProperty]
+    private int _leadingNumbers = 0;
 
-    [ObservableProperty] private string _fileName = "";
+    [ObservableProperty]
+    private int _simultaneousDownloads = 0;
 
-    [ObservableProperty] private string _mkvMergeOptions = "";
+    [ObservableProperty]
+    private string _fileName = "";
 
-    [ObservableProperty] private string _ffmpegOptions = "";
+    [ObservableProperty]
+    private string _mkvMergeOptions = "";
 
-    [ObservableProperty] private string _selectedSubs = "all";
+    [ObservableProperty]
+    private string _ffmpegOptions = "";
 
-    [ObservableProperty] private ComboBoxItem _selectedHSLang;
+    [ObservableProperty]
+    private string _selectedSubs = "all";
 
-    [ObservableProperty] private ComboBoxItem? _selectedDubLang;
+    [ObservableProperty]
+    private ComboBoxItem _selectedHSLang;
 
-    [ObservableProperty] private ComboBoxItem? _selectedVideoQuality;
+    [ObservableProperty]
+    private string _selectedDubs = "ja-JP";
 
-    [ObservableProperty] private ComboBoxItem? _selectedAudioQuality;
+    [ObservableProperty]
+    private ObservableCollection<ListBoxItem> _selectedDubLang = new();
 
-    [ObservableProperty] private ComboBoxItem? _currentAppTheme;
+    [ObservableProperty]
+    private ComboBoxItem? _selectedVideoQuality;
 
-    [ObservableProperty] private ObservableCollection<ListBoxItem> _selectedSubLang = new();
+    [ObservableProperty]
+    private ComboBoxItem? _selectedAudioQuality;
 
-    [ObservableProperty] private bool _useCustomAccent = false;
+    [ObservableProperty]
+    private ComboBoxItem? _currentAppTheme;
 
-    [ObservableProperty] private Color _listBoxColor ;
-    [ObservableProperty] private Color _customAccentColor = Colors.SlateBlue;
+    [ObservableProperty]
+    private ObservableCollection<ListBoxItem> _selectedSubLang = new();
+
+    [ObservableProperty]
+    private bool _useCustomAccent = false;
+
+    [ObservableProperty]
+    private Color _listBoxColor;
+
+    [ObservableProperty]
+    private Color _customAccentColor = Colors.SlateBlue;
 
     public ObservableCollection<Color> PredefinedColors{ get; } = new(){
-        
         Color.FromRgb(255, 185, 0),
         Color.FromRgb(255, 140, 0),
         Color.FromRgb(247, 99, 12),
@@ -151,15 +175,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private readonly FluentAvaloniaTheme _faTheme;
 
     private bool settingsLoaded = false;
-    
+
     public SettingsPageViewModel(){
-        
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         _currentVersion = $"{version?.Major}.{version?.Minor}.{version?.Build}";
-        
-        
+
+
         _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
-        
+
         foreach (var languageItem in Languages.languages){
             HardSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
             SubLangList.Add(new ListBoxItem{ Content = languageItem.CrLocale });
@@ -174,7 +197,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         foreach (var listBoxItem in softSubLang){
             SelectedSubLang.Add(listBoxItem);
         }
-        
+
         if (SelectedSubLang.Count == 0){
             SelectedSubs = "none";
         } else{
@@ -187,8 +210,25 @@ public partial class SettingsPageViewModel : ViewModelBase{
         ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
 
-        ComboBoxItem? dubLang = DubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DubLang[0]) ?? null;
-        SelectedDubLang = dubLang ?? DubLangList[0];
+        // ComboBoxItem? dubLang = DubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DubLang[0]) ?? null;
+        // SelectedDubLang = dubLang ?? DubLangList[0];
+
+        var dubLang = DubLangList.Where(a => options.DubLang.Contains(a.Content)).ToList();
+
+        SelectedDubLang.Clear();
+        foreach (var listBoxItem in dubLang){
+            SelectedDubLang.Add(listBoxItem);
+        }
+
+        if (SelectedDubLang.Count == 0){
+            SelectedDubs = "none";
+        } else{
+            SelectedDubs = SelectedDubLang[0].Content.ToString();
+            for (var i = 1; i < SelectedDubLang.Count; i++){
+                SelectedDubs += "," + SelectedDubLang[i].Content;
+            }
+        }
+
 
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
@@ -216,22 +256,31 @@ public partial class SettingsPageViewModel : ViewModelBase{
         //TODO - Mux Options
 
         SelectedSubLang.CollectionChanged += Changes;
+        SelectedDubLang.CollectionChanged += Changes;
 
         settingsLoaded = true;
     }
 
     private void UpdateSettings(){
-
         if (!settingsLoaded){
             return;
         }
-        
+
         if (SelectedSubLang.Count == 0){
             SelectedSubs = "none";
         } else{
             SelectedSubs = SelectedSubLang[0].Content.ToString();
             for (var i = 1; i < SelectedSubLang.Count; i++){
                 SelectedSubs += "," + SelectedSubLang[i].Content;
+            }
+        }
+        
+        if (SelectedDubLang.Count == 0){
+            SelectedDubs = "none";
+        } else{
+            SelectedDubs = SelectedDubLang[0].Content.ToString();
+            for (var i = 1; i < SelectedDubLang.Count; i++){
+                SelectedDubs += "," + SelectedDubLang[i].Content;
             }
         }
 
@@ -254,11 +303,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;
 
-        if (SelectedDubLang != null){
-            string dublang = SelectedDubLang.Content + "";
 
-            Crunchyroll.Instance.CrunOptions.DubLang = new List<string>{ dublang };
+        List<string> dubLangs = new List<string>();
+        foreach (var listBoxItem in SelectedDubLang){
+            dubLangs.Add(listBoxItem.Content + "");
         }
+
+        Crunchyroll.Instance.CrunOptions.DubLang = dubLangs;
+
 
         Crunchyroll.Instance.CrunOptions.SimultaneousDownloads = SimultaneousDownloads;
 
@@ -270,7 +322,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.AccentColor = _faTheme.CustomAccentColor.ToString();
 
         Crunchyroll.Instance.CrunOptions.History = History;
-        
+
         //TODO - Mux Options
 
         CfgManager.WriteSettingsToFile();
@@ -297,7 +349,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
             if (_faTheme.TryGetResource("SystemAccentColor", null, out var curColor)){
                 CustomAccentColor = (Color)curColor;
                 ListBoxColor = CustomAccentColor;
-    
+
                 RaisePropertyChanged(nameof(CustomAccentColor));
                 RaisePropertyChanged(nameof(ListBoxColor));
             }
@@ -307,16 +359,16 @@ public partial class SettingsPageViewModel : ViewModelBase{
             UpdateAppAccentColor(Colors.SlateBlue);
         }
     }
-    
+
     partial void OnListBoxColorChanged(Color value){
         if (value != null){
             CustomAccentColor = value;
             RaisePropertyChanged(nameof(CustomAccentColor));
-    
+
             UpdateAppAccentColor(value);
         }
     }
-    
+
     partial void OnCustomAccentColorChanged(Color value){
         ListBoxColor = value;
         RaisePropertyChanged(nameof(ListBoxColor));
@@ -329,9 +381,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
 
-    partial void OnSelectedDubLangChanged(ComboBoxItem? value){
-        UpdateSettings();
-    }
+
 
     private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
         UpdateSettings();

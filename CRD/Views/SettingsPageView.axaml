@@ -21,10 +21,41 @@
                                        IconSource="Speaker2"
                                        Description="Change the selected dub language">
                 <controls:SettingsExpander.Footer>
-                    <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
-                              ItemsSource="{Binding DubLangList}"
-                              SelectedItem="{Binding SelectedDubLang}">
-                    </ComboBox>
+                    <!-- <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400" -->
+                    <!--            -->
+                    <!--           ItemsSource="{Binding DubLangList}" -->
+                    <!--           SelectedItem="{Binding SelectedDubLang}"> -->
+                    <!-- </ComboBox> -->
+
+
+                    <StackPanel>
+                        <ToggleButton x:Name="DropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
+                            <ToggleButton.Content>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedDubs}"
+                                               VerticalAlignment="Center" />
+                                    <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                          VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                </Grid>
+                            </ToggleButton.Content>
+                        </ToggleButton>
+                        <Popup IsLightDismissEnabled="True"
+                               IsOpen="{Binding IsChecked, ElementName=DropdownButtonDub, Mode=TwoWay}" Placement="Bottom"
+                               PlacementTarget="{Binding ElementName=DropdownButtonDub}">
+                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
+                                         MaxHeight="400"
+                                         ItemsSource="{Binding DubLangList}" SelectedItems="{Binding SelectedDubLang}">
+                                </ListBox>
+                            </Border>
+                        </Popup>
+                    </StackPanel>
+
+
                 </controls:SettingsExpander.Footer>
 
             </controls:SettingsExpander>
