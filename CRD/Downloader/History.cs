@@ -353,7 +353,12 @@ public class HistorySeries : INotifyPropertyChanged{
             
             // Iterate over the Episodes from the end to the beginning
             for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (!Seasons[i].EpisodesList[j].WasDownloaded && !Seasons[i].EpisodesList[j].SpecialEpisode){
+
+                if (Seasons[i].EpisodesList[j].SpecialEpisode){
+                    continue;
+                }
+                
+                if (!Seasons[i].EpisodesList[j].WasDownloaded){
                     count++;
                 } else{
                     foundWatched = true;
@@ -376,7 +381,12 @@ public class HistorySeries : INotifyPropertyChanged{
             
             // Iterate over the Episodes from the end to the beginning
             for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (!Seasons[i].EpisodesList[j].WasDownloaded && !Seasons[i].EpisodesList[j].SpecialEpisode){
+                
+                if (Seasons[i].EpisodesList[j].SpecialEpisode){
+                    continue;
+                }
+                
+                if (!Seasons[i].EpisodesList[j].WasDownloaded){
                     //ADD to download queue
                     await Seasons[i].EpisodesList[j].DownloadEpisode();
                 } else{

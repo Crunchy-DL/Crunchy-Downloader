@@ -1397,6 +1397,7 @@ public class Crunchyroll{
 
     private async Task FetchNoDrmPlaybackData(string currentMediaId, PlaybackData pbData){
         var playbackRequestNonDrm = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{currentMediaId}/console/switch/play", HttpMethod.Get, true, true, null);
+        playbackRequestNonDrm.Headers.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
 
         var playbackRequestNonDrmResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequestNonDrm);
 
