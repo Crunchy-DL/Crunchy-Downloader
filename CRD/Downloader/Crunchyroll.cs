@@ -511,15 +511,15 @@ public class Crunchyroll{
             };
         }
 
-        if (!options.UseNonDrmStreams && !_widevine.canDecrypt){
-            Console.Error.WriteLine("Only searching for drm streams but widevine can't decrypt");
-            MainWindow.Instance.ShowError("Settings set to not search for DRM streams - but can't find CDM files in widevine folder ");
-            return new DownloadResponse{
-                Data = new List<DownloadedMedia>(),
-                Error = true,
-                FileName = "./unknown"
-            };
-        }
+        // if (!options.UseNonDrmStreams && !_widevine.canDecrypt){
+        //     Console.Error.WriteLine("Only searching for drm streams but widevine can't decrypt");
+        //     MainWindow.Instance.ShowError("Settings set to not search for DRM streams - but can't find CDM files in widevine folder ");
+        //     return new DownloadResponse{
+        //         Data = new List<DownloadedMedia>(),
+        //         Error = true,
+        //         FileName = "./unknown"
+        //     };
+        // }
 
         string mediaName = $"{data.SeasonTitle} - {data.EpisodeNumber} - {data.EpisodeTitle}";
         string fileName = "";
@@ -619,7 +619,9 @@ public class Crunchyroll{
 
                 #region NonDrmRequest
 
-                await FetchNoDrmPlaybackData(mediaGuid, pbData);
+                if (options.UseNonDrmStreams || !_widevine.canDecrypt){
+                    await FetchNoDrmPlaybackData(mediaGuid, pbData);
+                }
 
                 #endregion
 
