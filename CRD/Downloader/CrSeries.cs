@@ -83,7 +83,12 @@ public class CrSeries(Crunchyroll crunInstance){
                     Time = 0,
                     DownloadSpeed = 0
                 };
-
+                epMeta.AvailableSubs = item.SubtitleLocales;
+                if (episode.Langs.Count > 0){
+                    epMeta.SelectedDubs = dubLang
+                        .Where(language => episode.Langs.Any(epLang => epLang.CrLocale == language))
+                        .ToList();
+                }
        
 
                 var epMetaData = epMeta.Data[0];

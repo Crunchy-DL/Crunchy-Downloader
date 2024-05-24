@@ -150,7 +150,7 @@ public class Crunchyroll{
         CrunOptions.History = true;
 
         CfgManager.UpdateSettingsFromFile();
-        
+
         if (CrunOptions.History){
             if (File.Exists(CfgManager.PathCrHistory)){
                 HistoryList = JsonConvert.DeserializeObject<ObservableCollection<HistorySeries>>(File.ReadAllText(CfgManager.PathCrHistory)) ??[];
@@ -281,8 +281,8 @@ public class Crunchyroll{
 
 
         if (episodeL != null){
-            if (episodeL.Value.Data != null && episodeL.Value.Data.First().IsPremiumOnly && Profile.Username == "???"){
-                MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode - try to login first", ToastType.Error, 3));
+            if (episodeL.Value.Data != null && episodeL.Value.Data.First().IsPremiumOnly && (episodeL.Value.Data.First().StreamsLink == null || Profile.Username == "???")){
+                MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
                 return;
             }
 
@@ -292,6 +292,7 @@ public class Crunchyroll{
             foreach (var crunchyEpMeta in metas){
                 Queue.Add(crunchyEpMeta);
             }
+
             Console.WriteLine("Added Episode to Queue");
             MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
         }
@@ -300,8 +301,20 @@ public class Crunchyroll{
     public void AddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
         var selected = CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
 
+        bool failed = false;
+
         foreach (var crunchyEpMeta in selected.Values.ToList()){
-            Queue.Add(crunchyEpMeta);
+            if (crunchyEpMeta.Data?.First().Playback != null){
+                Queue.Add(crunchyEpMeta);
+            } else{
+                failed = true;
+            }
+        }
+
+        if (failed){
+            MainWindow.Instance.ShowError("Not all episodes could be added – make sure that you are signed in with an account that has an active premium subscription?");
+        } else{
+            MessageBus.Current.SendMessage(new ToastMessage($"Added episodes to the queue", ToastType.Information, 1));
         }
     }
 
@@ -471,7 +484,7 @@ public class Crunchyroll{
     private async Task<DownloadResponse> DownloadMediaList(CrunchyEpMeta data, CrDownloadOptions options){
         if (CmsToken?.Cms == null){
             Console.WriteLine("Missing CMS Token");
-            MainWindow.ShowError("Missing CMS Token - are you signed in?");
+            MainWindow.Instance.ShowError("Missing CMS Token - are you signed in?");
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
@@ -480,7 +493,7 @@ public class Crunchyroll{
         }
 
         if (Profile.Username == "???"){
-            MainWindow.ShowError("User Account not recognized - are you signed in?");
+            MainWindow.Instance.ShowError("User Account not recognized - are you signed in?");
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
@@ -490,7 +503,17 @@ public class Crunchyroll{
 
         if (!File.Exists(CfgManager.PathFFMPEG)){
             Console.Error.WriteLine("Missing ffmpeg");
-            MainWindow.ShowError("FFmpeg not found");
+            MainWindow.Instance.ShowError("FFmpeg not found");
+            return new DownloadResponse{
+                Data = new List<DownloadedMedia>(),
+                Error = true,
+                FileName = "./unknown"
+            };
+        }
+
+        if (!options.UseNonDrmStreams && !_widevine.canDecrypt){
+            Console.Error.WriteLine("Only searching for drm streams but widevine can't decrypt");
+            MainWindow.Instance.ShowError("Settings set to not search for DRM streams - but can't find CDM files in widevine folder ");
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
@@ -506,7 +529,7 @@ public class Crunchyroll{
 
         if (data.Data != null && data.Data.All(a => a.Playback == null)){
             Console.WriteLine("Video not available!");
-            MainWindow.ShowError("No Video Data found");
+            MainWindow.Instance.ShowError("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
             return new DownloadResponse{
                 Data = files,
                 Error = true,
@@ -544,7 +567,7 @@ public class Crunchyroll{
 
                     if (currentVersion.MediaGuid == null){
                         Console.WriteLine("Selected language not found in versions.");
-                        MainWindow.ShowError("Selected language not found");
+                        MainWindow.Instance.ShowError("Selected language not found");
                         continue;
                     }
 
@@ -583,7 +606,7 @@ public class Crunchyroll{
                 var fetchPlaybackData = await FetchPlaybackData(mediaId, epMeta);
 
                 if (!fetchPlaybackData.IsOk){
-                    MainWindow.ShowError("Couldn't get Playback Data");
+                    MainWindow.Instance.ShowError("Couldn't get Playback Data");
                     return new DownloadResponse{
                         Data = new List<DownloadedMedia>(),
                         Error = true,
@@ -641,7 +664,7 @@ public class Crunchyroll{
 
                     if (streams.Count < 1){
                         Console.WriteLine("No full streams found!");
-                        MainWindow.ShowError("No streams found");
+                        MainWindow.Instance.ShowError("No streams found");
                         return new DownloadResponse{
                             Data = new List<DownloadedMedia>(),
                             Error = true,
@@ -700,7 +723,6 @@ public class Crunchyroll{
 
                     StreamDetailsPop? curStream = null;
                     if (!dlFailed){
-                        
                         options.Kstream = options.Kstream >= 1 && options.Kstream <= streams.Count
                             ? options.Kstream
                             : 1;
@@ -726,7 +748,7 @@ public class Crunchyroll{
                         if (!streamPlaylistsReqResponse.IsOk){
                             dlFailed = true;
                         }
-                        
+
                         if (dlFailed){
                             Console.WriteLine($"CAN\'T FETCH VIDEO PLAYLISTS!");
                         } else{
@@ -847,7 +869,7 @@ public class Crunchyroll{
                                 LanguageItem? lang = Languages.languages.FirstOrDefault(a => a.Code == curStream.AudioLang);
                                 if (lang == null){
                                     Console.Error.WriteLine($"Unable to find language for code {curStream.AudioLang}");
-                                    MainWindow.ShowError($"Unable to find language for code {curStream.AudioLang}");
+                                    MainWindow.Instance.ShowError($"Unable to find language for code {curStream.AudioLang}");
                                     return new DownloadResponse{
                                         Data = new List<DownloadedMedia>(),
                                         Error = true,
@@ -869,7 +891,7 @@ public class Crunchyroll{
 
                                 if (options.DlVideoOnce && dlVideoOnce){
                                     Console.WriteLine("Already downloaded video, skipping video download...");
-                                }else if (options.Novids){
+                                } else if (options.Novids){
                                     Console.WriteLine("Skipping video download...");
                                 } else{
                                     var videoDownloadResult = await DownloadVideo(chosenVideoSegments, options, outFile, tsFile, tempTsFile, data);
@@ -1059,7 +1081,7 @@ public class Crunchyroll{
                                         }
                                     } else{
                                         Console.WriteLine("mp4decrypt not found, files need decryption. Decryption Keys: ");
-                                        MainWindow.ShowError($"mp4decrypt not found, files need decryption");
+                                        MainWindow.Instance.ShowError($"mp4decrypt not found, files need decryption");
                                     }
                                 } else{
                                     if (videoDownloaded){
@@ -1082,7 +1104,7 @@ public class Crunchyroll{
                                 }
                             } else if (!options.Novids){
                                 //TODO
-                                MainWindow.ShowError("Requested Video with the current settings not implemented");
+                                MainWindow.Instance.ShowError("Requested Video with the current settings not implemented");
                             } else if (options.Novids){
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
                                 Console.WriteLine("Downloading skipped!");
@@ -1395,15 +1417,14 @@ public class Crunchyroll{
         playbackRequestNonDrm.Headers.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
 
         var playbackRequestNonDrmResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequestNonDrm);
-        
+
         if (playbackRequestNonDrmResponse.IsOk && playbackRequestNonDrmResponse.ResponseContent != string.Empty){
             CrunchyNoDrmStream? playStream = JsonConvert.DeserializeObject<CrunchyNoDrmStream>(playbackRequestNonDrmResponse.ResponseContent, SettingsJsonSerializerSettings);
             CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
             if (playStream != null){
-                
                 var deauthVideoToken = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{currentMediaId}/{playStream.Token}/inactive", HttpMethod.Patch, true, false, null);
                 var deauthVideoTokenResponse = await HttpClientReq.Instance.SendHttpRequest(deauthVideoToken);
-                
+
                 if (playStream.HardSubs != null)
                     foreach (var hardsub in playStream.HardSubs){
                         var stream = hardsub.Value;

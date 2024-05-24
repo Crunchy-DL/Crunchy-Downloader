@@ -14,7 +14,7 @@
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
-    <Grid>
+    <Grid Name="mainGrid"> 
         <ContentControl x:Name="MainContent">
             <Grid RowDefinitions="Auto, *">
 
@@ -76,8 +76,9 @@
             </Grid>
         </ContentControl>
 
-        <!-- Your main window content -->
+        <!-- Tost Message -->
         <views:ToastNotification x:Name="Toast" IsVisible="False" />
+        
     </Grid>
 
 

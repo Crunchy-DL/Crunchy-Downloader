@@ -1,22 +1,13 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net.Http;
-using System.Reactive.Disposables;
-using System.Reflection;
-using System.Threading.Tasks;
 using Avalonia.Controls;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CRD.Downloader;
+using Avalonia.Markup.Xaml;
 using CRD.Utils.Updater;
 using CRD.ViewModels;
 using CRD.Views.Utils;
 using FluentAvalonia.Core;
 using FluentAvalonia.UI.Controls;
-using FluentAvalonia.UI.Navigation;
 using FluentAvalonia.UI.Windowing;
-using Newtonsoft.Json;
 using ReactiveUI;
 
 namespace CRD.Views;
@@ -25,9 +16,32 @@ public partial class MainWindow : AppWindow{
     private Stack<object> navigationStack = new Stack<object>();
 
 
+    #region Singelton
+
+    private static MainWindow? _instance;
+    private static readonly object Padlock = new();
+
+    public static MainWindow Instance{
+        get{
+            if (_instance == null){
+                lock (Padlock){
+                    if (_instance == null){
+                        _instance = new MainWindow();
+                    }
+                }
+            }
+
+            return _instance;
+        }
+    }
+
+    #endregion
+
+
     private object selectedNavVieItem;
-    
+
     public MainWindow(){
+        AvaloniaXamlLoader.Load(this);
         InitializeComponent();
 
         TitleBar.ExtendsContentIntoTitleBar = true;
@@ -38,7 +52,7 @@ public partial class MainWindow : AppWindow{
         var nv = this.FindControl<NavigationView>("NavView");
         nv.SelectedItem = nv.MenuItems.ElementAt(0);
         selectedNavVieItem = nv.SelectedItem;
-        
+
         MessageBus.Current.Listen<NavigationMessage>()
             .Subscribe(message => {
                 if (message.Refresh){
@@ -61,23 +75,26 @@ public partial class MainWindow : AppWindow{
             .Subscribe(message => ShowToast(message.Message, message.Type, message.Seconds));
     }
 
+    public async void ShowError(string message){
+        var dialog = new ContentDialog(){
+            Title = "Error",
+            Content = message,
+            CloseButtonText = "Close"
+        };
 
-    public static void ShowError(string message){
-        var window = new ErrorWindow();
-        window.SetErrorMessage(message);
-        window.Show(); // 'this' is a reference to the parent window, if applicable
+        _ = await dialog.ShowAsync();
     }
+
 
     public void ShowToast(string message, ToastType type, int durationInSeconds = 5){
         this.FindControl<ToastNotification>("Toast").Show(message, type, durationInSeconds);
     }
 
-    
+
     private void NavView_SelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e){
         if (sender is NavigationView navView){
             var selectedItem = navView.SelectedItem as NavigationViewItem;
             if (selectedItem != null){
-               
                 switch (selectedItem.Tag){
                     case "DownloadQueue":
                         navView.Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
@@ -107,6 +124,7 @@ public partial class MainWindow : AppWindow{
                         break;
                     case "UpdateAvailable":
                         Updater.Instance.DownloadAndUpdateAsync();
+                        ShowUpdateDialog();
                         break;
                     default:
                         // (sender as NavigationView).Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
@@ -116,7 +134,19 @@ public partial class MainWindow : AppWindow{
         }
     }
 
+    public async void ShowUpdateDialog(){
+        var dialog = new ContentDialog(){
+            Title = "Updating",
+            // CloseButtonText = "Close"
+        };
 
+        var viewModel = new ContentDialogUpdateViewModel(dialog);
+        dialog.Content = new ContentDialogUpdateView(){
+            DataContext = viewModel
+        };
+
+        _ = await dialog.ShowAsync();
+    }
 }
 
 public class ToastMessage(string message, ToastType type, int i){

@@ -116,9 +116,25 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
         DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing :  "Waiting";
 
-        if (epMeta.Data != null) InfoText = "Dub: " + epMeta.Data.First().Lang?.CrLocale + " - " + GetSubtitleString();
+        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString();
 
         Error = epMeta.DownloadProgress.Error;
+    }
+    
+    private string GetDubString(){
+        var hardSubs = Crunchyroll.Instance.CrunOptions.Hslang != "none" ? "Hardsub: " + Crunchyroll.Instance.CrunOptions.Hslang : "";
+        if (hardSubs != string.Empty){
+            return hardSubs;
+        }
+
+        var dubs = "Dub: ";
+
+        if (epMeta.SelectedDubs != null)
+            foreach (var crunOptionsDlDub in epMeta.SelectedDubs){
+                dubs += crunOptionsDlDub + " ";
+            }
+
+        return dubs;
     }
 
     private string GetSubtitleString(){
@@ -129,8 +145,11 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
         var softSubs = "Softsub: ";
 
+
         foreach (var crunOptionsDlSub in Crunchyroll.Instance.CrunOptions.DlSubs){
-            softSubs += crunOptionsDlSub + " ";
+            if (epMeta.AvailableSubs != null && epMeta.AvailableSubs.Contains(crunOptionsDlSub)){
+                softSubs += crunOptionsDlSub + " ";
+            }
         }
 
         return softSubs;
@@ -146,6 +165,8 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
         DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing :  "Waiting";
 
+        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString();
+        
         Error = epMeta.DownloadProgress.Error;
         
         if (PropertyChanged != null){
@@ -155,6 +176,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadSpeed)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DoingWhat)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Error)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InfoText)));
         }
     }
     

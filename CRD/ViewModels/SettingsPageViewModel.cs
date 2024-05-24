@@ -31,16 +31,19 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private bool _downloadChapters = true;
 
     [ObservableProperty]
-    private bool _muxToMp4 = false;
+    private bool _muxToMp4;
 
     [ObservableProperty]
-    private bool _history = false;
+    private bool _history;
+    
+    [ObservableProperty]
+    private bool _useNonDrmEndpoint = true;
 
     [ObservableProperty]
-    private int _leadingNumbers = 0;
+    private int _leadingNumbers;
 
     [ObservableProperty]
-    private int _simultaneousDownloads = 0;
+    private int _simultaneousDownloads;
 
     [ObservableProperty]
     private string _fileName = "";
@@ -76,7 +79,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private ObservableCollection<ListBoxItem> _selectedSubLang = new();
 
     [ObservableProperty]
-    private bool _useCustomAccent = false;
+    private bool _useCustomAccent;
 
     [ObservableProperty]
     private Color _listBoxColor;
@@ -174,7 +177,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     private readonly FluentAvaloniaTheme _faTheme;
 
-    private bool settingsLoaded = false;
+    private bool settingsLoaded;
 
     public SettingsPageViewModel(){
         var version = Assembly.GetExecutingAssembly().GetName().Version;
@@ -190,28 +193,16 @@ public partial class SettingsPageViewModel : ViewModelBase{
         }
 
         CrDownloadOptions options = Crunchyroll.Instance.CrunOptions;
-
+        
+        ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
+        SelectedHSLang = hsLang ?? HardSubLangList[0];
+        
         var softSubLang = SubLangList.Where(a => options.DlSubs.Contains(a.Content)).ToList();
 
         SelectedSubLang.Clear();
         foreach (var listBoxItem in softSubLang){
             SelectedSubLang.Add(listBoxItem);
         }
-
-        if (SelectedSubLang.Count == 0){
-            SelectedSubs = "none";
-        } else{
-            SelectedSubs = SelectedSubLang[0].Content.ToString();
-            for (var i = 1; i < SelectedSubLang.Count; i++){
-                SelectedSubs += "," + SelectedSubLang[i].Content;
-            }
-        }
-
-        ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
-        SelectedHSLang = hsLang ?? HardSubLangList[0];
-
-        // ComboBoxItem? dubLang = DubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DubLang[0]) ?? null;
-        // SelectedDubLang = dubLang ?? DubLangList[0];
 
         var dubLang = DubLangList.Where(a => options.DubLang.Contains(a.Content)).ToList();
 
@@ -220,16 +211,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
             SelectedDubLang.Add(listBoxItem);
         }
 
-        if (SelectedDubLang.Count == 0){
-            SelectedDubs = "none";
-        } else{
-            SelectedDubs = SelectedDubLang[0].Content.ToString();
-            for (var i = 1; i < SelectedDubLang.Count; i++){
-                SelectedDubs += "," + SelectedDubLang[i].Content;
-            }
-        }
+        UpdateSubAndDubString();
 
 
+        UseNonDrmEndpoint = options.UseNonDrmStreams;
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadChapters = options.Chapters;
@@ -266,23 +251,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
             return;
         }
 
-        if (SelectedSubLang.Count == 0){
-            SelectedSubs = "none";
-        } else{
-            SelectedSubs = SelectedSubLang[0].Content.ToString();
-            for (var i = 1; i < SelectedSubLang.Count; i++){
-                SelectedSubs += "," + SelectedSubLang[i].Content;
-            }
-        }
-        
-        if (SelectedDubLang.Count == 0){
-            SelectedDubs = "none";
-        } else{
-            SelectedDubs = SelectedDubLang[0].Content.ToString();
-            for (var i = 1; i < SelectedDubLang.Count; i++){
-                SelectedDubs += "," + SelectedDubLang[i].Content;
-            }
-        }
+        UpdateSubAndDubString();
 
         Crunchyroll.Instance.CrunOptions.Novids = !DownloadVideo;
         Crunchyroll.Instance.CrunOptions.Noaudio = !DownloadAudio;
@@ -314,7 +283,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.SimultaneousDownloads = SimultaneousDownloads;
 
-
+        Crunchyroll.Instance.CrunOptions.UseNonDrmStreams = UseNonDrmEndpoint;
         Crunchyroll.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
@@ -328,6 +297,26 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CfgManager.WriteSettingsToFile();
 
         // Console.WriteLine("Updated Settings");
+    }
+
+    private void UpdateSubAndDubString(){
+        if (SelectedSubLang.Count == 0){
+            SelectedSubs = "none";
+        } else{
+            SelectedSubs = SelectedSubLang[0].Content.ToString();
+            for (var i = 1; i < SelectedSubLang.Count; i++){
+                SelectedSubs += "," + SelectedSubLang[i].Content;
+            }
+        }
+
+        if (SelectedDubLang.Count == 0){
+            SelectedDubs = "none";
+        } else{
+            SelectedDubs = SelectedDubLang[0].Content.ToString();
+            for (var i = 1; i < SelectedDubLang.Count; i++){
+                SelectedDubs += "," + SelectedDubLang[i].Content;
+            }
+        }
     }
 
     partial void OnCurrentAppThemeChanged(ComboBoxItem? value){

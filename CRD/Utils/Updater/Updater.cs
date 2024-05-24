@@ -1,19 +1,26 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using CRD.ViewModels;
+using CRD.Views.Utils;
+using FluentAvalonia.UI.Controls;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Updater;
 
-public class Updater{
+public class Updater : INotifyPropertyChanged{
     #region Singelton
 
     private static Updater? _instance;
     private static readonly object Padlock = new();
+
+    public double progress = 0;
 
     public static Updater Instance{
         get{
@@ -30,6 +37,12 @@ public class Updater{
     }
 
     #endregion
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected void OnPropertyChanged([CallerMemberName] string propertyName = null){
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 
     private string downloadUrl = "";
     private readonly string tempPath = Path.Combine(Path.GetTempPath(), "Update.zip");
@@ -65,22 +78,52 @@ public class Updater{
         }
     }
 
+
     public async Task DownloadAndUpdateAsync(){
+        
+
+        
         try{
             using (var client = new HttpClient()){
                 // Download the zip file
                 var response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None)){
-                    await stream.CopyToAsync(fileStream);
+
+                if (response.IsSuccessStatusCode){
+                    var totalBytes = response.Content.Headers.ContentLength ?? -1L;
+                    var totalBytesRead = 0L;
+                    var buffer = new byte[8192];
+                    var isMoreToRead = true;
+
+                    using (var stream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None)){
+                        do{
+                            var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                            if (bytesRead == 0){
+                                isMoreToRead = false;
+                                progress = 100;
+                                OnPropertyChanged(nameof(progress));
+                                continue;
+                            }
+
+                            await fileStream.WriteAsync(buffer, 0, bytesRead);
+
+                            totalBytesRead += bytesRead;
+                            if (totalBytes != -1){
+                                progress = (double)totalBytesRead / totalBytes * 100;
+                                OnPropertyChanged(nameof(progress));
+                            }
+                        } while (isMoreToRead);
+                    }
+
+                    ZipFile.ExtractToDirectory(tempPath, extractPath, true);
+
+                    ApplyUpdate(extractPath);
+                } else{
+                    Console.WriteLine("Failed to get Update");
                 }
-
-                ZipFile.ExtractToDirectory(tempPath, extractPath, true);
-
-                ApplyUpdate(extractPath);
             }
         } catch (Exception e){
-            Console.WriteLine("Failed to get Update");
+            Console.WriteLine($"Failed to get Update: {e.Message}");
         }
     }
 

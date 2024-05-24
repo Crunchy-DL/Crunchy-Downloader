@@ -187,6 +187,10 @@ public class CrunchyEpMeta{
     public string? Image{ get; set; }
     public bool Paused{ get; set; }
     public DownloadProgress? DownloadProgress{ get; set; }
+    
+    public List<string>? SelectedDubs{ get; set; }
+    
+    public List<string>? AvailableSubs{ get; set; }
 }
 
 public class DownloadProgress{

@@ -111,4 +111,8 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "history", ApplyNamingConventions = false)]
     public bool History{ get; set; }
+    
+    [YamlMember(Alias = "user_non_drm_streams", ApplyNamingConventions = false)]
+    public bool UseNonDrmStreams{ get; set; }
+    
 }

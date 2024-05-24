@@ -166,6 +166,12 @@
                         <CheckBox IsChecked="{Binding DownloadChapters}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Check for Non-DRM streams">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding UseNonDrmEndpoint}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpander.Footer>
 

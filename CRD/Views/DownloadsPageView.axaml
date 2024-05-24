@@ -58,8 +58,8 @@
                                     <TextBlock Grid.Row="0" Grid.Column="0"    MaxHeight="117" Text="{Binding Title}" FontWeight="Bold" FontSize="16"
                                                TextWrapping="Wrap" VerticalAlignment="Top" />
                                     
-                                    <!-- <TextBlock Grid.Row="1" Grid.Column="0"    MaxHeight="117" Text="{Binding InfoText}" Opacity="0.8" -->
-                                    <!--            TextWrapping="Wrap" VerticalAlignment="Center" /> -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0"    MaxHeight="117" Text="{Binding InfoText}" Opacity="0.8"
+                                               TextWrapping="Wrap" VerticalAlignment="Center" />
                                     
                                     <Button Grid.Row="0" Grid.Column="1" Margin="0 0 5 0" IsVisible="{Binding !Error}" Command="{Binding ToggleIsDownloading}" FontStyle="Italic"
                                             HorizontalAlignment="Right" VerticalAlignment="Top">

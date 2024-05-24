@@ -141,6 +141,7 @@ public class CfgManager{
         Crunchyroll.Instance.CrunOptions.Theme = loadedOptions.Theme;
         Crunchyroll.Instance.CrunOptions.AccentColor = loadedOptions.AccentColor;
         Crunchyroll.Instance.CrunOptions.History = loadedOptions.History;
+        Crunchyroll.Instance.CrunOptions.UseNonDrmStreams = loadedOptions.UseNonDrmStreams;
     }
 
     private static object fileLock = new object();

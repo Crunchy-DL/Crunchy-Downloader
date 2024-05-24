@@ -80,7 +80,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
             if (currentSeriesList != null){
                 Crunchyroll.Instance.AddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
-                MessageBus.Current.SendMessage(new ToastMessage($"Added episodes to the queue", ToastType.Information, 1));
+                
             }
 
 
