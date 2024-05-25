@@ -1,5 +1,26 @@
 # 💾 Crunchy-Downloader
-This intuitive software allows you to seamlessly download your favorite series and episodes directly from Crunchyroll, ensuring you can enjoy high-quality anime offline, anytime and anywhere.
+
+A simple software that allows you to download your favorite series and episodes directly from [Crunchyroll](https://www.crunchyroll.com).
+
+<p align="center">
+  <a href="https://github.com/Crunchy-DL/Crunchy-Downloader">
+    <img src="https://img.shields.io/github/languages/code-size/Crunchy-DL/Crunchy-Downloader?style=flat-square" alt="Code size">
+  </a>
+  <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/releases/latest">
+    <img src="https://img.shields.io/github/downloads/Crunchy-DL/Crunchy-Downloader/total?style=flat-square" alt="Download Badge">
+  </a>
+  <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/LICENSE">
+    <img src="https://img.shields.io/github/license/Crunchy-DL/Crunchy-Downloader?style=flat-square" alt="License">
+  </a>
+  <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/releases">
+    <img src="https://img.shields.io/github/v/release/Crunchy-DL/Crunchy-Downloader?include_prereleases&style=flat-square" alt="Release">
+  </a>
+  <a href="https://discord.gg/mqGCTCtx">
+    <img src="https://img.shields.io/discord/1243699657629110383?label=discord&style=flat-square" alt="Discord">
+  </a>
+</p>
+
+
 
 > I am in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
 > The official Crunchyroll website can be found at https://crunchyroll.com/.
@@ -7,6 +28,7 @@ This intuitive software allows you to seamlessly download your favorite series a
 # ✏️ Software Requirements
 
 Windows 10 or Windows 11
+.NET Desktop Runtime
 
 # 🖥️ User Interface
 
