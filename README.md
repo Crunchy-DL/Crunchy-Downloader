@@ -28,6 +28,7 @@ A simple software that allows you to download your favorite series and episodes 
 # ✏️ Software Requirements
 
 Windows 10 or Windows 11
+
 .NET Desktop Runtime
 
 # 🖥️ User Interface
