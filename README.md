@@ -1,4 +1,4 @@
-# 💾 Crunchy-Downloader
+# 💾 Crunchyroll-Downloader
 
 A simple software that allows you to download your favorite series and episodes directly from [Crunchyroll](https://www.crunchyroll.com).
 
