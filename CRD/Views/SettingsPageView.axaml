@@ -236,6 +236,40 @@
 
                 </controls:SettingsExpander.Footer>
             </controls:SettingsExpander>
+            
+            <controls:SettingsExpander Header="Sonarr Settings"
+                                       IconSource="Globe"
+                                       Description="Adjust sonarr settings"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Host">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox   HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding SonarrHost}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Port">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox   HorizontalAlignment="Left" MinWidth="250"
+                                   Text="{Binding SonarrPort}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="API Key">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox   HorizontalAlignment="Left" MinWidth="250"
+                                   Text="{Binding SonarrApiKey}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Use SSL">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SonarrUseSsl}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+            </controls:SettingsExpander>
 
             <controls:SettingsExpander Header="App Theme"
                                        IconSource="DarkTheme"

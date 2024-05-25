@@ -13,7 +13,10 @@ using Newtonsoft.Json;
 
 namespace CRD.Downloader;
 
-public class CrSeries(Crunchyroll crunInstance){
+public class CrSeries(){
+    
+    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+    
     public async Task<List<CrunchyEpMeta>> DownloadFromSeriesId(string id, CrunchyMultiDownload data){
         var series = await ListSeriesId(id, "" ,data);
 
@@ -353,7 +356,7 @@ public class CrSeries(Crunchyroll crunInstance){
         }
 
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-
+      
         query["preferred_audio_language"] = "ja-JP";
         if (!string.IsNullOrEmpty(locale)){
             query["locale"] = Languages.Locale2language(locale).CrLocale;  

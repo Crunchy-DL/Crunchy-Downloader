@@ -17,6 +17,8 @@ using CRD.Utils.CustomList;
 using CRD.Utils.DRM;
 using CRD.Utils.HLS;
 using CRD.Utils.Muxing;
+using CRD.Utils.Sonarr;
+using CRD.Utils.Sonarr.Models;
 using CRD.Utils.Structs;
 using CRD.ViewModels;
 using CRD.Views;
@@ -62,6 +64,8 @@ public class Crunchyroll{
         Seasons =[]
     };
 
+    public List<SonarrSeries> SonarrSeries =[];
+
     #endregion
 
     public string DefaultLocale = "en";
@@ -101,10 +105,10 @@ public class Crunchyroll{
     public async Task Init(){
         _widevine = Widevine.Instance;
 
-        CrAuth = new CrAuth(Instance);
-        CrEpisode = new CrEpisode(Instance);
-        CrSeries = new CrSeries(Instance);
-        CrHistory = new History(Instance);
+        CrAuth = new CrAuth();
+        CrEpisode = new CrEpisode();
+        CrSeries = new CrSeries();
+        CrHistory = new History();
 
         Profile = new CrProfile{
             Username = "???",
@@ -146,6 +150,7 @@ public class Crunchyroll{
         CrunOptions.Theme = "System";
         CrunOptions.SelectedCalendarLanguage = "de";
         CrunOptions.DlVideoOnce = true;
+        CrunOptions.UseNonDrmStreams = true;
 
         CrunOptions.History = true;
 
@@ -155,6 +160,8 @@ public class Crunchyroll{
             if (File.Exists(CfgManager.PathCrHistory)){
                 HistoryList = JsonConvert.DeserializeObject<ObservableCollection<HistorySeries>>(File.ReadAllText(CfgManager.PathCrHistory)) ??[];
             }
+
+            RefreshSonarr();
         }
 
 
@@ -173,16 +180,14 @@ public class Crunchyroll{
         };
     }
 
-    // public async void TestMethode(){
-    //     // One Pice - GRMG8ZQZR
-    //     // Studio - G9VHN9QWQ
-    //     var episodesMeta = await DownloadFromSeriesId("G9VHN9QWQ", new CrunchyMultiDownload(Crunchy.Instance.CrunOptions.dubLang, true));
-    //
-    //
-    //     foreach (var crunchyEpMeta in episodesMeta){
-    //         await DownloadEpisode(crunchyEpMeta, CrunOptions, false);
-    //     }
-    // }
+    public async void RefreshSonarr(){
+        if (CrunOptions.SonarrProperties != null && !string.IsNullOrEmpty(CrunOptions.SonarrProperties.ApiKey)){
+            SonarrClient.Instance.SetApiUrl();
+            SonarrSeries = await SonarrClient.Instance.GetSeries();
+            CrHistory.MatchHistorySeriesWithSonarr(true);
+        }
+    }
+    
 
     public async Task<CalendarWeek> GetCalendarForDate(string weeksMondayDate, bool forceUpdate){
         if (!forceUpdate && calendar.TryGetValue(weeksMondayDate, out var forDate)){

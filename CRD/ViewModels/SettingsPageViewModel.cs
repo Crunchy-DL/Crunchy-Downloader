@@ -12,6 +12,7 @@ using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader;
 using CRD.Utils;
+using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using FluentAvalonia.Styling;
 
@@ -35,7 +36,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _history;
-    
+
     [ObservableProperty]
     private bool _useNonDrmEndpoint = true;
 
@@ -86,6 +87,18 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private Color _customAccentColor = Colors.SlateBlue;
+
+    [ObservableProperty]
+    private string _sonarrHost = "localhost";
+
+    [ObservableProperty]
+    private string _sonarrPort = "8989";
+
+    [ObservableProperty]
+    private string _sonarrApiKey = "";
+
+    [ObservableProperty]
+    private bool _sonarrUseSsl = false;
 
     public ObservableCollection<Color> PredefinedColors{ get; } = new(){
         Color.FromRgb(255, 185, 0),
@@ -193,10 +206,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
         }
 
         CrDownloadOptions options = Crunchyroll.Instance.CrunOptions;
-        
+
         ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
-        
+
         var softSubLang = SubLangList.Where(a => options.DlSubs.Contains(a.Content)).ToList();
 
         SelectedSubLang.Clear();
@@ -213,6 +226,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         UpdateSubAndDubString();
 
+        var props = options.SonarrProperties;
+
+        if (props != null){
+            SonarrUseSsl = props.UseSsl;
+            SonarrHost = props.Host + "";
+            SonarrPort = props.Port + "";
+            SonarrApiKey = props.ApiKey + "";
+        }
 
         UseNonDrmEndpoint = options.UseNonDrmStreams;
         DownloadVideo = !options.Novids;
@@ -292,6 +313,17 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.History = History;
 
+        var props = new SonarrProperties();
+
+        props.UseSsl = SonarrUseSsl;
+        props.Host = SonarrHost;
+        props.Port = Convert.ToInt32(SonarrPort);
+        props.ApiKey = SonarrApiKey;
+
+        Crunchyroll.Instance.CrunOptions.SonarrProperties = props;
+
+        Crunchyroll.Instance.RefreshSonarr();
+
         //TODO - Mux Options
 
         CfgManager.WriteSettingsToFile();
@@ -370,8 +402,6 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
 
-
-
     private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
         UpdateSettings();
     }
@@ -416,7 +446,27 @@ public partial class SettingsPageViewModel : ViewModelBase{
         UpdateSettings();
     }
 
+    partial void OnUseNonDrmEndpointChanged(bool value){
+        UpdateSettings();
+    }
+
     partial void OnHistoryChanged(bool value){
+        UpdateSettings();
+    }
+
+    partial void OnSonarrHostChanged(string value){
+        UpdateSettings();
+    }
+
+    partial void OnSonarrPortChanged(string value){
+        UpdateSettings();
+    }
+
+    partial void OnSonarrApiKeyChanged(string value){
+        UpdateSettings();
+    }
+
+    partial void OnSonarrUseSslChanged(bool value){
         UpdateSettings();
     }
 }

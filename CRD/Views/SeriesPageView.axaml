@@ -40,9 +40,36 @@
 
             <TextBlock Grid.Row="0" FontSize="50" Text="{Binding SelectedSeries.SeriesTitle}"></TextBlock>
             <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}"></TextBlock>
-            <StackPanel Grid.Row="3" Orientation="Horizontal">
-                <Button Command="{Binding UpdateData}" Margin="0 0 5  10">Fetch Series</Button>
-                <ToggleButton IsChecked="{Binding EditMode}" Margin="0 0 0  10">Edit</ToggleButton>
+            <StackPanel Grid.Row="3" Orientation="Vertical">
+
+                <StackPanel Orientation="Horizontal" Margin="0 10 10 10">
+
+                    <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                            BorderThickness="0" CornerRadius="50"
+                            Command="{Binding OpenCrPage}">
+                        <Grid>
+                            <controls:ImageIcon Source="../Assets/crunchy_icon_round.png" Width="30" Height="30" />
+                        </Grid>
+                    </Button>
+
+                    <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                            BorderThickness="0" CornerRadius="50"
+                            IsVisible="{Binding SonarrAvailable}"
+                            Command="{Binding OpenSonarrPage}">
+                        <Grid>
+                            <controls:ImageIcon Source="../Assets/sonarr.png" Width="30" Height="30" />
+                        </Grid>
+                    </Button>
+
+
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Command="{Binding UpdateData}" Margin="0 0 5  10">Fetch Series</Button>
+                    <ToggleButton IsChecked="{Binding EditMode}" Margin="0 0 0  10">Edit</ToggleButton>
+                </StackPanel>
+
+
             </StackPanel>
 
         </Grid>
@@ -79,6 +106,20 @@
                                         </StackPanel>
 
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
+                                            <StackPanel VerticalAlignment="Center" Margin="0 0 5 0"
+                                                        IsVisible="{Binding $parent[ItemsControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
+
+
+                                                <controls:ImageIcon IsVisible="{Binding SonarrHasFile}" Source="../Assets/sonarr.png" Width="25"
+                                                                    Height="25" />
+                                                
+                                                <controls:ImageIcon IsVisible="{Binding !SonarrHasFile}" Source="../Assets/sonarr_inactive.png" Width="25"
+                                                                    Height="25" />
+
+
+                                            </StackPanel>
+
 
                                             <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
                                                     BorderThickness="0" CornerRadius="50"

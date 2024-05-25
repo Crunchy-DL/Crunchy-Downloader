@@ -12,7 +12,10 @@ using Newtonsoft.Json;
 
 namespace CRD.Downloader;
 
-public class CrEpisode(Crunchyroll crunInstance){
+public class CrEpisode(){
+    
+    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+    
     public async Task<CrunchyEpisodeList?> ParseEpisodeById(string id,string locale){
         if (crunInstance.CmsToken?.Cms == null){
             Console.WriteLine("Missing CMS Access Token");

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using CRD.Utils;
+using CRD.Utils.Sonarr;
+using CRD.Utils.Sonarr.Models;
 using CRD.Utils.Structs;
 using CRD.Views;
 using Newtonsoft.Json;
@@ -17,11 +16,13 @@ using ReactiveUI;
 
 namespace CRD.Downloader;
 
-public class History(Crunchyroll crunInstance){
+public class History(){
+    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+
     public async Task UpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
-        
-        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja");
+
+        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja"); 
 
         if (parsedSeries == null){
             Console.WriteLine("Parse Data Invalid");
@@ -43,11 +44,12 @@ public class History(Crunchyroll crunInstance){
                             if (sVersion.Guid != null){
                                 sId = sVersion.Guid;
                             }
+
                             break;
                         }
                     }
                 }
-                
+
                 var seasonData = await crunInstance.CrSeries.GetSeasonDataById(sId);
                 UpdateWithSeasonData(seasonData);
             }
@@ -103,12 +105,22 @@ public class History(Crunchyroll crunInstance){
         if (historySeries != null){
             var historySeason = historySeries.Seasons.Find(s => s.SeasonId == episode.SeasonId);
 
+            var series = await crunInstance.CrSeries.SeriesById(seriesId);
+            if (series?.Data != null){
+                historySeries.SeriesTitle = series.Data.First().Title;
+            }
+
             if (historySeason != null){
+                historySeason.SeasonTitle = episode.SeasonTitle;
+                historySeason.SeasonNum = episode.SeasonNumber + "";
                 if (historySeason.EpisodesList.All(e => e.EpisodeId != episode.Id)){
                     var newHistoryEpisode = new HistoryEpisode{
-                        EpisodeTitle = episode.Title,
+                        EpisodeTitle = episode.Identifier.Contains("|M|") ? episode.SeasonTitle : episode.Title,
+                        EpisodeDescription = episode.Description,
                         EpisodeId = episode.Id,
                         Episode = episode.Episode,
+                        EpisodeSeasonNum = episode.SeasonNumber + "",
+                        SpecialEpisode = !int.TryParse(episode.Episode, out _),
                     };
 
                     historySeason.EpisodesList.Add(newHistoryEpisode);
@@ -122,6 +134,7 @@ public class History(Crunchyroll crunInstance){
 
                 historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0).ToList();
             }
+
             historySeries.UpdateNewEpisodes();
         } else{
             var newHistorySeries = new HistorySeries{
@@ -136,6 +149,7 @@ public class History(Crunchyroll crunInstance){
             if (series?.Data != null){
                 newHistorySeries.SeriesDescription = series.Data.First().Description;
                 newHistorySeries.ThumbnailImageUrl = GetSeriesThumbnail(series);
+                newHistorySeries.SeriesTitle = series.Data.First().Title;
             }
 
             newHistorySeries.Seasons.Add(newSeason);
@@ -148,6 +162,7 @@ public class History(Crunchyroll crunInstance){
             crunInstance.HistoryList.Add(item);
         }
 
+        MatchHistorySeriesWithSonarr(false);
         UpdateHistoryFile();
     }
 
@@ -158,27 +173,38 @@ public class History(Crunchyroll crunInstance){
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
             if (historySeries != null){
                 var historySeason = historySeries.Seasons.Find(s => s.SeasonId == firstEpisode.SeasonId);
+                var series = await crunInstance.CrSeries.SeriesById(seriesId);
+                if (series?.Data != null){
+                    historySeries.SeriesTitle = series.Data.First().Title;
+                }
 
                 if (historySeason != null){
+                    historySeason.SeasonTitle = firstEpisode.SeasonTitle;
+                    historySeason.SeasonNum = firstEpisode.SeasonNumber + "";
                     foreach (var crunchyEpisode in seasonData.Data){
-
                         var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == crunchyEpisode.Id);
-                        
+
                         if (historyEpisode == null){
                             var newHistoryEpisode = new HistoryEpisode{
-                                EpisodeTitle = crunchyEpisode.Title,
+                                EpisodeTitle = crunchyEpisode.Identifier.Contains("|M|") ? crunchyEpisode.SeasonTitle : crunchyEpisode.Title,
+                                EpisodeDescription = crunchyEpisode.Description,
                                 EpisodeId = crunchyEpisode.Id,
                                 Episode = crunchyEpisode.Episode,
+                                EpisodeSeasonNum = crunchyEpisode.SeasonNumber + "",
                                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
                             };
 
                             historySeason.EpisodesList.Add(newHistoryEpisode);
                         } else{
                             //Update existing episode
-                            historyEpisode.EpisodeTitle = crunchyEpisode.Title;
+                            historyEpisode.EpisodeTitle = crunchyEpisode.Identifier.Contains("|M|") ? crunchyEpisode.SeasonTitle : crunchyEpisode.Title;
                             historyEpisode.SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _);
+                            historyEpisode.EpisodeDescription = crunchyEpisode.Description;
+                            historyEpisode.EpisodeId = crunchyEpisode.Id;
+                            historyEpisode.Episode = crunchyEpisode.Episode;
+                            historyEpisode.EpisodeSeasonNum = crunchyEpisode.SeasonNumber + "";
+                            
                         }
-                        
                     }
 
                     historySeason.EpisodesList.Sort(new NumericStringPropertyComparer());
@@ -191,6 +217,7 @@ public class History(Crunchyroll crunInstance){
 
                     historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0).ToList();
                 }
+
                 historySeries.UpdateNewEpisodes();
             } else{
                 var newHistorySeries = new HistorySeries{
@@ -208,11 +235,12 @@ public class History(Crunchyroll crunInstance){
                 if (series?.Data != null){
                     newHistorySeries.SeriesDescription = series.Data.First().Description;
                     newHistorySeries.ThumbnailImageUrl = GetSeriesThumbnail(series);
+                    newHistorySeries.SeriesTitle = series.Data.First().Title;
                 }
 
 
                 newHistorySeries.Seasons.Add(newSeason);
-                
+
                 newHistorySeries.UpdateNewEpisodes();
             }
         }
@@ -223,6 +251,7 @@ public class History(Crunchyroll crunInstance){
             crunInstance.HistoryList.Add(item);
         }
 
+        MatchHistorySeriesWithSonarr(false);
         UpdateHistoryFile();
     }
 
@@ -255,9 +284,11 @@ public class History(Crunchyroll crunInstance){
 
         foreach (var crunchyEpisode in seasonData.Data!){
             var newHistoryEpisode = new HistoryEpisode{
-                EpisodeTitle = crunchyEpisode.Title,
+                EpisodeTitle = crunchyEpisode.Identifier.Contains("|M|") ? crunchyEpisode.SeasonTitle : crunchyEpisode.Title,
+                EpisodeDescription = crunchyEpisode.Description,
                 EpisodeId = crunchyEpisode.Id,
                 Episode = crunchyEpisode.Episode,
+                EpisodeSeasonNum = firstEpisode.SeasonNumber + "",
                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
             };
 
@@ -276,9 +307,11 @@ public class History(Crunchyroll crunInstance){
         };
 
         var newHistoryEpisode = new HistoryEpisode{
-            EpisodeTitle = episode.Title,
+            EpisodeTitle = episode.Identifier.Contains("|M|") ? episode.SeasonTitle : episode.Title,
+            EpisodeDescription = episode.Description,
             EpisodeId = episode.Id,
             Episode = episode.Episode,
+            EpisodeSeasonNum = episode.SeasonNumber + "",
             SpecialEpisode = !int.TryParse(episode.Episode, out _),
         };
 
@@ -287,6 +320,170 @@ public class History(Crunchyroll crunInstance){
 
         return newSeason;
     }
+
+    public void MatchHistorySeriesWithSonarr(bool updateAll){
+        foreach (var historySeries in crunInstance.HistoryList){
+            if (updateAll || string.IsNullOrEmpty(historySeries.SonarrSeriesId)){
+                var sonarrSeries = FindClosestMatch(historySeries.SeriesTitle);
+                if (sonarrSeries != null){
+                    historySeries.SonarrSeriesId = sonarrSeries.Id + "";
+                    historySeries.SonarrTvDbId = sonarrSeries.TvdbId + "";
+                    historySeries.SonarrSlugTitle = sonarrSeries.TitleSlug;
+                }
+            }
+        }
+    }
+
+    public async void MatchHistoryEpisodesWithSonarr(bool updateAll, HistorySeries historySeries){
+        if (!string.IsNullOrEmpty(historySeries.SonarrSeriesId)){
+            var episodes = await SonarrClient.Instance.GetEpisodes(int.Parse(historySeries.SonarrSeriesId));
+
+            List<HistoryEpisode> allHistoryEpisodes =[];
+
+            foreach (var historySeriesSeason in historySeries.Seasons){
+                allHistoryEpisodes.AddRange(historySeriesSeason.EpisodesList);
+            }
+
+            List<HistoryEpisode> failedEpisodes =[];
+            
+            foreach (var historyEpisode in allHistoryEpisodes){
+                if (updateAll || string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){
+                    var episode = FindClosestMatchEpisodes(episodes, historyEpisode.EpisodeTitle);
+                    if (episode != null){
+                        historyEpisode.SonarrEpisodeId = episode.Id + "";
+                        historyEpisode.SonarrEpisodeNumber = episode.EpisodeNumber + "";
+                        historyEpisode.SonarrHasFile = episode.HasFile;
+                        historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
+                        historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
+                        episodes.Remove(episode);
+                    } else{
+                        failedEpisodes.Add(historyEpisode);
+                    }
+                }
+            }
+
+            foreach (var historyEpisode in failedEpisodes){
+                var episode = episodes.Find(ele => ele.EpisodeNumber + "" == historyEpisode.Episode && ele.SeasonNumber + "" == historyEpisode.EpisodeSeasonNum);
+                if (episode != null){
+                    historyEpisode.SonarrEpisodeId = episode.Id + "";
+                    historyEpisode.SonarrEpisodeNumber = episode.EpisodeNumber + "";
+                    historyEpisode.SonarrHasFile = episode.HasFile;
+                    historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
+                    historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
+                    episodes.Remove(episode);
+                } else{
+                    var episode1 = episodes.Find(ele => !string.IsNullOrEmpty(historyEpisode.EpisodeDescription) && !string.IsNullOrEmpty(ele.Overview) && Helpers.CalculateCosineSimilarity(ele.Overview, historyEpisode.EpisodeDescription) > 0.8);
+                    
+                    if (episode1 != null){
+                        historyEpisode.SonarrEpisodeId = episode1.Id + "";
+                        historyEpisode.SonarrEpisodeNumber = episode1.EpisodeNumber + "";
+                        historyEpisode.SonarrHasFile = episode1.HasFile;
+                        historyEpisode.SonarrAbsolutNumber = episode1.AbsoluteEpisodeNumber + "";
+                        historyEpisode.SonarrSeasonNumber = episode1.SeasonNumber + "";
+                        episodes.Remove(episode1);
+                    } else{
+                        var episode2 = episodes.Find(ele => ele.AbsoluteEpisodeNumber + "" == historyEpisode.Episode);
+                        if (episode2 != null){
+                            historyEpisode.SonarrEpisodeId = episode2.Id + "";
+                            historyEpisode.SonarrEpisodeNumber = episode2.EpisodeNumber + "";
+                            historyEpisode.SonarrHasFile = episode2.HasFile;
+                            historyEpisode.SonarrAbsolutNumber = episode2.AbsoluteEpisodeNumber + "";
+                            historyEpisode.SonarrSeasonNumber = episode2.SeasonNumber + "";
+                            episodes.Remove(episode2);
+                        } else{
+                            Console.WriteLine("Could not match episode to sonarr episode");
+                        }
+                    }
+                }
+                
+            }
+
+            
+            
+        }
+    }
+
+    private SonarrSeries? FindClosestMatch(string title){
+        SonarrSeries? closestMatch = null;
+        double highestSimilarity = 0.0;
+
+        Parallel.ForEach(crunInstance.SonarrSeries, series => {
+            double similarity = CalculateSimilarity(series.Title, title);
+            if (similarity > highestSimilarity){
+                highestSimilarity = similarity;
+                closestMatch = series;
+            }
+        });
+
+        return highestSimilarity < 0.8 ? null : closestMatch;
+    }
+
+    public SonarrEpisode? FindClosestMatchEpisodes(List<SonarrEpisode> episodeList, string title){
+        SonarrEpisode? closestMatch = null;
+        double highestSimilarity = 0.0;
+        object lockObject = new object(); // To synchronize access to shared variables
+
+        Parallel.ForEach(episodeList, episode => {
+            double similarity = CalculateSimilarity(episode.Title, title);
+            lock (lockObject) // Ensure thread-safe access to shared variables
+            {
+                if (similarity > highestSimilarity){
+                    highestSimilarity = similarity;
+                    closestMatch = episode;
+                }
+            }
+        });
+
+        return highestSimilarity < 0.8 ? null : closestMatch;
+    }
+
+    private double CalculateSimilarity(string source, string target){
+        int distance = LevenshteinDistance(source, target);
+        return 1.0 - (double)distance / Math.Max(source.Length, target.Length);
+    }
+
+    private int LevenshteinDistance(string source, string target){
+        if (string.IsNullOrEmpty(source)){
+            return string.IsNullOrEmpty(target) ? 0 : target.Length;
+        }
+
+        if (string.IsNullOrEmpty(target)){
+            return source.Length;
+        }
+
+        int n = source.Length;
+        int m = target.Length;
+
+        // Create two work arrays of integer distances.
+        int[] previousDistances = new int[m + 1];
+        int[] currentDistances = new int[m + 1];
+
+        // Initialize the previous distance array.
+        for (int j = 0; j <= m; j++){
+            previousDistances[j] = j;
+        }
+
+        for (int i = 1; i <= n; i++){
+            // Initialize the current distance array.
+            currentDistances[0] = i;
+
+            for (int j = 1; j <= m; j++){
+                int cost = (target[j - 1] == source[i - 1]) ? 0 : 1;
+
+                currentDistances[j] = Math.Min(
+                    Math.Min(currentDistances[j - 1] + 1, previousDistances[j] + 1),
+                    previousDistances[j - 1] + cost);
+            }
+
+            // Swap the arrays for the next iteration.
+            var temp = previousDistances;
+            previousDistances = currentDistances;
+            currentDistances = temp;
+        }
+
+        // The final distance is in the previous distance array.
+        return previousDistances[m];
+    }
 }
 
 public class NumericStringPropertyComparer : IComparer<HistoryEpisode>{
@@ -294,7 +491,7 @@ public class NumericStringPropertyComparer : IComparer<HistoryEpisode>{
         if (int.TryParse(x.Episode, out int xInt) && int.TryParse(y.Episode, out int yInt)){
             return xInt.CompareTo(yInt);
         }
-        
+
         // Fall back to string comparison if not parseable as integers
         return String.Compare(x.Episode, y.Episode, StringComparison.Ordinal);
     }
@@ -306,6 +503,15 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonProperty("series_id")]
     public string? SeriesId{ get; set; }
+
+    [JsonProperty("sonarr_series_id")]
+    public string? SonarrSeriesId{ get; set; }
+
+    [JsonProperty("sonarr_tvdb_id")]
+    public string? SonarrTvDbId{ get; set; }
+
+    [JsonProperty("sonarr_slug_title")]
+    public string? SonarrSlugTitle{ get; set; }
 
     [JsonProperty("series_description")]
     public string? SeriesDescription{ get; set; }
@@ -346,18 +552,16 @@ public class HistorySeries : INotifyPropertyChanged{
 
         // Iterate over the Seasons list from the end to the beginning
         for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
-
             if (Seasons[i].SpecialSeason == true){
                 continue;
             }
-            
+
             // Iterate over the Episodes from the end to the beginning
             for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-
                 if (Seasons[i].EpisodesList[j].SpecialEpisode){
                     continue;
                 }
-                
+
                 if (!Seasons[i].EpisodesList[j].WasDownloaded){
                     count++;
                 } else{
@@ -365,27 +569,26 @@ public class HistorySeries : INotifyPropertyChanged{
                 }
             }
         }
+
         NewEpisodes = count;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NewEpisodes)));
     }
-    
+
     public async Task AddNewMissingToDownloads(){
         bool foundWatched = false;
 
         // Iterate over the Seasons list from the end to the beginning
         for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
-
             if (Seasons[i].SpecialSeason == true){
                 continue;
             }
-            
+
             // Iterate over the Episodes from the end to the beginning
             for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                
                 if (Seasons[i].EpisodesList[j].SpecialEpisode){
                     continue;
                 }
-                
+
                 if (!Seasons[i].EpisodesList[j].WasDownloaded){
                     //ADD to download queue
                     await Seasons[i].EpisodesList[j].DownloadEpisode();
@@ -410,9 +613,10 @@ public class HistorySeason : INotifyPropertyChanged{
 
     [JsonProperty("season_cr_season_number")]
     public string? SeasonNum{ get; set; }
-    
+
     [JsonProperty("season_special_season")]
     public bool? SpecialSeason{ get; set; }
+
     [JsonIgnore]
     public string CombinedProperty => SpecialSeason ?? false ? $"Specials {SeasonNum}" : $"Season {SeasonNum}";
 
@@ -450,15 +654,36 @@ public partial class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("episode_cr_episode_number")]
     public string? Episode{ get; set; }
+    
+    [JsonProperty("episode_cr_episode_description")]
+    public string? EpisodeDescription{ get; set; }
+    
+    [JsonProperty("episode_cr_season_number")]
+    public string? EpisodeSeasonNum{ get; set; }
 
     [JsonProperty("episode_was_downloaded")]
     public bool WasDownloaded{ get; set; }
 
     [JsonProperty("episode_special_episode")]
-    public bool SpecialEpisode{ get; set; } 
+    public bool SpecialEpisode{ get; set; }
+
+    [JsonProperty("sonarr_episode_id")]
+    public string? SonarrEpisodeId{ get; set; }
+
+    [JsonProperty("sonarr_has_file")]
+    public bool SonarrHasFile{ get; set; }
+
+    [JsonProperty("sonarr_episode_number")]
+    public string? SonarrEpisodeNumber{ get; set; }
+
+    [JsonProperty("sonarr_season_number")]
+    public string? SonarrSeasonNumber{ get; set; }
+
+    [JsonProperty("sonarr_absolut_number")]
+    public string? SonarrAbsolutNumber{ get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    
+
     public void ToggleWasDownloaded(){
         WasDownloaded = !WasDownloaded;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
@@ -466,6 +691,5 @@ public partial class HistoryEpisode : INotifyPropertyChanged{
 
     public async Task DownloadEpisode(){
         await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, Crunchyroll.Instance.DefaultLocale, Crunchyroll.Instance.CrunOptions.DubLang);
-
     }
 }

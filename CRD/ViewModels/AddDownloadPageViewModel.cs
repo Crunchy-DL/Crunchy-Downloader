@@ -39,7 +39,6 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     private CrunchySeriesList? currentSeriesList;
 
     public AddDownloadPageViewModel(){
-        // Items.Add(new ItemModel("", "Test", "22:33", "Test", "S1", "E1", 1, new List<string>()));
         SelectedItems.CollectionChanged += OnSelectedItemsChanged;
     }
 

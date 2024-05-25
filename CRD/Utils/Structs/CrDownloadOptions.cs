@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using CRD.Utils.Sonarr;
 using YamlDotNet.Serialization;
 
 namespace CRD.Utils.Structs;
@@ -114,5 +115,8 @@ public class CrDownloadOptions{
     
     [YamlMember(Alias = "user_non_drm_streams", ApplyNamingConventions = false)]
     public bool UseNonDrmStreams{ get; set; }
+    
+    [YamlMember(Alias = "sonarr_properties", ApplyNamingConventions = false)]
+    public SonarrProperties? SonarrProperties{ get; set; }
     
 }

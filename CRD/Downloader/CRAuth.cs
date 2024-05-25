@@ -12,7 +12,10 @@ using YamlDotNet.Core.Tokens;
 
 namespace CRD.Downloader;
 
-public class CrAuth(Crunchyroll crunInstance){
+public class CrAuth{
+
+    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+
     public async Task AuthAnonymous(){
         var formData = new Dictionary<string, string>{
             { "grant_type", "client_id" },

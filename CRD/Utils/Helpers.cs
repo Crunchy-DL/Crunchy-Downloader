@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -14,9 +16,9 @@ public class Helpers{
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="serializerSettings">The settings for deserialization if null default settings will be used</param>
     /// <returns>The deserialized object of type T.</returns>
-    public static T? Deserialize<T>(string json,JsonSerializerSettings? serializerSettings){
+    public static T? Deserialize<T>(string json, JsonSerializerSettings? serializerSettings){
         try{
-            return JsonConvert.DeserializeObject<T>(json,serializerSettings);
+            return JsonConvert.DeserializeObject<T>(json, serializerSettings);
         } catch (JsonException ex){
             Console.WriteLine($"Error deserializing JSON: {ex.Message}");
             throw;
@@ -76,5 +78,43 @@ public class Helpers{
 
             return (IsOk: isSuccess, ErrorCode: process.ExitCode);
         }
+    }
+
+    public static double CalculateCosineSimilarity(string text1, string text2){
+        var vector1 = ComputeWordFrequency(text1);
+        var vector2 = ComputeWordFrequency(text2);
+
+        return CosineSimilarity(vector1, vector2);
+    }
+
+    private static Dictionary<string, double> ComputeWordFrequency(string text){
+        var wordFrequency = new Dictionary<string, double>();
+        var words = text.Split(new[]{ ' ', ',', '.', ';', ':', '-', '_', '\'' }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var word in words){
+            var lowerWord = word.ToLower();
+            if (!wordFrequency.ContainsKey(lowerWord)){
+                wordFrequency[lowerWord] = 0;
+            }
+
+            wordFrequency[lowerWord]++;
+        }
+
+        return wordFrequency;
+    }
+
+    private static double CosineSimilarity(Dictionary<string, double> vector1, Dictionary<string, double> vector2){
+        var intersection = vector1.Keys.Intersect(vector2.Keys);
+
+        double dotProduct = intersection.Sum(term => vector1[term] * vector2[term]);
+        double normA = Math.Sqrt(vector1.Values.Sum(val => val * val));
+        double normB = Math.Sqrt(vector2.Values.Sum(val => val * val));
+
+        if (normA == 0 || normB == 0){
+            // If either vector has zero length, return 0 similarity.
+            return 0;
+        }
+
+        return dotProduct / (normA * normB);
     }
 }
