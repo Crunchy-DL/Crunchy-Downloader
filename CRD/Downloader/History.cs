@@ -112,14 +112,14 @@ public class History(){
 
             if (historySeason != null){
                 historySeason.SeasonTitle = episode.SeasonTitle;
-                historySeason.SeasonNum = episode.SeasonNumber + "";
+                historySeason.SeasonNum = Helpers.ExtractNumberAfterS(episode.Identifier) ?? episode.SeasonNumber + "";
                 if (historySeason.EpisodesList.All(e => e.EpisodeId != episode.Id)){
                     var newHistoryEpisode = new HistoryEpisode{
                         EpisodeTitle = episode.Identifier.Contains("|M|") ? episode.SeasonTitle : episode.Title,
                         EpisodeDescription = episode.Description,
                         EpisodeId = episode.Id,
                         Episode = episode.Episode,
-                        EpisodeSeasonNum = episode.SeasonNumber + "",
+                        EpisodeSeasonNum = Helpers.ExtractNumberAfterS(episode.Identifier) ?? episode.SeasonNumber + "",
                         SpecialEpisode = !int.TryParse(episode.Episode, out _),
                     };
 
@@ -180,7 +180,7 @@ public class History(){
 
                 if (historySeason != null){
                     historySeason.SeasonTitle = firstEpisode.SeasonTitle;
-                    historySeason.SeasonNum = firstEpisode.SeasonNumber + "";
+                    historySeason.SeasonNum = Helpers.ExtractNumberAfterS(firstEpisode.Identifier) ?? firstEpisode.SeasonNumber + "";
                     foreach (var crunchyEpisode in seasonData.Data){
                         var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == crunchyEpisode.Id);
 
@@ -190,7 +190,7 @@ public class History(){
                                 EpisodeDescription = crunchyEpisode.Description,
                                 EpisodeId = crunchyEpisode.Id,
                                 Episode = crunchyEpisode.Episode,
-                                EpisodeSeasonNum = crunchyEpisode.SeasonNumber + "",
+                                EpisodeSeasonNum = Helpers.ExtractNumberAfterS(crunchyEpisode.Identifier) ?? crunchyEpisode.SeasonNumber + "",
                                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
                             };
 
@@ -202,7 +202,7 @@ public class History(){
                             historyEpisode.EpisodeDescription = crunchyEpisode.Description;
                             historyEpisode.EpisodeId = crunchyEpisode.Id;
                             historyEpisode.Episode = crunchyEpisode.Episode;
-                            historyEpisode.EpisodeSeasonNum = crunchyEpisode.SeasonNumber + "";
+                            historyEpisode.EpisodeSeasonNum = Helpers.ExtractNumberAfterS(crunchyEpisode.Identifier) ?? crunchyEpisode.SeasonNumber + "";
                             
                         }
                     }
@@ -277,7 +277,7 @@ public class History(){
         var newSeason = new HistorySeason{
             SeasonTitle = firstEpisode.SeasonTitle,
             SeasonId = firstEpisode.SeasonId,
-            SeasonNum = firstEpisode.SeasonNumber + "",
+            SeasonNum = Helpers.ExtractNumberAfterS(firstEpisode.Identifier) ?? firstEpisode.SeasonNumber + "",
             EpisodesList =[],
             SpecialSeason = CheckStringForSpecial(firstEpisode.Identifier)
         };
@@ -288,7 +288,7 @@ public class History(){
                 EpisodeDescription = crunchyEpisode.Description,
                 EpisodeId = crunchyEpisode.Id,
                 Episode = crunchyEpisode.Episode,
-                EpisodeSeasonNum = firstEpisode.SeasonNumber + "",
+                EpisodeSeasonNum = Helpers.ExtractNumberAfterS(firstEpisode.Identifier) ?? firstEpisode.SeasonNumber + "",
                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
             };
 
@@ -302,7 +302,7 @@ public class History(){
         var newSeason = new HistorySeason{
             SeasonTitle = episode.SeasonTitle,
             SeasonId = episode.SeasonId,
-            SeasonNum = episode.SeasonNumber + "",
+            SeasonNum = Helpers.ExtractNumberAfterS(episode.Identifier) ?? episode.SeasonNumber + "",
             EpisodesList =[],
         };
 
@@ -311,7 +311,7 @@ public class History(){
             EpisodeDescription = episode.Description,
             EpisodeId = episode.Id,
             Episode = episode.Episode,
-            EpisodeSeasonNum = episode.SeasonNumber + "",
+            EpisodeSeasonNum = Helpers.ExtractNumberAfterS(episode.Identifier) ?? episode.SeasonNumber + "",
             SpecialEpisode = !int.TryParse(episode.Episode, out _),
         };
 

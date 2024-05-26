@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -75,7 +76,7 @@ public class CrSeries(){
                 epMeta.EpisodeNumber = item.Episode;
                 epMeta.EpisodeTitle = item.Title;
                 epMeta.SeasonId = item.SeasonId;
-                epMeta.Season = item.SeasonNumber;
+                epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + ""; 
                 epMeta.ShowId = item.SeriesId;
                 epMeta.AbsolutEpisodeNumberE = epNum;
                 epMeta.Image = images[images.Count / 2].FirstOrDefault().Source;
@@ -238,7 +239,7 @@ public class CrSeries(){
                               ?? Regex.Replace(item.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
 
             var title = item.Items[0].Title;
-            var seasonNumber = item.Items[0].SeasonNumber;
+            var seasonNumber = Helpers.ExtractNumberAfterS(item.Items[0].Identifier) ?? item.Items[0].SeasonNumber.ToString();
 
             var languages = item.Items.Select((a, index) =>
                 $"{(a.IsPremiumOnly ? "+ " : "")}{item.Langs.ElementAtOrDefault(index).Name ?? "Unknown"}").ToArray(); //☆
@@ -262,7 +263,7 @@ public class CrSeries(){
                 E = key.StartsWith("E") ? key.Substring(1) : key,
                 Lang = value.Langs.Select(a => a.Code).ToList(),
                 Name = value.Items[0].Title,
-                Season = value.Items[0].SeasonNumber.ToString(),
+                Season = Helpers.ExtractNumberAfterS(value.Items[0].Identifier) ?? value.Items[0].SeasonNumber.ToString(),
                 SeriesTitle = Regex.Replace(value.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd(),
                 SeasonTitle = Regex.Replace(value.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd(),
                 EpisodeNum = value.Items[0].EpisodeNumber?.ToString() ?? value.Items[0].Episode ?? "?",

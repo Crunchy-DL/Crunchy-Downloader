@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
@@ -116,5 +117,24 @@ public class Helpers{
         }
 
         return dotProduct / (normA * normB);
+    }
+
+    public static string? ExtractNumberAfterS(string input){
+        // Define the regular expression pattern to match |S followed by a number and optionally C followed by another number
+        string pattern = @"\|S(\d+)(?:C(\d+))?";
+        Match match = Regex.Match(input, pattern);
+
+        if (match.Success){
+            string sNumber = match.Groups[1].Value;
+            string cNumber = match.Groups[2].Value;
+
+            if (!string.IsNullOrEmpty(cNumber)){
+                return $"{sNumber}.{cNumber}";
+            } else{
+                return sNumber;
+            }
+        } else{
+            return null;
+        }
     }
 }

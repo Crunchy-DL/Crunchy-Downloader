@@ -30,6 +30,10 @@ public class FileNameManager{
             if (variable.Type == "int32"){
                 int len = replacement.Length;
                 replacement = len < numbers ? new string('0', numbers - len) + replacement : replacement;
+            } else if (variable.Type == "double"){
+                string[] parts = replacement.Split(',');
+                string formattedIntegerPart = parts[0].PadLeft(numbers, '0');
+                replacement = formattedIntegerPart + "," + parts[1];
             } else if (variable.Sanitize){
                 replacement = CleanupFilename(replacement);
             }

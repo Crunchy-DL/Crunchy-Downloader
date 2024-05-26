@@ -639,8 +639,8 @@ public class Crunchyroll{
                 variables.Add(new Variable("episode", (int.TryParse(data.EpisodeNumber, out int episodeNum) ? (object)episodeNum : data.AbsolutEpisodeNumberE) ?? string.Empty, false));
                 variables.Add(new Variable("seriesTitle", data.SeriesTitle ?? string.Empty, true));
                 variables.Add(new Variable("showTitle", data.SeasonTitle ?? string.Empty, true));
-                variables.Add(new Variable("season", data.Season ?? 0, false));
-
+                variables.Add(new Variable("season", data.Season != null ? Math.Round(double.Parse(data.Season, CultureInfo.InvariantCulture), 1) : 0, false));
+                
                 if (pbStreams?.Keys != null){
                     foreach (var key in pbStreams.Keys){
                         if ((key.Contains("hls") || key.Contains("dash")) &&
