@@ -33,7 +33,7 @@ public class FileNameManager{
             } else if (variable.Type == "double"){
                 string[] parts = replacement.Split(',');
                 string formattedIntegerPart = parts[0].PadLeft(numbers, '0');
-                replacement = formattedIntegerPart + "," + parts[1];
+                replacement = formattedIntegerPart + (parts.Length > 1 ? "," + parts[1] : "");
             } else if (variable.Sanitize){
                 replacement = CleanupFilename(replacement);
             }
