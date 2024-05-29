@@ -963,13 +963,14 @@ public class Crunchyroll{
                                     var json = JsonConvert.SerializeObject(reqBodyData);
                                     var reqBody = new StringContent(json, Encoding.UTF8, "application/json");
 
-                                    var decRequest = HttpClientReq.CreateRequestMessage("https://pl.crunchyroll.com/drm/v1/auth", HttpMethod.Post, false, false, null);
+                                    var decRequest = HttpClientReq.CreateRequestMessage($"{Api.DRM}", HttpMethod.Post, false, false, null);
                                     decRequest.Content = reqBody;
 
                                     var decRequestResponse = await HttpClientReq.Instance.SendHttpRequest(decRequest);
 
                                     if (!decRequestResponse.IsOk){
                                         Console.WriteLine("Request to DRM Authentication failed: ");
+                                        MainWindow.Instance.ShowError("Request to DRM Authentication failed");
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
@@ -1007,6 +1008,7 @@ public class Crunchyroll{
 
                                             if (!decryptVideo.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptVideo.ErrorCode}");
+                                                MainWindow.Instance.ShowError($"Decryption failed with exit code {decryptVideo.ErrorCode}");
                                                 try{
                                                     File.Move($"{tempTsFile}.video.enc.m4s", $"{tsFile}.video.enc.m4s");
                                                 } catch (IOException ex){

@@ -136,6 +136,7 @@ public static class Api{
     public static readonly string Cms = ApiBeta + "/content/v2/cms";
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
+    public static readonly string DRM = ApiBeta + "/drm/v1/auth";
 
 
     public static readonly string CmsN = ApiN + "/content/v2/cms";

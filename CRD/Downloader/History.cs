@@ -408,7 +408,7 @@ public class History(){
         double highestSimilarity = 0.0;
 
         Parallel.ForEach(crunInstance.SonarrSeries, series => {
-            double similarity = CalculateSimilarity(series.Title, title);
+            double similarity = CalculateSimilarity(series.Title.ToLower(), title.ToLower());
             if (similarity > highestSimilarity){
                 highestSimilarity = similarity;
                 closestMatch = series;
