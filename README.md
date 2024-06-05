@@ -15,11 +15,12 @@ A simple crunchyroll downloader that allows you to download your favorite series
   <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/releases">
     <img src="https://img.shields.io/github/v/release/Crunchy-DL/Crunchy-Downloader?include_prereleases&style=flat-square" alt="Release">
   </a>
+</p>
+<p align="center">
   <a href="https://discord.gg/mqGCTCtx">
-    <img src="https://img.shields.io/discord/1243699657629110383?label=discord&style=flat-square" alt="Discord">
+    <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
   </a>
 </p>
-
 
 
 > I am in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
