@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -187,7 +187,7 @@ public class Crunchyroll{
             CrHistory.MatchHistorySeriesWithSonarr(true);
         }
     }
-    
+
 
     public async Task<CalendarWeek> GetCalendarForDate(string weeksMondayDate, bool forceUpdate){
         if (!forceUpdate && calendar.TryGetValue(weeksMondayDate, out var forDate)){
@@ -346,7 +346,7 @@ public class Crunchyroll{
                 Percent = 100,
                 Time = 0,
                 DownloadSpeed = 0,
-                Doing = "Download Error"
+                Doing = "Download Error" + (!string.IsNullOrEmpty(res.ErrorText) ? " - " + res.ErrorText : ""),
             };
             Queue.Refresh();
             return false;
@@ -362,7 +362,7 @@ public class Crunchyroll{
             };
 
             Queue.Refresh();
-
+            
             await MuxStreams(res.Data,
                 new CrunchyMuxOptions{
                     FfmpegOptions = options.FfmpegOptions,
@@ -434,6 +434,19 @@ public class Crunchyroll{
             subt.Fonts = downloadedMedia.Fonts;
             subsList.Add(subt);
         }
+        
+        if (File.Exists($"{filename}.{(muxToMp3 ? "mp3" : options.Mp4 ? "mp4" : "mkv")}") && !string.IsNullOrEmpty(filename)){
+            string newFilePath = filename;
+            int counter = 1;
+
+            while (File.Exists($"{newFilePath}.{(muxToMp3 ? "mp3" : options.Mp4 ? "mp4" : "mkv")}")){
+                newFilePath = filename + $"({counter})";
+                counter++;
+            }
+
+            filename = newFilePath;
+        }
+        
 
         var merger = new Merger(new MergerOptions{
             OnlyVid = hasAudioStreams ? data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList() : new List<MergerInput>(),
@@ -493,7 +506,8 @@ public class Crunchyroll{
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
-                FileName = "./unknown"
+                FileName = "./unknown",
+                ErrorText = "Login problem"
             };
         }
 
@@ -502,7 +516,8 @@ public class Crunchyroll{
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
-                FileName = "./unknown"
+                FileName = "./unknown",
+                ErrorText = "Login problem"
             };
         }
 
@@ -512,7 +527,8 @@ public class Crunchyroll{
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
-                FileName = "./unknown"
+                FileName = "./unknown",
+                ErrorText = "Missing ffmpeg"
             };
         }
 
@@ -538,7 +554,8 @@ public class Crunchyroll{
             return new DownloadResponse{
                 Data = files,
                 Error = true,
-                FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown"
+                FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                ErrorText = "Video Data not found"
             };
         }
 
@@ -608,14 +625,15 @@ public class Crunchyroll{
                 #endregion
 
 
-                var fetchPlaybackData = await FetchPlaybackData(mediaId, epMeta);
+                var fetchPlaybackData = await FetchPlaybackData(mediaId, mediaGuid, epMeta);
 
                 if (!fetchPlaybackData.IsOk){
                     MainWindow.Instance.ShowError("Couldn't get Playback Data");
                     return new DownloadResponse{
                         Data = new List<DownloadedMedia>(),
                         Error = true,
-                        FileName = "./unknown"
+                        FileName = "./unknown",
+                        ErrorText = "Playback data not found"
                     };
                 }
 
@@ -640,7 +658,7 @@ public class Crunchyroll{
                 variables.Add(new Variable("seriesTitle", data.SeriesTitle ?? string.Empty, true));
                 variables.Add(new Variable("showTitle", data.SeasonTitle ?? string.Empty, true));
                 variables.Add(new Variable("season", data.Season != null ? Math.Round(double.Parse(data.Season, CultureInfo.InvariantCulture), 1) : 0, false));
-                
+
                 if (pbStreams?.Keys != null){
                     foreach (var key in pbStreams.Keys){
                         if ((key.Contains("hls") || key.Contains("dash")) &&
@@ -675,7 +693,8 @@ public class Crunchyroll{
                         return new DownloadResponse{
                             Data = new List<DownloadedMedia>(),
                             Error = true,
-                            FileName = "./unknown"
+                            FileName = "./unknown",
+                            ErrorText = "Streams not found"
                         };
                     }
 
@@ -754,6 +773,12 @@ public class Crunchyroll{
 
                         if (!streamPlaylistsReqResponse.IsOk){
                             dlFailed = true;
+                            return new DownloadResponse{
+                                Data = new List<DownloadedMedia>(),
+                                Error = true,
+                                FileName = "./unknown",
+                                ErrorText = "Playlist fetch problem"
+                            };
                         }
 
                         if (dlFailed){
@@ -777,7 +802,8 @@ public class Crunchyroll{
                                     return new DownloadResponse{
                                         Data = new List<DownloadedMedia>(),
                                         Error = true,
-                                        FileName = "./unknown"
+                                        FileName = "./unknown",
+                                        ErrorText = "No stream servers found"
                                     };
                                 }
 
@@ -880,7 +906,8 @@ public class Crunchyroll{
                                     return new DownloadResponse{
                                         Data = new List<DownloadedMedia>(),
                                         Error = true,
-                                        FileName = "./unknown"
+                                        FileName = "./unknown",
+                                        ErrorText = "Language not found"
                                     };
                                 }
 
@@ -934,7 +961,8 @@ public class Crunchyroll{
                                     return new DownloadResponse{
                                         Data = files,
                                         Error = dlFailed,
-                                        FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown"
+                                        FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                        ErrorText = ""
                                     };
                                 }
 
@@ -974,7 +1002,8 @@ public class Crunchyroll{
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
-                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown"
+                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                            ErrorText = "DRM Authentication failed"
                                         };
                                     }
 
@@ -991,7 +1020,8 @@ public class Crunchyroll{
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
-                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown"
+                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                            ErrorText = "Couldn't get DRM encryption keys"
                                         };
                                     }
 
@@ -1029,20 +1059,23 @@ public class Crunchyroll{
                                                         Console.WriteLine($"Failed to delete file {tempTsFile}.video.enc.m4s. Error: {ex.Message}");
                                                         // Handle exceptions if you need to log them or throw
                                                     }
-
-                                                    try{
-                                                        File.Move($"{tempTsFile}.video.m4s", $"{tsFile}.video.m4s");
-                                                    } catch (IOException ex){
-                                                        Console.WriteLine($"An error occurred: {ex.Message}");
-                                                    }
-
-                                                    files.Add(new DownloadedMedia{
-                                                        Type = DownloadMediaType.Video,
-                                                        Path = $"{tsFile}.video.m4s",
-                                                        Lang = lang.Value,
-                                                        IsPrimary = isPrimary
-                                                    });
                                                 }
+
+                                                try{
+                                                    if (File.Exists($"{tsFile}.video.m4s")){
+                                                        File.Delete($"{tsFile}.video.m4s");
+                                                    }
+                                                    File.Move($"{tempTsFile}.video.m4s", $"{tsFile}.video.m4s");
+                                                } catch (IOException ex){
+                                                    Console.WriteLine($"An error occurred: {ex.Message}");
+                                                }
+
+                                                files.Add(new DownloadedMedia{
+                                                    Type = DownloadMediaType.Video,
+                                                    Path = $"{tsFile}.video.m4s",
+                                                    Lang = lang.Value,
+                                                    IsPrimary = isPrimary
+                                                });
                                             }
                                         }
 
@@ -1072,20 +1105,23 @@ public class Crunchyroll{
                                                         Console.WriteLine($"Failed to delete file {tempTsFile}.audio.enc.m4s. Error: {ex.Message}");
                                                         // Handle exceptions if you need to log them or throw
                                                     }
-
-                                                    try{
-                                                        File.Move($"{tempTsFile}.audio.m4s", $"{tsFile}.audio.m4s");
-                                                    } catch (IOException ex){
-                                                        Console.WriteLine($"An error occurred: {ex.Message}");
-                                                    }
-
-                                                    files.Add(new DownloadedMedia{
-                                                        Type = DownloadMediaType.Audio,
-                                                        Path = $"{tsFile}.audio.m4s",
-                                                        Lang = lang.Value,
-                                                        IsPrimary = isPrimary
-                                                    });
                                                 }
+
+                                                try{
+                                                    if (File.Exists($"{tsFile}.audio.m4s")){
+                                                        File.Delete($"{tsFile}.audio.m4s");
+                                                    }
+                                                    File.Move($"{tempTsFile}.audio.m4s", $"{tsFile}.audio.m4s");
+                                                } catch (IOException ex){
+                                                    Console.WriteLine($"An error occurred: {ex.Message}");
+                                                }
+
+                                                files.Add(new DownloadedMedia{
+                                                    Type = DownloadMediaType.Audio,
+                                                    Path = $"{tsFile}.audio.m4s",
+                                                    Lang = lang.Value,
+                                                    IsPrimary = isPrimary
+                                                });
                                             }
                                         }
                                     } else{
@@ -1198,7 +1234,8 @@ public class Crunchyroll{
         return new DownloadResponse{
             Data = files,
             Error = dlFailed,
-            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown"
+            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+            ErrorText = ""
         };
     }
 
@@ -1428,7 +1465,7 @@ public class Crunchyroll{
         var playbackRequestNonDrmResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequestNonDrm);
 
         if (playbackRequestNonDrmResponse.IsOk && playbackRequestNonDrmResponse.ResponseContent != string.Empty){
-            CrunchyNoDrmStream? playStream = JsonConvert.DeserializeObject<CrunchyNoDrmStream>(playbackRequestNonDrmResponse.ResponseContent, SettingsJsonSerializerSettings);
+            CrunchyStreamData? playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(playbackRequestNonDrmResponse.ResponseContent, SettingsJsonSerializerSettings);
             CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
             if (playStream != null){
                 var deauthVideoToken = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{currentMediaId}/{playStream.Token}/inactive", HttpMethod.Patch, true, false, null);
@@ -1455,7 +1492,7 @@ public class Crunchyroll{
         }
     }
 
-    private async Task<(bool IsOk, PlaybackData pbData)> FetchPlaybackData(string mediaId, CrunchyEpMetaData epMeta){
+    private async Task<(bool IsOk, PlaybackData pbData)> FetchPlaybackData(string mediaId, string mediaGuidId, CrunchyEpMetaData epMeta){
         PlaybackData temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
         bool ok = true;
 
@@ -1506,13 +1543,50 @@ public class Crunchyroll{
                 }
             }
         } else{
-            playbackRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/videos/{mediaId}/streams", HttpMethod.Get, true, false, null);
+            // var playbackRequest22 = HttpClientReq.CreateRequestMessage($"{Api.Cms}/videos/{mediaId}/streams", HttpMethod.Get, true, false, null);
+            //  
+            //  var playbackRequestResponse22 = await HttpClientReq.Instance.SendHttpRequest(playbackRequest22);
+
+            playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/web/firefox/play", HttpMethod.Get, true, false, null);
 
             playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
 
             if (playbackRequestResponse.IsOk){
-                temppbData = Helpers.Deserialize<PlaybackData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ??
-                             new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+                // temppbData = Helpers.Deserialize<PlaybackData>(playbackRequestResponse22.ResponseContent, SettingsJsonSerializerSettings) ??
+                //              new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+
+                temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+                temppbData.Data.Add(new Dictionary<string, Dictionary<string, StreamDetails>>());
+
+                CrunchyStreamData? playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings);
+                CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
+                if (playStream != null){
+                    var deauthVideoToken = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{mediaGuidId}/{playStream.Token}/inactive", HttpMethod.Patch, true, false, null);
+                    var deauthVideoTokenResponse = await HttpClientReq.Instance.SendHttpRequest(deauthVideoToken);
+
+                    if (playStream.HardSubs != null)
+                        foreach (var hardsub in playStream.HardSubs){
+                            var stream = hardsub.Value;
+                            derivedPlayCrunchyStreams[hardsub.Key] = new StreamDetails{
+                                Url = stream.Url,
+                                HardsubLocale = Helpers.ConvertStringToLocale(stream.Hlang)
+                            };
+                        }
+
+                    derivedPlayCrunchyStreams[""] = new StreamDetails{
+                        Url = playStream.Url,
+                        HardsubLocale = Locale.DefaulT
+                    };
+
+                    if (temppbData.Data != null) temppbData.Data[0]["drm_adaptive_dash"] = derivedPlayCrunchyStreams;
+
+                    temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
+                    temppbData.Meta.Subtitles = new Subtitles();
+                    foreach (var playStreamSubtitle in playStream.Subtitles){
+                        Subtitle sub = playStreamSubtitle.Value;
+                        temppbData.Meta.Subtitles.Add(playStreamSubtitle.Key, new SubtitleInfo(){ Format = sub.Format, Locale = sub.Locale, Url = sub.Url });
+                    }
+                }
             } else{
                 Console.WriteLine("Request Stream URLs FAILED! Attempting fallback");
 

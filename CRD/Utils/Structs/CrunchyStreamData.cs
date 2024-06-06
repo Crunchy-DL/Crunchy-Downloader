@@ -1,10 +1,11 @@
 ﻿using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs;
 
-public class CrunchyNoDrmStream{
+public class CrunchyStreamData{
     public string? AssetId{ get; set; }
-    public string? AudioLocale{ get; set; }
+    public Locale? AudioLocale{ get; set; }
     public string? Bifs{ get; set; }
     public string? BurnedInLocale{ get; set; }
     public Dictionary<string, Caption>? Captions{ get; set; }
@@ -14,7 +15,7 @@ public class CrunchyNoDrmStream{
     public Dictionary<string, Subtitle>? Subtitles{ get; set; }
     public string? Token{ get; set; }
     public string? Url{ get; set; }
-    public List<object>? Versions{ get; set; } // Use a more specific type if known
+    public List<PlaybackVersion>? Versions{ get; set; } 
 }
 
 public class Caption{
@@ -41,6 +42,8 @@ public class Session{
 
 public class Subtitle{
     public string? Format{ get; set; }
-    public string? Language{ get; set; }
+    [JsonProperty("language")]
+    public Locale? Locale{ get; set; }
     public string? Url{ get; set; }
 }
+

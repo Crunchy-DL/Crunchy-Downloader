@@ -43,8 +43,9 @@ public class HttpClientReq{
 
         // Initialize the HttpClient with the handler
         client = new HttpClient(handler);
-
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0");
+        
+        // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
 
         // // Set Accept headers
         // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
@@ -85,16 +86,19 @@ public class HttpClientReq{
     }
 
     public async Task<(bool IsOk, string ResponseContent)> SendHttpRequest(HttpRequestMessage request){
+
+        string content = string.Empty;
         try{
             HttpResponseMessage response = await client.SendAsync(request);
 
+            content = await response.Content.ReadAsStringAsync();
+            
             response.EnsureSuccessStatusCode();
-
-            string content = await response.Content.ReadAsStringAsync();
+            
             return (IsOk: true, ResponseContent: content);
         } catch (Exception e){
             Console.WriteLine(e);
-            return (IsOk: false, ResponseContent: String.Empty);
+            return (IsOk: false, ResponseContent: content);
         }
     }
 
@@ -113,6 +117,7 @@ public class HttpClientReq{
 
         if (disableDrmHeader){
             request.Headers.Add("X-Cr-Disable-Drm", "true");
+            request.Headers.Add("x-cr-stream-limits", "false");
         }
 
 
