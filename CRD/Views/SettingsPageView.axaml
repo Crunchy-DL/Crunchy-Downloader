@@ -6,7 +6,8 @@
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="vm:SettingsPageViewModel"
-             x:Class="CRD.Views.SettingsPageView">
+             x:Class="CRD.Views.SettingsPageView"
+             Unloaded="OnUnloaded">
 
     <Design.DataContext>
         <vm:SettingsPageViewModel />
@@ -240,6 +241,7 @@
             <controls:SettingsExpander Header="Sonarr Settings"
                                        IconSource="Globe"
                                        Description="Adjust sonarr settings"
+                                       IsEnabled="{Binding History}"
                                        IsExpanded="False">
 
                 <controls:SettingsExpanderItem Content="Host">
@@ -266,6 +268,12 @@
                 <controls:SettingsExpanderItem Content="Use SSL">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SonarrUseSsl}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Use Sonarr Numbering" Description="Potentially wrong if it couldn't be matched">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SonarrUseSonarrNumbering}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
                 

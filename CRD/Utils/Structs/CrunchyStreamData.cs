@@ -25,7 +25,7 @@ public class Caption{
 }
 
 public class HardSub{
-    public string? Hlang{ get; set; }
+    public Locale? Hlang{ get; set; }
     public string? Url{ get; set; }
     public string? Quality{ get; set; }
 }

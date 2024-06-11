@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 namespace CRD.Utils.Sonarr;
 
 public class SonarrClient{
-    private string apiUrl;
+    private string? apiUrl;
 
     private HttpClient httpClient;
 
@@ -50,11 +50,39 @@ public class SonarrClient{
     public void SetApiUrl(){
         if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null) properties = Crunchyroll.Instance.CrunOptions.SonarrProperties;
 
-        if (properties != null){
-            apiUrl = $"http{(properties.UseSsl ? "s" : "")}://{properties.Host}:{properties.Port}{(properties.UrlBase ?? "")}/api";
+        if (properties != null ){
+            apiUrl = $"http{(properties.UseSsl ? "s" : "")}://{(!string.IsNullOrEmpty(properties.Host) ? properties.Host : "localhost")}:{properties.Port}{(properties.UrlBase ?? "")}/api";
         }
     }
 
+    public async Task CheckSonarrSettings(){
+       
+        SetApiUrl();
+
+        if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null){
+            Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled = false;
+        } else{
+            Crunchyroll.Instance.CrunOptions.SonarrProperties = new SonarrProperties(){SonarrEnabled = false};
+            return;
+        }
+        
+        Debug.WriteLine($"[DEBUG] [SonarrClient.CheckSonarrSettings] Endpoint URL: '{apiUrl}'");
+
+        var request = CreateRequestMessage($"{apiUrl}", HttpMethod.Get);
+        HttpResponseMessage response;
+       
+        try{
+            response = await httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null) Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled = true; 
+        } catch (Exception ex){
+            Debug.WriteLine($"[ERROR] [SonarrClient.GetJson] Endpoint URL: '{apiUrl}', {ex}");
+            if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null) Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled = false;
+        } 
+
+        
+    } 
+    
     public async Task<List<SonarrSeries>> GetSeries(){
         var json = await GetJson($"/v3/series{(true ? $"?includeSeasonImages={true}" : "")}");
 
@@ -151,4 +179,7 @@ public class SonarrProperties(){
     public bool UseSsl{ get; set; }
 
     public string? UrlBase{ get; set; }
+    
+    public bool UseSonarrNumbering{ get; set; }
+    public bool SonarrEnabled{ get; set; }
 }

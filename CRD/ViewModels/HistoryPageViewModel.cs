@@ -14,7 +14,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
     public ObservableCollection<HistorySeries> Items{ get; }
 
     [ObservableProperty]
-    private bool? _showLoading = false;
+    private static bool _fetchingData;
 
     [ObservableProperty]
     public HistorySeries _selectedSeries;
@@ -35,38 +35,52 @@ public partial class HistoryPageViewModel : ViewModelBase{
     }
 
 
+
+
     partial void OnSelectedSeriesChanged(HistorySeries value){
         Crunchyroll.Instance.SelectedSeries = value;
-        MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, false));
+        NavToSeries();
         _selectedSeries = null;
     }
-    
+
     [RelayCommand]
     public void RemoveSeries(string? seriesId){
-        
         HistorySeries? objectToRemove = Crunchyroll.Instance.HistoryList.ToList().Find(se => se.SeriesId == seriesId) ?? null;
-        if (objectToRemove != null) {
+        if (objectToRemove != null){
             Crunchyroll.Instance.HistoryList.Remove(objectToRemove);
             Items.Remove(objectToRemove);
         }
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);    
+
+        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
     }
-    
+
 
     [RelayCommand]
     public void NavToSeries(){
+        if (FetchingData){
+            return;
+        }
+
         MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, false));
     }
 
     [RelayCommand]
     public async void RefreshAll(){
+        FetchingData = true;
+        RaisePropertyChanged(nameof(FetchingData));
         for (int i = 0; i < Items.Count; i++){
-            ShowLoading = true;
+            Items[i].SetFetchingData();
+        }
+
+        for (int i = 0; i < Items.Count; i++){
+            FetchingData = true;
+            RaisePropertyChanged(nameof(FetchingData));
             await Items[i].FetchData("");
             Items[i].UpdateNewEpisodes();
         }
 
-        ShowLoading = false;
+        FetchingData = false;
+        RaisePropertyChanged(nameof(FetchingData));
     }
 
     [RelayCommand]
@@ -74,7 +88,5 @@ public partial class HistoryPageViewModel : ViewModelBase{
         for (int i = 0; i < Items.Count; i++){
             await Items[i].AddNewMissingToDownloads();
         }
-
-        ShowLoading = false;
     }
 }

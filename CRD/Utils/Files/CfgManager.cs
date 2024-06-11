@@ -146,12 +146,9 @@ public class CfgManager{
     }
 
     private static object fileLock = new object();
-
+    
     public static void WriteJsonToFile(string pathToFile, object obj){
         try{
-            // Serialize the object to a JSON string.
-            var jsonString = JsonConvert.SerializeObject(obj, Formatting.Indented);
-
             // Check if the directory exists; if not, create it.
             string directoryPath = Path.GetDirectoryName(pathToFile);
             if (!Directory.Exists(directoryPath)){
@@ -159,14 +156,19 @@ public class CfgManager{
             }
 
             lock (fileLock){
-                // Write the JSON string to file. Creates the file if it does not exist.
-                File.WriteAllText(pathToFile, jsonString);
+                // Write the JSON string to file using a streaming approach.
+                using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write))
+                using (var streamWriter = new StreamWriter(fileStream))
+                using (var jsonWriter = new JsonTextWriter(streamWriter){ Formatting = Formatting.Indented }){
+                    var serializer = new JsonSerializer();
+                    serializer.Serialize(jsonWriter, obj);
+                }
             }
         } catch (Exception ex){
             Console.WriteLine($"An error occurred: {ex.Message}");
         }
     }
-    
+
     public static bool CheckIfFileExists(string filePath){
         string dirPath = Path.GetDirectoryName(filePath) ?? string.Empty;
 

@@ -4,16 +4,14 @@
              xmlns:sty="clr-namespace:FluentAvalonia.Styling;assembly=FluentAvalonia"
              x:Class="CRD.App"
              RequestedThemeVariant="Dark">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+    <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
-        <crd:ViewLocator/>
+        <crd:ViewLocator />
     </Application.DataTemplates>
-             
-
-  
+    
     <Application.Styles>
-        <sty:FluentAvaloniaTheme/>
+        <sty:FluentAvaloniaTheme PreferSystemTheme="True" PreferUserAccentColor="True"/>
         <StyleInclude Source="avares://CRD/Styling/ControlsGalleryStyles.axaml" />
         <StyleInclude Source="avares://CRD/Assets/Icons.axaml"></StyleInclude>
     </Application.Styles>

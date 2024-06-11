@@ -10,6 +10,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Utils;
 using CRD.Utils.Sonarr;
@@ -99,6 +100,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _sonarrUseSsl = false;
+
+    [ObservableProperty]
+    private bool _sonarrUseSonarrNumbering = false;
 
     public ObservableCollection<Color> PredefinedColors{ get; } = new(){
         Color.FromRgb(255, 185, 0),
@@ -230,6 +234,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         if (props != null){
             SonarrUseSsl = props.UseSsl;
+            SonarrUseSonarrNumbering = props.UseSonarrNumbering;
             SonarrHost = props.Host + "";
             SonarrPort = props.Port + "";
             SonarrApiKey = props.ApiKey + "";
@@ -316,13 +321,21 @@ public partial class SettingsPageViewModel : ViewModelBase{
         var props = new SonarrProperties();
 
         props.UseSsl = SonarrUseSsl;
+        props.UseSonarrNumbering = SonarrUseSonarrNumbering;
         props.Host = SonarrHost;
-        props.Port = Convert.ToInt32(SonarrPort);
+
+        if (int.TryParse(SonarrPort, out var portNumber)){
+            props.Port = portNumber;
+        } else{
+            props.Port = 8989;
+        }
+
         props.ApiKey = SonarrApiKey;
+
 
         Crunchyroll.Instance.CrunOptions.SonarrProperties = props;
 
-        Crunchyroll.Instance.RefreshSonarr();
+        
 
         //TODO - Mux Options
 
@@ -467,6 +480,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
     partial void OnSonarrUseSslChanged(bool value){
+        UpdateSettings();
+    }
+
+    partial void OnSonarrUseSonarrNumberingChanged(bool value){
         UpdateSettings();
     }
 }

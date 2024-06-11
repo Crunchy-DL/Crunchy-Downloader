@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-
              xmlns:vm="clr-namespace:CRD.ViewModels"
              xmlns:ui="clr-namespace:CRD.Utils.UI"
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
@@ -22,22 +21,12 @@
         </Grid.RowDefinitions>
         
         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="20 0 0 0 ">
-            <Button  Command="{Binding RefreshAll}" Margin="10">Refresh All</Button>
-            <Button  Command="{Binding AddMissingToQueue}" Margin="10">Add To Queue</Button>
-            <ToggleButton IsChecked="{Binding EditMode}"   Margin="10">Edit</ToggleButton>
+            <Button  Command="{Binding RefreshAll}" Margin="10" IsEnabled="{Binding !FetchingData}">Refresh All</Button>
+            <Button  Command="{Binding AddMissingToQueue}" Margin="10" IsEnabled="{Binding !FetchingData}">Add To Queue</Button>
+            <ToggleButton IsChecked="{Binding EditMode}"   Margin="10" IsEnabled="{Binding !FetchingData}">Edit</ToggleButton>
         </StackPanel>
         
-        <Grid Grid.Row="1" Grid.Column="0">
-            <!-- Spinner Style ProgressBar -->
-            <ProgressBar IsIndeterminate="True"
-                         Value="50"
-                         Maximum="100"
-                         MaxWidth="100"
-                         IsVisible="{Binding ShowLoading}">
-            </ProgressBar>
-        </Grid>
-        
-        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Items}" IsVisible="{Binding !ShowLoading}" SelectedItem="{Binding SelectedSeries}" Margin="5">
+        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedSeries}" Margin="5">
 
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -59,8 +48,8 @@
                                                Padding="0,5,0,0"/>
                                 </StackPanel>
                             </Grid>
-                            <TextBlock HorizontalAlignment="Center" Text="{Binding SeriesTitle}" TextWrapping="NoWrap"
-                                       Margin="4,0,0,0">
+                            <TextBlock HorizontalAlignment="Center" Text="{Binding SeriesTitle}" TextWrapping="NoWrap" MaxWidth="240"
+                                       Margin="4,0,4,0">
                             </TextBlock>
                         </StackPanel>
                         
@@ -70,6 +59,7 @@
                                     VerticalAlignment="Center"
                                     Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
                                     CommandParameter="{Binding SeriesId}"
+                                    IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).FetchingData}"
                                     >
                                 <ToolTip.Tip>
                                     <TextBlock Text="Remove Series" FontSize="15" />
@@ -78,6 +68,14 @@
                                     <controls:SymbolIcon Symbol="Delete" FontSize="32" />
                                 </StackPanel>
                             </Button>
+                        </StackPanel>
+                        
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="250" Width="250"
+                                    MaxHeight="400" Height="400" Background="#90000000" IsVisible="{Binding FetchingData}">
+                            <!-- <ProgressBar IsIndeterminate="{Binding FetchingData}" -->
+                            <!--              MaxWidth="100"> -->
+                            <!-- </ProgressBar> -->
+                            <controls:ProgressRing Width="100" Height="100"></controls:ProgressRing>
                         </StackPanel>
                         
                     </Grid>

@@ -38,7 +38,11 @@ public class Helpers{
             }
         }
 
-        return Locale.DefaulT; // Return default if not found
+        if (string.IsNullOrEmpty(value)){
+            return Locale.DefaulT;
+        }
+        
+        return Locale.Unknown; // Return default if not found
     }
 
     public static string GenerateSessionId(){
@@ -88,22 +92,44 @@ public class Helpers{
         return CosineSimilarity(vector1, vector2);
     }
 
-    private static Dictionary<string, double> ComputeWordFrequency(string text){
-        var wordFrequency = new Dictionary<string, double>();
-        var words = text.Split(new[]{ ' ', ',', '.', ';', ':', '-', '_', '\'' }, StringSplitOptions.RemoveEmptyEntries);
+    private static readonly char[] Delimiters ={ ' ', ',', '.', ';', ':', '-', '_', '\'' };
+
+    public static Dictionary<string, double> ComputeWordFrequency(string text){
+        var wordFrequency = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+        var words = SplitText(text);
 
         foreach (var word in words){
-            var lowerWord = word.ToLower();
-            if (!wordFrequency.ContainsKey(lowerWord)){
-                wordFrequency[lowerWord] = 0;
+            if (wordFrequency.TryGetValue(word, out double count)){
+                wordFrequency[word] = count + 1;
+            } else{
+                wordFrequency[word] = 1;
             }
-
-            wordFrequency[lowerWord]++;
         }
 
         return wordFrequency;
     }
 
+    private static List<string> SplitText(string text){
+        var words = new List<string>();
+        int start = 0;
+        for (int i = 0; i < text.Length; i++){
+            if (Array.IndexOf(Delimiters, text[i]) >= 0){
+                if (i > start){
+                    words.Add(text.Substring(start, i - start));
+                }
+
+                start = i + 1;
+            }
+        }
+
+        if (start < text.Length){
+            words.Add(text.Substring(start));
+        }
+
+        return words;
+    }
+
+    
     private static double CosineSimilarity(Dictionary<string, double> vector1, Dictionary<string, double> vector2){
         var intersection = vector1.Keys.Intersect(vector2.Keys);
 

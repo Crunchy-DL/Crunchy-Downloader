@@ -164,7 +164,6 @@ public class Crunchyroll{
             RefreshSonarr();
         }
 
-
         calendarLanguage = new(){
             { "en-us", "https://www.crunchyroll.com/simulcastcalendar" },
             { "es", "https://www.crunchyroll.com/es/simulcastcalendar" },
@@ -181,8 +180,8 @@ public class Crunchyroll{
     }
 
     public async void RefreshSonarr(){
-        if (CrunOptions.SonarrProperties != null && !string.IsNullOrEmpty(CrunOptions.SonarrProperties.ApiKey)){
-            SonarrClient.Instance.SetApiUrl();
+        await SonarrClient.Instance.CheckSonarrSettings();
+        if (CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             SonarrSeries = await SonarrClient.Instance.GetSeries();
             CrHistory.MatchHistorySeriesWithSonarr(true);
         }
@@ -221,8 +220,6 @@ public class Crunchyroll{
 
                 var dayName = day.SelectSingleNode(".//h1[@class='day-name']/time")?.InnerText.Trim();
 
-                // Console.WriteLine($"Day: {dayName}, Date: {date}");
-
                 CalendarDay calDay = new CalendarDay();
 
                 calDay.CalendarEpisodes = new List<CalendarEpisode>();
@@ -242,13 +239,9 @@ public class Crunchyroll{
                         var episodeLink = episode.SelectSingleNode(".//a[contains(@class, 'available-episode-link')]")?.GetAttributeValue("href", "No link");
                         var thumbnailUrl = episode.SelectSingleNode(".//img[contains(@class, 'thumbnail')]")?.GetAttributeValue("src", "No image");
                         var isPremiumOnly = episode.SelectSingleNode(".//svg[contains(@class, 'premium-flag')]") != null;
+                        var isPremiere = episode.SelectSingleNode(".//div[contains(@class, 'premiere-flag')]") != null;
                         var seasonName = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
                         var episodeNumber = episode.SelectSingleNode(".//meta[contains(@itemprop, 'episodeNumber')]")?.GetAttributeValue("content", "?");
-
-                        // Console.WriteLine($"  Time: {episodeTime} (Has Passed: {hasPassed}), Episode: {episodeName}");
-                        // Console.WriteLine($"  Season Link: {seasonLink}");
-                        // Console.WriteLine($"  Episode Link: {episodeLink}");
-                        // Console.WriteLine($"  Thumbnail URL: {thumbnailUrl}");
 
                         CalendarEpisode calEpisode = new CalendarEpisode();
 
@@ -259,6 +252,7 @@ public class Crunchyroll{
                         calEpisode.EpisodeUrl = episodeLink;
                         calEpisode.ThumbnailUrl = thumbnailUrl;
                         calEpisode.IsPremiumOnly = isPremiumOnly;
+                        calEpisode.IsPremiere = isPremiere;
                         calEpisode.SeasonName = seasonName;
                         calEpisode.EpisodeNumber = episodeNumber;
 
@@ -267,7 +261,6 @@ public class Crunchyroll{
                 }
 
                 week.CalendarDays.Add(calDay);
-                // Console.WriteLine();
             }
         } else{
             Console.WriteLine("No days found in the HTML document.");
@@ -291,10 +284,19 @@ public class Crunchyroll{
                 return;
             }
 
-            var sList = CrEpisode.EpisodeData((CrunchyEpisodeList)episodeL);
+            var sList = await CrEpisode.EpisodeData((CrunchyEpisodeList)episodeL);
             var selected = CrEpisode.EpisodeMeta(sList.Data, dubLang);
             var metas = selected.Values.ToList();
+
             foreach (var crunchyEpMeta in metas){
+                if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
+                    var historyEpisode = CrHistory.GetHistoryEpisode(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
+                    if (historyEpisode != null){
+                        crunchyEpMeta.EpisodeNumber = historyEpisode.SonarrEpisodeNumber;
+                        crunchyEpMeta.Season = historyEpisode.SonarrSeasonNumber;
+                    }
+                }
+
                 Queue.Add(crunchyEpMeta);
             }
 
@@ -310,6 +312,14 @@ public class Crunchyroll{
 
         foreach (var crunchyEpMeta in selected.Values.ToList()){
             if (crunchyEpMeta.Data?.First().Playback != null){
+                if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
+                    var historyEpisode = CrHistory.GetHistoryEpisode(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
+                    if (historyEpisode != null){
+                        crunchyEpMeta.EpisodeNumber = historyEpisode.SonarrEpisodeNumber;
+                        crunchyEpMeta.Season = historyEpisode.SonarrSeasonNumber;
+                    }
+                }
+
                 Queue.Add(crunchyEpMeta);
             } else{
                 failed = true;
@@ -362,7 +372,7 @@ public class Crunchyroll{
             };
 
             Queue.Refresh();
-            
+
             await MuxStreams(res.Data,
                 new CrunchyMuxOptions{
                     FfmpegOptions = options.FfmpegOptions,
@@ -434,7 +444,7 @@ public class Crunchyroll{
             subt.Fonts = downloadedMedia.Fonts;
             subsList.Add(subt);
         }
-        
+
         if (File.Exists($"{filename}.{(muxToMp3 ? "mp3" : options.Mp4 ? "mp4" : "mkv")}") && !string.IsNullOrEmpty(filename)){
             string newFilePath = filename;
             int counter = 1;
@@ -446,7 +456,7 @@ public class Crunchyroll{
 
             filename = newFilePath;
         }
-        
+
 
         var merger = new Merger(new MergerOptions{
             OnlyVid = hasAudioStreams ? data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList() : new List<MergerInput>(),
@@ -559,10 +569,11 @@ public class Crunchyroll{
             };
         }
 
+
         bool dlFailed = false;
         bool dlVideoOnce = false;
 
-        if (data.Data != null)
+        if (data.Data != null){
             foreach (CrunchyEpMetaData epMeta in data.Data){
                 Console.WriteLine($"Requesting: [{epMeta.MediaId}] {mediaName}");
 
@@ -1065,6 +1076,7 @@ public class Crunchyroll{
                                                     if (File.Exists($"{tsFile}.video.m4s")){
                                                         File.Delete($"{tsFile}.video.m4s");
                                                     }
+
                                                     File.Move($"{tempTsFile}.video.m4s", $"{tsFile}.video.m4s");
                                                 } catch (IOException ex){
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
@@ -1111,6 +1123,7 @@ public class Crunchyroll{
                                                     if (File.Exists($"{tsFile}.audio.m4s")){
                                                         File.Delete($"{tsFile}.audio.m4s");
                                                     }
+
                                                     File.Move($"{tempTsFile}.audio.m4s", $"{tsFile}.audio.m4s");
                                                 } catch (IOException ex){
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
@@ -1226,7 +1239,7 @@ public class Crunchyroll{
 
                 await Task.Delay(options.Waittime);
             }
-
+        }
 
         // variables.Add(new Variable("height", quality == 0 ? plQuality.Last().RESOLUTION.Height : plQuality[quality - 1].RESOLUTION.Height, false));
         // variables.Add(new Variable("width", quality == 0 ? plQuality.Last().RESOLUTION.Width : plQuality[quality - 1].RESOLUTION.Width, false));
@@ -1476,7 +1489,7 @@ public class Crunchyroll{
                         var stream = hardsub.Value;
                         derivedPlayCrunchyStreams[hardsub.Key] = new StreamDetails{
                             Url = stream.Url,
-                            HardsubLocale = Helpers.ConvertStringToLocale(stream.Hlang)
+                            HardsubLocale = stream.Hlang
                         };
                     }
 
@@ -1552,7 +1565,7 @@ public class Crunchyroll{
             playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
 
             if (playbackRequestResponse.IsOk){
-                // temppbData = Helpers.Deserialize<PlaybackData>(playbackRequestResponse22.ResponseContent, SettingsJsonSerializerSettings) ??
+                // var temppbData2 = Helpers.Deserialize<PlaybackData>(playbackRequestResponse22.ResponseContent, SettingsJsonSerializerSettings) ??
                 //              new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
 
                 temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
@@ -1569,7 +1582,7 @@ public class Crunchyroll{
                             var stream = hardsub.Value;
                             derivedPlayCrunchyStreams[hardsub.Key] = new StreamDetails{
                                 Url = stream.Url,
-                                HardsubLocale = Helpers.ConvertStringToLocale(stream.Hlang)
+                                HardsubLocale = stream.Hlang
                             };
                         }
 
@@ -1578,7 +1591,7 @@ public class Crunchyroll{
                         HardsubLocale = Locale.DefaulT
                     };
 
-                    if (temppbData.Data != null) temppbData.Data[0]["drm_adaptive_dash"] = derivedPlayCrunchyStreams;
+                    if (temppbData.Data != null) temppbData.Data[0]["drm_adaptive_switch_dash"] = derivedPlayCrunchyStreams;
 
                     temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
                     temppbData.Meta.Subtitles = new Subtitles();

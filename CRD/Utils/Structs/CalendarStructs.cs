@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
-using CRD.Views;
-using ReactiveUI;
 
 namespace CRD.Utils.Structs;
 
@@ -36,6 +34,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
     public string? EpisodeNumber{ get; set; }
     
     public bool IsPremiumOnly{ get; set; }
+    public bool IsPremiere{ get; set; }
 
     public string? SeasonName{ get; set; }
 
@@ -51,7 +50,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
             Crunchyroll.Instance.AddEpisodeToQue(id, locale, Crunchyroll.Instance.CrunOptions.DubLang);
         }
     }
-
+    
     public async Task LoadImage(){
         try{
             using (var client = new HttpClient()){

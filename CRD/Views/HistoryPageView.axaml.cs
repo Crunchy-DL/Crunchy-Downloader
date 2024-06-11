@@ -1,11 +1,11 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
+﻿using Avalonia.Controls;
 
 namespace CRD.Views;
 
 public partial class HistoryPageView : UserControl{
+    
     public HistoryPageView(){
         InitializeComponent();
     }
+
 }

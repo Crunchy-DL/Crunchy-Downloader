@@ -47,7 +47,7 @@ public class CrEpisode(){
     }
 
 
-    public CrunchySeriesList EpisodeData(CrunchyEpisodeList dlEpisodes){
+    public async Task<CrunchySeriesList> EpisodeData(CrunchyEpisodeList dlEpisodes){
         bool serieshasversions = true;
 
         Dictionary<string, EpisodeAndLanguage> episodes = new Dictionary<string, EpisodeAndLanguage>();
@@ -56,7 +56,7 @@ public class CrEpisode(){
             foreach (var episode in dlEpisodes.Data){
                 
                 if (crunInstance.CrunOptions.History){
-                    crunInstance.CrHistory.UpdateWithEpisode(episode);
+                   await crunInstance.CrHistory.UpdateWithEpisode(episode);
                 }
                 
                 // Prepare the episode array

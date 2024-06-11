@@ -421,7 +421,7 @@ public class HlsDownloader{
                 try{
                     response = await HttpClientReq.Instance.GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
                     response.EnsureSuccessStatusCode();
-                    return await response.Content.ReadAsByteArrayAsync();
+                    return await ReadContentAsByteArrayAsync(response.Content);
                 } catch (HttpRequestException ex){
                     // Log retry attempts
                     string partType = isKey ? "Key" : "Part";
@@ -435,6 +435,14 @@ public class HlsDownloader{
         }
 
         return null; // Should not reach here
+    }
+
+    private async Task<byte[]> ReadContentAsByteArrayAsync(HttpContent content){
+        using (var memoryStream = new MemoryStream())
+        using (var contentStream = await content.ReadAsStreamAsync()){
+            await contentStream.CopyToAsync(memoryStream, 81920);
+            return memoryStream.ToArray();
+        }
     }
 
     private HttpRequestMessage CloneHttpRequestMessage(HttpRequestMessage originalRequest){
