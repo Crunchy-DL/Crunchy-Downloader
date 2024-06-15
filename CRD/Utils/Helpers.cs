@@ -66,18 +66,30 @@ public class Helpers{
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
+            
+            process.OutputDataReceived += (sender, e) => 
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Console.WriteLine(e.Data);
+                }
+            };
 
+            process.ErrorDataReceived += (sender, e) => 
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Console.WriteLine($"ERROR: {e.Data}");
+                }
+            };
+            
             process.Start();
 
-            // To log the output or errors, you might use process.StandardOutput.ReadToEndAsync()
-            // string output = await process.StandardOutput.ReadToEndAsync();
-            string errors = await process.StandardError.ReadToEndAsync();
-
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+            
             await process.WaitForExitAsync();
-
-            if (!string.IsNullOrEmpty(errors))
-                Console.WriteLine($"Error: {errors}");
-
+            
             // Define success condition more appropriately based on the application
             bool isSuccess = process.ExitCode == 0;
 
