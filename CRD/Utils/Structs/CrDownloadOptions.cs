@@ -119,4 +119,7 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "sonarr_properties", ApplyNamingConventions = false)]
     public SonarrProperties? SonarrProperties{ get; set; }
     
+    [YamlMember(Alias = "log_mode", ApplyNamingConventions = false)]
+    public bool LogMode{ get; set; }
+    
 }

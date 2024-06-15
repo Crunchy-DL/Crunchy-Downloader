@@ -153,6 +153,10 @@ public class CrAuth{
             }
         }
 
+        if (crunInstance.Profile.Username == "???"){
+            return;
+        }
+
         var formData = new Dictionary<string, string>{
             { "refresh_token", crunInstance.Token?.refresh_token ?? string.Empty },
             { "grant_type", "refresh_token" },

@@ -67,7 +67,7 @@ public class Widevine{
                 canDecrypt = false;
             }
         } catch (Exception e){
-            Console.WriteLine(e);
+            Console.WriteLine("Widevine: " + e);
             canDecrypt = false;
         }
     }

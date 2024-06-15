@@ -103,6 +103,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _sonarrUseSonarrNumbering = false;
+    
+    [ObservableProperty]
+    private bool _logMode = false;
 
     public ObservableCollection<Color> PredefinedColors{ get; } = new(){
         Color.FromRgb(255, 185, 0),
@@ -248,6 +251,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         LeadingNumbers = options.Numbers;
         FileName = options.FileName;
         SimultaneousDownloads = options.SimultaneousDownloads;
+        LogMode = options.LogMode;
 
         ComboBoxItem? qualityAudio = AudioQualityList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.QualityAudio) ?? null;
         SelectedAudioQuality = qualityAudio ?? AudioQualityList[0];
@@ -335,6 +339,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.SonarrProperties = props;
 
+        Crunchyroll.Instance.CrunOptions.LogMode = LogMode;
         
 
         //TODO - Mux Options
@@ -485,5 +490,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     partial void OnSonarrUseSonarrNumberingChanged(bool value){
         UpdateSettings();
+    }
+
+    partial void OnLogModeChanged(bool value){
+        UpdateSettings();
+        if (value){
+            CfgManager.EnableLogMode();
+        } else{
+            CfgManager.DisableLogMode();
+        }
     }
 }

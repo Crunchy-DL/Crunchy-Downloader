@@ -446,6 +446,15 @@
 
             </controls:SettingsExpander>
 
+            <controls:SettingsExpander Header="Log Mode"
+                                       IconSource="Help"
+                                       Description="Should only be enabled if something isn't working">
+                <controls:SettingsExpander.Footer>
+                    <CheckBox IsChecked="{Binding LogMode}"> </CheckBox>
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+            
 
             <Grid Margin="0 0 0 10"
                   ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">

@@ -8,7 +8,9 @@ namespace CRD.Utils.Structs;
 
 public class Languages{
     public static readonly LanguageItem[] languages ={
+        new(){ CrLocale = "ja-JP", Locale = "ja", Code = "jpn", Name = "Japanese" },
         new(){ CrLocale = "en-US", Locale = "en", Code = "eng", Name = "English" },
+        new(){ CrLocale = "de-DE", Locale = "de", Code = "deu", Name = "German" },
         new(){ CrLocale = "en-IN", Locale = "en-IN", Code = "eng", Name = "English (India)" },
         new(){ CrLocale = "es-LA", Locale = "es-419", Code = "spa", Name = "Spanish", Language = "Latin American Spanish" },
         new(){ CrLocale = "es-419", Locale = "es-419", Code = "spa-419", Name = "Spanish", Language = "Latin American Spanish" },
@@ -16,7 +18,6 @@ public class Languages{
         new(){ CrLocale = "pt-BR", Locale = "pt-BR", Code = "por", Name = "Portuguese", Language = "Brazilian Portuguese" },
         new(){ CrLocale = "pt-PT", Locale = "pt-PT", Code = "por", Name = "Portuguese (Portugal)", Language = "Portugues (Portugal)" },
         new(){ CrLocale = "fr-FR", Locale = "fr", Code = "fra", Name = "French" },
-        new(){ CrLocale = "de-DE", Locale = "de", Code = "deu", Name = "German" },
         new(){ CrLocale = "ar-ME", Locale = "ar", Code = "ara-ME", Name = "Arabic" },
         new(){ CrLocale = "ar-SA", Locale = "ar", Code = "ara", Name = "Arabic (Saudi Arabia)" },
         new(){ CrLocale = "it-IT", Locale = "it", Code = "ita", Name = "Italian" },
@@ -35,14 +36,14 @@ public class Languages{
         new(){ CrLocale = "vi-VN", Locale = "vi-VN", Code = "vie", Name = "Vietnamese", Language = "Tiếng Việt" },
         new(){ CrLocale = "id-ID", Locale = "id-ID", Code = "ind", Name = "Indonesian", Language = "Bahasa Indonesia" },
         new(){ CrLocale = "te-IN", Locale = "te-IN", Code = "tel", Name = "Telugu (India)", Language = "తెలుగు" },
-        new(){ CrLocale = "ja-JP", Locale = "ja", Code = "jpn", Name = "Japanese" },
-        new(){ CrLocale = "id-ID", Locale = "id", Code = "in", Name = "Indonesian " },
+        new(){ CrLocale = "id-ID", Locale = "id", Code = "in", Name = "Indonesian " }
     };
 
     public static LanguageItem FixAndFindCrLc(string cr_locale){
         if (string.IsNullOrEmpty(cr_locale)){
             return new LanguageItem();
         }
+
         string str = FixLanguageTag(cr_locale);
         return FindLang(str);
     }
@@ -50,7 +51,7 @@ public class Languages{
     public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem, bool isCC, string ccTag, bool? isSigns = false, string? format = "ass"){
         subsIndex = (int.Parse(subsIndex) + 1).ToString().PadLeft(2, '0');
         string fileName = $"{fnOutput}.{subsIndex}.{langItem.Code}";
-        
+
         //removed .{langItem.language} from file name at end
 
         if (isCC){
@@ -67,12 +68,11 @@ public class Languages{
 
     public static string FixLanguageTag(string tag){
         tag = tag ?? "und";
-        
+
         var match = Regex.Match(tag, @"^(\w{2})-?(\w{2})$");
         if (match.Success){
-            
             string tagLang = $"{match.Groups[1].Value}-{match.Groups[2].Value.ToUpper()}";
-            
+
             var langObj = FindLang(tagLang);
             if (langObj.CrLocale != "und"){
                 return langObj.CrLocale;
@@ -104,7 +104,7 @@ public class Languages{
             };
         }
     }
-    
+
 
     public static LanguageItem Locale2language(string locale){
         LanguageItem? filteredLocale = languages.FirstOrDefault(l => { return l.Locale == locale; });

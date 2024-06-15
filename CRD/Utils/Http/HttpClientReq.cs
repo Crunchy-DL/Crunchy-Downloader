@@ -97,7 +97,7 @@ public class HttpClientReq{
             
             return (IsOk: true, ResponseContent: content);
         } catch (Exception e){
-            Console.WriteLine(e);
+            Console.WriteLine($"Error: {e} \n Response: {content}");
             return (IsOk: false, ResponseContent: content);
         }
     }

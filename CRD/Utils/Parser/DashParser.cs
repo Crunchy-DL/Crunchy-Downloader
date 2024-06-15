@@ -24,8 +24,6 @@ public class DashParser{
         
         return ToM3u8Class.ToM3u8(parsedElement);
         // string jsonString = JsonConvert.SerializeObject(M3u8);
-      
-        Console.WriteLine("Hallo");
     }
     
     private static XmlElement StringToMpdXml(string manifestString){

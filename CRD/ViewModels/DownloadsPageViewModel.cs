@@ -42,7 +42,7 @@ public partial class DownloadsPageViewModel : ViewModelBase{
                     if (downloadItem != null){
                         Crunchyroll.Instance.DownloadItemModels.Remove(downloadItem);
                     } else{
-                        Console.WriteLine("Failed to Remove From Preview");
+                        Console.WriteLine("Failed to Remove Episode from list");
                     }
                 }
         }
@@ -145,6 +145,15 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
         var softSubs = "Softsub: ";
 
+        if (Crunchyroll.Instance.CrunOptions.DlSubs.Contains("all")){
+            if (epMeta.AvailableSubs != null){
+                foreach (var epMetaAvailableSub in epMeta.AvailableSubs){
+                    softSubs += epMetaAvailableSub + " ";
+                }
+
+                return softSubs;
+            }
+        } 
 
         foreach (var crunOptionsDlSub in Crunchyroll.Instance.CrunOptions.DlSubs){
             if (epMeta.AvailableSubs != null && epMeta.AvailableSubs.Contains(crunOptionsDlSub)){

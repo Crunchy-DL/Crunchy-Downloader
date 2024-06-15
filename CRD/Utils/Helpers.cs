@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -66,30 +66,26 @@ public class Helpers{
             process.StartInfo.RedirectStandardError = true;
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.CreateNoWindow = true;
-            
-            process.OutputDataReceived += (sender, e) => 
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
+
+            process.OutputDataReceived += (sender, e) => {
+                if (!string.IsNullOrEmpty(e.Data)){
                     Console.WriteLine(e.Data);
                 }
             };
 
-            process.ErrorDataReceived += (sender, e) => 
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
+            process.ErrorDataReceived += (sender, e) => {
+                if (!string.IsNullOrEmpty(e.Data)){
                     Console.WriteLine($"ERROR: {e.Data}");
                 }
             };
-            
+
             process.Start();
 
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            
+
             await process.WaitForExitAsync();
-            
+
             // Define success condition more appropriately based on the application
             bool isSuccess = process.ExitCode == 0;
 

@@ -64,6 +64,39 @@ public enum Locale{
 
     [EnumMember(Value = "id-ID")]
     IdId,
+    
+    [EnumMember(Value = "en-IN")]
+    EnIn,
+    
+    [EnumMember(Value = "pt-PT")]
+    PtPt,
+    
+    [EnumMember(Value = "zh-TW")]
+    ZhTw,
+    
+    [EnumMember(Value = "ca-ES")]
+    CaEs,
+    
+    [EnumMember(Value = "pl-PL")]
+    PlPl,
+    
+    [EnumMember(Value = "th-TH")]
+    ThTh,
+    
+    [EnumMember(Value = "ta-IN")]
+    TaIn,
+    
+    [EnumMember(Value = "ms-MY")]
+    MsMy,
+    
+    [EnumMember(Value = "vi-VN")]
+    ViVn,
+    
+    [EnumMember(Value = "te-IN")]
+    TeIn,
+    
+    [EnumMember(Value = "id-ID")]
+    idID,
 }
 
 public static class EnumExtensions{

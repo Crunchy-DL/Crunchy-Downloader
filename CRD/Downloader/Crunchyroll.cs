@@ -163,6 +163,12 @@ public class Crunchyroll{
 
             RefreshSonarr();
         }
+        
+        if (CrunOptions.LogMode){
+            CfgManager.EnableLogMode();
+        } else{
+            CfgManager.DisableLogMode();
+        }
 
         calendarLanguage = new(){
             { "en-us", "https://www.crunchyroll.com/simulcastcalendar" },
@@ -559,7 +565,7 @@ public class Crunchyroll{
         List<DownloadedMedia> files = new List<DownloadedMedia>();
 
         if (data.Data != null && data.Data.All(a => a.Playback == null)){
-            Console.WriteLine("Video not available!");
+            Console.WriteLine("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
             MainWindow.Instance.ShowError("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
             return new DownloadResponse{
                 Data = files,
@@ -765,7 +771,7 @@ public class Crunchyroll{
                             : 1;
 
                         for (int i = 0; i < streams.Count; i++){
-                            string isSelected = options.Kstream == i + 1 ? "✓" : " ";
+                            string isSelected = options.Kstream == i + 1 ? "+" : " ";
                             Console.WriteLine($"Full stream found! ({isSelected}{i + 1}: {streams[i].Type})");
                         }
 
@@ -922,7 +928,10 @@ public class Crunchyroll{
                                     };
                                 }
 
-                                Console.WriteLine($"Selected quality: \n\tVideo: {chosenVideoSegments.resolutionText}\n\tAudio: {chosenAudioSegments.resolutionText}\n\tServer: {selectedServer}");
+                                Console.WriteLine($"Selected quality:");
+                                Console.WriteLine($"\tVideo: {chosenVideoSegments.resolutionText}");
+                                Console.WriteLine($"\tAudio: {chosenAudioSegments.resolutionText}");
+                                Console.WriteLine($"\tServer: {selectedServer}");
                                 Console.WriteLine("Stream URL:" + chosenVideoSegments.segments[0].uri.Split(new[]{ ",.urlset" }, StringSplitOptions.None)[0]);
 
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());

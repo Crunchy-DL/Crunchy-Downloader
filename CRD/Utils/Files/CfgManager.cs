@@ -23,8 +23,33 @@ public class CfgManager{
 
     public static readonly string PathVIDEOS_DIR = WorkingDirectory + "/video/";
     public static readonly string PathFONTS_DIR = WorkingDirectory + "/video/";
+    
+    public static readonly string PathLogFile = WorkingDirectory + "/logfile.txt";
+    
+    private static StreamWriter logFile;
+    private static bool isLogModeEnabled = false;
 
+    public static void EnableLogMode(){
+        if (!isLogModeEnabled){
+            logFile = new StreamWriter(PathLogFile);
+            logFile.AutoFlush = true;
+            Console.SetOut(logFile);
+            isLogModeEnabled = true;
+            Console.WriteLine("Log mode enabled.");
+        }
+    }
 
+    public static void DisableLogMode(){
+        if (isLogModeEnabled){
+            logFile.Close();
+            StreamWriter standardOutput = new StreamWriter(Console.OpenStandardOutput());
+            standardOutput.AutoFlush = true;
+            Console.SetOut(standardOutput);
+            isLogModeEnabled = false;
+            Console.WriteLine("Log mode disabled.");
+        }
+    }
+    
     public static void WriteJsonResponseToYamlFile(string jsonResponse, string filePath){
         // Convert JSON to an object
         var deserializer = new DeserializerBuilder()
@@ -143,6 +168,7 @@ public class CfgManager{
         Crunchyroll.Instance.CrunOptions.History = loadedOptions.History;
         Crunchyroll.Instance.CrunOptions.UseNonDrmStreams = loadedOptions.UseNonDrmStreams;
         Crunchyroll.Instance.CrunOptions.SonarrProperties = loadedOptions.SonarrProperties;
+        Crunchyroll.Instance.CrunOptions.LogMode = loadedOptions.LogMode;
     }
 
     private static object fileLock = new object();

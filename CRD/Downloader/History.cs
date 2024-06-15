@@ -420,7 +420,7 @@ public class History(){
                             historyEpisode.SonarrSeasonNumber = episode2.SeasonNumber + "";
                             episodes.Remove(episode2);
                         } else{
-                            Console.WriteLine("Could not match episode to sonarr episode");
+                            Console.WriteLine($"Could not match episode {historyEpisode.EpisodeTitle} to sonarr episode");
                         }
                     }
                 }

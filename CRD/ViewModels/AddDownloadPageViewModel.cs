@@ -156,7 +156,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 }
             }
         } else{
-            Console.WriteLine("Probably not a url");
+            Console.WriteLine("Unnkown input");
         }
     }
 
