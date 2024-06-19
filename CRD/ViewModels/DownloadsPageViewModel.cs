@@ -42,7 +42,7 @@ public partial class DownloadsPageViewModel : ViewModelBase{
                     if (downloadItem != null){
                         Crunchyroll.Instance.DownloadItemModels.Remove(downloadItem);
                     } else{
-                        Console.WriteLine("Failed to Remove Episode from list");
+                        Console.Error.WriteLine("Failed to Remove Episode from list");
                     }
                 }
         }
@@ -252,7 +252,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             }
         } catch (Exception ex){
             // Handle exceptions
-            Console.WriteLine("Failed to load image: " + ex.Message);
+            Console.Error.WriteLine("Failed to load image: " + ex.Message);
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
@@ -21,7 +22,7 @@ public class Helpers{
         try{
             return JsonConvert.DeserializeObject<T>(json, serializerSettings);
         } catch (JsonException ex){
-            Console.WriteLine($"Error deserializing JSON: {ex.Message}");
+            Console.Error.WriteLine($"Error deserializing JSON: {ex.Message}");
             throw;
         }
     }
@@ -41,7 +42,7 @@ public class Helpers{
         if (string.IsNullOrEmpty(value)){
             return Locale.DefaulT;
         }
-        
+
         return Locale.Unknown; // Return default if not found
     }
 
@@ -56,6 +57,35 @@ public class Helpers{
         string highResTimestamp = timestampToMilliseconds.ToString("F0").PadLeft(13, '0');
 
         return milliseconds + highResTimestamp;
+    }
+
+    public static void ConvertChapterFileForFFMPEG(string chapterFilePath)
+    {
+        var chapterLines = File.ReadAllLines(chapterFilePath);
+        var ffmpegChapterLines = new List<string> { ";FFMETADATA1" };
+
+        for (int i = 0; i < chapterLines.Length; i += 2)
+        {
+            var timeLine = chapterLines[i];
+            var nameLine = chapterLines[i + 1];
+
+            var timeParts = timeLine.Split('=');
+            var nameParts = nameLine.Split('=');
+
+            if (timeParts.Length == 2 && nameParts.Length == 2)
+            {
+                var startTime = TimeSpan.Parse(timeParts[1]).TotalMilliseconds;
+                var endTime = i + 2 < chapterLines.Length ? TimeSpan.Parse(chapterLines[i + 2].Split('=')[1]).TotalMilliseconds : startTime + 10000;
+
+                ffmpegChapterLines.Add("[CHAPTER]");
+                ffmpegChapterLines.Add("TIMEBASE=1/1000");
+                ffmpegChapterLines.Add($"START={startTime}");
+                ffmpegChapterLines.Add($"END={endTime}");
+                ffmpegChapterLines.Add($"title={nameParts[1]}");
+            }
+        }
+
+        File.WriteAllLines(chapterFilePath, ffmpegChapterLines);
     }
 
     public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsync(string type, string bin, string command){
@@ -75,7 +105,7 @@ public class Helpers{
 
             process.ErrorDataReceived += (sender, e) => {
                 if (!string.IsNullOrEmpty(e.Data)){
-                    Console.WriteLine($"ERROR: {e.Data}");
+                    Console.WriteLine($"{e.Data}");
                 }
             };
 
@@ -137,7 +167,7 @@ public class Helpers{
         return words;
     }
 
-    
+
     private static double CosineSimilarity(Dictionary<string, double> vector1, Dictionary<string, double> vector2){
         var intersection = vector1.Keys.Intersect(vector2.Keys);
 

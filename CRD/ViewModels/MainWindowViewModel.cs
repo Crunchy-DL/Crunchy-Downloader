@@ -37,7 +37,7 @@ public partial class MainWindowViewModel : ViewModelBase{
                 File.Delete(backupFilePath);
                 Console.WriteLine($"Deleted old updater file: {backupFilePath}");
             } catch (Exception ex) {
-                Console.WriteLine($"Failed to delete old updater file: {ex.Message}");
+                Console.Error.WriteLine($"Failed to delete old updater file: {ex.Message}");
             }
         } else {
             Console.WriteLine("No old updater file found to delete.");

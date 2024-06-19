@@ -22,10 +22,13 @@
         </Image>
 
         <!-- Profile Name -->
-        <TextBlock Text="{Binding ProfileName}" TextAlignment="Center" FontSize="20" Margin="10" />
+        <TextBlock Text="{Binding ProfileName}" HorizontalAlignment="Center" TextAlignment="Center" FontSize="20" Margin="10" />
 
+        <!-- Subscription End -->
+        <TextBlock x:Name="SubscriptionTextBlock" FontSize="24" Text="{Binding RemainingTime, Mode=OneWay}" TextAlignment="Center" HorizontalAlignment="Center" />
+        
         <!-- Login/Logout Button -->
-        <Button Content="{Binding LoginLogoutText}" Width="170" Margin="20" Command="{Binding Button_PressCommand}" />
+        <Button Content="{Binding LoginLogoutText}" HorizontalAlignment="Center" Width="170" Margin="20" Command="{Binding Button_PressCommand}" />
     </StackPanel>
     
     

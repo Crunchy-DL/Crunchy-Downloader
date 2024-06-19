@@ -22,7 +22,7 @@ public class FileNameManager{
             var variable = overriddenVars.FirstOrDefault(v => v.Name == varName);
 
             if (variable == null){
-                Console.WriteLine($"[ERROR] Found variable '{match}' in fileName but no values was internally found!");
+                Console.Error.WriteLine($"[ERROR] Found variable '{match}' in fileName but no values was internally found!");
                 continue;
             }
 
@@ -51,13 +51,13 @@ public class FileNameManager{
         foreach (var item in overrides){
             int index = item.IndexOf('=');
             if (index == -1){
-                Console.WriteLine($"Error: Invalid override format '{item}'");
+                Console.Error.WriteLine($"Error: Invalid override format '{item}'");
                 continue;
             }
 
             string[] parts ={ item.Substring(0, index), item.Substring(index + 1) };
             if (!(parts[1].StartsWith("'") && parts[1].EndsWith("'") && parts[1].Length >= 2)){
-                Console.WriteLine($"Error: Invalid value format for '{item}'");
+                Console.Error.WriteLine($"Error: Invalid value format for '{item}'");
                 continue;
             }
 
@@ -67,7 +67,7 @@ public class FileNameManager{
             if (alreadyIndex > -1){
                 if (variables[alreadyIndex].Type == "number"){
                     if (!float.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out float numberValue)){
-                        Console.WriteLine($"Error: Wrong type for '{item}'");
+                        Console.Error.WriteLine($"Error: Wrong type for '{item}'");
                         continue;
                     }
 

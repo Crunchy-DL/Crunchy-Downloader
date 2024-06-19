@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -156,7 +156,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 }
             }
         } else{
-            Console.WriteLine("Unnkown input");
+            Console.Error.WriteLine("Unnkown input");
         }
     }
 
@@ -248,7 +248,7 @@ public class ItemModel(string imageUrl, string description, string time, string 
             }
         } catch (Exception ex){
             // Handle exceptions
-            Console.WriteLine("Failed to load image: " + ex.Message);
+            Console.Error.WriteLine("Failed to load image: " + ex.Message);
         }
     }
 }

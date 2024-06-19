@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Globalization;
@@ -19,7 +19,7 @@ public class CrEpisode(){
     
     public async Task<CrunchyEpisodeList?> ParseEpisodeById(string id,string locale){
         if (crunInstance.CmsToken?.Cms == null){
-            Console.WriteLine("Missing CMS Access Token");
+            Console.Error.WriteLine("Missing CMS Access Token");
             return null;
         }
 
@@ -33,7 +33,7 @@ public class CrEpisode(){
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (!response.IsOk){
-            Console.WriteLine("Series Request Failed");
+            Console.Error.WriteLine("Series Request Failed");
             return null;
         }
 

@@ -20,7 +20,7 @@
 
             <controls:SettingsExpander Header="Dub language"
                                        IconSource="Speaker2"
-                                       Description="Change the selected dub language">
+                                       Description="Change the selected dub language (with multiple dubs some can be out of sync)">
                 <controls:SettingsExpander.Footer>
                     <!-- <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400" -->
                     <!--            -->
@@ -137,6 +137,12 @@
                         <CheckBox IsChecked="{Binding DownloadVideo}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Download Video for every dub">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadVideoForEveryDub}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Video Quality">
                     <controls:SettingsExpanderItem.Footer>
@@ -218,18 +224,102 @@
                         <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Keep Subtitles separate">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SkipSubMux}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Default Audio ">
+                    <controls:SettingsExpanderItem.Footer>
+                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding DefaultDubLangList}"
+                                  SelectedItem="{Binding SelectedDefaultDubLang}">
+                        </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                
+                <controls:SettingsExpanderItem Content="Default Subtitle ">
+                    <controls:SettingsExpanderItem.Footer>
+                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding DefaultSubLangList}"
+                                  SelectedItem="{Binding SelectedDefaultSubLang}">
+                        </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+               
 
                 <controls:SettingsExpanderItem Content="Additional MKVMerge Options">
                     <controls:SettingsExpanderItem.Footer>
-                        <TextBox IsEnabled="False" Name="TargetTextBox2" HorizontalAlignment="Left" MinWidth="250"
-                                 Text="{Binding MkvMergeOptions}" />
+                        
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                            <TextBox Name="TargetTextBox2" HorizontalAlignment="Left" MinWidth="250"
+                                     Text="{Binding MkvMergeOption }"></TextBox>
+                                <Button HorizontalAlignment="Center" Margin="5 0" Command="{Binding  AddMkvMergeParam}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:SymbolIcon Symbol="Add" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding MkvMergeOptions}" Margin="0,5" MaxWidth="350">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1" CornerRadius="10" Margin="2">
+                                            <StackPanel Orientation="Horizontal" Margin="5">
+                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0"/>
+                                                <Button Content="X" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"  Width="15" Height="15" Padding="0" 
+                                                        Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveMkvMergeParam}" CommandParameter="{Binding .}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                        
+                       
+                        
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Additional FFMpeg Options">
                     <controls:SettingsExpanderItem.Footer>
-                        <TextBox IsEnabled="False" Name="TargetTextBox3" HorizontalAlignment="Left" MinWidth="250"
-                                 Text="{Binding FfmpegOptions}" />
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                            <TextBox  HorizontalAlignment="Left" MinWidth="250"
+                                     Text="{Binding FfmpegOption }"></TextBox>
+                                <Button HorizontalAlignment="Center" Margin="5 0" Command="{Binding  AddFfmpegParam}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:SymbolIcon Symbol="Add" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding FfmpegOptions}" Margin="0,5" MaxWidth="350">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1" CornerRadius="10" Margin="2">
+                                            <StackPanel Orientation="Horizontal" Margin="5">
+                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0"/>
+                                                <Button Content="X" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"  Width="15" Height="15" Padding="0" 
+                                                        Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveFfmpegParam}" CommandParameter="{Binding .}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 

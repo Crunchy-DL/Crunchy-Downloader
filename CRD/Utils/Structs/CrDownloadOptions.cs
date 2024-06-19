@@ -50,9 +50,9 @@ public class CrDownloadOptions{
     [YamlIgnore]
     public bool SkipSubs{ get; set; }
 
-    [YamlIgnore]
-    public bool NoSubs{ get; set; }
-
+    [YamlMember(Alias = "mux_skip_subs", ApplyNamingConventions = false)]
+    public bool SkipSubsMux{ get; set; }
+    
     [YamlMember(Alias = "mux_mp4", ApplyNamingConventions = false)]
     public bool Mp4{ get; set; }
 
@@ -71,16 +71,16 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "mux_mkvmerge", ApplyNamingConventions = false)]
     public List<string> MkvmergeOptions{ get; set; }
 
-    [YamlIgnore]
-    public LanguageItem DefaultSub{ get; set; }
+    [YamlMember(Alias = "mux_default_sub", ApplyNamingConventions = false)]
+    public string DefaultSub{ get; set; }
 
-    [YamlIgnore]
-    public LanguageItem DefaultAudio{ get; set; }
+    [YamlMember(Alias = "mux_default_dub", ApplyNamingConventions = false)]
+    public string DefaultAudio{ get; set; }
 
     [YamlIgnore]
     public string CcTag{ get; set; }
 
-    [YamlIgnore]
+    [YamlMember(Alias = "dl_video_once", ApplyNamingConventions = false)]
     public bool DlVideoOnce{ get; set; }
 
     [YamlIgnore]

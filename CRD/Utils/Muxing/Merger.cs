@@ -14,7 +14,7 @@ public class Merger{
     public Merger(MergerOptions options){
         this.options = options;
         if (this.options.SkipSubMux != null && this.options.SkipSubMux == true){
-            this.options.Subtitles = new List<SubtitleInput>();
+            this.options.Subtitles = new();
         }
 
         if (this.options.VideoTitle != null && this.options.VideoTitle.Length > 0){
@@ -32,31 +32,11 @@ public class Merger{
         var hasVideo = false;
 
         if (!options.mp3){
-            foreach (var vid in options.VideoAndAudio){
-                if (vid.Delay != null && hasVideo){
-                    args.Add($"-itsoffset -{Math.Ceiling((double)vid.Delay * 1000)}ms");
-                }
-
-                args.Add($"-i \"{vid.Path}\"");
-                if (!hasVideo || options.KeepAllVideos == true){
-                    metaData.Add($"-map {index}:a -map {index}:v");
-                    metaData.Add($"-metadata:s:a:{audioIndex} language={vid.Language.Code}");
-                    metaData.Add($"-metadata:s:v:{index} title=\"{options.VideoTitle}\"");
-                    hasVideo = true;
-                } else{
-                    metaData.Add($"-map {index}:a");
-                    metaData.Add($"-metadata:s:a:{audioIndex} language={vid.Language.Code}");
-                }
-
-                audioIndex++;
-                index++;
-            }
-
             foreach (var vid in options.OnlyVid){
                 if (!hasVideo || options.KeepAllVideos == true){
                     args.Add($"-i \"{vid.Path}\"");
-                    metaData.Add($"-map {index} -map -{index}:a");
-                    metaData.Add($"-metadata:s:v:{index} title=\"{options.VideoTitle}\"");
+                    metaData.Add($"-map {index}:v");
+                    metaData.Add($"-metadata:s:v:{index} title=\"{(options.VideoTitle ?? vid.Language.Name)}\"");
                     hasVideo = true;
                     index++;
                 }
@@ -64,12 +44,21 @@ public class Merger{
 
             foreach (var aud in options.OnlyAudio){
                 args.Add($"-i \"{aud.Path}\"");
-                metaData.Add($"-map {index}");
+                metaData.Add($"-map {index}:a");
                 metaData.Add($"-metadata:s:a:{audioIndex} language={aud.Language.Code}");
                 index++;
                 audioIndex++;
             }
 
+            if (options.Chapters != null && options.Chapters.Count > 0){
+                
+                Helpers.ConvertChapterFileForFFMPEG(options.Chapters[0].Path);
+                
+                args.Add($"-i \"{options.Chapters[0].Path}\"");
+                metaData.Add($"-map_metadata {index}");
+                index++;
+            }
+            
             foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
                 if (sub.value.Delay != null){
                     args.Add($"-itsoffset -{Math.Ceiling((double)sub.value.Delay * 1000)}ms");
@@ -77,7 +66,7 @@ public class Merger{
 
                 args.Add($"-i \"{sub.value.File}\"");
             }
-
+            
             if (options.Output.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)){
                 if (options.Fonts != null){
                     int fontIndex = 0;
@@ -87,7 +76,7 @@ public class Merger{
                     }
                 }
             }
-
+            
             args.AddRange(metaData);
             args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
             args.Add("-c:v copy");
@@ -95,6 +84,9 @@ public class Merger{
             args.Add(options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");
             args.AddRange(options.Subtitles.Select((sub, subindex) =>
                 $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
+
+           
+
             if (options.Options.ffmpeg?.Count > 0){
                 args.AddRange(options.Options.ffmpeg);
             }
@@ -112,12 +104,14 @@ public class Merger{
             index++;
             audioIndex++;
         }
-        
+
         args.Add("-acodec libmp3lame");
         args.Add("-ab 192k");
         args.Add($"\"{options.Output}\"");
         return string.Join(" ", args);
     }
+
+
 
     public string MkvMerge(){
         List<string> args = new List<string>();
@@ -135,54 +129,13 @@ public class Merger{
                 args.Add("--video-tracks 0");
                 args.Add("--no-audio");
 
-                string trackName = $"{(options.VideoTitle ?? vid.Language.Name)}{(options.Simul == true ? " [Simulcast]" : " [Uncut]")}";
+                string trackName = $"{(options.VideoTitle ?? vid.Language.Name)}";
                 args.Add($"--track-name 0:\"{trackName}\"");
                 args.Add($"--language 0:{vid.Language.Code}");
 
                 hasVideo = true;
                 args.Add($"\"{vid.Path}\"");
             }
-        }
-
-        foreach (var vid in options.VideoAndAudio){
-            string audioTrackNum = options.InverseTrackOrder == true ? "0" : "1";
-            string videoTrackNum = options.InverseTrackOrder == true ? "1" : "0";
-
-            if (vid.Delay.HasValue){
-                double delay = vid.Delay ?? 0;
-                args.Add($"--sync {audioTrackNum}:-{Math.Ceiling(delay * 1000)}");
-            }
-
-            if (!hasVideo || options.KeepAllVideos == true){
-                args.Add($"--video-tracks {videoTrackNum}");
-                args.Add($"--audio-tracks {audioTrackNum}");
-
-                string trackName = $"{(options.VideoTitle ?? vid.Language.Name)}{(options.Simul == true ? " [Simulcast]" : " [Uncut]")}";
-                args.Add($"--track-name 0:\"{trackName}\""); // Assuming trackName applies to video if present
-                args.Add($"--language {audioTrackNum}:{vid.Language.Code}");
-
-                if (options.Defaults.Audio.Code == vid.Language.Code){
-                    args.Add($"--default-track {audioTrackNum}");
-                } else{
-                    args.Add($"--default-track {audioTrackNum}:0");
-                }
-
-                hasVideo = true;
-            } else{
-                args.Add("--no-video");
-                args.Add($"--audio-tracks {audioTrackNum}");
-
-                if (options.Defaults.Audio.Code == vid.Language.Code){
-                    args.Add($"--default-track {audioTrackNum}");
-                } else{
-                    args.Add($"--default-track {audioTrackNum}:0");
-                }
-
-                args.Add($"--track-name {audioTrackNum}:\"{vid.Language.Name}\"");
-                args.Add($"--language {audioTrackNum}:{vid.Language.Code}");
-            }
-
-            args.Add($"\"{vid.Path}\"");
         }
 
         foreach (var aud in options.OnlyAudio){
@@ -245,51 +198,6 @@ public class Merger{
         return string.Join(" ", args);
     }
 
-    // public async Task CreateDelays(){
-    //     // Don't bother scanning if there is only 1 vna stream
-    //     if (options.VideoAndAudio.Count > 1){
-    //         var bin = await YamlCfg.LoadBinCfg();
-    //         var vnas = this.options.VideoAndAudio;
-    //
-    //         // Get and set durations on each videoAndAudio Stream
-    //         foreach (var vna in vnas){
-    //             var streamInfo = await FFProbe(vna.Path, bin.FFProbe);
-    //             var videoInfo = streamInfo.Streams.Where(stream => stream.CodecType == "video").FirstOrDefault();
-    //             vna.Duration = int.Parse(videoInfo.Duration);
-    //         }
-    //
-    //         // Sort videoAndAudio streams by duration (shortest first)
-    //         vnas.Sort((a, b) => {
-    //             if (a.Duration == 0 || b.Duration == 0) return -1;
-    //             return a.Duration.CompareTo(b.Duration);
-    //         });
-    //
-    //         // Set Delays
-    //         var shortestDuration = vnas[0].Duration;
-    //         foreach (var (vna, index) in vnas.Select((vna, index) => (vna, index))){
-    //             // Don't calculate the shortestDuration track
-    //             if (index == 0){
-    //                 if (!vna.IsPrimary)
-    //                     Console.WriteLine("Shortest video isn't primary, this might lead to problems with subtitles. Please report on github or discord if you experience issues.");
-    //                 continue;
-    //             }
-    //
-    //             if (vna.Duration > 0 && shortestDuration > 0){
-    //                 // Calculate the tracks delay
-    //                 vna.Delay = Math.Ceiling((vna.Duration - shortestDuration) * 1000) / 1000;
-    //
-    //                 var subtitles = this.options.Subtitles.Where(sub => sub.Language.Code == vna.Lang.Code).ToList();
-    //                 foreach (var (sub, subIndex) in subtitles.Select((sub, subIndex) => (sub, subIndex))){
-    //                     if (vna.IsPrimary)
-    //                         subtitles[subIndex].Delay = vna.Delay;
-    //                     else if (sub.ClosedCaption)
-    //                         subtitles[subIndex].Delay = vna.Delay;
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
-
 
     public async Task Merge(string type, string bin){
         string command = type switch{
@@ -299,7 +207,7 @@ public class Merger{
         };
 
         if (string.IsNullOrEmpty(command)){
-            Console.WriteLine("Unable to merge files.");
+            Console.Error.WriteLine("Unable to merge files.");
             return;
         }
 
@@ -309,7 +217,7 @@ public class Merger{
         if (!result.IsOk && type == "mkvmerge" && result.ErrorCode == 1){
             Console.WriteLine($"[{type}] Mkvmerge finished with at least one warning");
         } else if (!result.IsOk){
-            Console.WriteLine($"[{type}] Merging failed with exit code {result.ErrorCode}");
+            Console.Error.WriteLine($"[{type}] Merging failed with exit code {result.ErrorCode}");
         } else{
             Console.WriteLine($"[{type} Done]");
         }
@@ -319,7 +227,7 @@ public class Merger{
     public void CleanUp(){
         // Combine all media file lists and iterate through them
         var allMediaFiles = options.OnlyAudio.Concat(options.OnlyVid)
-            .Concat(options.VideoAndAudio).ToList();
+            .ToList();
         allMediaFiles.ForEach(file => DeleteFile(file.Path));
         allMediaFiles.ForEach(file => DeleteFile(file.Path + ".resume"));
 
@@ -336,7 +244,7 @@ public class Merger{
                 File.Delete(filePath);
             }
         } catch (Exception ex){
-            Console.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
+            Console.Error.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
             // Handle exceptions if you need to log them or throw
         }
     }
@@ -382,7 +290,6 @@ public class CrunchyMuxOptions{
 }
 
 public class MergerOptions{
-    public List<MergerInput> VideoAndAudio{ get; set; } = new List<MergerInput>();
     public List<MergerInput> OnlyVid{ get; set; } = new List<MergerInput>();
     public List<MergerInput> OnlyAudio{ get; set; } = new List<MergerInput>();
     public List<SubtitleInput> Subtitles{ get; set; } = new List<SubtitleInput>();
@@ -390,8 +297,6 @@ public class MergerOptions{
     public string CcTag{ get; set; }
     public string Output{ get; set; }
     public string VideoTitle{ get; set; }
-    public bool? Simul{ get; set; }
-    public bool? InverseTrackOrder{ get; set; }
     public bool? KeepAllVideos{ get; set; }
     public List<ParsedFont> Fonts{ get; set; } = new List<ParsedFont>();
     public bool? SkipSubMux{ get; set; }

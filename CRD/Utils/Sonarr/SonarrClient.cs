@@ -92,7 +92,7 @@ public class SonarrClient{
             series = JsonConvert.DeserializeObject<List<SonarrSeries>>(json) ?? [];
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetSeries error \n" + e);
-            Console.WriteLine("Sonarr GetSeries error \n" + e);
+            Console.Error.WriteLine("Sonarr GetSeries error \n" + e);
         }
         
         return series;
@@ -107,7 +107,7 @@ public class SonarrClient{
             episodes = JsonConvert.DeserializeObject<List<SonarrEpisode>>(json) ?? [];
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetEpisodes error \n" + e);
-            Console.WriteLine("Sonarr GetEpisodes error \n" + e);
+            Console.Error.WriteLine("Sonarr GetEpisodes error \n" + e);
         }
 
         return episodes;
@@ -121,7 +121,7 @@ public class SonarrClient{
             episode = JsonConvert.DeserializeObject<SonarrEpisode>(json) ?? new SonarrEpisode();
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetEpisode error \n" + e);
-            Console.WriteLine("Sonarr GetEpisode error \n" + e);
+            Console.Error.WriteLine("Sonarr GetEpisode error \n" + e);
         }
 
         return episode;

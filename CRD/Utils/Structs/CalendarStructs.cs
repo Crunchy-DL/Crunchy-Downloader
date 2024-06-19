@@ -63,7 +63,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
             }
         } catch (Exception ex){
             // Handle exceptions
-            Console.WriteLine("Failed to load image: " + ex.Message);
+            Console.Error.WriteLine("Failed to load image: " + ex.Message);
         }
     }
 }

@@ -81,8 +81,8 @@ public class HlsDownloader{
                                       $"Current: {{ total: {_data.M3U8Json?.Segments.Count} }}");
                 }
             } catch (Exception e){
-                Console.WriteLine("Resume failed, downloading will not be resumed!");
-                Console.WriteLine(e.Message);
+                Console.Error.WriteLine("Resume failed, downloading will not be resumed!");
+                Console.Error.WriteLine(e.Message);
             }
         }
 
@@ -169,7 +169,7 @@ public class HlsDownloader{
                 try{
                     await Task.WhenAll(keyTasks.Values);
                 } catch (Exception ex){
-                    Console.WriteLine($"Error downloading keys: {ex.Message}");
+                    Console.Error.WriteLine($"Error downloading keys: {ex.Message}");
                     throw;
                 }
 

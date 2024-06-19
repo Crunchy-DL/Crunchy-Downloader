@@ -10,7 +10,9 @@ using System.Threading.Tasks;
 using System.Web;
 using CRD.Utils;
 using CRD.Utils.Structs;
+using CRD.Views;
 using Newtonsoft.Json;
+using ReactiveUI;
 
 namespace CRD.Downloader;
 
@@ -45,10 +47,15 @@ public class CrSeries(){
         foreach (var kvp in eps){
             var key = kvp.Key;
             var episode = kvp.Value;
-
+            
             for (int index = 0; index < episode.Items.Count; index++){
                 var item = episode.Items[index];
 
+                if (item.IsPremiumOnly && !crunInstance.Profile.HasPremium){
+                    MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
+                    continue;
+                }
+                
                 if (!dubLang.Contains(episode.Langs[index].CrLocale))
                     continue;
 
@@ -133,7 +140,7 @@ public class CrSeries(){
         CrSeriesSearch? parsedSeries = await ParseSeriesById(id,Locale); // one piece - GRMG8ZQZR
 
         if (parsedSeries == null){
-            Console.WriteLine("Parse Data Invalid");
+            Console.Error.WriteLine("Parse Data Invalid");
             return null;
         }
 
@@ -281,7 +288,7 @@ public class CrSeries(){
         CrunchyEpisodeList episodeList = new CrunchyEpisodeList(){ Data = new List<CrunchyEpisode>(), Total = 0, Meta = new Meta() };
 
         if (crunInstance.CmsToken?.Cms == null){
-            Console.WriteLine("Missing CMS Token");
+            Console.Error.WriteLine("Missing CMS Token");
             return episodeList;
         }
 
@@ -291,13 +298,11 @@ public class CrSeries(){
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
             if (!response.IsOk){
-                Console.WriteLine("Show Request FAILED!");
+                Console.Error.WriteLine("Show Request FAILED!");
             } else{
                 Console.WriteLine(response.ResponseContent);
             }
         }
-
-        //TODO
 
         var episodeRequest = new HttpRequestMessage(HttpMethod.Get, $"{Api.Cms}/seasons/{seasonID}/episodes?preferred_audio_language=ja-JP");
 
@@ -306,13 +311,13 @@ public class CrSeries(){
         var episodeRequestResponse = await HttpClientReq.Instance.SendHttpRequest(episodeRequest);
 
         if (!episodeRequestResponse.IsOk){
-            Console.WriteLine($"Episode List Request FAILED! uri: {episodeRequest.RequestUri}");
+            Console.Error.WriteLine($"Episode List Request FAILED! uri: {episodeRequest.RequestUri}");
         } else{
             episodeList = Helpers.Deserialize<CrunchyEpisodeList>(episodeRequestResponse.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
         }
 
         if (episodeList.Total < 1){
-            Console.WriteLine("Season is empty!");
+            Console.Error.WriteLine("Season is empty!");
         }
 
         return episodeList;
@@ -352,7 +357,7 @@ public class CrSeries(){
     
     public async Task<CrSeriesSearch?> ParseSeriesById(string id,string? locale){
         if (crunInstance.CmsToken?.Cms == null){
-            Console.WriteLine("Missing CMS Access Token");
+            Console.Error.WriteLine("Missing CMS Access Token");
             return null;
         }
 
@@ -369,7 +374,7 @@ public class CrSeries(){
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (!response.IsOk){
-            Console.WriteLine("Series Request Failed");
+            Console.Error.WriteLine("Series Request Failed");
             return null;
         }
 
@@ -385,7 +390,7 @@ public class CrSeries(){
     
     public async Task<CrSeriesBase?> SeriesById(string id){
         if (crunInstance.CmsToken?.Cms == null){
-            Console.WriteLine("Missing CMS Access Token");
+            Console.Error.WriteLine("Missing CMS Access Token");
             return null;
         }
 
@@ -398,7 +403,7 @@ public class CrSeries(){
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (!response.IsOk){
-            Console.WriteLine("Series Request Failed");
+            Console.Error.WriteLine("Series Request Failed");
             return null;
         }
 

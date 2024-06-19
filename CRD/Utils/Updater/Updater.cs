@@ -73,7 +73,7 @@ public class Updater : INotifyPropertyChanged{
                 }
             }
         } catch (Exception e){
-            Console.WriteLine("Failed to get Update information");
+            Console.Error.WriteLine("Failed to get Update information");
             return false;
         }
     }
@@ -119,11 +119,11 @@ public class Updater : INotifyPropertyChanged{
 
                     ApplyUpdate(extractPath);
                 } else{
-                    Console.WriteLine("Failed to get Update");
+                    Console.Error.WriteLine("Failed to get Update");
                 }
             }
         } catch (Exception e){
-            Console.WriteLine($"Failed to get Update: {e.Message}");
+            Console.Error.WriteLine($"Failed to get Update: {e.Message}");
         }
     }
 

@@ -25,7 +25,7 @@ public class History(){
         CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja");
 
         if (parsedSeries == null){
-            Console.WriteLine("Parse Data Invalid");
+            Console.Error.WriteLine("Parse Data Invalid");
             return;
         }
 
@@ -420,7 +420,7 @@ public class History(){
                             historyEpisode.SonarrSeasonNumber = episode2.SeasonNumber + "";
                             episodes.Remove(episode2);
                         } else{
-                            Console.WriteLine($"Could not match episode {historyEpisode.EpisodeTitle} to sonarr episode");
+                            Console.Error.WriteLine($"Could not match episode {historyEpisode.EpisodeTitle} to sonarr episode");
                         }
                     }
                 }
@@ -568,7 +568,7 @@ public class HistorySeries : INotifyPropertyChanged{
             }
         } catch (Exception ex){
             // Handle exceptions
-            Console.WriteLine("Failed to load image: " + ex.Message);
+            Console.Error.WriteLine("Failed to load image: " + ex.Message);
         }
     }
 

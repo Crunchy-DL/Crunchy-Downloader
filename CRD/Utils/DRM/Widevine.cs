@@ -60,14 +60,14 @@ public class Widevine{
             if (privateKey.Length != 0 && identifierBlob.Length != 0){
                 canDecrypt = true;
             } else if (privateKey.Length == 0){
-                Console.WriteLine("Private key missing");
+                Console.Error.WriteLine("Private key missing");
                 canDecrypt = false;
             } else if (identifierBlob.Length == 0){
-                Console.WriteLine("Identifier blob missing");
+                Console.Error.WriteLine("Identifier blob missing");
                 canDecrypt = false;
             }
         } catch (Exception e){
-            Console.WriteLine("Widevine: " + e);
+            Console.Error.WriteLine("Widevine: " + e);
             canDecrypt = false;
         }
     }
@@ -90,7 +90,7 @@ public class Widevine{
         var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
 
         if (!response.IsOk){
-            Console.WriteLine("Fallback Request Stream URLs FAILED!");
+            Console.Error.WriteLine("Failed to get Keys!");
             return new List<ContentKey>();
         }
 

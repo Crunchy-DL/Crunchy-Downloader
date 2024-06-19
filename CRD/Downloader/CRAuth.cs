@@ -35,7 +35,7 @@ public class CrAuth{
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent);
         } else{
-            Console.WriteLine("Anonymous login failed");
+            Console.Error.WriteLine("Anonymous login failed");
         }
 
         crunInstance.Profile = new CrProfile{
@@ -104,13 +104,27 @@ public class CrAuth{
 
             if (profileTemp != null){
                 crunInstance.Profile = profileTemp;
+                
+                var requestSubs = HttpClientReq.CreateRequestMessage(Api.Subscription + crunInstance.Token.account_id, HttpMethod.Get, true, false, null);
+
+                var responseSubs = await HttpClientReq.Instance.SendHttpRequest(requestSubs);
+
+                if (responseSubs.IsOk){
+                    var subsc = Helpers.Deserialize<Subscription>(responseSubs.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+                    crunInstance.Profile.Subscription = subsc;
+                    crunInstance.Profile.HasPremium = subsc.IsActive;
+                } else{
+                    crunInstance.Profile.HasPremium = false;
+                    Console.Error.WriteLine("Failed to check premium subscription status");
+                }
+                
             }
         }
     }
 
     public async void LoginWithToken(){
         if (crunInstance.Token?.refresh_token == null){
-            Console.WriteLine("Missing Refresh Token");
+            Console.Error.WriteLine("Missing Refresh Token");
             return;
         }
 
@@ -133,7 +147,7 @@ public class CrAuth{
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent);
         } else{
-            Console.WriteLine("Token Auth Failed");
+            Console.Error.WriteLine("Token Auth Failed");
         }
 
         if (crunInstance.Token?.refresh_token != null){
@@ -176,7 +190,7 @@ public class CrAuth{
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent);
         } else{
-            Console.WriteLine("Refresh Token Auth Failed");
+            Console.Error.WriteLine("Refresh Token Auth Failed");
         }
 
         await GetCmsToken();
@@ -185,7 +199,7 @@ public class CrAuth{
 
     public async Task GetCmsToken(){
         if (crunInstance.Token?.access_token == null){
-            Console.WriteLine($"Missing Access Token: {crunInstance.Token?.access_token}");
+            Console.Error.WriteLine($"Missing Access Token: {crunInstance.Token?.access_token}");
             return;
         }
 
@@ -196,13 +210,13 @@ public class CrAuth{
         if (response.IsOk){
             crunInstance.CmsToken = JsonConvert.DeserializeObject<CrCmsToken>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
         } else{
-            Console.WriteLine("CMS Token Auth Failed");
+            Console.Error.WriteLine("CMS Token Auth Failed");
         }
     }
 
     public async Task GetCmsData(){
         if (crunInstance.CmsToken?.Cms == null){
-            Console.WriteLine("Missing CMS Token");
+            Console.Error.WriteLine("Missing CMS Token");
             return;
         }
 
@@ -224,7 +238,7 @@ public class CrAuth{
         if (response.IsOk){
             Console.WriteLine(response.ResponseContent);
         } else{
-            Console.WriteLine("Failed to Get CMS Index");
+            Console.Error.WriteLine("Failed to Get CMS Index");
         }
     }
 }

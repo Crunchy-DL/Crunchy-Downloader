@@ -97,7 +97,7 @@ public class HttpClientReq{
             
             return (IsOk: true, ResponseContent: content);
         } catch (Exception e){
-            Console.WriteLine($"Error: {e} \n Response: {content}");
+            Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             return (IsOk: false, ResponseContent: content);
         }
     }
@@ -124,6 +124,11 @@ public class HttpClientReq{
         return request;
     }
 
+    public static async Task DeAuthVideo(string currentMediaId, string token){
+        var deauthVideoToken = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{currentMediaId}/{token}/inactive", HttpMethod.Patch, true, false, null);
+        var deauthVideoTokenResponse = await HttpClientReq.Instance.SendHttpRequest(deauthVideoToken);
+    }
+
     public HttpClient GetHttpClient(){
         return client;
     }
@@ -132,7 +137,7 @@ public class HttpClientReq{
 
 public static class Api{
     public static readonly string ApiBeta = "https://beta-api.crunchyroll.com";
-    public static readonly string ApiN = "https://crunchyroll.com";
+    public static readonly string ApiN = "https://www.crunchyroll.com";
 
     public static readonly string BetaAuth = ApiBeta + "/auth/v1/token";
     public static readonly string BetaProfile = ApiBeta + "/accounts/v1/me/profile";
@@ -143,7 +148,7 @@ public static class Api{
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
 
-
+    public static readonly string Subscription = ApiBeta + "/subs/v3/subscriptions/";
     public static readonly string CmsN = ApiN + "/content/v2/cms";
 
 

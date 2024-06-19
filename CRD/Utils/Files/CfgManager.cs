@@ -1,8 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using CRD.Downloader;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
+using YamlDotNet.Core;
+using YamlDotNet.Core.Events;
+using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -23,9 +28,9 @@ public class CfgManager{
 
     public static readonly string PathVIDEOS_DIR = WorkingDirectory + "/video/";
     public static readonly string PathFONTS_DIR = WorkingDirectory + "/video/";
-    
+
     public static readonly string PathLogFile = WorkingDirectory + "/logfile.txt";
-    
+
     private static StreamWriter logFile;
     private static bool isLogModeEnabled = false;
 
@@ -33,23 +38,23 @@ public class CfgManager{
         if (!isLogModeEnabled){
             logFile = new StreamWriter(PathLogFile);
             logFile.AutoFlush = true;
-            Console.SetOut(logFile);
+            Console.SetError(logFile);
             isLogModeEnabled = true;
-            Console.WriteLine("Log mode enabled.");
+            Console.Error.WriteLine("Log mode enabled.");
         }
     }
 
     public static void DisableLogMode(){
         if (isLogModeEnabled){
             logFile.Close();
-            StreamWriter standardOutput = new StreamWriter(Console.OpenStandardOutput());
-            standardOutput.AutoFlush = true;
-            Console.SetOut(standardOutput);
+            StreamWriter standardError = new StreamWriter(Console.OpenStandardError());
+            standardError.AutoFlush = true;
+            Console.SetError(standardError);
             isLogModeEnabled = false;
-            Console.WriteLine("Log mode disabled.");
+            Console.Error.WriteLine("Log mode disabled.");
         }
     }
-    
+
     public static void WriteJsonResponseToYamlFile(string jsonResponse, string filePath){
         // Convert JSON to an object
         var deserializer = new DeserializerBuilder()
@@ -122,6 +127,7 @@ public class CfgManager{
         File.WriteAllText(PathCrDownloadOptions, yaml);
     }
 
+ 
     public static void UpdateSettingsFromFile(){
         string dirPath = Path.GetDirectoryName(PathCrDownloadOptions) ?? string.Empty;
 
@@ -144,35 +150,46 @@ public class CfgManager{
 
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
-            .IgnoreUnmatchedProperties() // Important to ignore properties not present in YAML
+            .IgnoreUnmatchedProperties()
             .Build();
 
+        var propertiesPresentInYaml = GetTopLevelPropertiesInYaml(input);
         var loadedOptions = deserializer.Deserialize<CrDownloadOptions>(new StringReader(input));
+        var instanceOptions = Crunchyroll.Instance.CrunOptions;
 
-        Crunchyroll.Instance.CrunOptions.Hslang = loadedOptions.Hslang;
-        Crunchyroll.Instance.CrunOptions.Novids = loadedOptions.Novids;
-        Crunchyroll.Instance.CrunOptions.Noaudio = loadedOptions.Noaudio;
-        Crunchyroll.Instance.CrunOptions.FileName = loadedOptions.FileName;
-        Crunchyroll.Instance.CrunOptions.Numbers = loadedOptions.Numbers;
-        Crunchyroll.Instance.CrunOptions.DlSubs = loadedOptions.DlSubs;
-        Crunchyroll.Instance.CrunOptions.Mp4 = loadedOptions.Mp4;
-        Crunchyroll.Instance.CrunOptions.FfmpegOptions = loadedOptions.FfmpegOptions;
-        Crunchyroll.Instance.CrunOptions.MkvmergeOptions = loadedOptions.MkvmergeOptions;
-        Crunchyroll.Instance.CrunOptions.Chapters = loadedOptions.Chapters;
-        Crunchyroll.Instance.CrunOptions.SimultaneousDownloads = loadedOptions.SimultaneousDownloads;
-        Crunchyroll.Instance.CrunOptions.QualityAudio = loadedOptions.QualityAudio;
-        Crunchyroll.Instance.CrunOptions.QualityVideo = loadedOptions.QualityVideo;
-        Crunchyroll.Instance.CrunOptions.DubLang = loadedOptions.DubLang;
-        Crunchyroll.Instance.CrunOptions.Theme = loadedOptions.Theme;
-        Crunchyroll.Instance.CrunOptions.AccentColor = loadedOptions.AccentColor;
-        Crunchyroll.Instance.CrunOptions.History = loadedOptions.History;
-        Crunchyroll.Instance.CrunOptions.UseNonDrmStreams = loadedOptions.UseNonDrmStreams;
-        Crunchyroll.Instance.CrunOptions.SonarrProperties = loadedOptions.SonarrProperties;
-        Crunchyroll.Instance.CrunOptions.LogMode = loadedOptions.LogMode;
+        foreach (PropertyInfo property in typeof(CrDownloadOptions).GetProperties()){
+            var yamlMemberAttribute = property.GetCustomAttribute<YamlMemberAttribute>();
+            string yamlPropertyName = yamlMemberAttribute?.Alias ?? property.Name;
+
+            if (propertiesPresentInYaml.Contains(yamlPropertyName)){
+                PropertyInfo instanceProperty = instanceOptions.GetType().GetProperty(property.Name);
+                if (instanceProperty != null && instanceProperty.CanWrite){
+                    instanceProperty.SetValue(instanceOptions, property.GetValue(loadedOptions));
+                }
+            }
+        }
+    }
+
+    private static HashSet<string> GetTopLevelPropertiesInYaml(string yamlContent){
+        var reader = new StringReader(yamlContent);
+        var yamlStream = new YamlStream();
+        yamlStream.Load(reader);
+
+        var properties = new HashSet<string>();
+
+        if (yamlStream.Documents.Count > 0 && yamlStream.Documents[0].RootNode is YamlMappingNode rootNode){
+            foreach (var entry in rootNode.Children){
+                if (entry.Key is YamlScalarNode scalarKey){
+                    properties.Add(scalarKey.Value);
+                }
+            }
+        }
+
+        return properties;
     }
 
     private static object fileLock = new object();
-    
+
     public static void WriteJsonToFile(string pathToFile, object obj){
         try{
             // Check if the directory exists; if not, create it.
@@ -191,7 +208,7 @@ public class CfgManager{
                 }
             }
         } catch (Exception ex){
-            Console.WriteLine($"An error occurred: {ex.Message}");
+            Console.Error.WriteLine($"An error occurred: {ex.Message}");
         }
     }
 

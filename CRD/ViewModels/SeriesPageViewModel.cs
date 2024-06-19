@@ -87,7 +87,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
                 UseShellExecute = true
             });
         } catch (Exception e){
-            Console.WriteLine($"An error occurred while trying to open URL - {url} : {e.Message}");
+            Console.Error.WriteLine($"An error occurred while trying to open URL - {url} : {e.Message}");
         }
     }
 }
