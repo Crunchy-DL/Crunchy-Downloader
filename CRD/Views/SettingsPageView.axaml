@@ -45,7 +45,8 @@
                             </ToggleButton.Content>
                         </ToggleButton>
                         <Popup IsLightDismissEnabled="True"
-                               IsOpen="{Binding IsChecked, ElementName=DropdownButtonDub, Mode=TwoWay}" Placement="Bottom"
+                               IsOpen="{Binding IsChecked, ElementName=DropdownButtonDub, Mode=TwoWay}"
+                               Placement="Bottom"
                                PlacementTarget="{Binding ElementName=DropdownButtonDub}">
                             <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
                                 <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
@@ -107,6 +108,18 @@
                     </StackPanel>
                 </controls:SettingsExpander.Footer>
 
+                <controls:SettingsExpanderItem Content="Add ScaledBorderAndShadow ">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox HorizontalContentAlignment="Center" IsVisible="{Binding AddScaledBorderAndShadow}" Margin="5 0" MinWidth="210" MaxDropDownHeight="400"
+                                      ItemsSource="{Binding ScaledBorderAndShadow}"
+                                      SelectedItem="{Binding SelectedScaledBorderAndShadow}">
+                            </ComboBox>
+                            <CheckBox IsChecked="{Binding AddScaledBorderAndShadow}"> </CheckBox>
+                        </StackPanel>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
             </controls:SettingsExpander>
 
             <controls:SettingsExpander Header="History"
@@ -131,7 +144,7 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Simultaneous Downloads">
                     <controls:SettingsExpanderItem.Footer>
                         <controls:NumberBox Minimum="0" Maximum="5"
@@ -146,7 +159,7 @@
                         <CheckBox IsChecked="{Binding DownloadVideo}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Download Video for every dub">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadVideoForEveryDub}"> </CheckBox>
@@ -182,7 +195,7 @@
                         <CheckBox IsChecked="{Binding DownloadChapters}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpander.Footer>
                 </controls:SettingsExpander.Footer>
             </controls:SettingsExpander>
@@ -226,13 +239,13 @@
                         <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Keep Subtitles separate">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SkipSubMux}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Default Audio ">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
@@ -241,8 +254,8 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                
+
+
                 <controls:SettingsExpanderItem Content="Default Subtitle ">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
@@ -251,15 +264,16 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-               
+
 
                 <controls:SettingsExpanderItem Content="Additional MKVMerge Options">
                     <controls:SettingsExpanderItem.Footer>
-                        
+
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                            <TextBox Name="TargetTextBox2" HorizontalAlignment="Left" MinWidth="250"
-                                     Text="{Binding MkvMergeOption }"></TextBox>
+                                <TextBox Name="TargetTextBox2" HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding MkvMergeOption }">
+                                </TextBox>
                                 <Button HorizontalAlignment="Center" Margin="5 0" Command="{Binding  AddMkvMergeParam}">
                                     <StackPanel Orientation="Horizontal">
                                         <controls:SymbolIcon Symbol="Add" FontSize="18" />
@@ -274,20 +288,22 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1" CornerRadius="10" Margin="2">
+                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1"
+                                                CornerRadius="10" Margin="2">
                                             <StackPanel Orientation="Horizontal" Margin="5">
-                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0"/>
-                                                <Button Content="X" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"  Width="15" Height="15" Padding="0" 
-                                                        Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveMkvMergeParam}" CommandParameter="{Binding .}"/>
+                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0" />
+                                                <Button Content="X" FontSize="10" VerticalAlignment="Center"
+                                                        HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
+                                                        Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveMkvMergeParam}"
+                                                        CommandParameter="{Binding .}" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        
-                       
-                        
+
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -295,8 +311,9 @@
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                            <TextBox  HorizontalAlignment="Left" MinWidth="250"
-                                     Text="{Binding FfmpegOption }"></TextBox>
+                                <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding FfmpegOption }">
+                                </TextBox>
                                 <Button HorizontalAlignment="Center" Margin="5 0" Command="{Binding  AddFfmpegParam}">
                                     <StackPanel Orientation="Horizontal">
                                         <controls:SymbolIcon Symbol="Add" FontSize="18" />
@@ -311,11 +328,14 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1" CornerRadius="10" Margin="2">
+                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1"
+                                                CornerRadius="10" Margin="2">
                                             <StackPanel Orientation="Horizontal" Margin="5">
-                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0"/>
-                                                <Button Content="X" FontSize="10" VerticalAlignment="Center" HorizontalAlignment="Center"  Width="15" Height="15" Padding="0" 
-                                                        Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveFfmpegParam}" CommandParameter="{Binding .}"/>
+                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0" />
+                                                <Button Content="X" FontSize="10" VerticalAlignment="Center"
+                                                        HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
+                                                        Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveFfmpegParam}"
+                                                        CommandParameter="{Binding .}" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
@@ -329,7 +349,7 @@
 
                 </controls:SettingsExpander.Footer>
             </controls:SettingsExpander>
-            
+
             <controls:SettingsExpander Header="Sonarr Settings"
                                        IconSource="Globe"
                                        Description="Adjust sonarr settings"
@@ -338,37 +358,38 @@
 
                 <controls:SettingsExpanderItem Content="Host">
                     <controls:SettingsExpanderItem.Footer>
-                        <TextBox   HorizontalAlignment="Left" MinWidth="250"
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding SonarrHost}" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Port">
                     <controls:SettingsExpanderItem.Footer>
-                        <TextBox   HorizontalAlignment="Left" MinWidth="250"
-                                   Text="{Binding SonarrPort}" />
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding SonarrPort}" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="API Key">
                     <controls:SettingsExpanderItem.Footer>
-                        <TextBox   HorizontalAlignment="Left" MinWidth="250"
-                                   Text="{Binding SonarrApiKey}" />
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding SonarrApiKey}" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Use SSL">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SonarrUseSsl}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                <controls:SettingsExpanderItem Content="Use Sonarr Numbering" Description="Potentially wrong if it couldn't be matched">
+
+                <controls:SettingsExpanderItem Content="Use Sonarr Numbering"
+                                               Description="Potentially wrong if it couldn't be matched">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SonarrUseSonarrNumbering}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
             </controls:SettingsExpander>
 
             <controls:SettingsExpander Header="App Theme"
@@ -546,7 +567,7 @@
                 </controls:SettingsExpander.Footer>
 
             </controls:SettingsExpander>
-            
+
 
             <Grid Margin="0 0 0 10"
                   ColumnDefinitions="*,Auto" RowDefinitions="*,Auto">

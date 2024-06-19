@@ -53,6 +53,9 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "mux_skip_subs", ApplyNamingConventions = false)]
     public bool SkipSubsMux{ get; set; }
     
+    [YamlMember(Alias = "subs_add_scaled_border", ApplyNamingConventions = false)]
+    public ScaledBorderAndShadowSelection SubsAddScaledBorder{ get; set; }
+    
     [YamlMember(Alias = "mux_mp4", ApplyNamingConventions = false)]
     public bool Mp4{ get; set; }
 

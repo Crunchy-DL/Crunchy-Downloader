@@ -165,6 +165,12 @@ public enum DownloadMediaType{
     Subtitle,
 }
 
+public enum ScaledBorderAndShadowSelection{
+    DontAdd,
+    ScaledBorderAndShadowYes,
+    ScaledBorderAndShadowNo,
+}
+
 public enum SonarrCoverType{
     Banner,
     FanArt,

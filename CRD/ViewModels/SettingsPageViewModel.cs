@@ -32,6 +32,17 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _downloadChapters = true;
+    
+    [ObservableProperty]
+    private bool _addScaledBorderAndShadow = false;
+    
+    [ObservableProperty]
+    private ComboBoxItem _selectedScaledBorderAndShadow;
+    
+    public ObservableCollection<ComboBoxItem> ScaledBorderAndShadow{ get; } = new(){
+        new ComboBoxItem(){ Content = "ScaledBorderAndShadow: yes" },
+        new ComboBoxItem(){ Content = "ScaledBorderAndShadow: no" },
+    };
 
     [ObservableProperty]
     private bool _muxToMp4;
@@ -296,6 +307,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
             SonarrPort = props.Port + "";
             SonarrApiKey = props.ApiKey + "";
         }
+
+        AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+        SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
         
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
@@ -362,6 +376,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.Numbers = LeadingNumbers;
         Crunchyroll.Instance.CrunOptions.FileName = FileName;
 
+        Crunchyroll.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
         List<string> softSubs = new List<string>();
         foreach (var listBoxItem in SelectedSubLang){
@@ -434,6 +449,35 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CfgManager.WriteSettingsToFile();
     }
 
+
+    private ScaledBorderAndShadowSelection GetScaledBorderAndShadowSelection(){
+        if (!AddScaledBorderAndShadow){
+            return ScaledBorderAndShadowSelection.DontAdd;
+        }
+
+        if (SelectedScaledBorderAndShadow.Content + "" == "ScaledBorderAndShadow: yes"){
+            return ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+        }
+        
+        if (SelectedScaledBorderAndShadow.Content + "" == "ScaledBorderAndShadow: no"){
+            return ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo;
+        }
+        
+        return ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+    }
+
+    private ComboBoxItem GetScaledBorderAndShadowFromOptions(CrDownloadOptions options){
+        switch (options.SubsAddScaledBorder){
+            case (ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes):
+                return ScaledBorderAndShadow.FirstOrDefault(a => a.Content != null && (string)a.Content == "ScaledBorderAndShadow: yes") ?? ScaledBorderAndShadow[0];
+            case ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo:
+                return ScaledBorderAndShadow.FirstOrDefault(a => a.Content != null && (string)a.Content == "ScaledBorderAndShadow: no") ?? ScaledBorderAndShadow[0];
+            default:
+                return ScaledBorderAndShadow[0];
+        }
+    }
+    
+    
     private void UpdateSubAndDubString(){
         if (SelectedSubLang.Count == 0){
             SelectedSubs = "none";
@@ -624,6 +668,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
     partial void OnSelectedStreamEndpointChanged(ComboBoxItem value){
+        UpdateSettings();
+    }
+
+    partial void OnAddScaledBorderAndShadowChanged(bool value){
+        UpdateSettings();
+    }
+
+    partial void OnSelectedScaledBorderAndShadowChanged(ComboBoxItem value){
         UpdateSettings();
     }
 }

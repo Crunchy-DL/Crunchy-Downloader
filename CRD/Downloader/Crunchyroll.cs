@@ -151,6 +151,7 @@ public class Crunchyroll{
         CrunOptions.SelectedCalendarLanguage = "de";
         CrunOptions.DlVideoOnce = true;
         CrunOptions.StreamEndpoint = "web/firefox";
+        CrunOptions.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
 
         CrunOptions.History = true;
 
@@ -1023,12 +1024,14 @@ public class Crunchyroll{
                                         DownloadSpeed = 0,
                                         Doing = "Decrypting"
                                     };
+                                    Queue.Refresh();
 
                                     var assetIdRegexMatch = Regex.Match(chosenVideoSegments.segments[0].uri, @"/assets/(?:p/)?([^_,]+)");
                                     var assetId = assetIdRegexMatch.Success ? assetIdRegexMatch.Groups[1].Value : null;
                                     var sessionId = Helpers.GenerateSessionId();
 
-                                    Console.WriteLine("Decryption Needed, attempting to decrypt");
+                                    //TODO change back from error
+                                    Console.Error.WriteLine("Decryption Needed, attempting to decrypt");
 
                                     if (!_widevine.canDecrypt){
                                         dlFailed = true;
@@ -1057,8 +1060,9 @@ public class Crunchyroll{
                                     var decRequestResponse = await HttpClientReq.Instance.SendHttpRequest(decRequest);
 
                                     if (!decRequestResponse.IsOk){
-                                        Console.WriteLine("Request to DRM Authentication failed: ");
+                                        Console.Error.WriteLine("Request to DRM Authentication failed: ");
                                         MainWindow.Instance.ShowError("Request to DRM Authentication failed");
+                                        dlFailed = true;
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
@@ -1066,7 +1070,8 @@ public class Crunchyroll{
                                             ErrorText = "DRM Authentication failed"
                                         };
                                     }
-
+                                    //TODO change back from error
+                                    Console.Error.WriteLine("Request to DRM Authentication successful");
                                     DrmAuthData authData = Helpers.Deserialize<DrmAuthData>(decRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ?? new DrmAuthData();
 
 
@@ -1076,7 +1081,8 @@ public class Crunchyroll{
                                     var encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, "https://lic.drmtoday.com/license-proxy-widevine/cenc/", authDataDict);
 
                                     if (encryptionKeys.Count == 0){
-                                        Console.WriteLine("Failed to get encryption keys");
+                                        Console.Error.WriteLine("Failed to get encryption keys");
+                                        dlFailed = true;
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
@@ -1093,7 +1099,8 @@ public class Crunchyroll{
                                         var commandAudio = commandBase + $" \"{tempTsFile}.audio.enc.m4s\" \"{tempTsFile}.audio.m4s\"";
 
                                         if (videoDownloaded){
-                                            Console.WriteLine("Started decrypting video");
+                                            //TODO change back from error
+                                            Console.Error.WriteLine("Started decrypting video");
                                             var decryptVideo = await Helpers.ExecuteCommandAsync("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo);
 
                                             if (!decryptVideo.IsOk){
@@ -1370,8 +1377,14 @@ public class Crunchyroll{
                             subsAssReqResponse.ResponseContent = '\ufeff' + subsAssReqResponse.ResponseContent;
                             var sBodySplit = subsAssReqResponse.ResponseContent.Split(new[]{ "\r\n" }, StringSplitOptions.None).ToList();
                             // Insert 'ScaledBorderAndShadow: yes' after the second line
-                            if (sBodySplit.Count > 2)
-                                sBodySplit.Insert(2, "ScaledBorderAndShadow: yes");
+                            if (sBodySplit.Count > 2){
+                                if (options.SubsAddScaledBorder == ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes){
+                                    sBodySplit.Insert(2, "ScaledBorderAndShadow: yes");
+                                }else if (options.SubsAddScaledBorder == ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo){
+                                    sBodySplit.Insert(2, "ScaledBorderAndShadow: no");
+                                }
+                            }
+                                
 
                             // Rejoin the lines back into a single string
                             subsAssReqResponse.ResponseContent = string.Join("\r\n", sBodySplit);

@@ -59,21 +59,18 @@ public class Helpers{
         return milliseconds + highResTimestamp;
     }
 
-    public static void ConvertChapterFileForFFMPEG(string chapterFilePath)
-    {
+    public static void ConvertChapterFileForFFMPEG(string chapterFilePath){
         var chapterLines = File.ReadAllLines(chapterFilePath);
-        var ffmpegChapterLines = new List<string> { ";FFMETADATA1" };
+        var ffmpegChapterLines = new List<string>{ ";FFMETADATA1" };
 
-        for (int i = 0; i < chapterLines.Length; i += 2)
-        {
+        for (int i = 0; i < chapterLines.Length; i += 2){
             var timeLine = chapterLines[i];
             var nameLine = chapterLines[i + 1];
 
             var timeParts = timeLine.Split('=');
             var nameParts = nameLine.Split('=');
 
-            if (timeParts.Length == 2 && nameParts.Length == 2)
-            {
+            if (timeParts.Length == 2 && nameParts.Length == 2){
                 var startTime = TimeSpan.Parse(timeParts[1]).TotalMilliseconds;
                 var endTime = i + 2 < chapterLines.Length ? TimeSpan.Parse(chapterLines[i + 2].Split('=')[1]).TotalMilliseconds : startTime + 10000;
 
@@ -89,37 +86,42 @@ public class Helpers{
     }
 
     public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsync(string type, string bin, string command){
-        using (var process = new Process()){
-            process.StartInfo.FileName = bin;
-            process.StartInfo.Arguments = command;
-            process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
-            process.StartInfo.UseShellExecute = false;
-            process.StartInfo.CreateNoWindow = true;
+        try{
+            using (var process = new Process()){
+                process.StartInfo.FileName = bin;
+                process.StartInfo.Arguments = command;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
 
-            process.OutputDataReceived += (sender, e) => {
-                if (!string.IsNullOrEmpty(e.Data)){
-                    Console.WriteLine(e.Data);
-                }
-            };
+                process.OutputDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.WriteLine(e.Data);
+                    }
+                };
 
-            process.ErrorDataReceived += (sender, e) => {
-                if (!string.IsNullOrEmpty(e.Data)){
-                    Console.WriteLine($"{e.Data}");
-                }
-            };
+                process.ErrorDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.WriteLine($"{e.Data}");
+                    }
+                };
 
-            process.Start();
+                process.Start();
 
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
 
-            await process.WaitForExitAsync();
+                await process.WaitForExitAsync();
 
-            // Define success condition more appropriately based on the application
-            bool isSuccess = process.ExitCode == 0;
+                // Define success condition more appropriately based on the application
+                bool isSuccess = process.ExitCode == 0;
 
-            return (IsOk: isSuccess, ErrorCode: process.ExitCode);
+                return (IsOk: isSuccess, ErrorCode: process.ExitCode);
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred: {ex.Message}");
+            return (IsOk: false, ErrorCode: -1); 
         }
     }
 
