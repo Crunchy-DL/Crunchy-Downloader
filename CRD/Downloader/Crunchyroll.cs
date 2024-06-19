@@ -549,6 +549,17 @@ public class Crunchyroll{
                 ErrorText = "Missing ffmpeg"
             };
         }
+        
+        if (!File.Exists(CfgManager.PathMKVMERGE)){
+            Console.Error.WriteLine("Missing Mkvmerge");
+            MainWindow.Instance.ShowError("Mkvmerge not found");
+            return new DownloadResponse{
+                Data = new List<DownloadedMedia>(),
+                Error = true,
+                FileName = "./unknown",
+                ErrorText = "Missing Mkvmerge"
+            };
+        }
 
         if (!_widevine.canDecrypt){
             Console.Error.WriteLine("L3 key files missing");
@@ -558,6 +569,17 @@ public class Crunchyroll{
                 Error = true,
                 FileName = "./unknown",
                 ErrorText = "Missing L3 Key"
+            };
+        }
+        
+        if (!File.Exists(CfgManager.PathMP4Decrypt)){
+            Console.Error.WriteLine("mp4decrypt  not found");
+            MainWindow.Instance.ShowError("Can't find mp4decrypt in lib folder ");
+            return new DownloadResponse{
+                Data = new List<DownloadedMedia>(),
+                Error = true,
+                FileName = "./unknown",
+                ErrorText = "Missing mp4decrypt"
             };
         }
 
@@ -864,7 +886,7 @@ public class Crunchyroll{
                                 } else if (options.QualityVideo == "worst"){
                                     chosenVideoQuality = 1;
                                 } else{
-                                    var tempIndex = videos.FindIndex(a => a.quality.height + "" == options.QualityAudio);
+                                    var tempIndex = videos.FindIndex(a => a.quality.height + "" == options.QualityVideo);
                                     if (tempIndex < 0){
                                         chosenVideoQuality = videos.Count;
                                     } else{
