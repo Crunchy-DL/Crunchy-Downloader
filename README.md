@@ -17,7 +17,7 @@ A simple crunchyroll downloader that allows you to download your favorite series
   </a>
 </p>
 <p align="center">
-  <a href="https://discord.gg/mqGCTCtx">
+  <a href="https://discord.gg/zDKNU8UUqt">
     <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
   </a>
 </p>
