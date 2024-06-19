@@ -44,10 +44,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _history;
-
-    [ObservableProperty]
-    private bool _useNonDrmEndpoint = true;
-
+    
     [ObservableProperty]
     private int _leadingNumbers;
 
@@ -81,6 +78,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
     [ObservableProperty]
     private ObservableCollection<ListBoxItem> _selectedDubLang = new();
 
+    [ObservableProperty]
+    private ComboBoxItem _selectedStreamEndpoint;
+    
     [ObservableProperty]
     private ComboBoxItem _selectedDefaultDubLang;
 
@@ -221,6 +221,22 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ListBoxItem(){ Content = "all" },
         new ListBoxItem(){ Content = "none" },
     };
+    
+    public ObservableCollection<ComboBoxItem> StreamEndpoints{ get; } = new(){
+        new ComboBoxItem(){ Content = "web/firefox" },
+        new ComboBoxItem(){ Content = "console/switch" },
+        new ComboBoxItem(){ Content = "console/ps4" },
+        new ComboBoxItem(){ Content = "console/ps5" },
+        new ComboBoxItem(){ Content = "console/xbox_one" },
+        new ComboBoxItem(){ Content = "web/edge" },
+        // new ComboBoxItem(){ Content = "web/safari" },
+        new ComboBoxItem(){ Content = "web/chrome" },
+        new ComboBoxItem(){ Content = "web/fallback" },
+        // new ComboBoxItem(){ Content = "ios/iphone" },
+        // new ComboBoxItem(){ Content = "ios/ipad" },
+        new ComboBoxItem(){ Content = "android/phone" },
+        new ComboBoxItem(){ Content = "tv/samsung" },
+    };
 
     private readonly FluentAvaloniaTheme _faTheme;
 
@@ -252,6 +268,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
         ComboBoxItem? defaultSubLang = DefaultSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.DefaultSub ?? "")) ?? null;
         SelectedDefaultSubLang = defaultSubLang ?? DefaultSubLangList[0];
 
+        ComboBoxItem? streamEndpoint = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpoint ?? "")) ?? null;
+        SelectedStreamEndpoint = streamEndpoint ?? StreamEndpoints[0];
+        
         var softSubLang = SubLangList.Where(a => options.DlSubs.Contains(a.Content)).ToList();
 
         SelectedSubLang.Clear();
@@ -277,8 +296,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
             SonarrPort = props.Port + "";
             SonarrApiKey = props.ApiKey + "";
         }
-
-        UseNonDrmEndpoint = options.UseNonDrmStreams;
+        
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
@@ -358,6 +376,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
         Crunchyroll.Instance.CrunOptions.DefaultSub = SelectedDefaultSubLang.Content + "";
+        
+        
+        Crunchyroll.Instance.CrunOptions.StreamEndpoint = SelectedStreamEndpoint.Content + "";
 
         List<string> dubLangs = new List<string>();
         foreach (var listBoxItem in SelectedDubLang){
@@ -368,8 +389,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
 
         Crunchyroll.Instance.CrunOptions.SimultaneousDownloads = SimultaneousDownloads;
-
-        Crunchyroll.Instance.CrunOptions.UseNonDrmStreams = UseNonDrmEndpoint;
+        
         Crunchyroll.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
@@ -412,8 +432,6 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.FfmpegOptions = ffmpegParams;
 
         CfgManager.WriteSettingsToFile();
-
-        // Console.WriteLine("Updated Settings");
     }
 
     private void UpdateSubAndDubString(){
@@ -555,11 +573,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     partial void OnSelectedVideoQualityChanged(ComboBoxItem? value){
         UpdateSettings();
     }
-
-    partial void OnUseNonDrmEndpointChanged(bool value){
-        UpdateSettings();
-    }
-
+    
     partial void OnHistoryChanged(bool value){
         UpdateSettings();
     }
@@ -606,6 +620,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
     partial void OnDownloadVideoForEveryDubChanged(bool value){
+        UpdateSettings();
+    }
+
+    partial void OnSelectedStreamEndpointChanged(ComboBoxItem value){
         UpdateSettings();
     }
 }

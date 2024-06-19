@@ -123,6 +123,15 @@
                                        Description="Adjust download settings"
                                        IsExpanded="False">
 
+                <controls:SettingsExpanderItem Content="Stream Endpoint ">
+                    <controls:SettingsExpanderItem.Footer>
+                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding StreamEndpoints}"
+                                  SelectedItem="{Binding SelectedStreamEndpoint}">
+                        </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
                 <controls:SettingsExpanderItem Content="Simultaneous Downloads">
                     <controls:SettingsExpanderItem.Footer>
                         <controls:NumberBox Minimum="0" Maximum="5"
@@ -174,14 +183,7 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
                 
-                <controls:SettingsExpanderItem Content="Check for Non-DRM streams">
-                    <controls:SettingsExpanderItem.Footer>
-                        <CheckBox IsChecked="{Binding UseNonDrmEndpoint}"> </CheckBox>
-                    </controls:SettingsExpanderItem.Footer>
-                </controls:SettingsExpanderItem>
-
                 <controls:SettingsExpander.Footer>
-
                 </controls:SettingsExpander.Footer>
             </controls:SettingsExpander>
 

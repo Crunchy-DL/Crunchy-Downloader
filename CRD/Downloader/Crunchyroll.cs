@@ -33,7 +33,6 @@ namespace CRD.Downloader;
 public class Crunchyroll{
     public CrToken? Token;
     public CrCmsToken? CmsToken;
-    private readonly string _api = "web"; //web | android
 
     public CrProfile Profile = new();
     public CrDownloadOptions CrunOptions;
@@ -151,7 +150,7 @@ public class Crunchyroll{
         CrunOptions.Theme = "System";
         CrunOptions.SelectedCalendarLanguage = "de";
         CrunOptions.DlVideoOnce = true;
-        CrunOptions.UseNonDrmStreams = true;
+        CrunOptions.StreamEndpoint = "web/firefox";
 
         CrunOptions.History = true;
 
@@ -551,15 +550,16 @@ public class Crunchyroll{
             };
         }
 
-        // if (!options.UseNonDrmStreams && !_widevine.canDecrypt){
-        //     Console.Error.WriteLine("Only searching for drm streams but widevine can't decrypt");
-        //     MainWindow.Instance.ShowError("Settings set to not search for DRM streams - but can't find CDM files in widevine folder ");
-        //     return new DownloadResponse{
-        //         Data = new List<DownloadedMedia>(),
-        //         Error = true,
-        //         FileName = "./unknown"
-        //     };
-        // }
+        if (!_widevine.canDecrypt){
+            Console.Error.WriteLine("L3 key files missing");
+            MainWindow.Instance.ShowError("Can't find CDM files in widevine folder ");
+            return new DownloadResponse{
+                Data = new List<DownloadedMedia>(),
+                Error = true,
+                FileName = "./unknown",
+                ErrorText = "Missing L3 Key"
+            };
+        }
 
         string mediaName = $"{data.SeasonTitle} - {data.EpisodeNumber} - {data.EpisodeTitle}";
         string fileName = "";
@@ -672,16 +672,6 @@ public class Crunchyroll{
                 }
 
                 var pbData = fetchPlaybackData.pbData;
-
-
-                #region NonDrmRequest
-
-                if (options.UseNonDrmStreams || !_widevine.canDecrypt){
-                    await FetchNoDrmPlaybackData(mediaGuid, pbData);
-                }
-
-                #endregion
-
 
                 List<string> hsLangs = new List<string>();
                 var pbStreams = pbData.Data?[0];
@@ -809,7 +799,7 @@ public class Crunchyroll{
                             dlFailed = true;
                             return new DownloadResponse{
                                 Data = new List<DownloadedMedia>(),
-                                Error = true,
+                                Error = dlFailed,
                                 FileName = "./unknown",
                                 ErrorText = "Playlist fetch problem"
                             };
@@ -1500,31 +1490,39 @@ public class Crunchyroll{
         return (audioDownloadResult.Ok, audioDownloadResult.Parts, tsFile);
     }
 
-    private async Task FetchNoDrmPlaybackData(string currentMediaId, PlaybackData pbData){
-        var playbackRequestNonDrm = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{currentMediaId}/console/switch/play", HttpMethod.Get, true, true, null);
-        playbackRequestNonDrm.Headers.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
+    private async Task<(bool IsOk, PlaybackData pbData, string error)> FetchPlaybackData(string mediaId, string mediaGuidId, CrunchyEpMetaData epMeta){
+        PlaybackData temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+        bool ok = true;
 
-        var playbackRequestNonDrmResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequestNonDrm);
+        HttpRequestMessage playbackRequest;
+        (bool IsOk, string ResponseContent) playbackRequestResponse;
 
-        if (!playbackRequestNonDrmResponse.IsOk && playbackRequestNonDrmResponse.ResponseContent != string.Empty){
-            var s = playbackRequestNonDrmResponse.ResponseContent;
+
+        playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/{CrunOptions.StreamEndpoint}/play", HttpMethod.Get, true, false, null);
+
+        playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
+
+        if (!playbackRequestResponse.IsOk && playbackRequestResponse.ResponseContent != string.Empty){
+            var s = playbackRequestResponse.ResponseContent;
             var error = StreamError.FromJson(s);
             if (error != null && error.IsTooManyActiveStreamsError()){
                 foreach (var errorActiveStream in error.ActiveStreams){
                     await HttpClientReq.DeAuthVideo(errorActiveStream.ContentId, errorActiveStream.Token);
                 }
 
-                playbackRequestNonDrm = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{currentMediaId}/console/switch/play", HttpMethod.Get, true, true, null);
-                playbackRequestNonDrm.Headers.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
-                playbackRequestNonDrmResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequestNonDrm);
+                playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/{CrunOptions.StreamEndpoint}/play", HttpMethod.Get, true, false, null);
+                playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
             }
         }
 
-        if (playbackRequestNonDrmResponse.IsOk && playbackRequestNonDrmResponse.ResponseContent != string.Empty){
-            CrunchyStreamData? playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(playbackRequestNonDrmResponse.ResponseContent, SettingsJsonSerializerSettings);
+        if (playbackRequestResponse.IsOk){
+            temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+            temppbData.Data.Add(new Dictionary<string, Dictionary<string, StreamDetails>>());
+
+            CrunchyStreamData? playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings);
             CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
             if (playStream != null){
-                if (playStream.Token != null) await HttpClientReq.DeAuthVideo(currentMediaId, playStream.Token);
+                if (playStream.Token != null) await HttpClientReq.DeAuthVideo(mediaGuidId, playStream.Token);
 
                 if (playStream.HardSubs != null)
                     foreach (var hardsub in playStream.HardSubs){
@@ -1540,69 +1538,22 @@ public class Crunchyroll{
                     HardsubLocale = Locale.DefaulT
                 };
 
-                if (pbData.Data != null) pbData.Data[0]["adaptive_switch_dash"] = derivedPlayCrunchyStreams;
-            }
-        } else{
-            Console.WriteLine("Non-DRM Request Stream URLs FAILED!");
-        }
-    }
-
-    private async Task<(bool IsOk, PlaybackData pbData, string error)> FetchPlaybackData(string mediaId, string mediaGuidId, CrunchyEpMetaData epMeta){
-        PlaybackData temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
-        bool ok = true;
-
-        HttpRequestMessage playbackRequest;
-        (bool IsOk, string ResponseContent) playbackRequestResponse;
-
-        if (_api == "android"){
-            NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-
-            query["force_locale"] = "";
-            query["preferred_audio_language"] = "ja-JP";
-            query["Policy"] = CmsToken?.Cms.Policy;
-            query["Signature"] = CmsToken?.Cms.Signature;
-            query["Key-Pair-Id"] = CmsToken?.Cms.KeyPairId;
-
-
-            playbackRequest = HttpClientReq.CreateRequestMessage($"{Api.BetaCms}{CmsToken?.Cms.Bucket}/videos/{mediaId}/streams?", HttpMethod.Get, true, true, query);
-
-            playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
-
-            if (playbackRequestResponse.IsOk){
-                var androidTempData = Helpers.Deserialize<PlaybackDataAndroid>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings);
-                temppbData = new PlaybackData(){
-                    Data = androidTempData.streams, Total = androidTempData.streams.Count,
-                    Meta = new PlaybackMeta(){
-                        MediaId = androidTempData.media_id, Subtitles = androidTempData.subtitles, Bifs = androidTempData.bifs, Versions = androidTempData.versions, AudioLocale = androidTempData.audio_locale,
-                        ClosedCaptions = androidTempData.closed_captions, Captions = androidTempData.captions
-                    }
-                };
-            } else{
-                NameValueCollection query2 = HttpUtility.ParseQueryString(new UriBuilder().Query);
-
-                query2["preferred_audio_language"] = "ja-JP";
-                query2["Policy"] = CmsToken?.Cms.Policy;
-                query2["Signature"] = CmsToken?.Cms.Signature;
-                query2["Key-Pair-Id"] = CmsToken?.Cms.KeyPairId;
-
-                playbackRequest = HttpClientReq.CreateRequestMessage($"{Api.ApiBeta}{epMeta.Playback}?", HttpMethod.Get, true, true, query2);
-
-                playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
-
-                if (playbackRequestResponse.IsOk){
-                    temppbData = Helpers.Deserialize<PlaybackData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ??
-                                 new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
-                } else{
-                    Console.WriteLine("'Fallback Request Stream URLs FAILED!'");
-                    ok = playbackRequestResponse.IsOk;
+                if (temppbData.Data != null){
+                    temppbData.Data[0]["drm_adaptive_dash"] = derivedPlayCrunchyStreams;
+                    temppbData.Total = 1;
+                }
+                
+                temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
+                temppbData.Meta.Subtitles = new Subtitles();
+                foreach (var playStreamSubtitle in playStream.Subtitles){
+                    Subtitle sub = playStreamSubtitle.Value;
+                    temppbData.Meta.Subtitles.Add(playStreamSubtitle.Key, new SubtitleInfo(){ Format = sub.Format, Locale = sub.Locale, Url = sub.Url });
                 }
             }
         } else{
-            // var playbackRequest22 = HttpClientReq.CreateRequestMessage($"{Api.Cms}/videos/{mediaId}/streams", HttpMethod.Get, true, false, null);
-            //  
-            //  var playbackRequestResponse22 = await HttpClientReq.Instance.SendHttpRequest(playbackRequest22);
+            Console.WriteLine("Request Stream URLs FAILED! Attempting fallback");
 
-            playbackRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/videos/{mediaId}/streams", HttpMethod.Get, true, false, null);
+            playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/web/firefox/play", HttpMethod.Get, true, false, null);
 
             playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
 
@@ -1614,72 +1565,52 @@ public class Crunchyroll{
                         await HttpClientReq.DeAuthVideo(errorActiveStream.ContentId, errorActiveStream.Token);
                     }
 
-                    playbackRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/videos/{mediaId}/streams", HttpMethod.Get, true, false, null);
+                    playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/web/firefox/play", HttpMethod.Get, true, false, null);
                     playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
                 }
             }
-            
-            if (!playbackRequestResponse.IsOk){
-                temppbData = Helpers.Deserialize<PlaybackData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ??
-                             new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+
+            if (playbackRequestResponse.IsOk){
+                temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
+                temppbData.Data.Add(new Dictionary<string, Dictionary<string, StreamDetails>>());
+
+                CrunchyStreamData? playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings);
+                CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
+                if (playStream != null){
+                    if (playStream.Token != null) await HttpClientReq.DeAuthVideo(mediaGuidId, playStream.Token);
+
+                    if (playStream.HardSubs != null)
+                        foreach (var hardsub in playStream.HardSubs){
+                            var stream = hardsub.Value;
+                            derivedPlayCrunchyStreams[hardsub.Key] = new StreamDetails{
+                                Url = stream.Url,
+                                HardsubLocale = stream.Hlang
+                            };
+                        }
+
+                    derivedPlayCrunchyStreams[""] = new StreamDetails{
+                        Url = playStream.Url,
+                        HardsubLocale = Locale.DefaulT
+                    };
+
+                    if (temppbData.Data != null){
+                        temppbData.Data[0]["drm_adaptive_dash"] = derivedPlayCrunchyStreams;
+                        temppbData.Total = 1;
+                    }
+                 
+                    temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
+                    temppbData.Meta.Subtitles = new Subtitles();
+                    foreach (var playStreamSubtitle in playStream.Subtitles){
+                        Subtitle sub = playStreamSubtitle.Value;
+                        temppbData.Meta.Subtitles.Add(playStreamSubtitle.Key, new SubtitleInfo(){ Format = sub.Format, Locale = sub.Locale, Url = sub.Url });
+                    }
+                }
             } else{
-                Console.WriteLine("Request Stream URLs FAILED! Attempting fallback");
-                
-                playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/web/firefox/play", HttpMethod.Get, true, false, null);
-
-                playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
-
-                if (!playbackRequestResponse.IsOk && playbackRequestResponse.ResponseContent != string.Empty){
-                    var s = playbackRequestResponse.ResponseContent;
-                    var error = StreamError.FromJson(s);
-                    if (error != null && error.IsTooManyActiveStreamsError()){
-                        foreach (var errorActiveStream in error.ActiveStreams){
-                            await HttpClientReq.DeAuthVideo(errorActiveStream.ContentId, errorActiveStream.Token);
-                        }
-
-                        playbackRequest = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/{mediaGuidId}/web/firefox/play", HttpMethod.Get, true, false, null);
-                        playbackRequestResponse = await HttpClientReq.Instance.SendHttpRequest(playbackRequest);
-                    }
-                }
-
-                if (playbackRequestResponse.IsOk){
-                    temppbData = new PlaybackData{ Total = 0, Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>() };
-                    temppbData.Data.Add(new Dictionary<string, Dictionary<string, StreamDetails>>());
-
-                    CrunchyStreamData? playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(playbackRequestResponse.ResponseContent, SettingsJsonSerializerSettings);
-                    CrunchyStreams derivedPlayCrunchyStreams = new CrunchyStreams();
-                    if (playStream != null){
-                        if (playStream.Token != null) await HttpClientReq.DeAuthVideo(mediaGuidId, playStream.Token);
-
-                        if (playStream.HardSubs != null)
-                            foreach (var hardsub in playStream.HardSubs){
-                                var stream = hardsub.Value;
-                                derivedPlayCrunchyStreams[hardsub.Key] = new StreamDetails{
-                                    Url = stream.Url,
-                                    HardsubLocale = stream.Hlang
-                                };
-                            }
-
-                        derivedPlayCrunchyStreams[""] = new StreamDetails{
-                            Url = playStream.Url,
-                            HardsubLocale = Locale.DefaulT
-                        };
-
-                        if (temppbData.Data != null) temppbData.Data[0]["drm_adaptive_switch_dash"] = derivedPlayCrunchyStreams;
-
-                        temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
-                        temppbData.Meta.Subtitles = new Subtitles();
-                        foreach (var playStreamSubtitle in playStream.Subtitles){
-                            Subtitle sub = playStreamSubtitle.Value;
-                            temppbData.Meta.Subtitles.Add(playStreamSubtitle.Key, new SubtitleInfo(){ Format = sub.Format, Locale = sub.Locale, Url = sub.Url });
-                        }
-                    }
-                } else{
-                    Console.Error.WriteLine("'Fallback Request Stream URLs FAILED!'");
-                    ok = playbackRequestResponse.IsOk;
-                }
+                Console.Error.WriteLine("'Fallback Request Stream URLs FAILED!'");
+                ok = playbackRequestResponse.IsOk;
             }
         }
+
 
         return (IsOk: ok, pbData: temppbData, error: ok ? "" : playbackRequestResponse.ResponseContent);
     }

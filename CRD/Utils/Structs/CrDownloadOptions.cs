@@ -113,13 +113,13 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "history", ApplyNamingConventions = false)]
     public bool History{ get; set; }
     
-    [YamlMember(Alias = "user_non_drm_streams", ApplyNamingConventions = false)]
-    public bool UseNonDrmStreams{ get; set; }
-    
     [YamlMember(Alias = "sonarr_properties", ApplyNamingConventions = false)]
     public SonarrProperties? SonarrProperties{ get; set; }
     
     [YamlMember(Alias = "log_mode", ApplyNamingConventions = false)]
     public bool LogMode{ get; set; }
+ 
+    [YamlMember(Alias = "stream_endpoint", ApplyNamingConventions = false)]
+    public string? StreamEndpoint{ get; set; }
     
 }

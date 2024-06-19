@@ -46,34 +46,7 @@ public class HttpClientReq{
         
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.8.0 Nintendo Switch/12.3.12.0 UE4/4.27");
-
-        // // Set Accept headers
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/html"));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xhtml+xml"));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/xml", 0.9));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/avif"));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/webp"));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("image/apng"));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*", 0.8));
-        // client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/signed-exchange", 0.7));
-        //
-        // // Set Accept-Language
-        // client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("en-US"));
-        // client.DefaultRequestHeaders.AcceptLanguage.Add(new StringWithQualityHeaderValue("en", 0.9));
-        //
-        // // Set Cache-Control and Pragma for no caching
-        // client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue{ NoCache = true };
-        // client.DefaultRequestHeaders.Pragma.Add(new NameValueHeaderValue("no-cache"));
-        //
-        // // Set other headers
-        // client.DefaultRequestHeaders.Add("sec-ch-ua", "\"Google Chrome\";v=\"123\", \"Not:A-Brand\";v=\"8\", \"Chromium\";v=\"123\"");
-        // client.DefaultRequestHeaders.Add("sec-ch-ua-mobile", "?0");
-        // client.DefaultRequestHeaders.Add("sec-ch-ua-platform", "\"Windows\"");
-        // client.DefaultRequestHeaders.Add("sec-fetch-dest", "document");
-        // client.DefaultRequestHeaders.Add("sec-fetch-mode", "navigate");
-        // client.DefaultRequestHeaders.Add("sec-fetch-site", "none");
-        // client.DefaultRequestHeaders.Add("sec-fetch-user", "?1");
-        // client.DefaultRequestHeaders.Add("upgrade-insecure-requests", "1");
+        
     }
 
     public void SetETPCookie(string refresh_token){
