@@ -32,9 +32,6 @@ public partial class AccountPageViewModel : ViewModelBase{
 
     public AccountPageViewModel(){
         UpdatetProfile();
-
-
-
     }
 
     private void Timer_Tick(object sender, EventArgs e){
@@ -43,7 +40,7 @@ public partial class AccountPageViewModel : ViewModelBase{
             RemainingTime = "No active Subscription";
             _timer.Stop();
         } else{
-            RemainingTime = $"{(IsCancelled ? "Subscription ending in: ":"Subscription refreshing in: ")}{remaining:dd\\:hh\\:mm\\:ss}";
+            RemainingTime = $"{(IsCancelled ? "Subscription ending in: " : "Subscription refreshing in: ")}{remaining:dd\\:hh\\:mm\\:ss}";
         }
     }
 
@@ -51,23 +48,34 @@ public partial class AccountPageViewModel : ViewModelBase{
         ProfileName = Crunchyroll.Instance.Profile.Username; // Default or fetched user name
         LoginLogoutText = Crunchyroll.Instance.Profile.Username == "???" ? "Login" : "Logout"; // Default state
         LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" + Crunchyroll.Instance.Profile.Avatar);
-        
+
+
         if (Crunchyroll.Instance.Profile.Subscription != null && Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts != null){
-            var sub = Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.First();
-            _targetTime = Crunchyroll.Instance.Profile.Subscription.NextRenewalDate;
-            if (sub != null){
-                IsCancelled = sub.IsCancelled;
+            if (Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.Count >= 1){
+                var sub = Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.First();
+                
+                if (sub != null){
+                    IsCancelled = sub.IsCancelled;
+                }
             }
-            
-            _timer = new DispatcherTimer{
-                Interval = TimeSpan.FromSeconds(1)
-            };
-            _timer.Tick += Timer_Tick;
-            _timer.Start();
+
+            if (Crunchyroll.Instance.Profile.Subscription?.NextRenewalDate != null){
+                _targetTime = Crunchyroll.Instance.Profile.Subscription.NextRenewalDate;
+                _timer = new DispatcherTimer{
+                    Interval = TimeSpan.FromSeconds(1)
+                };
+                _timer.Tick += Timer_Tick;
+                _timer.Start();
+            }
+           
         } else{
             RemainingTime = "No active Subscription";
+            if (_timer != null){
+                _timer.Stop();
+                _timer.Tick -= Timer_Tick;
+            }
+            RaisePropertyChanged(nameof(RemainingTime));
         }
-        
     }
 
     [RelayCommand]

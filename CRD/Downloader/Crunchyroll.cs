@@ -550,7 +550,7 @@ public class Crunchyroll{
                 ErrorText = "Missing ffmpeg"
             };
         }
-        
+
         if (!File.Exists(CfgManager.PathMKVMERGE)){
             Console.Error.WriteLine("Missing Mkvmerge");
             MainWindow.Instance.ShowError("Mkvmerge not found");
@@ -572,7 +572,7 @@ public class Crunchyroll{
                 ErrorText = "Missing L3 Key"
             };
         }
-        
+
         if (!File.Exists(CfgManager.PathMP4Decrypt)){
             Console.Error.WriteLine("mp4decrypt  not found");
             MainWindow.Instance.ShowError("Can't find mp4decrypt in lib folder ");
@@ -1070,14 +1070,18 @@ public class Crunchyroll{
                                             ErrorText = "DRM Authentication failed"
                                         };
                                     }
+
                                     //TODO change back from error
                                     Console.Error.WriteLine("Request to DRM Authentication successful");
                                     DrmAuthData authData = Helpers.Deserialize<DrmAuthData>(decRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ?? new DrmAuthData();
 
-
+                                    //TODO change back from error
+                                    Console.Error.WriteLine("Deserialized Authentication successful");
                                     Dictionary<string, string> authDataDict = new Dictionary<string, string>
                                         { { "dt-custom-data", authData.CustomData ?? string.Empty },{ "x-dt-auth-token", authData.Token ?? string.Empty } };
 
+                                    //TODO change back from error
+                                    Console.Error.WriteLine("Requesting encryption keys");
                                     var encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, "https://lic.drmtoday.com/license-proxy-widevine/cenc/", authDataDict);
 
                                     if (encryptionKeys.Count == 0){
@@ -1091,13 +1095,19 @@ public class Crunchyroll{
                                         };
                                     }
 
+                                    //TODO change back from error
+                                    Console.Error.WriteLine("Requested encryption keys successful");
+
                                     if (Path.Exists(CfgManager.PathMP4Decrypt)){
+                                        //TODO change back from error
+                                        Console.Error.WriteLine("Building command");
                                         var keyId = BitConverter.ToString(encryptionKeys[0].KeyID).Replace("-", "").ToLower();
                                         var key = BitConverter.ToString(encryptionKeys[0].Bytes).Replace("-", "").ToLower();
                                         var commandBase = $"--show-progress --key {keyId}:{key}";
                                         var commandVideo = commandBase + $" \"{tempTsFile}.video.enc.m4s\" \"{tempTsFile}.video.m4s\"";
                                         var commandAudio = commandBase + $" \"{tempTsFile}.audio.enc.m4s\" \"{tempTsFile}.audio.m4s\"";
-
+                                        //TODO change back from error
+                                        Console.Error.WriteLine("Built command");
                                         if (videoDownloaded){
                                             //TODO change back from error
                                             Console.Error.WriteLine("Started decrypting video");
@@ -1145,10 +1155,14 @@ public class Crunchyroll{
                                                     IsPrimary = isPrimary
                                                 });
                                             }
+                                        } else{
+                                            //TODO change back from error
+                                            Console.Error.WriteLine("No Video downloaded");
                                         }
 
                                         if (audioDownloaded){
-                                            Console.WriteLine("Started decrypting audio");
+                                            //TODO change back from error
+                                            Console.Error.WriteLine("Started decrypting audio");
                                             var decryptAudio = await Helpers.ExecuteCommandAsync("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio);
 
                                             if (!decryptAudio.IsOk){
@@ -1192,9 +1206,12 @@ public class Crunchyroll{
                                                     IsPrimary = isPrimary
                                                 });
                                             }
+                                        } else{
+                                            //TODO change back from error
+                                            Console.Error.WriteLine("No Audio downloaded");
                                         }
                                     } else{
-                                        Console.WriteLine("mp4decrypt not found, files need decryption. Decryption Keys: ");
+                                        Console.Error.WriteLine("mp4decrypt not found, files need decryption. Decryption Keys: ");
                                         MainWindow.Instance.ShowError($"mp4decrypt not found, files need decryption");
                                     }
                                 } else{
@@ -1380,11 +1397,11 @@ public class Crunchyroll{
                             if (sBodySplit.Count > 2){
                                 if (options.SubsAddScaledBorder == ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes){
                                     sBodySplit.Insert(2, "ScaledBorderAndShadow: yes");
-                                }else if (options.SubsAddScaledBorder == ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo){
+                                } else if (options.SubsAddScaledBorder == ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo){
                                     sBodySplit.Insert(2, "ScaledBorderAndShadow: no");
                                 }
                             }
-                                
+
 
                             // Rejoin the lines back into a single string
                             subsAssReqResponse.ResponseContent = string.Join("\r\n", sBodySplit);
@@ -1577,7 +1594,7 @@ public class Crunchyroll{
                     temppbData.Data[0]["drm_adaptive_dash"] = derivedPlayCrunchyStreams;
                     temppbData.Total = 1;
                 }
-                
+
                 temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
                 temppbData.Meta.Subtitles = new Subtitles();
                 foreach (var playStreamSubtitle in playStream.Subtitles){
@@ -1632,7 +1649,7 @@ public class Crunchyroll{
                         temppbData.Data[0]["drm_adaptive_dash"] = derivedPlayCrunchyStreams;
                         temppbData.Total = 1;
                     }
-                 
+
                     temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
                     temppbData.Meta.Subtitles = new Subtitles();
                     foreach (var playStreamSubtitle in playStream.Subtitles){
