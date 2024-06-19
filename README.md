@@ -69,8 +69,6 @@ Settings:
 
 # 🛠️ DRM Decryption Guide
 
-Currently, it is not necessary to include the CDM files as it will use non-DRM URLs if possible.
-
 ## Decryption Requirements
 
 - **mp4decrypt** (available at [Bento4.com](http://www.bento4.com/)) - Required for the decryption process. This tool should be placed in the `./lib/` directory.
