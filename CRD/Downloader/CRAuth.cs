@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -112,7 +113,16 @@ public class CrAuth{
                 if (responseSubs.IsOk){
                     var subsc = Helpers.Deserialize<Subscription>(responseSubs.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
                     crunInstance.Profile.Subscription = subsc;
-                    crunInstance.Profile.HasPremium = subsc.IsActive;
+                    if ( subsc.SubscriptionProducts is{ Count: 0 } && subsc.ThirdPartySubscriptionProducts is{ Count: > 0 }){
+                        var thirdPartySub = subsc.ThirdPartySubscriptionProducts.First();
+                        var remaining = thirdPartySub.ExpirationDate - DateTime.UtcNow;
+                        crunInstance.Profile.HasPremium = remaining > TimeSpan.Zero;
+                        crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
+                        crunInstance.Profile.Subscription.NextRenewalDate = thirdPartySub.ExpirationDate;
+                    } else{
+                        crunInstance.Profile.HasPremium = subsc.IsActive; 
+                    }
+                    
                 } else{
                     crunInstance.Profile.HasPremium = false;
                     Console.Error.WriteLine("Failed to check premium subscription status");

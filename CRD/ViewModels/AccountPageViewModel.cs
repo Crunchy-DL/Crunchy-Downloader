@@ -53,9 +53,13 @@ public partial class AccountPageViewModel : ViewModelBase{
         if (Crunchyroll.Instance.Profile.Subscription != null && Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts != null){
             if (Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.Count >= 1){
                 var sub = Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.First();
-                
                 if (sub != null){
                     IsCancelled = sub.IsCancelled;
+                }
+            }else if (Crunchyroll.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.Count >= 1){
+                var sub = Crunchyroll.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.First();
+                if (sub != null){
+                    IsCancelled = !sub.AutoRenew;
                 }
             }
 

@@ -40,6 +40,12 @@ public class Subscription{
     public bool TaxIncluded{ get; set; }
     [JsonProperty("subscription_products")]
     public List<SubscriptionProduct>? SubscriptionProducts{ get; set; }
+    
+    [JsonProperty("third_party_subscription_products")]
+    public List<ThirdPartySubscriptionProduct>? ThirdPartySubscriptionProducts{ get; set; }
+    
+    [JsonProperty("nonrecurring_subscription_products")]
+    public List<SubscriptionProduct>? NonrecurringSubscriptionProducts{ get; set; }
 }
 
 public class SubscriptionProduct{
@@ -54,4 +60,25 @@ public class SubscriptionProduct{
     public string? Tier{ get; set; }
     [JsonProperty("active_free_trial")]
     public bool ActiveFreeTrial{ get; set; }
+}
+
+public class ThirdPartySubscriptionProduct{
+    [JsonProperty("effective_date")]
+    public DateTime EffectiveDate{ get; set; }
+    public string? Source{ get; set; }
+    [JsonProperty("source_reference")]
+    public string? SourceReference{ get; set; }
+    public string? Sku{ get; set; }
+    public string? Tier{ get; set; }
+    [JsonProperty("active_free_trial")]
+    public bool ActiveFreeTrial{ get; set; }
+    [JsonProperty("in_grace")]
+    public bool InGrace{ get; set; }
+    [JsonProperty("on_hold")]
+    public bool OnHold{ get; set; }
+    [JsonProperty("auto_renew")]
+    public bool AutoRenew{ get; set; }
+    [JsonProperty("expiration_date")]
+    public DateTime ExpirationDate{ get; set; }
+
 }

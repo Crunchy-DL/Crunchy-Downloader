@@ -1029,9 +1029,8 @@ public class Crunchyroll{
                                     var assetIdRegexMatch = Regex.Match(chosenVideoSegments.segments[0].uri, @"/assets/(?:p/)?([^_,]+)");
                                     var assetId = assetIdRegexMatch.Success ? assetIdRegexMatch.Groups[1].Value : null;
                                     var sessionId = Helpers.GenerateSessionId();
-
-                                    //TODO change back from error
-                                    Console.Error.WriteLine("Decryption Needed, attempting to decrypt");
+                                    
+                                    Console.WriteLine("Decryption Needed, attempting to decrypt");
 
                                     if (!_widevine.canDecrypt){
                                         dlFailed = true;
@@ -1070,18 +1069,12 @@ public class Crunchyroll{
                                             ErrorText = "DRM Authentication failed"
                                         };
                                     }
-
-                                    //TODO change back from error
-                                    Console.Error.WriteLine("Request to DRM Authentication successful");
+                                    
                                     DrmAuthData authData = Helpers.Deserialize<DrmAuthData>(decRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ?? new DrmAuthData();
-
-                                    //TODO change back from error
-                                    Console.Error.WriteLine("Deserialized Authentication successful");
+                                    
                                     Dictionary<string, string> authDataDict = new Dictionary<string, string>
                                         { { "dt-custom-data", authData.CustomData ?? string.Empty },{ "x-dt-auth-token", authData.Token ?? string.Empty } };
-
-                                    //TODO change back from error
-                                    Console.Error.WriteLine("Requesting encryption keys");
+                                    
                                     var encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, "https://lic.drmtoday.com/license-proxy-widevine/cenc/", authDataDict);
 
                                     if (encryptionKeys.Count == 0){
@@ -1094,23 +1087,24 @@ public class Crunchyroll{
                                             ErrorText = "Couldn't get DRM encryption keys"
                                         };
                                     }
-
-                                    //TODO change back from error
-                                    Console.Error.WriteLine("Requested encryption keys successful");
+                                    
 
                                     if (Path.Exists(CfgManager.PathMP4Decrypt)){
-                                        //TODO change back from error
-                                        Console.Error.WriteLine("Building command");
                                         var keyId = BitConverter.ToString(encryptionKeys[0].KeyID).Replace("-", "").ToLower();
                                         var key = BitConverter.ToString(encryptionKeys[0].Bytes).Replace("-", "").ToLower();
                                         var commandBase = $"--show-progress --key {keyId}:{key}";
                                         var commandVideo = commandBase + $" \"{tempTsFile}.video.enc.m4s\" \"{tempTsFile}.video.m4s\"";
                                         var commandAudio = commandBase + $" \"{tempTsFile}.audio.enc.m4s\" \"{tempTsFile}.audio.m4s\"";
-                                        //TODO change back from error
-                                        Console.Error.WriteLine("Built command");
                                         if (videoDownloaded){
-                                            //TODO change back from error
-                                            Console.Error.WriteLine("Started decrypting video");
+                                            Console.WriteLine("Started decrypting video");
+                                            data.DownloadProgress = new DownloadProgress(){
+                                                IsDownloading = true,
+                                                Percent = 100,
+                                                Time = 0,
+                                                DownloadSpeed = 0,
+                                                Doing = "Decrypting video"
+                                            };
+                                            Queue.Refresh();
                                             var decryptVideo = await Helpers.ExecuteCommandAsync("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo);
 
                                             if (!decryptVideo.IsOk){
@@ -1156,13 +1150,19 @@ public class Crunchyroll{
                                                 });
                                             }
                                         } else{
-                                            //TODO change back from error
-                                            Console.Error.WriteLine("No Video downloaded");
+                                            Console.WriteLine("No Video downloaded");
                                         }
 
                                         if (audioDownloaded){
-                                            //TODO change back from error
-                                            Console.Error.WriteLine("Started decrypting audio");
+                                            Console.WriteLine("Started decrypting audio");
+                                            data.DownloadProgress = new DownloadProgress(){
+                                                IsDownloading = true,
+                                                Percent = 100,
+                                                Time = 0,
+                                                DownloadSpeed = 0,
+                                                Doing = "Decrypting audio"
+                                            };
+                                            Queue.Refresh();
                                             var decryptAudio = await Helpers.ExecuteCommandAsync("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio);
 
                                             if (!decryptAudio.IsOk){
@@ -1207,8 +1207,7 @@ public class Crunchyroll{
                                                 });
                                             }
                                         } else{
-                                            //TODO change back from error
-                                            Console.Error.WriteLine("No Audio downloaded");
+                                            Console.WriteLine("No Audio downloaded");
                                         }
                                     } else{
                                         Console.Error.WriteLine("mp4decrypt not found, files need decryption. Decryption Keys: ");

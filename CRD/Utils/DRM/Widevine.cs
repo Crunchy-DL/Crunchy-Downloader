@@ -71,34 +71,39 @@ public class Widevine{
             canDecrypt = false;
         }
     }
-    
+
     public async Task<List<ContentKey>> getKeys(string? pssh, string licenseServer, Dictionary<string, string> authData){
         if (pssh == null || !canDecrypt) return new List<ContentKey>();
 
-        byte[] psshBuffer = Convert.FromBase64String(pssh);
+        try{
+            byte[] psshBuffer = Convert.FromBase64String(pssh);
 
-        Session ses = new Session(new ContentDecryptionModule{ identifierBlob = identifierBlob, privateKey = privateKey }, psshBuffer);
+            Session ses = new Session(new ContentDecryptionModule{ identifierBlob = identifierBlob, privateKey = privateKey }, psshBuffer);
 
-        var playbackRequest2 = new HttpRequestMessage(HttpMethod.Post, licenseServer);
-        foreach (var keyValuePair in authData){
-            playbackRequest2.Headers.Add(keyValuePair.Key, keyValuePair.Value);
-        }
+            var playbackRequest2 = new HttpRequestMessage(HttpMethod.Post, licenseServer);
+            foreach (var keyValuePair in authData){
+                playbackRequest2.Headers.Add(keyValuePair.Key, keyValuePair.Value);
+            }
 
-        var licenceReq = ses.GetLicenseRequest();
-        playbackRequest2.Content = new ByteArrayContent(licenceReq);
+            var licenceReq = ses.GetLicenseRequest();
+            playbackRequest2.Content = new ByteArrayContent(licenceReq);
 
-        var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
+            var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
 
-        if (!response.IsOk){
-            Console.Error.WriteLine("Failed to get Keys!");
+            if (!response.IsOk){
+                Console.Error.WriteLine("Failed to get Keys!");
+                return new List<ContentKey>();
+            }
+
+            LicenceReqResp resp = Helpers.Deserialize<LicenceReqResp>(response.ResponseContent, null) ?? new LicenceReqResp();
+
+            ses.ProvideLicense(Convert.FromBase64String(resp.license));
+
+            return ses.ContentKeys;
+        } catch (Exception e){
+            Console.Error.WriteLine(e);
             return new List<ContentKey>();
         }
-
-        LicenceReqResp resp = Helpers.Deserialize<LicenceReqResp>(response.ResponseContent,null) ?? new LicenceReqResp();
-
-        ses.ProvideLicense(Convert.FromBase64String(resp.license));
-
-        return ses.ContentKeys;
     }
 }
 
