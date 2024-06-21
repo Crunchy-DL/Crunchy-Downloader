@@ -6,9 +6,11 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net.Mime;
 using System.Reflection;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -32,13 +34,13 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _downloadChapters = true;
-    
+
     [ObservableProperty]
     private bool _addScaledBorderAndShadow = false;
-    
+
     [ObservableProperty]
     private ComboBoxItem _selectedScaledBorderAndShadow;
-    
+
     public ObservableCollection<ComboBoxItem> ScaledBorderAndShadow{ get; } = new(){
         new ComboBoxItem(){ Content = "ScaledBorderAndShadow: yes" },
         new ComboBoxItem(){ Content = "ScaledBorderAndShadow: no" },
@@ -46,7 +48,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
-    
+
     [ObservableProperty]
     private bool _downloadVideoForEveryDub;
 
@@ -55,7 +57,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _history;
-    
+
     [ObservableProperty]
     private int _leadingNumbers;
 
@@ -91,7 +93,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedStreamEndpoint;
-    
+
     [ObservableProperty]
     private ComboBoxItem _selectedDefaultDubLang;
 
@@ -232,7 +234,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ListBoxItem(){ Content = "all" },
         new ListBoxItem(){ Content = "none" },
     };
-    
+
     public ObservableCollection<ComboBoxItem> StreamEndpoints{ get; } = new(){
         new ComboBoxItem(){ Content = "web/firefox" },
         new ComboBoxItem(){ Content = "console/switch" },
@@ -248,15 +250,19 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "android/phone" },
         new ComboBoxItem(){ Content = "tv/samsung" },
     };
+    
+    [ObservableProperty]
+    private string _downloadDirPath;
 
     private readonly FluentAvaloniaTheme _faTheme;
 
     private bool settingsLoaded;
 
+    private IStorageProvider _storageProvider;
+
     public SettingsPageViewModel(){
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         _currentVersion = $"{version?.Major}.{version?.Minor}.{version?.Build}";
-
 
         _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
 
@@ -270,6 +276,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         CrDownloadOptions options = Crunchyroll.Instance.CrunOptions;
 
+        DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
+        
         ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
 
@@ -281,7 +289,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         ComboBoxItem? streamEndpoint = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpoint ?? "")) ?? null;
         SelectedStreamEndpoint = streamEndpoint ?? StreamEndpoints[0];
-        
+
         var softSubLang = SubLangList.Where(a => options.DlSubs.Contains(a.Content)).ToList();
 
         SelectedSubLang.Clear();
@@ -310,7 +318,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
-        
+
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
@@ -391,8 +399,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
         Crunchyroll.Instance.CrunOptions.DefaultSub = SelectedDefaultSubLang.Content + "";
-        
-        
+
+
         Crunchyroll.Instance.CrunOptions.StreamEndpoint = SelectedStreamEndpoint.Content + "";
 
         List<string> dubLangs = new List<string>();
@@ -404,7 +412,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
 
         Crunchyroll.Instance.CrunOptions.SimultaneousDownloads = SimultaneousDownloads;
-        
+
         Crunchyroll.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
@@ -458,11 +466,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
         if (SelectedScaledBorderAndShadow.Content + "" == "ScaledBorderAndShadow: yes"){
             return ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         }
-        
+
         if (SelectedScaledBorderAndShadow.Content + "" == "ScaledBorderAndShadow: no"){
             return ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo;
         }
-        
+
         return ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
     }
 
@@ -476,8 +484,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
                 return ScaledBorderAndShadow[0];
         }
     }
-    
-    
+
+
     private void UpdateSubAndDubString(){
         if (SelectedSubLang.Count == 0){
             SelectedSubs = "none";
@@ -522,6 +530,32 @@ public partial class SettingsPageViewModel : ViewModelBase{
     public void RemoveFfmpegParam(MuxingParam param){
         FfmpegOptions.Remove(param);
         RaisePropertyChanged(nameof(FfmpegOptions));
+    }
+
+    [RelayCommand]
+    public async Task OpenFolderDialogAsync(){
+        if (_storageProvider == null){
+            Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
+            throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
+        }
+
+
+        var result = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{
+            Title = "Select Folder"
+        });
+
+        if (result.Count > 0){
+            var selectedFolder = result[0];
+            // Do something with the selected folder path
+            Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
+            Crunchyroll.Instance.CrunOptions.DownloadDirPath = selectedFolder.Path.LocalPath;
+            DownloadDirPath = string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : Crunchyroll.Instance.CrunOptions.DownloadDirPath;
+            CfgManager.WriteSettingsToFile();
+        }
+    }
+
+    public void SetStorageProvider(IStorageProvider storageProvider){
+        _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
     }
 
     partial void OnCurrentAppThemeChanged(ComboBoxItem? value){
@@ -617,7 +651,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     partial void OnSelectedVideoQualityChanged(ComboBoxItem? value){
         UpdateSettings();
     }
-    
+
     partial void OnHistoryChanged(bool value){
         UpdateSettings();
     }

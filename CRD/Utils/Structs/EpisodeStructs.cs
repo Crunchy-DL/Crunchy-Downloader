@@ -50,7 +50,7 @@ public struct CrunchyEpisode{
     [JsonProperty("availability_starts")]
     public DateTime? AvailabilityStarts{ get; set; }
 
-    public Images? Images{ get; set; } 
+    public Images? Images{ get; set; }
 
     [JsonProperty("season_id")]
     public string SeasonId{ get; set; }
@@ -84,7 +84,7 @@ public struct CrunchyEpisode{
     public string Id{ get; set; }
 
     [JsonProperty("media_type")]
-    public MediaType? MediaType{ get; set; } 
+    public MediaType? MediaType{ get; set; }
 
     [JsonProperty("availability_ends")]
     public DateTime? AvailabilityEnds{ get; set; }
@@ -95,7 +95,7 @@ public struct CrunchyEpisode{
     public string Playback{ get; set; }
 
     [JsonProperty("channel_id")]
-    public ChannelId? ChannelId{ get; set; } 
+    public ChannelId? ChannelId{ get; set; }
 
     public string? Episode{ get; set; }
 
@@ -143,10 +143,10 @@ public struct CrunchyEpisode{
     public int? EpisodeNumber{ get; set; }
 
     [JsonProperty("season_tags")]
-    public List<object> SeasonTags{ get; set; } 
+    public List<object> SeasonTags{ get; set; }
 
     [JsonProperty("maturity_ratings")]
-    public List<string> MaturityRatings{ get; set; } 
+    public List<string> MaturityRatings{ get; set; }
 
     [JsonProperty("streams_link")]
     public string? StreamsLink{ get; set; }
@@ -247,6 +247,9 @@ public class CrunchyEpMeta{
     public List<string>? SelectedDubs{ get; set; }
 
     public List<string>? AvailableSubs{ get; set; }
+    
+    public string? DownloadPath{ get; set; }
+    
 }
 
 public class DownloadProgress{
@@ -267,4 +270,10 @@ public struct CrunchyEpMetaData{
     public List<EpisodeVersion>? Versions{ get; set; }
     public bool IsSubbed{ get; set; }
     public bool IsDubbed{ get; set; }
+    
+}
+
+public struct CrunchyRollEpisodeData{
+    public string Key{ get; set; }
+    public EpisodeAndLanguage EpisodeAndLanguages{ get; set; }
 }

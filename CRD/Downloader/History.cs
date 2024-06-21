@@ -79,7 +79,7 @@ public class History(){
 
         MessageBus.Current.SendMessage(new ToastMessage($"Couldn't update download History", ToastType.Warning, 1));
     }
-    
+
     public HistoryEpisode? GetHistoryEpisode(string? seriesId, string? seasonId, string episodeId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
@@ -90,7 +90,6 @@ public class History(){
                 var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == episodeId);
 
                 if (historyEpisode != null){
-                    
                     return historyEpisode;
                 }
             }
@@ -99,21 +98,45 @@ public class History(){
         return null;
     }
 
+    public (HistoryEpisode? historyEpisode, string downloadDirPath) GetHistoryEpisodeWithDownloadDir(string? seriesId, string? seasonId, string episodeId){
+        var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
+
+        var downloadDirPath = "";
+        
+        if (historySeries != null){
+            var historySeason = historySeries.Seasons.Find(s => s.SeasonId == seasonId);
+            if (!string.IsNullOrEmpty(historySeries.SeriesDownloadPath)){
+                downloadDirPath = historySeries.SeriesDownloadPath;
+            }
+
+            if (historySeason != null){
+                var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == episodeId);
+                if (!string.IsNullOrEmpty(historySeason.SeasonDownloadPath)){
+                    downloadDirPath = historySeason.SeasonDownloadPath;
+                }
+
+                if (historyEpisode != null){
+                    return (historyEpisode, downloadDirPath);
+                }
+            }
+        }
+
+        return (null, downloadDirPath);
+    }
+
 
     public async Task UpdateWithEpisode(CrunchyEpisode episodeParam){
         var episode = episodeParam;
-        
+
         if (episode.Versions != null){
             var version = episode.Versions.Find(a => a.Original);
             if (version.AudioLocale != episode.AudioLocale){
-                var episodeById = await crunInstance.CrEpisode.ParseEpisodeById(version.Guid, "");
-                if (episodeById?.Data != null){
-                    if (episodeById.Value.Total != 1){
-                        MessageBus.Current.SendMessage(new ToastMessage($"Couldn't update download History", ToastType.Warning, 1));
-                        return;
-                    }
-
-                    episode = episodeById.Value.Data.First();
+                var crEpisode = await crunInstance.CrEpisode.ParseEpisodeById(version.Guid, "");
+                if (crEpisode != null){
+                    episode = crEpisode.Value;
+                } else{
+                    MessageBus.Current.SendMessage(new ToastMessage($"Couldn't update download History", ToastType.Warning, 1));
+                    return;
                 }
             }
         }
@@ -182,7 +205,7 @@ public class History(){
         }
 
         MatchHistorySeriesWithSonarr(false);
-        await MatchHistoryEpisodesWithSonarr(false,historySeries);
+        await MatchHistoryEpisodesWithSonarr(false, historySeries);
         UpdateHistoryFile();
     }
 
@@ -262,6 +285,7 @@ public class History(){
 
                 historySeries.UpdateNewEpisodes();
             }
+
             var sortedList = crunInstance.HistoryList.OrderBy(item => item.SeriesTitle).ToList();
             crunInstance.HistoryList.Clear();
             foreach (var item in sortedList){
@@ -269,7 +293,7 @@ public class History(){
             }
 
             MatchHistorySeriesWithSonarr(false);
-            await MatchHistoryEpisodesWithSonarr(false,historySeries);
+            await MatchHistoryEpisodesWithSonarr(false, historySeries);
             UpdateHistoryFile();
         }
     }
@@ -341,11 +365,10 @@ public class History(){
     }
 
     public void MatchHistorySeriesWithSonarr(bool updateAll){
-
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;
         }
-        
+
         foreach (var historySeries in crunInstance.HistoryList){
             if (updateAll || string.IsNullOrEmpty(historySeries.SonarrSeriesId)){
                 var sonarrSeries = FindClosestMatch(historySeries.SeriesTitle);
@@ -362,7 +385,7 @@ public class History(){
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;
         }
-        
+
         if (!string.IsNullOrEmpty(historySeries.SonarrSeriesId)){
             var episodes = await SonarrClient.Instance.GetEpisodes(int.Parse(historySeries.SonarrSeriesId));
 
@@ -551,6 +574,9 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonProperty("series_season_list")]
     public required List<HistorySeason> Seasons{ get; set; }
 
+    [JsonProperty("series_download_path")]
+    public string? SeriesDownloadPath{ get; set; }
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     [JsonIgnore]
@@ -636,7 +662,7 @@ public class HistorySeries : INotifyPropertyChanged{
         await Crunchyroll.Instance.CrHistory.UpdateSeries(SeriesId, seasonId);
         FetchingData = false;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-        Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false,this);
+        Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false, this);
     }
 }
 
@@ -661,6 +687,9 @@ public class HistorySeason : INotifyPropertyChanged{
 
     [JsonProperty("season_episode_list")]
     public required List<HistoryEpisode> EpisodesList{ get; set; }
+
+    [JsonProperty("series_download_path")]
+    public string? SeasonDownloadPath{ get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

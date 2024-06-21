@@ -286,34 +286,48 @@ public class Crunchyroll{
 
 
         if (episodeL != null){
-            if (episodeL.Value.Data != null && episodeL.Value.Data.First().IsPremiumOnly && !Profile.HasPremium){
+            if (episodeL.Value.IsPremiumOnly && !Profile.HasPremium){
                 MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
                 return;
             }
 
-            var sList = await CrEpisode.EpisodeData((CrunchyEpisodeList)episodeL);
-            var selected = CrEpisode.EpisodeMeta(sList.Data, dubLang);
-            var metas = selected.Values.ToList();
+            var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL);
+            var selected = CrEpisode.EpisodeMeta(sList, dubLang);
 
-            foreach (var crunchyEpMeta in metas){
-                if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
-                    var historyEpisode = CrHistory.GetHistoryEpisode(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
-                    if (historyEpisode != null){
-                        if (!string.IsNullOrEmpty(historyEpisode.SonarrEpisodeNumber)){
-                            crunchyEpMeta.EpisodeNumber = historyEpisode.SonarrEpisodeNumber;
-                        }
+            if (selected.Data is{ Count: > 0 }){
+                if (CrunOptions.History){
+                    var historyEpisode = CrHistory.GetHistoryEpisodeWithDownloadDir(selected.ShowId, selected.SeasonId, selected.Data.First().MediaId);
+                    if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
+                        if (historyEpisode.historyEpisode != null){
+                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
+                                selected.EpisodeNumber = historyEpisode.historyEpisode.SonarrEpisodeNumber;
+                            }
 
-                        if (!string.IsNullOrEmpty(historyEpisode.SonarrSeasonNumber)){
-                            crunchyEpMeta.Season = historyEpisode.SonarrSeasonNumber;
+                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrSeasonNumber)){
+                                selected.Season = historyEpisode.historyEpisode.SonarrSeasonNumber;
+                            }
                         }
+                    }
+
+                    if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
+                        selected.DownloadPath = historyEpisode.downloadDirPath;
                     }
                 }
 
-                Queue.Add(crunchyEpMeta);
-            }
+                Queue.Add(selected);
 
-            Console.WriteLine("Added Episode to Queue");
-            MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
+
+                if (selected.Data.Count < dubLang.Count){
+                    Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
+                    MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
+                } else{
+                    Console.WriteLine("Added Episode to Queue");
+                    MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
+                }
+            } else{
+                Console.WriteLine("Episode couldn't be added to Queue");
+                MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
+            }
         }
     }
 
@@ -324,16 +338,22 @@ public class Crunchyroll{
 
         foreach (var crunchyEpMeta in selected.Values.ToList()){
             if (crunchyEpMeta.Data?.First().Playback != null){
-                if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
-                    var historyEpisode = CrHistory.GetHistoryEpisode(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
-                    if (historyEpisode != null){
-                        if (!string.IsNullOrEmpty(historyEpisode.SonarrEpisodeNumber)){
-                            crunchyEpMeta.EpisodeNumber = historyEpisode.SonarrEpisodeNumber;
-                        }
+                if (CrunOptions.History){
+                    var historyEpisode = CrHistory.GetHistoryEpisodeWithDownloadDir(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
+                    if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
+                        if (historyEpisode.historyEpisode != null){
+                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
+                                crunchyEpMeta.EpisodeNumber = historyEpisode.historyEpisode.SonarrEpisodeNumber;
+                            }
 
-                        if (!string.IsNullOrEmpty(historyEpisode.SonarrSeasonNumber)){
-                            crunchyEpMeta.Season = historyEpisode.SonarrSeasonNumber;
+                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrSeasonNumber)){
+                                crunchyEpMeta.Season = historyEpisode.historyEpisode.SonarrSeasonNumber;
+                            }
                         }
+                    }
+
+                    if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
+                        crunchyEpMeta.DownloadPath = historyEpisode.downloadDirPath;
                     }
                 }
 
@@ -596,7 +616,7 @@ public class Crunchyroll{
             return new DownloadResponse{
                 Data = files,
                 Error = true,
-                FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                FileName = "./unknown",
                 ErrorText = "Video Data not found"
             };
         }
@@ -604,10 +624,17 @@ public class Crunchyroll{
 
         bool dlFailed = false;
         bool dlVideoOnce = false;
+        string fileDir = CfgManager.PathVIDEOS_DIR;
 
         if (data.Data != null){
             foreach (CrunchyEpMetaData epMeta in data.Data){
                 Console.WriteLine($"Requesting: [{epMeta.MediaId}] {mediaName}");
+
+                fileDir = !string.IsNullOrEmpty(data.DownloadPath) ? data.DownloadPath : !string.IsNullOrEmpty(options.DownloadDirPath) ? options.DownloadDirPath : CfgManager.PathVIDEOS_DIR;
+
+                if (!Helpers.IsValidPath(fileDir)){
+                    fileDir = CfgManager.PathVIDEOS_DIR;
+                }
 
                 string currentMediaId = (epMeta.MediaId.Contains(':') ? epMeta.MediaId.Split(':')[1] : epMeta.MediaId);
 
@@ -964,12 +991,13 @@ public class Crunchyroll{
                                 Console.WriteLine($"\tServer: {selectedServer}");
                                 Console.WriteLine("Stream URL:" + chosenVideoSegments.segments[0].uri.Split(new[]{ ",.urlset" }, StringSplitOptions.None)[0]);
 
+
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
                                 string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.Name ?? lang.Value.Name), variables, options.Numbers, options.Override).ToArray());
 
                                 string tempFile = Path.Combine(FileNameManager.ParseFileName($"temp-{(currentVersion.Guid != null ? currentVersion.Guid : currentMediaId)}", variables, options.Numbers, options.Override)
                                     .ToArray());
-                                string tempTsFile = Path.IsPathRooted(tempFile) ? tempFile : Path.Combine(CfgManager.PathVIDEOS_DIR, tempFile);
+                                string tempTsFile = Path.IsPathRooted(tempFile) ? tempFile : Path.Combine(fileDir, tempFile);
 
                                 bool audioDownloaded = false, videoDownloaded = false;
 
@@ -978,7 +1006,7 @@ public class Crunchyroll{
                                 } else if (options.Novids){
                                     Console.WriteLine("Skipping video download...");
                                 } else{
-                                    var videoDownloadResult = await DownloadVideo(chosenVideoSegments, options, outFile, tsFile, tempTsFile, data);
+                                    var videoDownloadResult = await DownloadVideo(chosenVideoSegments, options, outFile, tsFile, tempTsFile, data, fileDir);
 
                                     tsFile = videoDownloadResult.tsFile;
 
@@ -993,7 +1021,7 @@ public class Crunchyroll{
 
 
                                 if (chosenAudioSegments.segments.Count > 0 && !options.Noaudio && !dlFailed){
-                                    var audioDownloadResult = await DownloadAudio(chosenAudioSegments, options, outFile, tsFile, tempTsFile, data);
+                                    var audioDownloadResult = await DownloadAudio(chosenAudioSegments, options, outFile, tsFile, tempTsFile, data, fileDir);
 
                                     tsFile = audioDownloadResult.tsFile;
 
@@ -1011,7 +1039,7 @@ public class Crunchyroll{
                                     return new DownloadResponse{
                                         Data = files,
                                         Error = dlFailed,
-                                        FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                        FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
                                         ErrorText = ""
                                     };
                                 }
@@ -1029,7 +1057,7 @@ public class Crunchyroll{
                                     var assetIdRegexMatch = Regex.Match(chosenVideoSegments.segments[0].uri, @"/assets/(?:p/)?([^_,]+)");
                                     var assetId = assetIdRegexMatch.Success ? assetIdRegexMatch.Groups[1].Value : null;
                                     var sessionId = Helpers.GenerateSessionId();
-                                    
+
                                     Console.WriteLine("Decryption Needed, attempting to decrypt");
 
                                     if (!_widevine.canDecrypt){
@@ -1037,7 +1065,7 @@ public class Crunchyroll{
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
-                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
                                             ErrorText = "Decryption Needed but couldn't find CDM files"
                                         };
                                     }
@@ -1065,16 +1093,16 @@ public class Crunchyroll{
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
-                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
                                             ErrorText = "DRM Authentication failed"
                                         };
                                     }
-                                    
+
                                     DrmAuthData authData = Helpers.Deserialize<DrmAuthData>(decRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ?? new DrmAuthData();
-                                    
+
                                     Dictionary<string, string> authDataDict = new Dictionary<string, string>
                                         { { "dt-custom-data", authData.CustomData ?? string.Empty },{ "x-dt-auth-token", authData.Token ?? string.Empty } };
-                                    
+
                                     var encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, "https://lic.drmtoday.com/license-proxy-widevine/cenc/", authDataDict);
 
                                     if (encryptionKeys.Count == 0){
@@ -1083,11 +1111,11 @@ public class Crunchyroll{
                                         return new DownloadResponse{
                                             Data = files,
                                             Error = dlFailed,
-                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
                                             ErrorText = "Couldn't get DRM encryption keys"
                                         };
                                     }
-                                    
+
 
                                     if (Path.Exists(CfgManager.PathMP4Decrypt)){
                                         var keyId = BitConverter.ToString(encryptionKeys[0].KeyID).Replace("-", "").ToLower();
@@ -1249,7 +1277,7 @@ public class Crunchyroll{
                             if (Path.IsPathRooted(outFile)){
                                 tsFile = outFile;
                             } else{
-                                tsFile = Path.Combine(CfgManager.PathVIDEOS_DIR, outFile);
+                                tsFile = Path.Combine(fileDir, outFile);
                             }
 
                             // Check if the path is absolute
@@ -1259,7 +1287,7 @@ public class Crunchyroll{
                             string[] directories = Path.GetDirectoryName(outFile)?.Split(Path.DirectorySeparatorChar) ?? Array.Empty<string>();
 
                             // Initialize the cumulative path based on whether the original path is absolute or not
-                            string cumulativePath = isAbsolute ? "" : CfgManager.PathVIDEOS_DIR;
+                            string cumulativePath = isAbsolute ? "" : fileDir;
                             for (int i = 0; i < directories.Length; i++){
                                 // Build the path incrementally
                                 cumulativePath = Path.Combine(cumulativePath, directories[i]);
@@ -1295,7 +1323,7 @@ public class Crunchyroll{
                     }
 
                     if (!options.SkipSubs && options.DlSubs.IndexOf("none") == -1){
-                        await DownloadSubtitles(options, pbData, audDub, fileName, files);
+                        await DownloadSubtitles(options, pbData, audDub, fileName, files, fileDir);
                     } else{
                         Console.WriteLine("Subtitles downloading skipped!");
                     }
@@ -1311,12 +1339,12 @@ public class Crunchyroll{
         return new DownloadResponse{
             Data = files,
             Error = dlFailed,
-            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(CfgManager.PathVIDEOS_DIR, fileName)) : "./unknown",
+            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
             ErrorText = ""
         };
     }
 
-    private static async Task DownloadSubtitles(CrDownloadOptions options, PlaybackData pbData, string audDub, string fileName, List<DownloadedMedia> files){
+    private static async Task DownloadSubtitles(CrDownloadOptions options, PlaybackData pbData, string audDub, string fileName, List<DownloadedMedia> files, string fileDir){
         if (pbData.Meta != null && pbData.Meta.Subtitles != null && pbData.Meta.Subtitles.Count > 0){
             List<SubtitleInfo> subsData = pbData.Meta.Subtitles.Values.ToList();
             List<SubtitleInfo> capsData = pbData.Meta.ClosedCaptions?.Values.ToList() ?? new List<SubtitleInfo>();
@@ -1354,26 +1382,9 @@ public class Crunchyroll{
                 var isSigns = langItem.Code == audDub && !subsItem.isCC;
                 var isCc = subsItem.isCC;
                 sxData.File = Languages.SubsFile(fileName, index + "", langItem, isCc, options.CcTag, isSigns, subsItem.format);
-                sxData.Path = Path.Combine(CfgManager.PathVIDEOS_DIR, sxData.File);
+                sxData.Path = Path.Combine(fileDir, sxData.File);
 
-                // Check if the path is absolute
-                bool isAbsolute = Path.IsPathRooted(sxData.Path);
-
-                // Get all directory parts of the path except the last segment (assuming it's a file)
-                string[] directories = Path.GetDirectoryName(sxData.Path)?.Split(Path.DirectorySeparatorChar) ?? Array.Empty<string>();
-
-                // Initialize the cumulative path based on whether the original path is absolute or not
-                string cumulativePath = isAbsolute ? "" : CfgManager.PathVIDEOS_DIR;
-                for (int i = 0; i < directories.Length; i++){
-                    // Build the path incrementally
-                    cumulativePath = Path.Combine(cumulativePath, directories[i]);
-
-                    // Check if the directory exists and create it if it does not
-                    if (!Directory.Exists(cumulativePath)){
-                        Directory.CreateDirectory(cumulativePath);
-                        Console.WriteLine($"Created directory: {cumulativePath}");
-                    }
-                }
+                Helpers.EnsureDirectoriesExist(sxData.Path);
 
                 // Check if any file matches the specified conditions
                 if (files.Any(a => a.Type == DownloadMediaType.Subtitle &&
@@ -1437,7 +1448,8 @@ public class Crunchyroll{
         }
     }
 
-    private async Task<(bool Ok, PartsData Parts, string tsFile)> DownloadVideo(VideoItem chosenVideoSegments, CrDownloadOptions options, string outFile, string tsFile, string tempTsFile, CrunchyEpMeta data){
+    private async Task<(bool Ok, PartsData Parts, string tsFile)> DownloadVideo(VideoItem chosenVideoSegments, CrDownloadOptions options, string outFile, string tsFile, string tempTsFile, CrunchyEpMeta data,
+        string fileDir){
         // Prepare for video download
         int totalParts = chosenVideoSegments.segments.Count;
         int mathParts = (int)Math.Ceiling((double)totalParts / options.Partsize);
@@ -1447,28 +1459,10 @@ public class Crunchyroll{
         if (Path.IsPathRooted(outFile)){
             tsFile = outFile;
         } else{
-            tsFile = Path.Combine(CfgManager.PathVIDEOS_DIR, outFile);
+            tsFile = Path.Combine(fileDir, outFile);
         }
 
-        // var split = outFile.Split(Path.DirectorySeparatorChar).AsSpan().Slice(0, -1).ToArray();
-        // Check if the path is absolute
-        bool isAbsolute = Path.IsPathRooted(outFile);
-
-        // Get all directory parts of the path except the last segment (assuming it's a file)
-        string[] directories = Path.GetDirectoryName(outFile)?.Split(Path.DirectorySeparatorChar) ?? Array.Empty<string>();
-
-        // Initialize the cumulative path based on whether the original path is absolute or not
-        string cumulativePath = isAbsolute ? "" : CfgManager.PathVIDEOS_DIR;
-        for (int i = 0; i < directories.Length; i++){
-            // Build the path incrementally
-            cumulativePath = Path.Combine(cumulativePath, directories[i]);
-
-            // Check if the directory exists and create it if it does not
-            if (!Directory.Exists(cumulativePath)){
-                Directory.CreateDirectory(cumulativePath);
-                Console.WriteLine($"Created directory: {cumulativePath}");
-            }
-        }
+        Helpers.EnsureDirectoriesExist(outFile);
 
         M3U8Json videoJson = new M3U8Json{
             Segments = chosenVideoSegments.segments.Cast<dynamic>().ToList()
@@ -1489,7 +1483,8 @@ public class Crunchyroll{
         return (videoDownloadResult.Ok, videoDownloadResult.Parts, tsFile);
     }
 
-    private async Task<(bool Ok, PartsData Parts, string tsFile)> DownloadAudio(AudioItem chosenAudioSegments, CrDownloadOptions options, string outFile, string tsFile, string tempTsFile, CrunchyEpMeta data){
+    private async Task<(bool Ok, PartsData Parts, string tsFile)> DownloadAudio(AudioItem chosenAudioSegments, CrDownloadOptions options, string outFile, string tsFile, string tempTsFile, CrunchyEpMeta data,
+        string fileDir){
         // Prepare for audio download
         int totalParts = chosenAudioSegments.segments.Count;
         int mathParts = (int)Math.Ceiling((double)totalParts / options.Partsize);
@@ -1499,7 +1494,7 @@ public class Crunchyroll{
         if (Path.IsPathRooted(outFile)){
             tsFile = outFile;
         } else{
-            tsFile = Path.Combine(CfgManager.PathVIDEOS_DIR, outFile);
+            tsFile = Path.Combine(fileDir, outFile);
         }
 
         // Check if the path is absolute
@@ -1509,7 +1504,7 @@ public class Crunchyroll{
         string[] directories = Path.GetDirectoryName(outFile)?.Split(Path.DirectorySeparatorChar) ?? Array.Empty<string>();
 
         // Initialize the cumulative path based on whether the original path is absolute or not
-        string cumulativePath = isAbsolute ? "" : CfgManager.PathVIDEOS_DIR;
+        string cumulativePath = isAbsolute ? "" : fileDir;
         for (int i = 0; i < directories.Length; i++){
             // Build the path incrementally
             cumulativePath = Path.Combine(cumulativePath, directories[i]);

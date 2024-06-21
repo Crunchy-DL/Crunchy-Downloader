@@ -125,4 +125,7 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "stream_endpoint", ApplyNamingConventions = false)]
     public string? StreamEndpoint{ get; set; }
     
+    [YamlMember(Alias = "download_dir_path", ApplyNamingConventions = false)]
+    public string? DownloadDirPath{ get; set; }
+    
 }

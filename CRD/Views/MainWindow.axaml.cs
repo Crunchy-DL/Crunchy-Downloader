@@ -58,10 +58,16 @@ public partial class MainWindow : AppWindow{
                 if (message.Refresh){
                     navigationStack.Pop();
                     var viewModel = Activator.CreateInstance(message.ViewModelType);
+                    if (viewModel is SeriesPageViewModel){
+                        ((SeriesPageViewModel)viewModel).SetStorageProvider(StorageProvider);
+                    }
                     navigationStack.Push(viewModel);
                     nv.Content = viewModel;
                 } else if (!message.Back && message.ViewModelType != null){
                     var viewModel = Activator.CreateInstance(message.ViewModelType);
+                    if (viewModel is SeriesPageViewModel){
+                        ((SeriesPageViewModel)viewModel).SetStorageProvider(StorageProvider);
+                    }
                     navigationStack.Push(viewModel);
                     nv.Content = viewModel;
                 } else{
@@ -119,7 +125,9 @@ public partial class MainWindow : AppWindow{
                         selectedNavVieItem = selectedItem;
                         break;
                     case "Settings":
-                        navView.Content = Activator.CreateInstance(typeof(SettingsPageViewModel));
+                        var viewModel = (SettingsPageViewModel)Activator.CreateInstance(typeof(SettingsPageViewModel));
+                        viewModel.SetStorageProvider(StorageProvider);
+                        navView.Content = viewModel;
                         selectedNavVieItem = selectedItem;
                         break;
                     case "UpdateAvailable":

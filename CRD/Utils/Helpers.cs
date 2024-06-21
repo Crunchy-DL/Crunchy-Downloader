@@ -27,6 +27,64 @@ public class Helpers{
         }
     }
 
+    public static void EnsureDirectoriesExist(string path){
+        // Check if the path is absolute
+        bool isAbsolute = Path.IsPathRooted(path);
+
+        // Get all directory parts of the path except the last segment (assuming it's a file)
+        string directoryPath = Path.GetDirectoryName(path);
+
+        if (string.IsNullOrEmpty(directoryPath)){
+            Console.WriteLine("The provided path does not contain any directory information.");
+            return;
+        }
+
+        // Initialize the cumulative path based on whether the original path is absolute or not
+        string cumulativePath = isAbsolute ? Path.GetPathRoot(directoryPath) : Environment.CurrentDirectory;
+
+        // Get all directory parts
+        string[] directories = directoryPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        // Start the loop from the correct initial index
+        int startIndex = isAbsolute && directories.Length > 0 && string.IsNullOrEmpty(directories[0]) ? 2 : 0;
+
+        for (int i = startIndex; i < directories.Length; i++){
+            // Skip empty parts (which can occur with UNC paths)
+            if (string.IsNullOrEmpty(directories[i])){
+                continue;
+            }
+
+            // Build the path incrementally
+            cumulativePath = Path.Combine(cumulativePath, directories[i]);
+
+            // Check if the directory exists and create it if it does not
+            if (!Directory.Exists(cumulativePath)){
+                Directory.CreateDirectory(cumulativePath);
+                Console.WriteLine($"Created directory: {cumulativePath}");
+            }
+        }
+    }
+
+    public static bool IsValidPath(string path){
+        char[] invalidChars = Path.GetInvalidPathChars();
+
+        if (string.IsNullOrWhiteSpace(path)){
+            return false;
+        }
+
+        if (path.Any(ch => invalidChars.Contains(ch))){
+            return false;
+        }
+
+        try{
+            // Use Path.GetFullPath to ensure that the path can be fully qualified
+            string fullPath = Path.GetFullPath(path);
+            return true;
+        } catch (Exception){
+            return false;
+        }
+    }
+
     public static Locale ConvertStringToLocale(string? value){
         foreach (Locale locale in Enum.GetValues(typeof(Locale))){
             var type = typeof(Locale);
@@ -121,7 +179,7 @@ public class Helpers{
             }
         } catch (Exception ex){
             Console.Error.WriteLine($"An error occurred: {ex.Message}");
-            return (IsOk: false, ErrorCode: -1); 
+            return (IsOk: false, ErrorCode: -1);
         }
     }
 

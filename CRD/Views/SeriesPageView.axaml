@@ -66,7 +66,19 @@
 
                 <StackPanel Orientation="Horizontal">
                     <Button Command="{Binding UpdateData}" Margin="0 0 5  10">Fetch Series</Button>
-                    <ToggleButton IsChecked="{Binding EditMode}" Margin="0 0 0  10">Edit</ToggleButton>
+                    <ToggleButton IsChecked="{Binding EditMode}" Margin="0 0 5  10">Edit</ToggleButton>
+
+                    <Button Margin="0 0 5 10" FontStyle="Italic"
+                            VerticalAlignment="Center"
+                            Command="{Binding OpenFolderDialogAsync}">
+                        <ToolTip.Tip>
+                            <TextBlock Text="{Binding SelectedSeries.SeriesDownloadPath}" FontSize="15" />
+                        </ToolTip.Tip>
+                        <StackPanel Orientation="Horizontal">
+                            <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                        </StackPanel>
+                    </Button>
+
                 </StackPanel>
 
 
@@ -111,10 +123,12 @@
                                                         IsVisible="{Binding $parent[ItemsControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
 
 
-                                                <controls:ImageIcon IsVisible="{Binding SonarrHasFile}" Source="../Assets/sonarr.png" Width="25"
+                                                <controls:ImageIcon IsVisible="{Binding SonarrHasFile}"
+                                                                    Source="../Assets/sonarr.png" Width="25"
                                                                     Height="25" />
-                                                
-                                                <controls:ImageIcon IsVisible="{Binding !SonarrHasFile}" Source="../Assets/sonarr_inactive.png" Width="25"
+
+                                                <controls:ImageIcon IsVisible="{Binding !SonarrHasFile}"
+                                                                    Source="../Assets/sonarr_inactive.png" Width="25"
                                                                     Height="25" />
 
 
@@ -171,6 +185,19 @@
                                             <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
                                         </StackPanel>
                                     </Button>
+                                    
+                                    <Button Margin="10 0 0 0" FontStyle="Italic"
+                                            VerticalAlignment="Center"
+                                            Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).OpenFolderDialogAsync}"
+                                            CommandParameter="{Binding .}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="{Binding SeasonDownloadPath}" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+                                    
                                     <Button Margin="10 0 0 0" FontStyle="Italic"
                                             VerticalAlignment="Center"
                                             Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).RemoveSeason}"

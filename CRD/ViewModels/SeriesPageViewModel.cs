@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
@@ -21,6 +22,8 @@ public partial class SeriesPageViewModel : ViewModelBase{
     [ObservableProperty]
     public static bool _sonarrAvailable;
 
+    private IStorageProvider _storageProvider;
+    
     public SeriesPageViewModel(){
         _selectedSeries = Crunchyroll.Instance.SelectedSeries;
 
@@ -37,6 +40,38 @@ public partial class SeriesPageViewModel : ViewModelBase{
         }
         
     }
+    
+    [RelayCommand]
+    public async Task OpenFolderDialogAsync(HistorySeason? season){
+        if (_storageProvider == null){
+            Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
+            throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
+        }
+
+
+        var result = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{
+            Title = "Select Folder"
+        });
+
+        if (result.Count > 0){
+            var selectedFolder = result[0];
+            // Do something with the selected folder path
+            Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
+
+            if (season != null){
+                season.SeasonDownloadPath = selectedFolder.Path.LocalPath;
+            } else{
+                SelectedSeries.SeriesDownloadPath = selectedFolder.Path.LocalPath;
+            }
+            
+            CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
+        }
+    }
+
+    public void SetStorageProvider(IStorageProvider storageProvider){
+        _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
+    }
+    
 
     [RelayCommand]
     public void OpenSonarrPage(){

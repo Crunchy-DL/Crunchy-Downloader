@@ -145,6 +145,25 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="Download Folder">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontSize="15" Opacity="0.8" TextWrapping="NoWrap" Text="{Binding DownloadDirPath, Mode=OneWay}" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            <Button Margin="10 0 0 0" FontStyle="Italic"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding OpenFolderDialogAsync}">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="Set Download Directory" FontSize="15" />
+                                </ToolTip.Tip>
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                        
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
                 <controls:SettingsExpanderItem Content="Simultaneous Downloads">
                     <controls:SettingsExpanderItem.Footer>
                         <controls:NumberBox Minimum="0" Maximum="5"

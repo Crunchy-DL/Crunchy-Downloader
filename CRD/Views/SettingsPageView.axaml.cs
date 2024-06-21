@@ -19,5 +19,4 @@ public partial class SettingsPageView : UserControl{
             Crunchyroll.Instance.RefreshSonarr();
         }
     }
-    
 }
