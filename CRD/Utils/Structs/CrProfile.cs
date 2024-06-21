@@ -45,8 +45,18 @@ public class Subscription{
     public List<ThirdPartySubscriptionProduct>? ThirdPartySubscriptionProducts{ get; set; }
     
     [JsonProperty("nonrecurring_subscription_products")]
-    public List<SubscriptionProduct>? NonrecurringSubscriptionProducts{ get; set; }
+    public List<NonRecurringSubscriptionProduct>? NonrecurringSubscriptionProducts{ get; set; }
 }
+
+public class NonRecurringSubscriptionProduct{
+    [JsonProperty("start_date")]
+    public DateTime StartDate{ get; set; }
+    [JsonProperty("end_date")]
+    public DateTime EndDate{ get; set; }
+    public string? Sku{ get; set; }
+    public string? Tier{ get; set; }
+}
+
 
 public class SubscriptionProduct{
     [JsonProperty("currency_code")]

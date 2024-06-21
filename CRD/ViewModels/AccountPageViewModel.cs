@@ -61,6 +61,8 @@ public partial class AccountPageViewModel : ViewModelBase{
                 if (sub != null){
                     IsCancelled = !sub.AutoRenew;
                 }
+            }else if(Crunchyroll.Instance.Profile.Subscription?.NonrecurringSubscriptionProducts.Count >= 1){
+                IsCancelled = true;
             }
 
             if (Crunchyroll.Instance.Profile.Subscription?.NextRenewalDate != null){
