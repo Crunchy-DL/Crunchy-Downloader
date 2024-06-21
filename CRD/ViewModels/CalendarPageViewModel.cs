@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Utils;
 using CRD.Utils.Structs;
 using DynamicData;
 
@@ -136,6 +137,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
         if (value?.Content != null){
             Crunchyroll.Instance.CrunOptions.SelectedCalendarLanguage = value.Content.ToString();
             Refresh();
+            CfgManager.WriteSettingsToFile();
         }
     }
 }

@@ -1381,7 +1381,8 @@ public class Crunchyroll{
                 sxData.Language = langItem;
                 var isSigns = langItem.Code == audDub && !subsItem.isCC;
                 var isCc = subsItem.isCC;
-                sxData.File = Languages.SubsFile(fileName, index + "", langItem, isCc, options.CcTag, isSigns, subsItem.format);
+                
+                sxData.File = Languages.SubsFile(fileName, index + "", langItem, isCc, options.CcTag, isSigns, subsItem.format, !(options.DlSubs.Count == 1 && !options.DlSubs.Contains("all")));
                 sxData.Path = Path.Combine(fileDir, sxData.File);
 
                 Helpers.EnsureDirectoriesExist(sxData.Path);
@@ -1462,7 +1463,7 @@ public class Crunchyroll{
             tsFile = Path.Combine(fileDir, outFile);
         }
 
-        Helpers.EnsureDirectoriesExist(outFile);
+        Helpers.EnsureDirectoriesExist(tsFile);
 
         M3U8Json videoJson = new M3U8Json{
             Segments = chosenVideoSegments.segments.Cast<dynamic>().ToList()

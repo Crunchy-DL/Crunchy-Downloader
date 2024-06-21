@@ -48,10 +48,14 @@ public class Languages{
         return FindLang(str);
     }
 
-    public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem, bool isCC, string ccTag, bool? isSigns = false, string? format = "ass"){
+    public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem, bool isCC, string ccTag , bool? isSigns = false, string? format = "ass", bool addIndexAndLangCode = true){
         subsIndex = (int.Parse(subsIndex) + 1).ToString().PadLeft(2, '0');
-        string fileName = $"{fnOutput}.{subsIndex}.{langItem.Code}";
+        string fileName = $"{fnOutput}";
 
+        if (addIndexAndLangCode){
+            fileName += $".{subsIndex}.{langItem.Code}";
+        }
+        
         //removed .{langItem.language} from file name at end
 
         if (isCC){

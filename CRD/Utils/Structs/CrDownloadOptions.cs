@@ -110,7 +110,7 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "accent_color", ApplyNamingConventions = false)]
     public string? AccentColor{ get; set; }
 
-    [YamlIgnore]
+    [YamlMember(Alias = "calendar_language", ApplyNamingConventions = false)]
     public string? SelectedCalendarLanguage{ get; set; }
 
     [YamlMember(Alias = "history", ApplyNamingConventions = false)]
