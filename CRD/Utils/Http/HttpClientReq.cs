@@ -54,8 +54,14 @@ public class HttpClientReq{
             Domain = "crunchyroll.com",
             Path = "/",
         };
+        
+        var cookie2 = new Cookie("c_locale", "en-US"){
+            Domain = "crunchyroll.com",
+            Path = "/",
+        };
 
         handler.CookieContainer.Add(cookie);
+        handler.CookieContainer.Add(cookie2);
     }
 
     public async Task<(bool IsOk, string ResponseContent)> SendHttpRequest(HttpRequestMessage request){

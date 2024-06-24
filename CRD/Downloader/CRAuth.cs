@@ -167,6 +167,8 @@ public class CrAuth{
         }
 
         if (crunInstance.Token?.refresh_token != null){
+            HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
+            
             await GetProfile();
         }
 

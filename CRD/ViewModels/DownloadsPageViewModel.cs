@@ -227,7 +227,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             epMeta.DownloadProgress.IsDownloading = true;
             Paused = !epMeta.Paused && !isDownloading || epMeta.Paused;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
-            await Crunchyroll.Instance.DownloadEpisode(epMeta, Crunchyroll.Instance.CrunOptions, false);
+            await Crunchyroll.Instance.DownloadEpisode(epMeta, Crunchyroll.Instance.CrunOptions);
         }
         
     }

@@ -198,6 +198,7 @@ public class CrEpisode(){
                 DownloadSpeed = 0
             };
             epMeta.AvailableSubs = item.SubtitleLocales;
+            epMeta.Description = item.Description;
             if (episodeP.EpisodeAndLanguages.Langs.Count > 0){
                 epMeta.SelectedDubs = dubLang
                     .Where(language => episodeP.EpisodeAndLanguages.Langs.Any(epLang => epLang.CrLocale == language))

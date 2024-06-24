@@ -24,7 +24,7 @@ public class PlaybackMeta{
     public List<PlaybackVersion>? Versions{ get; set; }
     [JsonProperty("audio_locale")] public Locale? AudioLocale{ get; set; }
     [JsonProperty("closed_captions")] public Subtitles? ClosedCaptions{ get; set; }
-    public Dictionary<string, object>? Captions{ get; set; }
+    public Dictionary<string, Caption>? Captions{ get; set; }
 }
 
 public class SubtitleInfo{

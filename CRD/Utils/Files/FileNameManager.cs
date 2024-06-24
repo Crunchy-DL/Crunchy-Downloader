@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using CRD.Utils.Structs;
 
-namespace CRD.Utils;
+namespace CRD.Utils.Files;
 
 public class FileNameManager{
     public static List<string> ParseFileName(string input, List<Variable> variables, int numbers, List<string> @override){

@@ -94,6 +94,7 @@ public class CrSeries(){
                     Time = 0,
                     DownloadSpeed = 0
                 };
+                epMeta.Description = item.Description;
                 epMeta.AvailableSubs = item.SubtitleLocales;
                 if (episode.Langs.Count > 0){
                     epMeta.SelectedDubs = dubLang

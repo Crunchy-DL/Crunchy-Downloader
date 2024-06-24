@@ -11,10 +11,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using System.Xml;
 using Avalonia.Media;
 using CRD.Utils;
 using CRD.Utils.CustomList;
 using CRD.Utils.DRM;
+using CRD.Utils.Files;
 using CRD.Utils.HLS;
 using CRD.Utils.Muxing;
 using CRD.Utils.Sonarr;
@@ -148,7 +150,7 @@ public class Crunchyroll{
         CrunOptions.SimultaneousDownloads = 2;
         CrunOptions.AccentColor = Colors.SlateBlue.ToString();
         CrunOptions.Theme = "System";
-        CrunOptions.SelectedCalendarLanguage = "de";
+        CrunOptions.SelectedCalendarLanguage = "default";
         CrunOptions.DlVideoOnce = true;
         CrunOptions.StreamEndpoint = "web/firefox";
         CrunOptions.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
@@ -371,7 +373,7 @@ public class Crunchyroll{
     }
 
 
-    public async Task<bool> DownloadEpisode(CrunchyEpMeta data, CrDownloadOptions options, bool? isSeries){
+    public async Task<bool> DownloadEpisode(CrunchyEpMeta data, CrDownloadOptions options){
         ActiveDownloads++;
 
         data.DownloadProgress = new DownloadProgress(){
@@ -416,7 +418,7 @@ public class Crunchyroll{
                     SkipSubMux = options.SkipSubsMux,
                     Output = res.FileName,
                     Mp4 = options.Mp4,
-                    VideoTitle = options.VideoTitle,
+                    VideoTitle = res.VideoTitle,
                     Novids = options.Novids,
                     NoCleanup = options.Nocleanup,
                     DefaultAudio = Languages.FindLang(options.DefaultAudio),
@@ -425,7 +427,8 @@ public class Crunchyroll{
                     ForceMuxer = options.Force,
                     SyncTiming = options.SyncTiming,
                     CcTag = options.CcTag,
-                    KeepAllVideos = true
+                    KeepAllVideos = true,
+                    MuxDescription = options.IncludeVideoDescription
                 },
                 res.FileName);
 
@@ -488,6 +491,15 @@ public class Crunchyroll{
             filename = newFilePath;
         }
 
+        bool muxDesc = false;
+        if (options.MuxDescription){
+            if (File.Exists($"{filename}.xml")){
+                muxDesc = true;
+            } else{
+                Console.Error.WriteLine("No xml description file found to mux description");
+            }
+        }
+        
 
         var merger = new Merger(new MergerOptions{
             OnlyVid = data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
@@ -508,7 +520,8 @@ public class Crunchyroll{
                 Sub = options.DefaultSub
             },
             CcTag = options.CcTag,
-            mp3 = muxToMp3
+            mp3 = muxToMp3,
+            MuxDescription = muxDesc
         });
 
         if (!File.Exists(CfgManager.PathFFMPEG)){
@@ -1336,11 +1349,42 @@ public class Crunchyroll{
         // variables.Add(new Variable("height", quality == 0 ? plQuality.Last().RESOLUTION.Height : plQuality[quality - 1].RESOLUTION.Height, false));
         // variables.Add(new Variable("width", quality == 0 ? plQuality.Last().RESOLUTION.Width : plQuality[quality - 1].RESOLUTION.Width, false));
 
+        if (options.IncludeVideoDescription){
+            string fullPath = (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) + ".xml";
+
+            if (!File.Exists(fullPath)){
+                using (XmlWriter writer = XmlWriter.Create(fullPath)){
+                    writer.WriteStartDocument();
+                    writer.WriteStartElement("Tags");
+
+                    writer.WriteStartElement("Tag");
+
+                    writer.WriteStartElement("Targets");
+                    writer.WriteElementString("TargetTypeValue", "50");
+                    writer.WriteEndElement(); // End Targets
+
+                    writer.WriteStartElement("Simple");
+                    writer.WriteElementString("Name", "DESCRIPTION");
+                    writer.WriteElementString("String", data.Description);
+                    writer.WriteEndElement(); // End Simple
+
+                    writer.WriteEndElement(); // End Tag
+
+                    writer.WriteEndElement(); // End Tags
+                    writer.WriteEndDocument();
+                }
+            }
+
+            Console.WriteLine($"{fileName} has been created with the description.");
+        }
+
+
         return new DownloadResponse{
             Data = files,
             Error = dlFailed,
             FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
-            ErrorText = ""
+            ErrorText = "",
+            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle, variables, options.Numbers, options.Override).Last()
         };
     }
 
@@ -1381,7 +1425,7 @@ public class Crunchyroll{
                 sxData.Language = langItem;
                 var isSigns = langItem.Code == audDub && !subsItem.isCC;
                 var isCc = subsItem.isCC;
-                
+
                 sxData.File = Languages.SubsFile(fileName, index + "", langItem, isCc, options.CcTag, isSigns, subsItem.format, !(options.DlSubs.Count == 1 && !options.DlSubs.Contains("all")));
                 sxData.Path = Path.Combine(fileDir, sxData.File);
 
@@ -1391,7 +1435,7 @@ public class Crunchyroll{
                 if (files.Any(a => a.Type == DownloadMediaType.Subtitle &&
                                    (a.Language.CrLocale == langItem.CrLocale || a.Language.Locale == langItem.Locale) &&
                                    a.Cc == isCc &&
-                                   a.Signs == isSigns)){
+                                   a.Signs == isSigns) || (!options.IncludeSignsSubs && isSigns)){
                     continue;
                 }
 
@@ -1404,7 +1448,7 @@ public class Crunchyroll{
                         if (subsItem.format == "ass"){
                             subsAssReqResponse.ResponseContent = '\ufeff' + subsAssReqResponse.ResponseContent;
                             var sBodySplit = subsAssReqResponse.ResponseContent.Split(new[]{ "\r\n" }, StringSplitOptions.None).ToList();
-                            // Insert 'ScaledBorderAndShadow: yes' after the second line
+                            // Insert 'ScaledBorderAndShadow' after the second line
                             if (sBodySplit.Count > 2){
                                 if (options.SubsAddScaledBorder == ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes){
                                     sBodySplit.Insert(2, "ScaledBorderAndShadow: yes");
@@ -1424,6 +1468,8 @@ public class Crunchyroll{
                                 var keysList = FontsManager.ExtractFontsFromAss(subsAssReqResponse.ResponseContent);
                                 sxData.Fonts = FontsManager.Instance.GetDictFromKeyList(keysList);
                             }
+                        } else if (subsItem.format == "vtt"){
+                            // TODO
                         }
 
                         File.WriteAllText(sxData.Path, subsAssReqResponse.ResponseContent);
@@ -1591,6 +1637,11 @@ public class Crunchyroll{
                 }
 
                 temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
+
+                if (playStream.Captions != null){
+                    temppbData.Meta.Captions = playStream.Captions;
+                }
+
                 temppbData.Meta.Subtitles = new Subtitles();
                 foreach (var playStreamSubtitle in playStream.Subtitles){
                     Subtitle sub = playStreamSubtitle.Value;
@@ -1646,6 +1697,11 @@ public class Crunchyroll{
                     }
 
                     temppbData.Meta = new PlaybackMeta(){ AudioLocale = playStream.AudioLocale, Versions = playStream.Versions, Bifs = new List<string>{ playStream.Bifs }, MediaId = mediaId };
+
+                    if (playStream.Captions != null){
+                        temppbData.Meta.Captions = playStream.Captions;
+                    }
+
                     temppbData.Meta.Subtitles = new Subtitles();
                     foreach (var playStreamSubtitle in playStream.Subtitles){
                         Subtitle sub = playStreamSubtitle.Value;

@@ -56,14 +56,20 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "subs_add_scaled_border", ApplyNamingConventions = false)]
     public ScaledBorderAndShadowSelection SubsAddScaledBorder{ get; set; }
     
+    [YamlMember(Alias = "include_signs_subs", ApplyNamingConventions = false)]
+    public bool IncludeSignsSubs{ get; set; }
+    
     [YamlMember(Alias = "mux_mp4", ApplyNamingConventions = false)]
     public bool Mp4{ get; set; }
 
     [YamlIgnore]
     public List<string> Override{ get; set; }
 
-    [YamlIgnore]
-    public string VideoTitle{ get; set; }
+    [YamlMember(Alias = "mux_video_title", ApplyNamingConventions = false)]
+    public string? VideoTitle{ get; set; }
+    
+    [YamlMember(Alias = "mux_video_description", ApplyNamingConventions = false)]
+    public bool IncludeVideoDescription{ get; set; }
 
     [YamlIgnore]
     public string Force{ get; set; }

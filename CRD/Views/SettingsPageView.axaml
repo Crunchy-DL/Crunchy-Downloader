@@ -119,6 +119,12 @@
                         </StackPanel>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Include Signs Subtitles ">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding IncludeSignSubs}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
             </controls:SettingsExpander>
 
@@ -281,6 +287,20 @@
                                   ItemsSource="{Binding DefaultSubLangList}"
                                   SelectedItem="{Binding SelectedDefaultSubLang}">
                         </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="File title"
+                                               Description="${showTitle} ${seriesTitle} ${title} ${season} ${episode} ${height} ${width}">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding FileTitle}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Include Episode description">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding IncludeEpisodeDescription}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 

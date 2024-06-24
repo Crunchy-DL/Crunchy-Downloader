@@ -39,6 +39,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private bool _addScaledBorderAndShadow = false;
 
     [ObservableProperty]
+    private bool _includeSignSubs = false;
+
+    [ObservableProperty]
     private ComboBoxItem _selectedScaledBorderAndShadow;
 
     public ObservableCollection<ComboBoxItem> ScaledBorderAndShadow{ get; } = new(){
@@ -48,6 +51,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
+    
+    [ObservableProperty]
+    private bool _includeEpisodeDescription;
 
     [ObservableProperty]
     private bool _downloadVideoForEveryDub;
@@ -66,6 +72,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _fileName = "";
+    
+    [ObservableProperty]
+    private string _fileTitle = "";
 
     [ObservableProperty]
     private ObservableCollection<MuxingParam> _mkvMergeOptions = new();
@@ -319,6 +328,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        IncludeEpisodeDescription = options.IncludeVideoDescription;
+        FileTitle = options.VideoTitle ?? "";
+        IncludeSignSubs = options.IncludeSignsSubs;
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
@@ -375,6 +387,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         UpdateSubAndDubString();
 
+        Crunchyroll.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
+        Crunchyroll.Instance.CrunOptions.VideoTitle = FileTitle;
         Crunchyroll.Instance.CrunOptions.Novids = !DownloadVideo;
         Crunchyroll.Instance.CrunOptions.Noaudio = !DownloadAudio;
         Crunchyroll.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
@@ -383,6 +397,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
         Crunchyroll.Instance.CrunOptions.Numbers = LeadingNumbers;
         Crunchyroll.Instance.CrunOptions.FileName = FileName;
+        Crunchyroll.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs;
 
         Crunchyroll.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
@@ -611,71 +626,17 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
         UpdateSettings();
     }
+    
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e){
+        base.OnPropertyChanged(e);
 
-    partial void OnDownloadAudioChanged(bool value){
+        if (e.PropertyName is nameof(SelectedSubs) or nameof(SelectedDubs) or nameof(CustomAccentColor) or nameof(ListBoxColor) or nameof(CurrentAppTheme) or nameof(UseCustomAccent) or nameof(LogMode)){
+            return;
+        }
+        
         UpdateSettings();
     }
-
-    partial void OnDownloadChaptersChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnDownloadVideoChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnFileNameChanged(string value){
-        UpdateSettings();
-    }
-
-    partial void OnLeadingNumbersChanged(int value){
-        UpdateSettings();
-    }
-
-    partial void OnMuxToMp4Changed(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnSelectedHSLangChanged(ComboBoxItem value){
-        UpdateSettings();
-    }
-
-    partial void OnSimultaneousDownloadsChanged(int value){
-        UpdateSettings();
-    }
-
-    partial void OnSelectedAudioQualityChanged(ComboBoxItem? value){
-        UpdateSettings();
-    }
-
-    partial void OnSelectedVideoQualityChanged(ComboBoxItem? value){
-        UpdateSettings();
-    }
-
-    partial void OnHistoryChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnSonarrHostChanged(string value){
-        UpdateSettings();
-    }
-
-    partial void OnSonarrPortChanged(string value){
-        UpdateSettings();
-    }
-
-    partial void OnSonarrApiKeyChanged(string value){
-        UpdateSettings();
-    }
-
-    partial void OnSonarrUseSslChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnSonarrUseSonarrNumberingChanged(bool value){
-        UpdateSettings();
-    }
-
+    
     partial void OnLogModeChanged(bool value){
         UpdateSettings();
         if (value){
@@ -684,34 +645,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
             CfgManager.DisableLogMode();
         }
     }
-
-    partial void OnSelectedDefaultDubLangChanged(ComboBoxItem value){
-        UpdateSettings();
-    }
-
-    partial void OnSelectedDefaultSubLangChanged(ComboBoxItem value){
-        UpdateSettings();
-    }
-
-    partial void OnSkipSubMuxChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnDownloadVideoForEveryDubChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnSelectedStreamEndpointChanged(ComboBoxItem value){
-        UpdateSettings();
-    }
-
-    partial void OnAddScaledBorderAndShadowChanged(bool value){
-        UpdateSettings();
-    }
-
-    partial void OnSelectedScaledBorderAndShadowChanged(ComboBoxItem value){
-        UpdateSettings();
-    }
+    
 }
 
 public class MuxingParam{

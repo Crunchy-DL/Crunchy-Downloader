@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CRD.Utils.Structs;
+using DynamicData;
 
 namespace CRD.Utils.Muxing;
 
@@ -36,7 +37,7 @@ public class Merger{
                 if (!hasVideo || options.KeepAllVideos == true){
                     args.Add($"-i \"{vid.Path}\"");
                     metaData.Add($"-map {index}:v");
-                    metaData.Add($"-metadata:s:v:{index} title=\"{(options.VideoTitle ?? vid.Language.Name)}\"");
+                    metaData.Add($"-metadata:s:v:{index} title=\"{(vid.Language.Name)}\"");
                     hasVideo = true;
                     index++;
                 }
@@ -129,7 +130,7 @@ public class Merger{
                 args.Add("--video-tracks 0");
                 args.Add("--no-audio");
 
-                string trackName = $"{(options.VideoTitle ?? vid.Language.Name)}";
+                string trackName = $"{(vid.Language.Name)}";
                 args.Add($"--track-name 0:\"{trackName}\"");
                 args.Add($"--language 0:{vid.Language.Code}");
 
@@ -194,6 +195,16 @@ public class Merger{
             args.Add($"--chapters \"{options.Chapters[0].Path}\"");
         }
 
+        if (!string.IsNullOrEmpty(options.VideoTitle)){
+            args.Add($"--title \"{options.VideoTitle}\"");
+        }
+
+        if (options.MuxDescription){
+            args.Add($"--global-tags \"{Path.Combine(Path.GetDirectoryName(options.Output), Path.GetFileNameWithoutExtension(options.Output))}.xml\"");
+        }
+        
+     
+
 
         return string.Join(" ", args);
     }
@@ -230,6 +241,10 @@ public class Merger{
             .ToList();
         allMediaFiles.ForEach(file => DeleteFile(file.Path));
         allMediaFiles.ForEach(file => DeleteFile(file.Path + ".resume"));
+        
+        if (options.MuxDescription){
+            DeleteFile(Path.Combine(Path.GetDirectoryName(options.Output), Path.GetFileNameWithoutExtension(options.Output)) + ".xml");
+        }
 
         // Delete chapter files if any
         options.Chapters?.ForEach(chapter => DeleteFile(chapter.Path));
@@ -278,6 +293,7 @@ public class CrunchyMuxOptions{
     public bool? KeepAllVideos{ get; set; }
     public bool? Novids{ get; set; }
     public bool Mp4{ get; set; }
+    public bool MuxDescription{ get; set; }
     public string ForceMuxer{ get; set; }
     public bool? NoCleanup{ get; set; }
     public string VideoTitle{ get; set; }
@@ -302,8 +318,8 @@ public class MergerOptions{
     public bool? SkipSubMux{ get; set; }
     public MuxOptions Options{ get; set; }
     public Defaults Defaults{ get; set; }
-
     public bool mp3{ get; set; }
+    public bool MuxDescription{ get; set; }
 }
 
 public class MuxOptions{
