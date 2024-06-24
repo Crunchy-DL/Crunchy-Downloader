@@ -18,18 +18,19 @@ using CRD.Utils.Structs;
 namespace CRD.ViewModels;
 
 public partial class DownloadsPageViewModel : ViewModelBase{
-
-
     public ObservableCollection<DownloadItemModel> Items{ get; }
 
-    [ObservableProperty] public bool _autoDownload;
+    [ObservableProperty]
+    public bool _autoDownload;
 
-    private SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
-
+    [ObservableProperty]
+    public bool _removeFinished;
+    
     public DownloadsPageViewModel(){
         UpdateListItems();
         Items = Crunchyroll.Instance.DownloadItemModels;
-        AutoDownload = Crunchyroll.Instance.AutoDownload;
+        AutoDownload = Crunchyroll.Instance.CrunOptions.AutoDownload;
+        RemoveFinished = Crunchyroll.Instance.CrunOptions.RemoveFinishedDownload;
         Crunchyroll.Instance.Queue.CollectionChanged += UpdateItemListOnRemove;
         // Items.Add(new DownloadItemModel{Title = "Test - S1E1"});
     }
@@ -51,30 +52,34 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     }
 
 
-    public  void UpdateListItems(){
-            var list = Crunchyroll.Instance.Queue;
+    public void UpdateListItems(){
+        var list = Crunchyroll.Instance.Queue;
 
-            foreach (CrunchyEpMeta crunchyEpMeta in list){
-                var downloadItem = Crunchyroll.Instance.DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(crunchyEpMeta));
-                if (downloadItem != null){
-                    downloadItem.Refresh();
-                } else{
-                    downloadItem = new DownloadItemModel(crunchyEpMeta);
-                    downloadItem.LoadImage();
-                    Crunchyroll.Instance.DownloadItemModels.Add(downloadItem);
-                }
-
-                if (downloadItem is{ isDownloading: false, Error: false } && Crunchyroll.Instance.AutoDownload && Crunchyroll.Instance.ActiveDownloads < Crunchyroll.Instance.CrunOptions.SimultaneousDownloads){
-                    downloadItem.StartDownload();
-                }
+        foreach (CrunchyEpMeta crunchyEpMeta in list){
+            var downloadItem = Crunchyroll.Instance.DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(crunchyEpMeta));
+            if (downloadItem != null){
+                downloadItem.Refresh();
+            } else{
+                downloadItem = new DownloadItemModel(crunchyEpMeta);
+                downloadItem.LoadImage();
+                Crunchyroll.Instance.DownloadItemModels.Add(downloadItem);
             }
+
+            if (downloadItem is{ isDownloading: false, Error: false } && Crunchyroll.Instance.CrunOptions.AutoDownload && Crunchyroll.Instance.ActiveDownloads < Crunchyroll.Instance.CrunOptions.SimultaneousDownloads){
+                downloadItem.StartDownload();
+            }
+        }
     }
 
     partial void OnAutoDownloadChanged(bool value){
-        Crunchyroll.Instance.AutoDownload = value;
+        Crunchyroll.Instance.CrunOptions.AutoDownload = value;
         if (value){
             UpdateListItems();
         }
+    }
+
+    partial void OnRemoveFinishedChanged(bool value){
+        Crunchyroll.Instance.CrunOptions.RemoveFinishedDownload = value;
     }
 
     public void Cleanup(){
@@ -99,7 +104,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
     public CrunchyEpMeta epMeta{ get; set; }
 
-    
+
     public bool Error{ get; set; }
 
     public DownloadItemModel(CrunchyEpMeta epMetaF){
@@ -107,20 +112,20 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
         ImageUrl = epMeta.Image;
         Title = epMeta.SeriesTitle + " - S" + epMeta.Season + "E" + (epMeta.EpisodeNumber != string.Empty ? epMeta.EpisodeNumber : epMeta.AbsolutEpisodeNumberE) + " - " + epMeta.EpisodeTitle;
-        isDownloading =  epMeta.DownloadProgress.IsDownloading || Done;
-        
+        isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
+
         Done = epMeta.DownloadProgress.Done;
         Percent = epMeta.DownloadProgress.Percent;
         Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time / 1000).ToString(@"hh\:mm\:ss");
         DownloadSpeed = $"{epMeta.DownloadProgress.DownloadSpeed / 1000000.0:F2}Mb/s";
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-        DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing :  "Waiting";
+        DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
         if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString();
 
         Error = epMeta.DownloadProgress.Error;
     }
-    
+
     private string GetDubString(){
         var hardSubs = Crunchyroll.Instance.CrunOptions.Hslang != "none" ? "Hardsub: " + Crunchyroll.Instance.CrunOptions.Hslang : "";
         if (hardSubs != string.Empty){
@@ -153,7 +158,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
                 return softSubs;
             }
-        } 
+        }
 
         foreach (var crunOptionsDlSub in Crunchyroll.Instance.CrunOptions.DlSubs){
             if (epMeta.AvailableSubs != null && epMeta.AvailableSubs.Contains(crunOptionsDlSub)){
@@ -165,19 +170,19 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     public void Refresh(){
-        isDownloading =  epMeta.DownloadProgress.IsDownloading ||  Done;
+        isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
         Done = epMeta.DownloadProgress.Done;
         Percent = epMeta.DownloadProgress.Percent;
         Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time / 1000).ToString(@"hh\:mm\:ss");
         DownloadSpeed = $"{epMeta.DownloadProgress.DownloadSpeed / 1000000.0:F2}Mb/s";
 
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-        DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing :  "Waiting";
+        DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
         if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString();
-        
+
         Error = epMeta.DownloadProgress.Error;
-        
+
         if (PropertyChanged != null){
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Percent)));
@@ -188,22 +193,18 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InfoText)));
         }
     }
-    
-    
 
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     [RelayCommand]
     public void ToggleIsDownloading(){
-        
         if (isDownloading){
             //StopDownload();
             epMeta.Paused = !epMeta.Paused;
 
             Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
-            
         } else{
             if (epMeta.Paused){
                 epMeta.Paused = false;
@@ -213,12 +214,11 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
                 StartDownload();
             }
         }
-        
-        
+
+
         if (PropertyChanged != null){
             PropertyChanged.Invoke(this, new PropertyChangedEventArgs("isDownloading"));
         }
-        
     }
 
     public async void StartDownload(){
@@ -229,7 +229,6 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
             await Crunchyroll.Instance.DownloadEpisode(epMeta, Crunchyroll.Instance.CrunOptions);
         }
-        
     }
 
     [RelayCommand]

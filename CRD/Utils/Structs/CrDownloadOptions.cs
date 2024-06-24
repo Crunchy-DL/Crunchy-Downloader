@@ -5,6 +5,15 @@ using YamlDotNet.Serialization;
 namespace CRD.Utils.Structs;
 
 public class CrDownloadOptions{
+    
+    [YamlIgnore]
+    public bool AutoDownload{ get; set; }
+
+    
+    [YamlIgnore]
+    public bool RemoveFinishedDownload{ get; set; }
+
+    
     [YamlMember(Alias = "hard_sub_lang", ApplyNamingConventions = false)]
     public string Hslang{ get; set; }
 

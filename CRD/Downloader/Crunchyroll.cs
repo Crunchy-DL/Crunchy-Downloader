@@ -44,7 +44,6 @@ public class Crunchyroll{
     public RefreshableObservableCollection<CrunchyEpMeta> Queue = new RefreshableObservableCollection<CrunchyEpMeta>();
     public ObservableCollection<DownloadItemModel> DownloadItemModels = new ObservableCollection<DownloadItemModel>();
     public int ActiveDownloads;
-    public bool AutoDownload = false;
 
     #endregion
 
@@ -103,6 +102,10 @@ public class Crunchyroll{
 
     #endregion
 
+    public Crunchyroll(){
+        CrunOptions = new CrDownloadOptions();
+    }
+    
     public async Task Init(){
         _widevine = Widevine.Instance;
 
@@ -129,8 +132,8 @@ public class Crunchyroll{
 
         Console.WriteLine($"Can Decrypt: {_widevine.canDecrypt}");
 
-        CrunOptions = new CrDownloadOptions();
-
+        CrunOptions.AutoDownload = false;
+        CrunOptions.RemoveFinishedDownload = false;
         CrunOptions.Chapters = true;
         CrunOptions.Hslang = "none";
         CrunOptions.Force = "Y";
@@ -440,6 +443,10 @@ public class Crunchyroll{
                 DownloadSpeed = 0,
                 Doing = "Done"
             };
+
+            if (CrunOptions.RemoveFinishedDownload){
+                Queue.Remove(data);
+            }
 
             Queue.Refresh();
         } else{
@@ -1384,7 +1391,7 @@ public class Crunchyroll{
             Error = dlFailed,
             FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
             ErrorText = "",
-            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle, variables, options.Numbers, options.Override).Last()
+            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle ?? "", variables, options.Numbers, options.Override).Last()
         };
     }
 

@@ -21,8 +21,9 @@
             <RowDefinition Height="*" />    <!-- For the ListBox to take remaining space -->
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
             <!-- <Button Click="Button_OnClick">Test Download</Button> -->
+            <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding RemoveFinished}" OffContent="Remove Finished" OnContent="Remove Finished"></ToggleSwitch>
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding AutoDownload}" OffContent="Auto Download" OnContent="Auto Download"></ToggleSwitch>
         </StackPanel>
 
