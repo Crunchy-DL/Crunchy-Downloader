@@ -1,18 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
-using CRD.Utils;
 using CRD.Utils.Structs;
 
 namespace CRD.ViewModels;
@@ -27,64 +22,23 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     public bool _removeFinished;
     
     public DownloadsPageViewModel(){
-        UpdateListItems();
+        Crunchyroll.Instance.UpdateDownloadListItems();
         Items = Crunchyroll.Instance.DownloadItemModels;
         AutoDownload = Crunchyroll.Instance.CrunOptions.AutoDownload;
         RemoveFinished = Crunchyroll.Instance.CrunOptions.RemoveFinishedDownload;
-        Crunchyroll.Instance.Queue.CollectionChanged += UpdateItemListOnRemove;
-        // Items.Add(new DownloadItemModel{Title = "Test - S1E1"});
-    }
-
-    private void UpdateItemListOnRemove(object? sender, NotifyCollectionChangedEventArgs e){
-        if (e.Action == NotifyCollectionChangedAction.Remove){
-            if (e.OldItems != null)
-                foreach (var eOldItem in e.OldItems){
-                    var downloadItem = Crunchyroll.Instance.DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(eOldItem));
-                    if (downloadItem != null){
-                        Crunchyroll.Instance.DownloadItemModels.Remove(downloadItem);
-                    } else{
-                        Console.Error.WriteLine("Failed to Remove Episode from list");
-                    }
-                }
-        }
-
-        UpdateListItems();
-    }
-
-
-    public void UpdateListItems(){
-        var list = Crunchyroll.Instance.Queue;
-
-        foreach (CrunchyEpMeta crunchyEpMeta in list){
-            var downloadItem = Crunchyroll.Instance.DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(crunchyEpMeta));
-            if (downloadItem != null){
-                downloadItem.Refresh();
-            } else{
-                downloadItem = new DownloadItemModel(crunchyEpMeta);
-                downloadItem.LoadImage();
-                Crunchyroll.Instance.DownloadItemModels.Add(downloadItem);
-            }
-
-            if (downloadItem is{ isDownloading: false, Error: false } && Crunchyroll.Instance.CrunOptions.AutoDownload && Crunchyroll.Instance.ActiveDownloads < Crunchyroll.Instance.CrunOptions.SimultaneousDownloads){
-                downloadItem.StartDownload();
-            }
-        }
     }
 
     partial void OnAutoDownloadChanged(bool value){
         Crunchyroll.Instance.CrunOptions.AutoDownload = value;
         if (value){
-            UpdateListItems();
+            Crunchyroll.Instance.UpdateDownloadListItems();
         }
     }
 
     partial void OnRemoveFinishedChanged(bool value){
         Crunchyroll.Instance.CrunOptions.RemoveFinishedDownload = value;
     }
-
-    public void Cleanup(){
-        Crunchyroll.Instance.Queue.CollectionChanged -= UpdateItemListOnRemove;
-    }
+    
 }
 
 public partial class DownloadItemModel : INotifyPropertyChanged{

@@ -356,7 +356,7 @@ public class CrSeries(){
         return ret;
     }
     
-    public async Task<CrSeriesSearch?> ParseSeriesById(string id,string? locale){
+    public async Task<CrSeriesSearch?> ParseSeriesById(string id,string? locale,bool forced = false){
         if (crunInstance.CmsToken?.Cms == null){
             Console.Error.WriteLine("Missing CMS Access Token");
             return null;
@@ -366,7 +366,11 @@ public class CrSeries(){
       
         query["preferred_audio_language"] = "ja-JP";
         if (!string.IsNullOrEmpty(locale)){
-            query["locale"] = Languages.Locale2language(locale).CrLocale;  
+            query["locale"] = Languages.Locale2language(locale).CrLocale;
+            if (forced){
+                query["force_locale"] = Languages.Locale2language(locale).CrLocale;   
+            }
+            
         }
        
 

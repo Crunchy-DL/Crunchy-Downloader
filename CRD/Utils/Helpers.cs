@@ -27,6 +27,17 @@ public class Helpers{
         }
     }
 
+    public static void OpenUrl(string url){
+        try{
+            Process.Start(new ProcessStartInfo{
+                FileName = url,
+                UseShellExecute = true
+            });
+        } catch (Exception e){
+            Console.Error.WriteLine($"An error occurred while trying to open URL - {url} : {e.Message}");
+        }
+    }
+
     public static void EnsureDirectoriesExist(string path){
         // Check if the path is absolute
         bool isAbsolute = Path.IsPathRooted(path);

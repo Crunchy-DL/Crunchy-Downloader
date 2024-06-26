@@ -5,28 +5,136 @@
              xmlns:vm="clr-namespace:CRD.ViewModels"
              xmlns:ui="clr-namespace:CRD.Utils.UI"
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:history="clr-namespace:CRD.Utils.Structs.History"
              x:DataType="vm:HistoryPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.HistoryPageView">
 
     <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
+        <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
     </UserControl.Resources>
-    
+
     <Grid>
-        
+
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        
-        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="20 0 0 0 ">
-            <Button  Command="{Binding RefreshAll}" Margin="10" IsEnabled="{Binding !FetchingData}">Refresh All</Button>
-            <Button  Command="{Binding AddMissingToQueue}" Margin="10" IsEnabled="{Binding !FetchingData}">Add To Queue</Button>
-            <ToggleButton IsChecked="{Binding EditMode}"   Margin="10" IsEnabled="{Binding !FetchingData}">Edit</ToggleButton>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" /> <!-- Takes up most space for the title -->
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2a2a2a"></StackPanel>
+
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
+
+            <Button Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
+                    VerticalAlignment="Center"
+                    Command="{Binding RefreshAll}"
+                    IsEnabled="{Binding !FetchingData}">
+                <StackPanel Orientation="Vertical">
+                    <controls:SymbolIcon Symbol="Sync" FontSize="32" />
+                    <TextBlock Text="Refresh Filtered" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                </StackPanel>
+            </Button>
+
+            <Button Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
+                    VerticalAlignment="Center"
+                    Command="{Binding AddMissingToQueue}"
+                    IsEnabled="{Binding !FetchingData}">
+                <StackPanel Orientation="Vertical">
+                    <controls:SymbolIcon Symbol="Import" FontSize="32" />
+                    <TextBlock Text="Add To Queue" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                </StackPanel>
+            </Button>
+
+            <ToggleButton Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding EditMode}"
+                          IsEnabled="{Binding !FetchingData}">
+                <StackPanel Orientation="Vertical">
+                    <controls:SymbolIcon Symbol="Edit" FontSize="32" />
+                    <TextBlock Text="Edit" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                </StackPanel>
+            </ToggleButton>
+
+            <!-- <Button Command="{Binding RefreshAll}" Margin="10" IsEnabled="{Binding !FetchingData}">Refresh All</Button> -->
+            <!-- <Button Command="{Binding AddMissingToQueue}" Margin="10 0"  IsEnabled="{Binding !FetchingData}">Add To Queue</Button> -->
+            <!-- <ToggleButton IsChecked="{Binding EditMode}" Margin="10 0"  IsEnabled="{Binding !FetchingData}">Edit</ToggleButton> -->
         </StackPanel>
-        
-        <ListBox Grid.Row="1" Grid.Column="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedSeries}" Margin="5">
+
+        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
+
+            <Slider VerticalAlignment="Center" Minimum="0.5" Maximum="1" Width="100"
+                    Value="{Binding ScaleValue}"
+                    IsVisible="{Binding IsPosterViewSelected}">
+            </Slider>
+
+            <StackPanel>
+                <ToggleButton x:Name="DropdownButtonViews" Width="70" Height="70" Background="Transparent"
+                              BorderThickness="0" Margin="5 0" VerticalAlignment="Center"
+                              IsEnabled="{Binding !FetchingData}"
+                              IsChecked="{Binding ViewSelectionOpen}">
+                    <StackPanel Orientation="Vertical">
+                        <controls:SymbolIcon Symbol="View" FontSize="32" />
+                        <TextBlock Text="View" FontSize="12"></TextBlock>
+                    </StackPanel>
+                </ToggleButton>
+                <Popup IsLightDismissEnabled="True"
+                       IsOpen="{Binding IsChecked, ElementName=DropdownButtonViews, Mode=TwoWay}"
+                       Placement="BottomEdgeAlignedRight"
+                       PlacementTarget="{Binding ElementName=DropdownButtonViews}">
+                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                        <ListBox SelectionMode="Single" Width="210"
+                                 MaxHeight="400"
+                                 ItemsSource="{Binding ViewsList}" SelectedItem="{Binding SelectedView}">
+                        </ListBox>
+                    </Border>
+                </Popup>
+            </StackPanel>
+
+
+            <StackPanel>
+                <ToggleButton x:Name="DropdownButtonSorting" Width="70" Height="70" Background="Transparent"
+                              BorderThickness="0" Margin="5 0" VerticalAlignment="Center"
+                              IsEnabled="{Binding !FetchingData}"
+                              IsChecked="{Binding SortingSelectionOpen}">
+                    <StackPanel Orientation="Vertical">
+                        <controls:SymbolIcon Symbol="Sort" FontSize="32" />
+                        <TextBlock Text="Sort" FontSize="12"></TextBlock>
+                    </StackPanel>
+                </ToggleButton>
+                <Popup IsLightDismissEnabled="True"
+                       IsOpen="{Binding IsChecked, ElementName=DropdownButtonSorting, Mode=TwoWay}"
+                       Placement="BottomEdgeAlignedRight"
+                       PlacementTarget="{Binding ElementName=DropdownButtonSorting}">
+                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                        <ListBox SelectionMode="Single" Width="210"
+                                 MaxHeight="400"
+                                 ItemsSource="{Binding SortingList}" SelectedItem="{Binding SelectedSorting}">
+                        </ListBox>
+                    </Border>
+                </Popup>
+            </StackPanel>
+            
+            <Button Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
+                    VerticalAlignment="Center"
+                    IsEnabled="False">
+                <StackPanel Orientation="Vertical">
+                    <controls:SymbolIcon Symbol="Filter" FontSize="32" />
+                    <TextBlock Text="Filter" FontSize="12"></TextBlock>
+                </StackPanel>
+            </Button>
+        </StackPanel>
+
+
+        <ListBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding SelectedSeries}"
+                 Margin="5" IsVisible="{Binding IsPosterViewSelected}">
 
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -35,32 +143,68 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    
+
                     <Grid>
-                        
-                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" MaxWidth="250" Width="250"
-                                    MaxHeight="400" Height="400" Margin="5">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center"
+                                    Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterWidth}"
+                                    Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterHeight}"
+                                    Margin="5">
                             <Grid>
-                                <Image Source="{Binding ThumbnailImage}" Width="240" Height="360"></Image>
-                                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Right" IsVisible="{Binding NewEpisodes, Converter={StaticResource UiIntToVisibilityConverter}}">
-                                    <TextBlock VerticalAlignment="Center" TextAlignment="Center" Margin="0 0 5 0" Width="30" Height="30"
-                                               Background="Black" Opacity="0.8" Text="{Binding NewEpisodes}"
-                                               Padding="0,5,0,0"/>
-                                </StackPanel>
+                                <Image Source="{Binding ThumbnailImage}"
+                                       Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
+                                       Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageHeight}">
+                                </Image>
+
+                                <Border VerticalAlignment="Top" HorizontalAlignment="Right" CornerRadius="0 0 0 10"
+                                        Background="#f78c25" Opacity="1"
+                                        Margin="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).CornerMargin} "
+                                        IsVisible="{Binding NewEpisodes, Converter={StaticResource UiIntToVisibilityConverter}}">
+                                    <TextBlock VerticalAlignment="Center" TextAlignment="Center" Width="30"
+                                               Height="30"
+                                               Text="{Binding NewEpisodes}"
+                                               Padding="0,5,0,0" />
+                                </Border>
+
                             </Grid>
-                            <TextBlock HorizontalAlignment="Center" Text="{Binding SeriesTitle}" TextWrapping="NoWrap" MaxWidth="240"
+
+                            <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
+                                       Text="{Binding SeriesTitle}"
+                                       TextWrapping="Wrap"
+                                       Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
+                                       FontSize="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterTextSize}"
+                                       Height="35"
                                        Margin="4,0,4,0">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="{Binding SeriesTitle}" FontSize="15" />
+                                </ToolTip.Tip>
+                            </TextBlock>
+
+                            <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
+                                       Text="{Binding SonarrNextAirDate}"
+                                       TextWrapping="Wrap"
+                                       Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
+                                       FontSize="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterTextSize}"
+                                       MaxHeight="20"
+                                       Margin="4,0,4,0">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="{Binding SonarrNextAirDate}" FontSize="15" />
+                                </ToolTip.Tip>
                             </TextBlock>
                         </StackPanel>
-                        
-                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" MaxWidth="250" Width="250"
-                                    MaxHeight="400" Height="400" Background="#90000000" IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).EditMode}">
-                            <Button MaxWidth="250" Width="250" MaxHeight="400" Height="400" FontStyle="Italic"
-                                    VerticalAlignment="Center"
-                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
-                                    CommandParameter="{Binding SeriesId}"
-                                    IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).FetchingData}"
-                                    >
+
+
+                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#90000000" IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).EditMode}">
+
+                            <Button
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterWidth}"
+                                Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterHeight}"
+                                FontStyle="Italic"
+                                VerticalAlignment="Center"
+                                Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
+                                CommandParameter="{Binding SeriesId}"
+                                IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).FetchingData}">
                                 <ToolTip.Tip>
                                     <TextBlock Text="Remove Series" FontSize="15" />
                                 </ToolTip.Tip>
@@ -68,22 +212,351 @@
                                     <controls:SymbolIcon Symbol="Delete" FontSize="32" />
                                 </StackPanel>
                             </Button>
-                        </StackPanel>
-                        
-                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="250" Width="250"
-                                    MaxHeight="400" Height="400" Background="#90000000" IsVisible="{Binding FetchingData}">
-                            <!-- <ProgressBar IsIndeterminate="{Binding FetchingData}" -->
-                            <!--              MaxWidth="100"> -->
-                            <!-- </ProgressBar> -->
+                        </Grid>
+
+                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#90000000" IsVisible="{Binding FetchingData}">
                             <controls:ProgressRing Width="100" Height="100"></controls:ProgressRing>
-                        </StackPanel>
-                        
+                        </Grid>
+
                     </Grid>
-                    
-                    
+
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
+
+        <Grid Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" IsVisible="{Binding IsTableViewSelected}">
+
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Items}"
+                              IsEnabled="{Binding !FetchingData}"
+
+                              Margin="5" IsVisible="{Binding IsTableViewSelected}">
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+
+                            <Grid>
+                                <controls:SettingsExpander
+                                    Header="{Binding .}"
+                                    ItemsSource="{Binding .}"
+                                    IsExpanded="False">
+                                    <controls:SettingsExpander.HeaderTemplate>
+                                        <DataTemplate DataType="{x:Type history:HistorySeries}">
+
+                                            <Grid Margin="10">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="*" />
+                                                </Grid.RowDefinitions>
+
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Grid Grid.Row="1" Grid.Column="0">
+                                                    <!-- Define a row with auto height to match the image height -->
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <!-- Define columns if needed -->
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <!-- Image element -->
+                                                    <Image Margin="10"
+                                                           Source="{Binding ThumbnailImage}"
+                                                           Width="120"
+                                                           Height="180" />
+
+                                                    <!-- Border element aligned within the same grid cell, overlaying the image -->
+                                                    <Border VerticalAlignment="Top" HorizontalAlignment="Right"
+                                                            CornerRadius="0 0 0 10"
+                                                            Background="#f78c25" Opacity="1"
+                                                            Margin="10"
+                                                            IsVisible="{Binding NewEpisodes, Converter={StaticResource UiIntToVisibilityConverter}}"
+                                                            Grid.Row="0" Grid.Column="0">
+                                                        <TextBlock VerticalAlignment="Center" TextAlignment="Center"
+                                                                   Width="30" Height="30"
+                                                                   Text="{Binding NewEpisodes}"
+                                                                   Padding="0,5,0,0" />
+                                                    </Border>
+                                                </Grid>
+
+
+                                                <Grid Grid.Row="1" Grid.Column="1">
+
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="*" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <TextBlock Grid.Row="0" FontSize="25" Text="{Binding SeriesTitle}"></TextBlock>
+                                                    <TextBlock Grid.Row="1" FontSize="15" TextWrapping="Wrap"
+                                                               Text="{Binding SeriesDescription}">
+                                                    </TextBlock>
+                                                    <StackPanel Grid.Row="3" Orientation="Vertical">
+
+                                                        <StackPanel Orientation="Horizontal" Margin="0 10 10 10">
+
+                                                            <Button Width="34" Height="34" Margin="0 0 10 0"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0" CornerRadius="50"
+                                                                    Command="{Binding OpenCrPage}">
+                                                                <Grid>
+                                                                    <controls:ImageIcon
+                                                                        Source="../Assets/crunchy_icon_round.png"
+                                                                        Width="30"
+                                                                        Height="30" />
+                                                                </Grid>
+                                                            </Button>
+
+                                                            <Button Width="34" Height="34" Margin="0 0 10 0"
+                                                                    Background="Transparent"
+                                                                    BorderThickness="0" CornerRadius="50"
+                                                                    IsVisible="{Binding SonarrSeriesId, Converter={StaticResource UiSonarrIdToVisibilityConverter}}"
+                                                                    Command="{Binding OpenSonarrPage}">
+                                                                <Grid>
+                                                                    <controls:ImageIcon Source="../Assets/sonarr.png"
+                                                                                        Width="30" Height="30" />
+                                                                </Grid>
+                                                            </Button>
+
+
+                                                        </StackPanel>
+
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Button Command="{Binding FetchData}" Margin="0 0 5  10">Fetch Series</Button>
+                                                            <ToggleButton x:Name="SeriesEditModeToggle" IsChecked="{Binding EditModeEnabled}" Margin="0 0 5  10">Edit</ToggleButton>
+
+                                                            <Button Margin="0 0 5 10" FontStyle="Italic"
+                                                                    VerticalAlignment="Center"
+                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsyncSeries}"
+                                                                    CommandParameter="{Binding .}">
+                                                                <ToolTip.Tip>
+                                                                    <TextBlock Text="{Binding SeriesDownloadPath}"
+                                                                               FontSize="15" />
+                                                                </ToolTip.Tip>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                                                </StackPanel>
+                                                            </Button>
+
+                                                        </StackPanel>
+
+
+                                                    </StackPanel>
+
+                                                </Grid>
+                                                
+
+                                            </Grid>
+
+
+                                        </DataTemplate>
+                                    </controls:SettingsExpander.HeaderTemplate>
+
+
+                                    <controls:SettingsExpanderItem>
+                                        <ScrollViewer>
+                                            <ItemsControl ItemsSource="{Binding Seasons}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type history:HistorySeason}">
+
+                                                        <controls:SettingsExpander
+                                                            Header="{Binding CombinedProperty}"
+                                                            ItemsSource="{Binding EpisodesList}"
+
+                                                            Description="{Binding SeasonTitle}"
+                                                            IsExpanded="False">
+
+
+                                                            <controls:SettingsExpander.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type history:HistoryEpisode}">
+
+                                                                    <Grid VerticalAlignment="Center">
+
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+
+                                                                        <StackPanel Orientation="Horizontal"
+                                                                                    VerticalAlignment="Center">
+                                                                            <TextBlock Text="E"></TextBlock>
+                                                                            <TextBlock Text="{Binding Episode}"></TextBlock>
+                                                                            <TextBlock Text=" - "></TextBlock>
+                                                                            <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
+                                                                        </StackPanel>
+
+                                                                        <StackPanel Grid.Column="1"
+                                                                                    Orientation="Horizontal"
+                                                                                    VerticalAlignment="Center">
+
+                                                                            <StackPanel VerticalAlignment="Center"
+                                                                                        Margin="0 0 5 0"
+                                                                                        IsVisible="{Binding $parent[ItemsControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
+
+
+                                                                                <controls:ImageIcon
+                                                                                    IsVisible="{Binding SonarrHasFile}"
+                                                                                    Source="../Assets/sonarr.png"
+                                                                                    Width="25"
+                                                                                    Height="25" />
+
+                                                                                <controls:ImageIcon
+                                                                                    IsVisible="{Binding !SonarrHasFile}"
+                                                                                    Source="../Assets/sonarr_inactive.png"
+                                                                                    Width="25"
+                                                                                    Height="25" />
+
+
+                                                                            </StackPanel>
+
+
+                                                                            <Button Width="34" Height="34"
+                                                                                    Margin="0 0 10 0" Background="Transparent"
+                                                                                    BorderThickness="0" CornerRadius="50"
+                                                                                    IsVisible="{Binding !WasDownloaded}"
+                                                                                    Command="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext).UpdateDownloaded}"
+                                                                                    CommandParameter="{Binding EpisodeId}">
+                                                                                <Grid>
+                                                                                    <Ellipse Width="25" Height="25"
+                                                                                             Fill="Gray" />
+                                                                                    <controls:SymbolIcon Symbol="Checkmark"
+                                                                                                         FontSize="18" />
+                                                                                </Grid>
+                                                                            </Button>
+
+                                                                            <Button Width="34" Height="34"
+                                                                                    Margin="0 0 10 0" Background="Transparent"
+                                                                                    BorderThickness="0" CornerRadius="50"
+                                                                                    IsVisible="{Binding WasDownloaded}"
+                                                                                    Command="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext).UpdateDownloaded}"
+                                                                                    CommandParameter="{Binding EpisodeId}">
+                                                                                <Grid>
+                                                                                    <Ellipse Width="25" Height="25"
+                                                                                             Fill="#21a556" />
+                                                                                    <controls:SymbolIcon Symbol="Checkmark"
+                                                                                                         FontSize="18" />
+                                                                                </Grid>
+                                                                            </Button>
+
+                                                                            <Button Margin="0 0 5 0" FontStyle="Italic"
+                                                                                    HorizontalAlignment="Right"
+                                                                                    VerticalAlignment="Center"
+                                                                                    Command="{Binding DownloadEpisode}">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <controls:SymbolIcon Symbol="Download"
+                                                                                                         FontSize="18" />
+                                                                                </StackPanel>
+                                                                            </Button>
+
+                                                                        </StackPanel>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </controls:SettingsExpander.ItemTemplate>
+
+                                                            <controls:SettingsExpander.Footer>
+                                                                <StackPanel Orientation="Horizontal"
+                                                                            VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding DownloadedEpisodes}" VerticalAlignment="Center"></TextBlock>
+                                                                    <TextBlock Text="/" VerticalAlignment="Center"></TextBlock>
+                                                                    <TextBlock Text="{Binding EpisodesList.Count}" VerticalAlignment="Center"></TextBlock>
+
+                                                                    <Button Margin="10 0 0 0" FontStyle="Italic"
+                                                                            VerticalAlignment="Center"
+                                                                            Command="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).FetchData}"
+                                                                            CommandParameter="{Binding SeasonId}">
+                                                                        <ToolTip.Tip>
+                                                                            <TextBlock Text="Fetch Season" FontSize="15" />
+                                                                        </ToolTip.Tip>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <controls:SymbolIcon Symbol="Refresh"
+                                                                                                 FontSize="18" />
+                                                                        </StackPanel>
+                                                                    </Button>
+
+                                                                    <Button Margin="10 0 0 0" FontStyle="Italic"
+                                                                            VerticalAlignment="Center"
+                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsyncSeason}"
+                                                                            CommandParameter="{Binding .}">
+                                                                        <ToolTip.Tip>
+                                                                            <TextBlock Text="{Binding SeasonDownloadPath}"
+                                                                                       FontSize="15" />
+                                                                        </ToolTip.Tip>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <controls:SymbolIcon Symbol="Folder"
+                                                                                                 FontSize="18" />
+                                                                        </StackPanel>
+                                                                    </Button>
+
+                                                                    <Button Margin="10 0 0 0" FontStyle="Italic"
+                                                                            IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).EditModeEnabled}"
+                                                                            Command="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).RemoveSeason}"
+                                                                            CommandParameter="{Binding SeasonId}"
+                                                                            VerticalAlignment="Center">
+                                                                        <ToolTip.Tip>
+                                                                            <TextBlock Text="Remove Season" FontSize="15" />
+                                                                        </ToolTip.Tip>
+                                                                        <StackPanel Orientation="Horizontal">
+                                                                            <controls:SymbolIcon Symbol="Delete"
+                                                                                                 FontSize="18" />
+                                                                        </StackPanel>
+                                                                    </Button>
+                                                                </StackPanel>
+                                                            </controls:SettingsExpander.Footer>
+
+                                                        </controls:SettingsExpander>
+
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+
+                                    </controls:SettingsExpanderItem>
+
+                                </controls:SettingsExpander>
+
+                                <Grid IsVisible="{Binding FetchingData}"
+                                      Background="#90000000"
+                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <controls:ProgressRing Width="100" Height="100" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Grid>
+
+                                <Grid IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).EditMode}"
+                                      Background="#90000000"
+                                      HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                    <Button
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        FontStyle="Italic"
+                                        HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                        Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
+                                        CommandParameter="{Binding SeriesId}"
+                                        IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).FetchingData}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Remove Series" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:SymbolIcon Symbol="Delete" FontSize="32" />
+                                        </StackPanel>
+                                    </Button>
+                                </Grid>
+                            </Grid>
+
+
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
     </Grid>
+
 
 </UserControl>

@@ -163,12 +163,27 @@ public enum DownloadMediaType{
 
     [EnumMember(Value = "Subtitle")]
     Subtitle,
+    
+    [EnumMember(Value = "Description")]
+    Description,
 }
 
 public enum ScaledBorderAndShadowSelection{
     DontAdd,
     ScaledBorderAndShadowYes,
     ScaledBorderAndShadowNo,
+}
+
+public enum HistoryViewType{
+    Posters,
+    Table,
+}
+
+public enum SortingType{
+    [EnumMember(Value = "Series Title")]
+    SeriesTitle,
+    [EnumMember(Value = "Next Air Date")]
+    NextAirDate,
 }
 
 public enum SonarrCoverType{

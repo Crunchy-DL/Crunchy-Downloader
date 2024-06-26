@@ -116,6 +116,9 @@ public partial class MainWindow : AppWindow{
                         break;
                     case "History":
                         navView.Content = Activator.CreateInstance(typeof(HistoryPageViewModel));
+                        if ( navView.Content is HistoryPageViewModel){
+                            ((HistoryPageViewModel)navView.Content).SetStorageProvider(StorageProvider);
+                        }
                         navigationStack.Clear();
                         navigationStack.Push(navView.Content);
                         selectedNavVieItem = selectedItem;

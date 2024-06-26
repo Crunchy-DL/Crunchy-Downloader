@@ -10,15 +10,4 @@ public partial class DownloadsPageView : UserControl{
     public DownloadsPageView(){
         InitializeComponent();
     }
-
-    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e){
-        base.OnDetachedFromVisualTree(e);
-        if (DataContext is DownloadsPageViewModel vm){
-            vm.Cleanup();
-        }
-    }
-
-    private void Button_OnClick(object? sender, RoutedEventArgs e){
-        // Crunchy.Instance.TestMethode();
-    }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using CRD.Utils.Sonarr;
+using CRD.ViewModels;
 using YamlDotNet.Serialization;
 
 namespace CRD.Utils.Structs;
@@ -142,5 +143,8 @@ public class CrDownloadOptions{
     
     [YamlMember(Alias = "download_dir_path", ApplyNamingConventions = false)]
     public string? DownloadDirPath{ get; set; }
+    
+    [YamlMember(Alias = "history_page_properties", ApplyNamingConventions = false)]
+    public HistoryPageProperties? HistoryPageProperties{ get; set; }
     
 }

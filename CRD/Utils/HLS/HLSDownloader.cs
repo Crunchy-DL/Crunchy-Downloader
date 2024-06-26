@@ -71,6 +71,15 @@ public class HlsDownloader{
                         _data.Offset = resumeData.Completed;
                         _data.IsResume = true;
                     } else{
+
+                        if (resumeData.Total == _data.M3U8Json?.Segments.Count &&
+                            resumeData.Completed == resumeData.Total &&
+                            !double.IsNaN(resumeData.Completed)){
+
+                            Console.WriteLine("Already finished");
+                            return (Ok: true, _data.Parts);
+                        }
+
                         Console.WriteLine("Resume data is wrong!");
                         Console.WriteLine($"Resume: {{ total: {resumeData.Total}, dled: {resumeData.Completed} }}, " +
                                           $"Current: {{ total: {_data.M3U8Json?.Segments.Count} }}");

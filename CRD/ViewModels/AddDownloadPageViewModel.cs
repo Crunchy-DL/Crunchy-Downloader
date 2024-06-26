@@ -19,17 +19,30 @@ using ReactiveUI;
 namespace CRD.ViewModels;
 
 public partial class AddDownloadPageViewModel : ViewModelBase{
-    [ObservableProperty] public string _urlInput = "";
-    [ObservableProperty] public string _buttonText = "Enter Url";
-    [ObservableProperty] public bool _addAllEpisodes = false;
+    [ObservableProperty]
+    public string _urlInput = "";
 
-    [ObservableProperty] public bool _buttonEnabled = false;
-    [ObservableProperty] public bool _allButtonEnabled = false;
-    [ObservableProperty] public bool _showLoading = false;
+    [ObservableProperty]
+    public string _buttonText = "Enter Url";
+
+    [ObservableProperty]
+    public bool _addAllEpisodes = false;
+
+    [ObservableProperty]
+    public bool _buttonEnabled = false;
+
+    [ObservableProperty]
+    public bool _allButtonEnabled = false;
+
+    [ObservableProperty]
+    public bool _showLoading = false;
+
     public ObservableCollection<ItemModel> Items{ get; } = new();
     public ObservableCollection<ItemModel> SelectedItems{ get; } = new();
 
-    [ObservableProperty] public ComboBoxItem _currentSelectedSeason;
+    [ObservableProperty]
+    public ComboBoxItem _currentSelectedSeason;
+
     public ObservableCollection<ComboBoxItem> SeasonList{ get; } = new();
 
     private Dictionary<string, List<ItemModel>> episodesBySeason = new();
@@ -79,7 +92,6 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
             if (currentSeriesList != null){
                 Crunchyroll.Instance.AddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
-                
             }
 
 
@@ -106,7 +118,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                 if (match.Success){
                     var locale = match.Groups[1].Value; // Capture the locale part
-                    var id = match.Groups[2].Value;     // Capture the ID part
+                    var id = match.Groups[2].Value; // Capture the ID part
                     Crunchyroll.Instance.AddEpisodeToQue(id, locale, Crunchyroll.Instance.CrunOptions.DubLang);
                     UrlInput = "";
                     selectedEpisodes.Clear();
@@ -122,7 +134,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                 if (match.Success){
                     var locale = match.Groups[1].Value; // Capture the locale part
-                    var id = match.Groups[2].Value;     // Capture the ID part
+                    var id = match.Groups[2].Value; // Capture the ID part
 
                     if (id.Length != 9){
                         return;
@@ -130,7 +142,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                     ButtonEnabled = false;
                     ShowLoading = true;
-                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id,"", new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
+                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id, "", new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
                     ShowLoading = false;
                     if (list != null){
                         currentSeriesList = list;

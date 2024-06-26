@@ -124,8 +124,9 @@
                                                     </StackPanel>
                                                 </Grid>
 
-                                                <TextBlock HorizontalAlignment="Center" Text="{Binding SeasonName}"
-                                                           TextWrapping="NoWrap"
+                                                <TextBlock HorizontalAlignment="Center" TextAlignment="Center" Text="{Binding SeasonName}"
+                                                           TextWrapping="Wrap"
+                                                           Height="40"
                                                            Margin="0,0,0,0">
                                                     <ToolTip.Tip>
                                                         <TextBlock Text="{Binding SeasonName}" FontSize="15" />

@@ -141,10 +141,12 @@ public class Merger{
 
         foreach (var aud in options.OnlyAudio){
             string trackName = aud.Language.Name;
+            args.Add("--audio-tracks 0");
+            args.Add("--no-video");
             args.Add($"--track-name 0:\"{trackName}\"");
             args.Add($"--language 0:{aud.Language.Code}");
-            args.Add("--no-video");
-            args.Add("--audio-tracks 0");
+          
+            
 
             if (options.Defaults.Audio.Code == aud.Language.Code){
                 args.Add("--default-track 0");
@@ -181,7 +183,7 @@ public class Merger{
             args.Add("--no-subtitles");
         }
 
-        if (options.Fonts != null && options.Fonts.Count > 0){
+        if (options.Fonts is{ Count: > 0 }){
             foreach (var font in options.Fonts){
                 args.Add($"--attachment-name \"{font.Name}\"");
                 args.Add($"--attachment-mime-type \"{font.Mime}\"");
@@ -191,7 +193,7 @@ public class Merger{
             args.Add("--no-attachments");
         }
 
-        if (options.Chapters != null && options.Chapters.Count > 0){
+        if (options.Chapters is{ Count: > 0 }){
             args.Add($"--chapters \"{options.Chapters[0].Path}\"");
         }
 
@@ -199,8 +201,8 @@ public class Merger{
             args.Add($"--title \"{options.VideoTitle}\"");
         }
 
-        if (options.MuxDescription){
-            args.Add($"--global-tags \"{Path.Combine(Path.GetDirectoryName(options.Output), Path.GetFileNameWithoutExtension(options.Output))}.xml\"");
+        if (options.Description is{ Count: > 0 }){
+            args.Add($"--global-tags \"{options.Description[0].Path}\"");
         }
         
      
@@ -242,10 +244,8 @@ public class Merger{
         allMediaFiles.ForEach(file => DeleteFile(file.Path));
         allMediaFiles.ForEach(file => DeleteFile(file.Path + ".resume"));
         
-        if (options.MuxDescription){
-            DeleteFile(Path.Combine(Path.GetDirectoryName(options.Output), Path.GetFileNameWithoutExtension(options.Output)) + ".xml");
-        }
-
+        options.Description?.ForEach(chapter => DeleteFile(chapter.Path));
+        
         // Delete chapter files if any
         options.Chapters?.ForEach(chapter => DeleteFile(chapter.Path));
 
@@ -319,7 +319,7 @@ public class MergerOptions{
     public MuxOptions Options{ get; set; }
     public Defaults Defaults{ get; set; }
     public bool mp3{ get; set; }
-    public bool MuxDescription{ get; set; }
+    public List<MergerInput> Description{ get; set; } = new List<MergerInput>();
 }
 
 public class MuxOptions{

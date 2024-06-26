@@ -1,16 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using CommunityToolkit.Mvvm.Input;
 using CRD.Utils;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Sonarr.Models;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
 using CRD.Views;
+using DynamicData;
 using Newtonsoft.Json;
 using ReactiveUI;
 
@@ -22,7 +27,7 @@ public class History(){
     public async Task UpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
 
-        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja");
+        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja", true);
 
         if (parsedSeries == null){
             Console.Error.WriteLine("Parse Data Invalid");
@@ -64,7 +69,7 @@ public class History(){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
         if (historySeries != null){
-            var historySeason = historySeries.Seasons.Find(s => s.SeasonId == seasonId);
+            var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
 
             if (historySeason != null){
                 var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == episodeId);
@@ -84,7 +89,7 @@ public class History(){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
         if (historySeries != null){
-            var historySeason = historySeries.Seasons.Find(s => s.SeasonId == seasonId);
+            var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
 
             if (historySeason != null){
                 var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == episodeId);
@@ -102,9 +107,9 @@ public class History(){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
         var downloadDirPath = "";
-        
+
         if (historySeries != null){
-            var historySeason = historySeries.Seasons.Find(s => s.SeasonId == seasonId);
+            var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
             if (!string.IsNullOrEmpty(historySeries.SeriesDownloadPath)){
                 downloadDirPath = historySeries.SeriesDownloadPath;
             }
@@ -145,7 +150,7 @@ public class History(){
         var seriesId = episode.SeriesId;
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
         if (historySeries != null){
-            var historySeason = historySeries.Seasons.Find(s => s.SeasonId == episode.SeasonId);
+            var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == episode.SeasonId);
 
             var series = await crunInstance.CrSeries.SeriesById(seriesId);
             if (series?.Data != null){
@@ -174,7 +179,7 @@ public class History(){
 
                 historySeries.Seasons.Add(newSeason);
 
-                historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0).ToList();
+                SortSeasons(historySeries);
             }
 
             historySeries.UpdateNewEpisodes();
@@ -198,11 +203,7 @@ public class History(){
             historySeries.UpdateNewEpisodes();
         }
 
-        var sortedList = crunInstance.HistoryList.OrderBy(item => item.SeriesTitle).ToList();
-        crunInstance.HistoryList.Clear();
-        foreach (var item in sortedList){
-            crunInstance.HistoryList.Add(item);
-        }
+        SortItems();
 
         MatchHistorySeriesWithSonarr(false);
         await MatchHistoryEpisodesWithSonarr(false, historySeries);
@@ -215,7 +216,7 @@ public class History(){
             var seriesId = firstEpisode.SeriesId;
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
             if (historySeries != null){
-                var historySeason = historySeries.Seasons.Find(s => s.SeasonId == firstEpisode.SeasonId);
+                var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == firstEpisode.SeasonId);
                 var series = await crunInstance.CrSeries.SeriesById(seriesId);
                 if (series?.Data != null){
                     historySeries.SeriesTitle = series.Data.First().Title;
@@ -257,7 +258,7 @@ public class History(){
 
                     historySeries.Seasons.Add(newSeason);
 
-                    historySeries.Seasons = historySeries.Seasons.OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0).ToList();
+                    SortSeasons(historySeries);
                 }
 
                 historySeries.UpdateNewEpisodes();
@@ -286,11 +287,7 @@ public class History(){
                 historySeries.UpdateNewEpisodes();
             }
 
-            var sortedList = crunInstance.HistoryList.OrderBy(item => item.SeriesTitle).ToList();
-            crunInstance.HistoryList.Clear();
-            foreach (var item in sortedList){
-                crunInstance.HistoryList.Add(item);
-            }
+            SortItems();
 
             MatchHistorySeriesWithSonarr(false);
             await MatchHistoryEpisodesWithSonarr(false, historySeries);
@@ -298,6 +295,66 @@ public class History(){
         }
     }
 
+    private void SortSeasons(HistorySeries series){
+        var sortedSeasons = series.Seasons
+            .OrderBy(s => s.SeasonNum != null ? int.Parse(s.SeasonNum) : 0)
+            .ToList();
+
+        series.Seasons.Clear();
+
+        foreach (var season in sortedSeasons){
+            series.Seasons.Add(season);
+        }
+    }
+    
+    public void SortItems(){
+        var currentSortingType = Crunchyroll.Instance.CrunOptions.HistoryPageProperties?.SelectedSorting ?? SortingType.SeriesTitle;
+        switch (currentSortingType){
+            case SortingType.SeriesTitle:
+                var sortedList = Crunchyroll.Instance.HistoryList.OrderBy(s => s.SeriesTitle).ToList();
+
+                Crunchyroll.Instance.HistoryList.Clear();
+
+                Crunchyroll.Instance.HistoryList.AddRange(sortedList);
+
+
+                return;
+
+            case SortingType.NextAirDate:
+
+                DateTime today = DateTime.UtcNow.Date;
+
+                var sortedSeriesDates = Crunchyroll.Instance.HistoryList
+                    .OrderByDescending(s => s.SonarrNextAirDate == "Today")
+                    .ThenBy(s => s.SonarrNextAirDate == "Today" ? s.SeriesTitle : null)
+                    .ThenBy(s => {
+                        var date = ParseDate(s.SonarrNextAirDate, today);
+                        return date.HasValue ? date.Value : DateTime.MaxValue;
+                    })
+                    .ThenBy(s => s.SeriesTitle)
+                    .ToList();
+
+                Crunchyroll.Instance.HistoryList.Clear();
+
+                Crunchyroll.Instance.HistoryList.AddRange(sortedSeriesDates);
+
+
+                return;
+        }
+    }
+
+    public static DateTime? ParseDate(string dateStr, DateTime today){
+        if (dateStr == "Today"){
+            return today;
+        }
+
+        if (DateTime.TryParseExact(dateStr, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime date)){
+            return date;
+        }
+
+        return null;
+    }
+    
     private string GetSeriesThumbnail(CrSeriesBase series){
         // var series = await crunInstance.CrSeries.SeriesById(seriesId);
 
@@ -389,6 +446,8 @@ public class History(){
         if (!string.IsNullOrEmpty(historySeries.SonarrSeriesId)){
             var episodes = await SonarrClient.Instance.GetEpisodes(int.Parse(historySeries.SonarrSeriesId));
 
+            historySeries.SonarrNextAirDate = GetNextAirDate(episodes);
+            
             List<HistoryEpisode> allHistoryEpisodes =[];
 
             foreach (var historySeriesSeason in historySeries.Seasons){
@@ -449,6 +508,29 @@ public class History(){
                 }
             }
         }
+    }
+
+    private string GetNextAirDate(List<SonarrEpisode> episodes){
+        DateTime today = DateTime.UtcNow.Date;
+
+        // Check if any episode air date matches today
+        var todayEpisode = episodes.FirstOrDefault(e => e.AirDateUtc.Date == today);
+        if (todayEpisode != null){
+            return "Today";
+        }
+
+        // Find the next episode date
+        var nextEpisode = episodes
+            .Where(e => e.AirDateUtc.Date > today)
+            .OrderBy(e => e.AirDateUtc.Date)
+            .FirstOrDefault();
+
+        if (nextEpisode != null){
+            return nextEpisode.AirDateUtc.ToString("dd.MM.yyyy");
+        }
+
+        // If no future episode date is found
+        return string.Empty;
     }
 
     private SonarrSeries? FindClosestMatch(string title){
@@ -543,218 +625,3 @@ public class NumericStringPropertyComparer : IComparer<HistoryEpisode>{
     }
 }
 
-public class HistorySeries : INotifyPropertyChanged{
-    [JsonProperty("series_title")]
-    public string? SeriesTitle{ get; set; }
-
-    [JsonProperty("series_id")]
-    public string? SeriesId{ get; set; }
-
-    [JsonProperty("sonarr_series_id")]
-    public string? SonarrSeriesId{ get; set; }
-
-    [JsonProperty("sonarr_tvdb_id")]
-    public string? SonarrTvDbId{ get; set; }
-
-    [JsonProperty("sonarr_slug_title")]
-    public string? SonarrSlugTitle{ get; set; }
-
-    [JsonProperty("series_description")]
-    public string? SeriesDescription{ get; set; }
-
-    [JsonProperty("series_thumbnail_url")]
-    public string? ThumbnailImageUrl{ get; set; }
-
-    [JsonProperty("series_new_episodes")]
-    public int NewEpisodes{ get; set; }
-
-    [JsonIgnore]
-    public Bitmap? ThumbnailImage{ get; set; }
-
-    [JsonProperty("series_season_list")]
-    public required List<HistorySeason> Seasons{ get; set; }
-
-    [JsonProperty("series_download_path")]
-    public string? SeriesDownloadPath{ get; set; }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    [JsonIgnore]
-    public bool FetchingData{ get; set; }
-
-    public async Task LoadImage(){
-        try{
-            using (var client = new HttpClient()){
-                var response = await client.GetAsync(ThumbnailImageUrl);
-                response.EnsureSuccessStatusCode();
-                using (var stream = await response.Content.ReadAsStreamAsync()){
-                    ThumbnailImage = new Bitmap(stream);
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ThumbnailImage)));
-                }
-            }
-        } catch (Exception ex){
-            // Handle exceptions
-            Console.Error.WriteLine("Failed to load image: " + ex.Message);
-        }
-    }
-
-    public void UpdateNewEpisodes(){
-        int count = 0;
-        bool foundWatched = false;
-
-        // Iterate over the Seasons list from the end to the beginning
-        for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
-            if (Seasons[i].SpecialSeason == true){
-                continue;
-            }
-
-            // Iterate over the Episodes from the end to the beginning
-            for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (Seasons[i].EpisodesList[j].SpecialEpisode){
-                    continue;
-                }
-
-                if (!Seasons[i].EpisodesList[j].WasDownloaded){
-                    count++;
-                } else{
-                    foundWatched = true;
-                }
-            }
-        }
-
-        NewEpisodes = count;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NewEpisodes)));
-    }
-
-    public void SetFetchingData(){
-        FetchingData = true;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-    }
-
-    public async Task AddNewMissingToDownloads(){
-        bool foundWatched = false;
-
-        // Iterate over the Seasons list from the end to the beginning
-        for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
-            if (Seasons[i].SpecialSeason == true){
-                continue;
-            }
-
-            // Iterate over the Episodes from the end to the beginning
-            for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (Seasons[i].EpisodesList[j].SpecialEpisode){
-                    continue;
-                }
-
-                if (!Seasons[i].EpisodesList[j].WasDownloaded){
-                    //ADD to download queue
-                    await Seasons[i].EpisodesList[j].DownloadEpisode();
-                } else{
-                    foundWatched = true;
-                }
-            }
-        }
-    }
-
-    public async Task FetchData(string? seasonId){
-        FetchingData = true;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-        await Crunchyroll.Instance.CrHistory.UpdateSeries(SeriesId, seasonId);
-        FetchingData = false;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-        Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false, this);
-    }
-}
-
-public class HistorySeason : INotifyPropertyChanged{
-    [JsonProperty("season_title")]
-    public string? SeasonTitle{ get; set; }
-
-    [JsonProperty("season_id")]
-    public string? SeasonId{ get; set; }
-
-    [JsonProperty("season_cr_season_number")]
-    public string? SeasonNum{ get; set; }
-
-    [JsonProperty("season_special_season")]
-    public bool? SpecialSeason{ get; set; }
-
-    [JsonIgnore]
-    public string CombinedProperty => SpecialSeason ?? false ? $"Specials {SeasonNum}" : $"Season {SeasonNum}";
-
-    [JsonProperty("season_downloaded_episodes")]
-    public int DownloadedEpisodes{ get; set; }
-
-    [JsonProperty("season_episode_list")]
-    public required List<HistoryEpisode> EpisodesList{ get; set; }
-
-    [JsonProperty("series_download_path")]
-    public string? SeasonDownloadPath{ get; set; }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    public void UpdateDownloaded(string? EpisodeId){
-        if (!string.IsNullOrEmpty(EpisodeId)){
-            EpisodesList.First(e => e.EpisodeId == EpisodeId).ToggleWasDownloaded();
-        }
-
-        DownloadedEpisodes = EpisodesList.FindAll(e => e.WasDownloaded).Count;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadedEpisodes)));
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
-    }
-
-    public void UpdateDownloaded(){
-        DownloadedEpisodes = EpisodesList.FindAll(e => e.WasDownloaded).Count;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadedEpisodes)));
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
-    }
-}
-
-public partial class HistoryEpisode : INotifyPropertyChanged{
-    [JsonProperty("episode_title")]
-    public string? EpisodeTitle{ get; set; }
-
-    [JsonProperty("episode_id")]
-    public string? EpisodeId{ get; set; }
-
-    [JsonProperty("episode_cr_episode_number")]
-    public string? Episode{ get; set; }
-
-    [JsonProperty("episode_cr_episode_description")]
-    public string? EpisodeDescription{ get; set; }
-
-    [JsonProperty("episode_cr_season_number")]
-    public string? EpisodeSeasonNum{ get; set; }
-
-    [JsonProperty("episode_was_downloaded")]
-    public bool WasDownloaded{ get; set; }
-
-    [JsonProperty("episode_special_episode")]
-    public bool SpecialEpisode{ get; set; }
-
-    [JsonProperty("sonarr_episode_id")]
-    public string? SonarrEpisodeId{ get; set; }
-
-    [JsonProperty("sonarr_has_file")]
-    public bool SonarrHasFile{ get; set; }
-
-    [JsonProperty("sonarr_episode_number")]
-    public string? SonarrEpisodeNumber{ get; set; }
-
-    [JsonProperty("sonarr_season_number")]
-    public string? SonarrSeasonNumber{ get; set; }
-
-    [JsonProperty("sonarr_absolut_number")]
-    public string? SonarrAbsolutNumber{ get; set; }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-
-    public void ToggleWasDownloaded(){
-        WasDownloaded = !WasDownloaded;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
-    }
-
-    public async Task DownloadEpisode(){
-        await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, Crunchyroll.Instance.DefaultLocale, Crunchyroll.Instance.CrunOptions.DubLang);
-    }
-}

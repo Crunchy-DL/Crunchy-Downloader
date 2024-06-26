@@ -22,6 +22,7 @@ using CRD.Utils.Muxing;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Sonarr.Models;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
 using CRD.ViewModels;
 using CRD.Views;
 using HtmlAgilityPack;
@@ -104,8 +105,9 @@ public class Crunchyroll{
 
     public Crunchyroll(){
         CrunOptions = new CrDownloadOptions();
+        Queue.CollectionChanged += UpdateItemListOnRemove;
     }
-    
+
     public async Task Init(){
         _widevine = Widevine.Instance;
 
@@ -196,6 +198,41 @@ public class Crunchyroll{
         if (CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             SonarrSeries = await SonarrClient.Instance.GetSeries();
             CrHistory.MatchHistorySeriesWithSonarr(true);
+        }
+    }
+
+    private void UpdateItemListOnRemove(object? sender, NotifyCollectionChangedEventArgs e){
+        if (e.Action == NotifyCollectionChangedAction.Remove){
+            if (e.OldItems != null)
+                foreach (var eOldItem in e.OldItems){
+                    var downloadItem = DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(eOldItem));
+                    if (downloadItem != null){
+                        DownloadItemModels.Remove(downloadItem);
+                    } else{
+                        Console.Error.WriteLine("Failed to Remove Episode from list");
+                    }
+                }
+        }
+
+        UpdateDownloadListItems();
+    }
+
+    public void UpdateDownloadListItems(){
+        var list = Queue;
+
+        foreach (CrunchyEpMeta crunchyEpMeta in list){
+            var downloadItem = DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(crunchyEpMeta));
+            if (downloadItem != null){
+                downloadItem.Refresh();
+            } else{
+                downloadItem = new DownloadItemModel(crunchyEpMeta);
+                downloadItem.LoadImage();
+                DownloadItemModels.Add(downloadItem);
+            }
+
+            if (downloadItem is{ isDownloading: false, Error: false } && CrunOptions.AutoDownload && ActiveDownloads < CrunOptions.SimultaneousDownloads){
+                downloadItem.StartDownload();
+            }
         }
     }
 
@@ -447,13 +484,12 @@ public class Crunchyroll{
             if (CrunOptions.RemoveFinishedDownload){
                 Queue.Remove(data);
             }
-
-            Queue.Refresh();
         } else{
             Console.WriteLine("Skipping mux");
         }
 
         ActiveDownloads--;
+        Queue.Refresh();
 
         if (CrunOptions.History && data.Data != null && data.Data.Count > 0){
             CrHistory.SetAsDownloaded(data.ShowId, data.SeasonId, data.Data.First().MediaId);
@@ -506,7 +542,7 @@ public class Crunchyroll{
                 Console.Error.WriteLine("No xml description file found to mux description");
             }
         }
-        
+
 
         var merger = new Merger(new MergerOptions{
             OnlyVid = data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
@@ -528,7 +564,7 @@ public class Crunchyroll{
             },
             CcTag = options.CcTag,
             mp3 = muxToMp3,
-            MuxDescription = muxDesc
+            Description = data.Where(a => a.Type == DownloadMediaType.Description).Select(a => new MergerInput{ Path = a.Path ?? string.Empty }).ToList(),
         });
 
         if (!File.Exists(CfgManager.PathFFMPEG)){
@@ -1380,6 +1416,11 @@ public class Crunchyroll{
                     writer.WriteEndElement(); // End Tags
                     writer.WriteEndDocument();
                 }
+
+                files.Add(new DownloadedMedia{
+                    Type = DownloadMediaType.Description,
+                    Path = fullPath,
+                });
             }
 
             Console.WriteLine($"{fileName} has been created with the description.");
