@@ -93,6 +93,13 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedHSLang;
+    
+    [ObservableProperty]
+    private ComboBoxItem _selectedHistoryLang;
+    
+    [ObservableProperty]
+    private ComboBoxItem _selectedDescriptionLang;
+
 
     [ObservableProperty]
     private string _selectedDubs = "ja-JP";
@@ -228,6 +235,36 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "none" },
     };
 
+    public ObservableCollection<ComboBoxItem> HistoryLangList{ get; } = new(){
+        new ComboBoxItem(){ Content = "default" },
+        new ComboBoxItem(){ Content = "de-DE" },
+        new ComboBoxItem(){ Content = "en-US" },
+        new ComboBoxItem(){ Content = "es-419" },
+        new ComboBoxItem(){ Content = "es-ES" },
+        new ComboBoxItem(){ Content = "fr-FR" },
+        new ComboBoxItem(){ Content = "it-IT" },
+        new ComboBoxItem(){ Content = "pt-BR" },
+        new ComboBoxItem(){ Content = "pt-PT" },
+        new ComboBoxItem(){ Content = "ru-RU" },
+        new ComboBoxItem(){ Content = "hi-IN" },
+        new ComboBoxItem(){ Content = "ar-SA" },
+    };
+    
+    public ObservableCollection<ComboBoxItem> DescriptionLangList{ get; } = new(){
+        new ComboBoxItem(){ Content = "default" },
+        new ComboBoxItem(){ Content = "de-DE" },
+        new ComboBoxItem(){ Content = "en-US" },
+        new ComboBoxItem(){ Content = "es-419" },
+        new ComboBoxItem(){ Content = "es-ES" },
+        new ComboBoxItem(){ Content = "fr-FR" },
+        new ComboBoxItem(){ Content = "it-IT" },
+        new ComboBoxItem(){ Content = "pt-BR" },
+        new ComboBoxItem(){ Content = "pt-PT" },
+        new ComboBoxItem(){ Content = "ru-RU" },
+        new ComboBoxItem(){ Content = "hi-IN" },
+        new ComboBoxItem(){ Content = "ar-SA" },
+    };
+    
     public ObservableCollection<ComboBoxItem> DubLangList{ get; } = new(){
     };
 
@@ -287,9 +324,15 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
         
+        ComboBoxItem? descriptionLang = DescriptionLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DescriptionLang) ?? null;
+        SelectedDescriptionLang = descriptionLang ?? DescriptionLangList[0];
+        
+        ComboBoxItem? historyLang = HistoryLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.HistoryLang) ?? null;
+        SelectedHistoryLang = historyLang ?? HistoryLangList[0];
+        
         ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
-
+        
         ComboBoxItem? defaultDubLang = DefaultDubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.DefaultAudio ?? "")) ?? null;
         SelectedDefaultDubLang = defaultDubLang ?? DefaultDubLangList[0];
 
@@ -408,6 +451,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         Crunchyroll.Instance.CrunOptions.DlSubs = softSubs;
 
+        string descLang = SelectedDescriptionLang.Content + "";
+
+        Crunchyroll.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : "";
+        
+        string historyLang = SelectedHistoryLang.Content + "";
+
+        Crunchyroll.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : "";
+        
         string hslang = SelectedHSLang.Content + "";
 
         Crunchyroll.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;

@@ -78,8 +78,8 @@ public partial class SeriesPageViewModel : ViewModelBase{
     [RelayCommand]
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);
-
-        MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
+        
+        // MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
 
     [RelayCommand]

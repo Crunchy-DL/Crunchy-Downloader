@@ -91,7 +91,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             }
 
             if (currentSeriesList != null){
-                Crunchyroll.Instance.AddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
+                await Crunchyroll.Instance.AddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
             }
 
 
@@ -119,7 +119,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 if (match.Success){
                     var locale = match.Groups[1].Value; // Capture the locale part
                     var id = match.Groups[2].Value; // Capture the ID part
-                    Crunchyroll.Instance.AddEpisodeToQue(id, locale, Crunchyroll.Instance.CrunOptions.DubLang);
+                    Crunchyroll.Instance.AddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, Crunchyroll.Instance.CrunOptions.DubLang);
                     UrlInput = "";
                     selectedEpisodes.Clear();
                     SelectedItems.Clear();
@@ -142,7 +142,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                     ButtonEnabled = false;
                     ShowLoading = true;
-                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id, "", new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
+                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id, Languages.Locale2language(locale).CrLocale, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
                     ShowLoading = false;
                     if (list != null){
                         currentSeriesList = list;

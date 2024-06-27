@@ -69,7 +69,7 @@ public class Crunchyroll{
 
     #endregion
 
-    public string DefaultLocale = "en";
+    public string DefaultLocale = "en-US";
 
     public JsonSerializerSettings? SettingsJsonSerializerSettings = new(){
         NullValueHandling = NullValueHandling.Ignore,
@@ -159,6 +159,7 @@ public class Crunchyroll{
         CrunOptions.DlVideoOnce = true;
         CrunOptions.StreamEndpoint = "web/firefox";
         CrunOptions.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+        CrunOptions.HistoryLang = "";
 
         CrunOptions.History = true;
 
@@ -321,10 +322,10 @@ public class Crunchyroll{
         return week;
     }
 
-    public async Task AddEpisodeToQue(string epId, string locale, List<string> dubLang){
+    public async Task AddEpisodeToQue(string epId, string crLocale, List<string> dubLang){
         await CrAuth.RefreshToken(true);
 
-        var episodeL = await CrEpisode.ParseEpisodeById(epId, locale);
+        var episodeL = await CrEpisode.ParseEpisodeById(epId, crLocale);
 
 
         if (episodeL != null){
@@ -335,6 +336,13 @@ public class Crunchyroll{
 
             var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL);
             var selected = CrEpisode.EpisodeMeta(sList, dubLang);
+            
+            if (CrunOptions.IncludeVideoDescription){
+                if (selected.Data is{ Count: > 0 }){
+                    var episode = await CrEpisode.ParseEpisodeById(selected.Data.First().MediaId, string.IsNullOrEmpty(CrunOptions.DescriptionLang) ? DefaultLocale : CrunOptions.DescriptionLang, true);
+                    selected.Description = episode?.Description ?? selected.Description;
+                }
+            }
 
             if (selected.Data is{ Count: > 0 }){
                 if (CrunOptions.History){
@@ -373,7 +381,7 @@ public class Crunchyroll{
         }
     }
 
-    public void AddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
+    public async Task AddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
         var selected = CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
 
         bool failed = false;
@@ -396,6 +404,13 @@ public class Crunchyroll{
 
                     if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
                         crunchyEpMeta.DownloadPath = historyEpisode.downloadDirPath;
+                    }
+                }
+                
+                if (CrunOptions.IncludeVideoDescription){
+                    if (crunchyEpMeta.Data is{ Count: > 0 }){
+                        var episode = await CrEpisode.ParseEpisodeById(crunchyEpMeta.Data.First().MediaId, string.IsNullOrEmpty(CrunOptions.DescriptionLang) ? DefaultLocale : CrunOptions.DescriptionLang, true);
+                        crunchyEpMeta.Description = episode?.Description ?? crunchyEpMeta.Description;
                     }
                 }
 

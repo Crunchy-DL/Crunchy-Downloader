@@ -27,7 +27,7 @@ public class History(){
     public async Task UpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
 
-        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja", true);
+        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja-JP", true);
 
         if (parsedSeries == null){
             Console.Error.WriteLine("Parse Data Invalid");
@@ -55,8 +55,8 @@ public class History(){
                     }
                 }
 
-                var seasonData = await crunInstance.CrSeries.GetSeasonDataById(sId);
-                UpdateWithSeasonData(seasonData);
+                var seasonData = await crunInstance.CrSeries.GetSeasonDataById(sId,string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang,true);
+                await UpdateWithSeasonData(seasonData);
             }
         }
     }
@@ -152,10 +152,7 @@ public class History(){
         if (historySeries != null){
             var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == episode.SeasonId);
 
-            var series = await crunInstance.CrSeries.SeriesById(seriesId);
-            if (series?.Data != null){
-                historySeries.SeriesTitle = series.Data.First().Title;
-            }
+            await RefreshSeriesData(seriesId, historySeries);
 
             if (historySeason != null){
                 historySeason.SeasonTitle = episode.SeasonTitle;
@@ -192,12 +189,7 @@ public class History(){
             crunInstance.HistoryList.Add(historySeries);
             var newSeason = NewHistorySeason(episode);
 
-            var series = await crunInstance.CrSeries.SeriesById(seriesId);
-            if (series?.Data != null){
-                historySeries.SeriesDescription = series.Data.First().Description;
-                historySeries.ThumbnailImageUrl = GetSeriesThumbnail(series);
-                historySeries.SeriesTitle = series.Data.First().Title;
-            }
+            await RefreshSeriesData(seriesId, historySeries);
 
             historySeries.Seasons.Add(newSeason);
             historySeries.UpdateNewEpisodes();
@@ -217,10 +209,8 @@ public class History(){
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
             if (historySeries != null){
                 var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == firstEpisode.SeasonId);
-                var series = await crunInstance.CrSeries.SeriesById(seriesId);
-                if (series?.Data != null){
-                    historySeries.SeriesTitle = series.Data.First().Title;
-                }
+                
+                await RefreshSeriesData(seriesId, historySeries);
 
                 if (historySeason != null){
                     historySeason.SeasonTitle = firstEpisode.SeasonTitle;
@@ -274,12 +264,7 @@ public class History(){
 
                 newSeason.EpisodesList.Sort(new NumericStringPropertyComparer());
 
-                var series = await crunInstance.CrSeries.SeriesById(seriesId);
-                if (series?.Data != null){
-                    historySeries.SeriesDescription = series.Data.First().Description;
-                    historySeries.ThumbnailImageUrl = GetSeriesThumbnail(series);
-                    historySeries.SeriesTitle = series.Data.First().Title;
-                }
+                await RefreshSeriesData(seriesId, historySeries);
 
 
                 historySeries.Seasons.Add(newSeason);
@@ -292,6 +277,15 @@ public class History(){
             MatchHistorySeriesWithSonarr(false);
             await MatchHistoryEpisodesWithSonarr(false, historySeries);
             UpdateHistoryFile();
+        }
+    }
+
+    private async Task RefreshSeriesData(string seriesId, HistorySeries historySeries){
+        var series = await crunInstance.CrSeries.SeriesById(seriesId,string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang,true);
+        if (series?.Data != null){
+            historySeries.SeriesDescription = series.Data.First().Description;
+            historySeries.ThumbnailImageUrl = GetSeriesThumbnail(series);
+            historySeries.SeriesTitle = series.Data.First().Title;
         }
     }
 

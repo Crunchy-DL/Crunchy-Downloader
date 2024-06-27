@@ -17,16 +17,22 @@ namespace CRD.Downloader;
 public class CrEpisode(){
     private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
 
-    public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string locale){
+    public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale,bool forcedLang = false){
         if (crunInstance.CmsToken?.Cms == null){
             Console.Error.WriteLine("Missing CMS Access Token");
             return null;
         }
 
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-
+        
         query["preferred_audio_language"] = "ja-JP";
-        query["locale"] = Languages.Locale2language(locale).CrLocale;
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+            if (forcedLang){
+                query["force_locale"] = crLocale;   
+            }
+        }
+        
 
         var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/episodes/{id}", HttpMethod.Get, true, true, query);
 
@@ -198,7 +204,8 @@ public class CrEpisode(){
                 DownloadSpeed = 0
             };
             epMeta.AvailableSubs = item.SubtitleLocales;
-            epMeta.Description = item.Description;
+            epMeta.Description = item.Description; 
+            
             if (episodeP.EpisodeAndLanguages.Langs.Count > 0){
                 epMeta.SelectedDubs = dubLang
                     .Where(language => episodeP.EpisodeAndLanguages.Langs.Any(epLang => epLang.CrLocale == language))

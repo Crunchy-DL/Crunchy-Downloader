@@ -133,12 +133,12 @@ public class CrSeries(){
     }
 
 
-    public async Task<CrunchySeriesList?> ListSeriesId(string id,string Locale, CrunchyMultiDownload? data){
+    public async Task<CrunchySeriesList?> ListSeriesId(string id,string crLocale, CrunchyMultiDownload? data){
         await crunInstance.CrAuth.RefreshToken(true);
 
         bool serieshasversions = true;
 
-        CrSeriesSearch? parsedSeries = await ParseSeriesById(id,Locale); // one piece - GRMG8ZQZR
+        CrSeriesSearch? parsedSeries = await ParseSeriesById(id,crLocale); // one piece - GRMG8ZQZR
 
         if (parsedSeries == null){
             Console.Error.WriteLine("Parse Data Invalid");
@@ -154,7 +154,7 @@ public class CrSeries(){
                 var s = result[season][key];
                 if (data?.S != null && s.Id != data.Value.S) continue;
                 int fallbackIndex = 0;
-                var seasonData = await GetSeasonDataById(s.Id);
+                var seasonData = await GetSeasonDataById(s.Id,"");
                 if (seasonData.Data != null){
 
                     if (crunInstance.CrunOptions.History){
@@ -285,7 +285,7 @@ public class CrSeries(){
         return crunchySeriesList;
     }
 
-    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonID, bool log = false){
+    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonID,string? crLocale,bool forcedLang = false, bool log = false){
         CrunchyEpisodeList episodeList = new CrunchyEpisodeList(){ Data = new List<CrunchyEpisode>(), Total = 0, Meta = new Meta() };
 
         if (crunInstance.CmsToken?.Cms == null){
@@ -293,8 +293,20 @@ public class CrSeries(){
             return episodeList;
         }
 
+        NameValueCollection query;
         if (log){
-            var showRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}?preferred_audio_language=ja-JP", HttpMethod.Get, true, true, null);
+            
+            query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+      
+            query["preferred_audio_language"] = "ja-JP";
+            if (!string.IsNullOrEmpty(crLocale)){
+                query["locale"] = crLocale;
+                if (forcedLang){
+                    query["force_locale"] = crLocale;   
+                }
+            }
+            
+            var showRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}", HttpMethod.Get, true, true, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
@@ -305,10 +317,18 @@ public class CrSeries(){
             }
         }
 
-        var episodeRequest = new HttpRequestMessage(HttpMethod.Get, $"{Api.Cms}/seasons/{seasonID}/episodes?preferred_audio_language=ja-JP");
-
-        episodeRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", crunInstance.Token?.access_token);
-
+        query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+      
+        query["preferred_audio_language"] = "ja-JP";
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+            if (forcedLang){
+                query["force_locale"] = crLocale;   
+            }
+        }
+        
+        var episodeRequest = HttpClientReq.CreateRequestMessage( $"{Api.Cms}/seasons/{seasonID}/episodes",HttpMethod.Get, true,true,query);
+        
         var episodeRequestResponse = await HttpClientReq.Instance.SendHttpRequest(episodeRequest);
 
         if (!episodeRequestResponse.IsOk){
@@ -356,7 +376,7 @@ public class CrSeries(){
         return ret;
     }
     
-    public async Task<CrSeriesSearch?> ParseSeriesById(string id,string? locale,bool forced = false){
+    public async Task<CrSeriesSearch?> ParseSeriesById(string id,string? crLocale,bool forced = false){
         if (crunInstance.CmsToken?.Cms == null){
             Console.Error.WriteLine("Missing CMS Access Token");
             return null;
@@ -365,10 +385,10 @@ public class CrSeries(){
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
       
         query["preferred_audio_language"] = "ja-JP";
-        if (!string.IsNullOrEmpty(locale)){
-            query["locale"] = Languages.Locale2language(locale).CrLocale;
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
             if (forced){
-                query["force_locale"] = Languages.Locale2language(locale).CrLocale;   
+                query["force_locale"] = crLocale;   
             }
             
         }
@@ -393,15 +413,22 @@ public class CrSeries(){
         return seasonsList;
     }
     
-    public async Task<CrSeriesBase?> SeriesById(string id){
+    public async Task<CrSeriesBase?> SeriesById(string id,string? crLocale,bool forced = false){
         if (crunInstance.CmsToken?.Cms == null){
             Console.Error.WriteLine("Missing CMS Access Token");
             return null;
         }
 
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-
+      
         query["preferred_audio_language"] = "ja-JP";
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+            if (forced){
+                query["force_locale"] = crLocale;   
+            }
+            
+        }
 
         var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/series/{id}", HttpMethod.Get, true, true, query);
         

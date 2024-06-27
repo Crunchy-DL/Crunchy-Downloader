@@ -80,6 +80,9 @@ public class CrDownloadOptions{
     
     [YamlMember(Alias = "mux_video_description", ApplyNamingConventions = false)]
     public bool IncludeVideoDescription{ get; set; }
+    
+    [YamlMember(Alias = "mux_description_lang", ApplyNamingConventions = false)]
+    public string? DescriptionLang{ get; set; }
 
     [YamlIgnore]
     public string Force{ get; set; }
@@ -131,6 +134,9 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "history", ApplyNamingConventions = false)]
     public bool History{ get; set; }
+    
+    [YamlMember(Alias = "history_lang", ApplyNamingConventions = false)]
+    public string? HistoryLang{ get; set; }
     
     [YamlMember(Alias = "sonarr_properties", ApplyNamingConventions = false)]
     public SonarrProperties? SonarrProperties{ get; set; }
