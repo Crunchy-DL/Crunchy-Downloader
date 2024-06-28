@@ -322,7 +322,7 @@ public class Crunchyroll{
         return week;
     }
 
-    public async Task AddEpisodeToQue(string epId, string crLocale, List<string> dubLang){
+    public async Task AddEpisodeToQue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false){
         await CrAuth.RefreshToken(true);
 
         var episodeL = await CrEpisode.ParseEpisodeById(epId, crLocale);
@@ -334,7 +334,7 @@ public class Crunchyroll{
                 return;
             }
 
-            var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL);
+            var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL,updateHistory);
             var selected = CrEpisode.EpisodeMeta(sList, dubLang);
             
             if (CrunOptions.IncludeVideoDescription){
@@ -352,21 +352,21 @@ public class Crunchyroll{
                             if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
                                 selected.EpisodeNumber = historyEpisode.historyEpisode.SonarrEpisodeNumber;
                             }
-
+            
                             if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrSeasonNumber)){
                                 selected.Season = historyEpisode.historyEpisode.SonarrSeasonNumber;
                             }
                         }
                     }
-
+            
                     if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
                         selected.DownloadPath = historyEpisode.downloadDirPath;
                     }
                 }
-
+            
                 Queue.Add(selected);
-
-
+            
+            
                 if (selected.Data.Count < dubLang.Count){
                     Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
                     MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));

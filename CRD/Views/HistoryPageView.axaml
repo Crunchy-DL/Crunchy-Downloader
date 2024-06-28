@@ -13,6 +13,7 @@
     <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
         <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
+        <ui:UiUpdateDownloadedHistorySeasonConverter x:Key="UiUpdateDownloadedHistorySeasonConverter" />
     </UserControl.Resources>
 
     <Grid>
@@ -422,8 +423,8 @@
                                                                                     Margin="0 0 10 0" Background="Transparent"
                                                                                     BorderThickness="0" CornerRadius="50"
                                                                                     IsVisible="{Binding !WasDownloaded}"
-                                                                                    Command="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext).UpdateDownloaded}"
-                                                                                    CommandParameter="{Binding EpisodeId}">
+                                                                                    Command="{Binding ToggleWasDownloadedSeries}"
+                                                                                    CommandParameter="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}">
                                                                                 <Grid>
                                                                                     <Ellipse Width="25" Height="25"
                                                                                              Fill="Gray" />
@@ -436,8 +437,8 @@
                                                                                     Margin="0 0 10 0" Background="Transparent"
                                                                                     BorderThickness="0" CornerRadius="50"
                                                                                     IsVisible="{Binding WasDownloaded}"
-                                                                                    Command="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext).UpdateDownloaded}"
-                                                                                    CommandParameter="{Binding EpisodeId}">
+                                                                                    Command="{Binding ToggleWasDownloadedSeries}"
+                                                                                    CommandParameter="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}">
                                                                                 <Grid>
                                                                                     <Ellipse Width="25" Height="25"
                                                                                              Fill="#21a556" />

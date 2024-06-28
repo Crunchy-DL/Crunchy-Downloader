@@ -59,14 +59,14 @@ public class CrEpisode(){
     }
 
 
-    public async Task<CrunchyRollEpisodeData> EpisodeData(CrunchyEpisode dlEpisode){
+    public async Task<CrunchyRollEpisodeData> EpisodeData(CrunchyEpisode dlEpisode,bool updateHistory = false){
         bool serieshasversions = true;
 
         // Dictionary<string, EpisodeAndLanguage> episodes = new Dictionary<string, EpisodeAndLanguage>();
 
         CrunchyRollEpisodeData episode = new CrunchyRollEpisodeData();
 
-        if (crunInstance.CrunOptions.History){
+        if (crunInstance.CrunOptions.History && updateHistory){
             await crunInstance.CrHistory.UpdateWithEpisode(dlEpisode);
         }
 

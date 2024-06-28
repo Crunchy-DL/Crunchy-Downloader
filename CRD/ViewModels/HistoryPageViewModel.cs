@@ -193,12 +193,14 @@ public partial class HistoryPageViewModel : ViewModelBase{
     partial void OnSelectedSeriesChanged(HistorySeries value){
         Crunchyroll.Instance.SelectedSeries = value;
 
+        NavToSeries();
+        
         if (!string.IsNullOrEmpty(value.SonarrSeriesId) && Crunchyroll.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
             CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
         }
 
-        NavToSeries();
+        
         _selectedSeries = null;
     }
 

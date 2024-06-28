@@ -48,4 +48,15 @@ public class HistorySeason : INotifyPropertyChanged{
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadedEpisodes)));
         CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
     }
+    
+    public void UpdateDownloadedSilent(){
+        DownloadedEpisodes = EpisodesList.FindAll(e => e.WasDownloaded).Count;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadedEpisodes)));
+    }
+    
+}
+
+public class UpdateDownloadedHistorySeason{
+    public string? EpisodeId;
+    public HistorySeries? HistorySeries;
 }

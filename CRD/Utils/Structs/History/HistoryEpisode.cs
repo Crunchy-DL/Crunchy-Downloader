@@ -48,6 +48,21 @@ public class HistoryEpisode : INotifyPropertyChanged{
         WasDownloaded = !WasDownloaded;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
     }
+    
+    public void ToggleWasDownloadedSeries(HistorySeries? series){
+        WasDownloaded = !WasDownloaded;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
+
+        if (series?.Seasons != null){
+            foreach (var historySeason in series.Seasons){
+                historySeason.UpdateDownloadedSilent();
+            }
+            series.UpdateNewEpisodes();
+        }
+            
+        
+        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
+    }
 
     public async Task DownloadEpisode(){
         await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, Crunchyroll.Instance.DefaultLocale, Crunchyroll.Instance.CrunOptions.DubLang);

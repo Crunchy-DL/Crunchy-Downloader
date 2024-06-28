@@ -450,7 +450,8 @@ public class History(){
 
             List<HistoryEpisode> failedEpisodes =[];
 
-            foreach (var historyEpisode in allHistoryEpisodes){
+            Parallel.ForEach(allHistoryEpisodes, historyEpisode =>
+            {
                 if (updateAll || string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){
                     var episode = FindClosestMatchEpisodes(episodes, historyEpisode.EpisodeTitle);
                     if (episode != null){
@@ -464,9 +465,10 @@ public class History(){
                         failedEpisodes.Add(historyEpisode);
                     }
                 }
-            }
+            });
 
-            foreach (var historyEpisode in failedEpisodes){
+            Parallel.ForEach(failedEpisodes, historyEpisode =>
+            {
                 var episode = episodes.Find(ele => ele.EpisodeNumber + "" == historyEpisode.Episode && ele.SeasonNumber + "" == historyEpisode.EpisodeSeasonNum);
                 if (episode != null){
                     historyEpisode.SonarrEpisodeId = episode.Id + "";
@@ -500,7 +502,7 @@ public class History(){
                         }
                     }
                 }
-            }
+            });
         }
     }
 
