@@ -30,6 +30,9 @@ public class HistorySeason : INotifyPropertyChanged{
 
     [JsonProperty("series_download_path")]
     public string? SeasonDownloadPath{ get; set; }
+    
+    [JsonIgnore]
+    public bool IsExpanded{ get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

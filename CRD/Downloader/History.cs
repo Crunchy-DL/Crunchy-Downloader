@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -453,7 +453,11 @@ public class History(){
             Parallel.ForEach(allHistoryEpisodes, historyEpisode =>
             {
                 if (updateAll || string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){
-                    var episode = FindClosestMatchEpisodes(episodes, historyEpisode.EpisodeTitle);
+                    
+                    // Create a copy of the episodes list for each thread
+                    var episodesCopy = new List<SonarrEpisode>(episodes);
+                    
+                    var episode = FindClosestMatchEpisodes(episodesCopy, historyEpisode.EpisodeTitle);
                     if (episode != null){
                         historyEpisode.SonarrEpisodeId = episode.Id + "";
                         historyEpisode.SonarrEpisodeNumber = episode.EpisodeNumber + "";

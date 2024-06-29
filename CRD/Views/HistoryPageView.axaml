@@ -240,7 +240,7 @@
                                 <controls:SettingsExpander
                                     Header="{Binding .}"
                                     ItemsSource="{Binding .}"
-                                    IsExpanded="False">
+                                    IsExpanded="{Binding IsExpanded}">
                                     <controls:SettingsExpander.HeaderTemplate>
                                         <DataTemplate DataType="{x:Type history:HistorySeries}">
 
@@ -373,7 +373,7 @@
                                                             ItemsSource="{Binding EpisodesList}"
 
                                                             Description="{Binding SeasonTitle}"
-                                                            IsExpanded="False">
+                                                            IsExpanded="{Binding IsExpanded}">
 
 
                                                             <controls:SettingsExpander.ItemTemplate>

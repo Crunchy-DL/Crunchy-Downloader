@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -150,6 +150,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
     partial void OnSelectedSortingChanged(ComboBoxItem value){
         if (TryParseEnum<SortingType>(value.Content + "", out var sortingType)){
             currentSortingType = sortingType;
+            if (Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null) Crunchyroll.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
             Crunchyroll.Instance.CrHistory.SortItems();
         } else{
             Console.Error.WriteLine("Invalid viewtype selected");

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using CRD.Utils.Structs;
 using DynamicData;
 
@@ -86,7 +87,18 @@ public class Merger{
             args.AddRange(options.Subtitles.Select((sub, subindex) =>
                 $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
 
-           
+        
+            if (!string.IsNullOrEmpty(options.VideoTitle)){
+
+                args.Add($"-metadata title=\"{options.VideoTitle}\"");
+            }
+
+            if (options.Description is{ Count: > 0 }){
+                XmlDocument doc = new XmlDocument();
+                doc.Load(options.Description[0].Path);
+                XmlNode? node = doc.SelectSingleNode("//Tag/Simple[Name='DESCRIPTION']/String");
+                args.Add($"-metadata comment=\"{node?.InnerText ?? string.Empty}\"");
+            }
 
             if (options.Options.ffmpeg?.Count > 0){
                 args.AddRange(options.Options.ffmpeg);

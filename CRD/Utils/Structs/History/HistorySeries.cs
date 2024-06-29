@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CRD.Downloader;
+using CRD.Utils.CustomList;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs.History;
@@ -26,7 +27,7 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonProperty("sonarr_slug_title")]
     public string? SonarrSlugTitle{ get; set; }
-    
+
     [JsonProperty("sonarr_next_air_date")]
     public string? SonarrNextAirDate{ get; set; }
 
@@ -43,7 +44,7 @@ public class HistorySeries : INotifyPropertyChanged{
     public Bitmap? ThumbnailImage{ get; set; }
 
     [JsonProperty("series_season_list")]
-    public required ObservableCollection<HistorySeason> Seasons{ get; set; }
+    public required RefreshableObservableCollection<HistorySeason> Seasons{ get; set; }
 
     [JsonProperty("series_download_path")]
     public string? SeriesDownloadPath{ get; set; }
@@ -52,6 +53,9 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonIgnore]
     public bool FetchingData{ get; set; }
+
+    [JsonIgnore]
+    public bool IsExpanded{ get; set; }
 
     [JsonIgnore]
     public bool EditModeEnabled{
@@ -145,21 +149,21 @@ public class HistorySeries : INotifyPropertyChanged{
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
         await Crunchyroll.Instance.CrHistory.UpdateSeries(SeriesId, seasonId);
-        FetchingData = false;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesTitle)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesDescription)));
         Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false, this);
         UpdateNewEpisodes();
+        FetchingData = false;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
     }
-    
+
     public void RemoveSeason(string? season){
         HistorySeason? objectToRemove = Seasons.FirstOrDefault(se => se.SeasonId == season) ?? null;
         if (objectToRemove != null){
             Seasons.Remove(objectToRemove);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Seasons)));
         }
-        
+
         CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
     }
 

@@ -96,7 +96,7 @@
                                 ItemsSource="{Binding EpisodesList}"
 
                                 Description="{Binding SeasonTitle}"
-                                IsExpanded="False">
+                                IsExpanded="{Binding IsExpanded}">
 
 
                                 <controls:SettingsExpander.ItemTemplate>

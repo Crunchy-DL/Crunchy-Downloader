@@ -79,6 +79,8 @@ public partial class SeriesPageViewModel : ViewModelBase{
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);
         
+        SelectedSeries.Seasons.Refresh();
+        
         // MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
 
