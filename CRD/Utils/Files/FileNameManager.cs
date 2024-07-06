@@ -89,7 +89,7 @@ public class FileNameManager{
     }
 
     public static string CleanupFilename(string filename){
-        string fixingChar = "_";
+        string fixingChar = "";
         Regex illegalRe = new Regex(@"[\/\?<>\\:\*\|"":]"); // Illegal Characters on most Operating Systems
         Regex controlRe = new Regex(@"[\x00-\x1f\x80-\x9f]"); // Unicode Control codes: C0 and C1
         Regex reservedRe = new Regex(@"^\.\.?$"); // Reserved filenames on Unix-based systems (".", "..")

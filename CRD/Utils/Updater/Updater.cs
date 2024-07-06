@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using CRD.Utils.HLS;
 using CRD.ViewModels;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
@@ -80,9 +81,6 @@ public class Updater : INotifyPropertyChanged{
 
 
     public async Task DownloadAndUpdateAsync(){
-        
-
-        
         try{
             using (var client = new HttpClient()){
                 // Download the zip file

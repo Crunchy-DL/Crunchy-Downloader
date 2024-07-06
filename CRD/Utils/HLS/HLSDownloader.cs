@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
@@ -71,11 +72,9 @@ public class HlsDownloader{
                         _data.Offset = resumeData.Completed;
                         _data.IsResume = true;
                     } else{
-
                         if (resumeData.Total == _data.M3U8Json?.Segments.Count &&
                             resumeData.Completed == resumeData.Total &&
                             !double.IsNaN(resumeData.Completed)){
-
                             Console.WriteLine("Already finished");
                             return (Ok: true, _data.Parts);
                         }
@@ -118,12 +117,11 @@ public class HlsDownloader{
         }
 
 
-        // Start time
-        _data.DateStart = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
 
         if (_data.M3U8Json != null){
             List<dynamic> segments = _data.M3U8Json.Segments;
-
+            
             // map has init uri outside is none init uri
             // Download init part
             if (segments[0].map != null && _data.Offset == 0 && !_data.SkipInit){
@@ -158,6 +156,8 @@ public class HlsDownloader{
             }
 
             for (int p = 0; p < Math.Ceiling((double)segments.Count / _data.Threads); p++){
+                // Start time
+                _data.DateStart = DateTimeOffset.Now.ToUnixTimeMilliseconds();
                 int offset = p * _data.Threads;
                 int dlOffset = Math.Min(offset + _data.Threads, segments.Count);
 
@@ -248,14 +248,15 @@ public class HlsDownloader{
                 int downloadedSeg = Math.Min(dlOffset, totalSeg);
                 _data.Parts.Completed = downloadedSeg + _data.Offset; // 
 
-                var dataLog = GetDownloadInfo(_data.DateStart, _data.Parts.Completed, totalSeg, _data.BytesDownloaded);
+                var dataLog = GetDownloadInfo(_data.DateStart, _data.Parts.Completed, totalSeg, _data.BytesDownloaded,_data.TotalBytes);
+                _data.BytesDownloaded = 0;
 
                 // Save resume data to file
                 string resumeDataJson = JsonConvert.SerializeObject(new{ _data.Parts.Completed, Total = totalSeg });
                 File.WriteAllText($"{fn}.resume", resumeDataJson);
 
                 // Log progress
-                Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time / 1000)} | {dataLog.DownloadSpeed / 1000000.0:F2}Mb/s)");
+                Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time)} | {dataLog.DownloadSpeed / 1000000.0:F2}Mb/s)");
 
                 _currentEpMeta.DownloadProgress = new DownloadProgress(){
                     IsDownloading = true,
@@ -283,7 +284,7 @@ public class HlsDownloader{
         return (Ok: true, _data.Parts);
     }
 
-    public static Info GetDownloadInfo(long dateStartUnix, int partsDownloaded, int partsTotal, long downloadedBytes){
+    public static Info GetDownloadInfo(long dateStartUnix, int partsDownloaded, int partsTotal, long downloadedBytes,long totalDownloadedBytes){
         // Convert Unix timestamp to DateTime
         DateTime dateStart = DateTimeOffset.FromUnixTimeMilliseconds(dateStartUnix).UtcDateTime;
         double dateElapsed = (DateTime.UtcNow - dateStart).TotalMilliseconds;
@@ -291,13 +292,15 @@ public class HlsDownloader{
         // Calculate percentage
         int percentFixed = (int)((double)partsDownloaded / partsTotal * 100);
         int percent = percentFixed < 100 ? percentFixed : (partsTotal == partsDownloaded ? 100 : 99);
-
-        // Calculate remaining time estimate
-        double remainingTime = dateElapsed * (partsTotal / (double)partsDownloaded - 1);
-
+        
         // Calculate download speed (bytes per second)
         double downloadSpeed = downloadedBytes / (dateElapsed / 1000);
 
+        // Calculate remaining time estimate
+        // double remainingTime = dateElapsed * (partsTotal / (double)partsDownloaded - 1);
+        int partsLeft = partsTotal - partsDownloaded;
+        double remainingTime = (partsLeft * (totalDownloadedBytes / partsDownloaded)) / downloadSpeed;
+        
         return new Info{
             Percent = percent,
             Time = remainingTime,
@@ -324,11 +327,17 @@ public class HlsDownloader{
                     if (partContent != null) dec = decipher.TransformFinalBlock(partContent, 0, partContent.Length);
                 }
 
-                if (dec != null) _data.BytesDownloaded += dec.Length;
+                if (dec != null){
+                    _data.BytesDownloaded += dec.Length;
+                    _data.TotalBytes += dec.Length;
+                }
             } else{
                 part = await GetData(p, sUri, seg.ByteRange != null ? seg.ByteRange.ToDictionary() : new Dictionary<string, string>(), segOffset, false, _data.Timeout, _data.Retries);
                 dec = part;
-                if (dec != null) _data.BytesDownloaded += dec.Length;
+                if (dec != null){
+                    _data.BytesDownloaded += dec.Length;
+                    _data.TotalBytes += dec.Length;
+                }
             }
         } catch (Exception ex){
             throw new Exception($"Error at segment {p}: {ex.Message}", ex);
@@ -428,7 +437,7 @@ public class HlsDownloader{
         for (int attempt = 0; attempt < retryCount + 1; attempt++){
             using (var request = CloneHttpRequestMessage(requestPara)){
                 try{
-                    response = await HttpClientReq.Instance.GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseContentRead);
+                    response = await HttpClientReq.Instance.GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                     response.EnsureSuccessStatusCode();
                     return await ReadContentAsByteArrayAsync(response.Content);
                 } catch (HttpRequestException ex){
@@ -448,8 +457,14 @@ public class HlsDownloader{
 
     private async Task<byte[]> ReadContentAsByteArrayAsync(HttpContent content){
         using (var memoryStream = new MemoryStream())
-        using (var contentStream = await content.ReadAsStreamAsync()){
-            await contentStream.CopyToAsync(memoryStream, 81920);
+        using (var contentStream = await content.ReadAsStreamAsync())
+        using (var throttledStream = new ThrottledStream(contentStream)){
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = await throttledStream.ReadAsync(buffer, 0, buffer.Length)) > 0){
+                await memoryStream.WriteAsync(buffer, 0, bytesRead);
+            }
+
             return memoryStream.ToArray();
         }
     }
@@ -567,6 +582,7 @@ public class Data{
     public int WaitTime{ get; set; }
     public string? Override{ get; set; }
     public long DateStart{ get; set; }
+    public long TotalBytes{ get; set; }
 }
 
 public class ProgressData{

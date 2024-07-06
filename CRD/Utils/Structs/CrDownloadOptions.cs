@@ -153,4 +153,7 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "history_page_properties", ApplyNamingConventions = false)]
     public HistoryPageProperties? HistoryPageProperties{ get; set; }
     
+    [YamlMember(Alias = "download_speed_limit", ApplyNamingConventions = false)]
+    public int DownloadSpeedLimit{ get; set; }
+    
 }

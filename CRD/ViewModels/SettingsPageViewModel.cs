@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -51,7 +51,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
-    
+
     [ObservableProperty]
     private bool _includeEpisodeDescription;
 
@@ -65,14 +65,17 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private bool _history;
 
     [ObservableProperty]
-    private int _leadingNumbers;
+    private double? _leadingNumbers;
 
     [ObservableProperty]
-    private int _simultaneousDownloads;
+    private double? _simultaneousDownloads;
+
+    [ObservableProperty]
+    private double? _downloadSpeed;
 
     [ObservableProperty]
     private string _fileName = "";
-    
+
     [ObservableProperty]
     private string _fileTitle = "";
 
@@ -93,10 +96,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedHSLang;
-    
+
     [ObservableProperty]
     private ComboBoxItem _selectedHistoryLang;
-    
+
     [ObservableProperty]
     private ComboBoxItem _selectedDescriptionLang;
 
@@ -249,7 +252,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "hi-IN" },
         new ComboBoxItem(){ Content = "ar-SA" },
     };
-    
+
     public ObservableCollection<ComboBoxItem> DescriptionLangList{ get; } = new(){
         new ComboBoxItem(){ Content = "default" },
         new ComboBoxItem(){ Content = "de-DE" },
@@ -264,7 +267,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "hi-IN" },
         new ComboBoxItem(){ Content = "ar-SA" },
     };
-    
+
     public ObservableCollection<ComboBoxItem> DubLangList{ get; } = new(){
     };
 
@@ -296,7 +299,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "android/phone" },
         new ComboBoxItem(){ Content = "tv/samsung" },
     };
-    
+
     [ObservableProperty]
     private string _downloadDirPath;
 
@@ -323,16 +326,16 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrDownloadOptions options = Crunchyroll.Instance.CrunOptions;
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
-        
+
         ComboBoxItem? descriptionLang = DescriptionLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DescriptionLang) ?? null;
         SelectedDescriptionLang = descriptionLang ?? DescriptionLangList[0];
-        
+
         ComboBoxItem? historyLang = HistoryLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.HistoryLang) ?? null;
         SelectedHistoryLang = historyLang ?? HistoryLangList[0];
-        
+
         ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
-        
+
         ComboBoxItem? defaultDubLang = DefaultDubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.DefaultAudio ?? "")) ?? null;
         SelectedDefaultDubLang = defaultDubLang ?? DefaultDubLangList[0];
 
@@ -371,6 +374,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        DownloadSpeed = options.DownloadSpeedLimit;
         IncludeEpisodeDescription = options.IncludeVideoDescription;
         FileTitle = options.VideoTitle ?? "";
         IncludeSignSubs = options.IncludeSignsSubs;
@@ -438,9 +442,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.Chapters = DownloadChapters;
         Crunchyroll.Instance.CrunOptions.Mp4 = MuxToMp4;
         Crunchyroll.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
-        Crunchyroll.Instance.CrunOptions.Numbers = LeadingNumbers;
+        Crunchyroll.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0),0,10);
         Crunchyroll.Instance.CrunOptions.FileName = FileName;
-        Crunchyroll.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs;
+        Crunchyroll.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs; 
+        Crunchyroll.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0),0,1000000000);
+        Crunchyroll.Instance.CrunOptions.SimultaneousDownloads =  Math.Clamp((int)(SimultaneousDownloads ?? 0),1,10);
 
         Crunchyroll.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
@@ -454,11 +460,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
         string descLang = SelectedDescriptionLang.Content + "";
 
         Crunchyroll.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : "";
-        
+
         string historyLang = SelectedHistoryLang.Content + "";
 
         Crunchyroll.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : "";
-        
+
         string hslang = SelectedHSLang.Content + "";
 
         Crunchyroll.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;
@@ -477,7 +483,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.DubLang = dubLangs;
 
 
-        Crunchyroll.Instance.CrunOptions.SimultaneousDownloads = SimultaneousDownloads;
+      
 
         Crunchyroll.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";

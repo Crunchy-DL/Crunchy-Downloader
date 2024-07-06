@@ -70,7 +70,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
         Done = epMeta.DownloadProgress.Done;
         Percent = epMeta.DownloadProgress.Percent;
-        Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time / 1000).ToString(@"hh\:mm\:ss");
+        Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
         DownloadSpeed = $"{epMeta.DownloadProgress.DownloadSpeed / 1000000.0:F2}Mb/s";
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
         DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
@@ -127,7 +127,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
         Done = epMeta.DownloadProgress.Done;
         Percent = epMeta.DownloadProgress.Percent;
-        Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time / 1000).ToString(@"hh\:mm\:ss");
+        Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
         DownloadSpeed = $"{epMeta.DownloadProgress.DownloadSpeed / 1000000.0:F2}Mb/s";
 
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;

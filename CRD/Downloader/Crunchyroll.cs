@@ -217,7 +217,7 @@ public class Crunchyroll{
 
         UpdateDownloadListItems();
     }
-
+    
     public void UpdateDownloadListItems(){
         var list = Queue;
 
@@ -243,8 +243,13 @@ public class Crunchyroll{
             return forDate;
         }
 
-        var request = HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, true, true, null);
+        var request = HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null);
 
+        request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
+        request.Headers.AcceptEncoding.ParseAdd("gzip, deflate");
+        request.Headers.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
+        request.Headers.Referrer = new Uri("https://www.crunchyroll.com/");
+        
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         CalendarWeek week = new CalendarWeek();

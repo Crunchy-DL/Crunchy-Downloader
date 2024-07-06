@@ -150,6 +150,17 @@
                                        IconSource="Download"
                                        Description="Adjust download settings"
                                        IsExpanded="False">
+                
+                <controls:SettingsExpanderItem Content="Max Download Speed"
+                                               Description="Download in Kb/s - 0 is full speed">
+                    <controls:SettingsExpanderItem.Footer>
+                        <controls:NumberBox Minimum="0" Maximum="1000000000"
+                                            Value="{Binding DownloadSpeed}"
+                                            SpinButtonPlacementMode="Hidden"
+                                            HorizontalAlignment="Stretch" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
 
                 <controls:SettingsExpanderItem Content="Stream Endpoint ">
                     <controls:SettingsExpanderItem.Footer>
@@ -181,7 +192,7 @@
 
                 <controls:SettingsExpanderItem Content="Simultaneous Downloads">
                     <controls:SettingsExpanderItem.Footer>
-                        <controls:NumberBox Minimum="0" Maximum="5"
+                        <controls:NumberBox Minimum="0" Maximum="10"
                                             Value="{Binding SimultaneousDownloads}"
                                             SpinButtonPlacementMode="Inline"
                                             HorizontalAlignment="Stretch" />

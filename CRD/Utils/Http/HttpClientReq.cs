@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Collections.Generic;
@@ -40,6 +40,7 @@ public class HttpClientReq{
         handler = new HttpClientHandler();
         handler.CookieContainer = new CookieContainer();
         handler.UseCookies = true;
+        handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 
         // Initialize the HttpClient with the handler
         client = new HttpClient(handler);
@@ -95,8 +96,7 @@ public class HttpClientReq{
         }
 
         if (disableDrmHeader){
-            request.Headers.Add("X-Cr-Disable-Drm", "true");
-            request.Headers.Add("x-cr-stream-limits", "false");
+
         }
 
 
