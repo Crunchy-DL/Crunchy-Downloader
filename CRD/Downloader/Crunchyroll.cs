@@ -10,7 +10,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Web;
 using System.Xml;
 using Avalonia.Media;
 using CRD.Utils;
@@ -245,10 +244,8 @@ public class Crunchyroll{
 
         var request = HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null);
 
-        request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36");
-        request.Headers.AcceptEncoding.ParseAdd("gzip, deflate");
-        request.Headers.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-        request.Headers.Referrer = new Uri("https://www.crunchyroll.com/");
+        request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
+        request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
         
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

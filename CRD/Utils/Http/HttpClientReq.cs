@@ -40,7 +40,7 @@ public class HttpClientReq{
         handler = new HttpClientHandler();
         handler.CookieContainer = new CookieContainer();
         handler.UseCookies = true;
-        handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+        handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli;
 
         // Initialize the HttpClient with the handler
         client = new HttpClient(handler);
@@ -77,7 +77,8 @@ public class HttpClientReq{
             
             return (IsOk: true, ResponseContent: content);
         } catch (Exception e){
-            Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
+            // Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
+            Console.Error.WriteLine($"Error: {e} \n Response: {content}");
             return (IsOk: false, ResponseContent: content);
         }
     }
