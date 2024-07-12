@@ -27,6 +27,7 @@
         </Grid.ColumnDefinitions>
 
         <Button Grid.Row="0" Grid.Column="0" Margin="10 10 0 0" HorizontalAlignment="Center"
+                IsEnabled="{Binding !CustomCalendar}"
                 Command="{Binding  PrevWeek}">
             <StackPanel Orientation="Horizontal">
                 <controls:SymbolIcon Symbol="ChevronLeft" FontSize="18" />
@@ -44,10 +45,14 @@
                       SelectedItem="{Binding CurrentCalendarLanguage}"
                       ItemsSource="{Binding CalendarLanguage}">
             </ComboBox>
+            <CheckBox IsChecked="{Binding CustomCalendar}"
+                      Content="Custom Calendar" Margin="5 0 0 0">
+            </CheckBox>
         </StackPanel>
 
 
         <Button Grid.Row="0" Grid.Column="2" Margin="0 0 10 0" HorizontalAlignment="Center"
+                IsEnabled="{Binding !CustomCalendar}"
                 Command="{Binding  NextWeek}">
             <StackPanel Orientation="Horizontal">
                 <controls:SymbolIcon Symbol="ChevronRight" FontSize="18" />

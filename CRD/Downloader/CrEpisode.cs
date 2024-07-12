@@ -17,22 +17,22 @@ namespace CRD.Downloader;
 public class CrEpisode(){
     private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
 
-    public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale,bool forcedLang = false){
+    public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale, bool forcedLang = false){
         if (crunInstance.CmsToken?.Cms == null){
             Console.Error.WriteLine("Missing CMS Access Token");
             return null;
         }
 
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-        
+
         query["preferred_audio_language"] = "ja-JP";
         if (!string.IsNullOrEmpty(crLocale)){
             query["locale"] = crLocale;
             if (forcedLang){
-                query["force_locale"] = crLocale;   
+                query["force_locale"] = crLocale;
             }
         }
-        
+
 
         var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/episodes/{id}", HttpMethod.Get, true, true, query);
 
@@ -59,7 +59,7 @@ public class CrEpisode(){
     }
 
 
-    public async Task<CrunchyRollEpisodeData> EpisodeData(CrunchyEpisode dlEpisode,bool updateHistory = false){
+    public async Task<CrunchyRollEpisodeData> EpisodeData(CrunchyEpisode dlEpisode, bool updateHistory = false){
         bool serieshasversions = true;
 
         // Dictionary<string, EpisodeAndLanguage> episodes = new Dictionary<string, EpisodeAndLanguage>();
@@ -158,8 +158,7 @@ public class CrEpisode(){
         // var ret = new Dictionary<string, CrunchyEpMeta>();
 
         var retMeta = new CrunchyEpMeta();
-        
-        
+
 
         for (int index = 0; index < episodeP.EpisodeAndLanguages.Items.Count; index++){
             var item = episodeP.EpisodeAndLanguages.Items[index];
@@ -186,8 +185,10 @@ public class CrEpisode(){
 
             var epMeta = new CrunchyEpMeta();
             epMeta.Data = new List<CrunchyEpMetaData>{ new(){ MediaId = item.Id, Versions = item.Versions, IsSubbed = item.IsSubbed, IsDubbed = item.IsDubbed } };
-            epMeta.SeriesTitle = episodeP.EpisodeAndLanguages.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeriesTitle)).SeriesTitle ?? Regex.Replace(episodeP.EpisodeAndLanguages.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd();
-            epMeta.SeasonTitle = episodeP.EpisodeAndLanguages.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeasonTitle)).SeasonTitle ?? Regex.Replace(episodeP.EpisodeAndLanguages.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
+            epMeta.SeriesTitle = episodeP.EpisodeAndLanguages.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeriesTitle)).SeriesTitle ??
+                                 Regex.Replace(episodeP.EpisodeAndLanguages.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd();
+            epMeta.SeasonTitle = episodeP.EpisodeAndLanguages.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeasonTitle)).SeasonTitle ??
+                                 Regex.Replace(episodeP.EpisodeAndLanguages.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
             epMeta.EpisodeNumber = item.Episode;
             epMeta.EpisodeTitle = item.Title;
             epMeta.SeasonId = item.SeasonId;
@@ -204,8 +205,8 @@ public class CrEpisode(){
                 DownloadSpeed = 0
             };
             epMeta.AvailableSubs = item.SubtitleLocales;
-            epMeta.Description = item.Description; 
-            
+            epMeta.Description = item.Description;
+
             if (episodeP.EpisodeAndLanguages.Langs.Count > 0){
                 epMeta.SelectedDubs = dubLang
                     .Where(language => episodeP.EpisodeAndLanguages.Langs.Any(epLang => epLang.CrLocale == language))
@@ -223,7 +224,6 @@ public class CrEpisode(){
             if (retMeta.Data != null){
                 epMetaData.Lang = episodeP.EpisodeAndLanguages.Langs[index];
                 retMeta.Data.Add(epMetaData);
-                
             } else{
                 epMetaData.Lang = episodeP.EpisodeAndLanguages.Langs[index];
                 epMeta.Data[0] = epMetaData;
@@ -237,5 +237,32 @@ public class CrEpisode(){
 
 
         return retMeta;
+    }
+
+    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale){
+        
+        NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+        }
+
+        query["n"] = "200";
+        query["sort_by"] = "newly_added";
+        query["type"] = "episode";
+
+        var request = HttpClientReq.CreateRequestMessage($"{Api.Browse}", HttpMethod.Get, true, false, query);
+
+        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+        if (!response.IsOk){
+            Console.Error.WriteLine("Series Request Failed");
+            return null;
+        }
+
+        CrBrowseEpisodeBase? series = Helpers.Deserialize<CrBrowseEpisodeBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+        
+
+        return series;
     }
 }

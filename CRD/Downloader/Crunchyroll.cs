@@ -51,7 +51,19 @@ public class Crunchyroll{
     #region Calendar Variables
 
     private Dictionary<string, CalendarWeek> calendar = new();
-    private Dictionary<string, string> calendarLanguage = new();
+    private Dictionary<string, string> calendarLanguage = new(){
+        { "en-us", "https://www.crunchyroll.com/simulcastcalendar" },
+        { "es", "https://www.crunchyroll.com/es/simulcastcalendar" },
+        { "es-es", "https://www.crunchyroll.com/es-es/simulcastcalendar" },
+        { "pt-br", "https://www.crunchyroll.com/pt-br/simulcastcalendar" },
+        { "pt-pt", "https://www.crunchyroll.com/pt-pt/simulcastcalendar" },
+        { "fr", "https://www.crunchyroll.com/fr/simulcastcalendar" },
+        { "de", "https://www.crunchyroll.com/de/simulcastcalendar" },
+        { "ar", "https://www.crunchyroll.com/ar/simulcastcalendar" },
+        { "it", "https://www.crunchyroll.com/it/simulcastcalendar" },
+        { "ru", "https://www.crunchyroll.com/ru/simulcastcalendar" },
+        { "hi", "https://www.crunchyroll.com/hi/simulcastcalendar" },
+    };
 
     #endregion
 
@@ -122,15 +134,7 @@ public class Crunchyroll{
             PreferredContentSubtitleLanguage = "de-DE",
             HasPremium = false,
         };
-
-
-        if (CfgManager.CheckIfFileExists(CfgManager.PathCrToken)){
-            Token = CfgManager.DeserializeFromFile<CrToken>(CfgManager.PathCrToken);
-            CrAuth.LoginWithToken();
-        } else{
-            await CrAuth.AuthAnonymous();
-        }
-
+        
         Console.WriteLine($"Can Decrypt: {_widevine.canDecrypt}");
 
         CrunOptions.AutoDownload = false;
@@ -163,7 +167,20 @@ public class Crunchyroll{
         CrunOptions.History = true;
 
         CfgManager.UpdateSettingsFromFile();
+        
+        if (CrunOptions.LogMode){
+            CfgManager.EnableLogMode();
+        } else{
+            CfgManager.DisableLogMode();
+        }
 
+        if (CfgManager.CheckIfFileExists(CfgManager.PathCrToken)){
+            Token = CfgManager.DeserializeFromFile<CrToken>(CfgManager.PathCrToken);
+            CrAuth.LoginWithToken();
+        } else{
+            await CrAuth.AuthAnonymous();
+        }
+        
         if (CrunOptions.History){
             if (File.Exists(CfgManager.PathCrHistory)){
                 HistoryList = JsonConvert.DeserializeObject<ObservableCollection<HistorySeries>>(File.ReadAllText(CfgManager.PathCrHistory)) ??[];
@@ -172,25 +189,8 @@ public class Crunchyroll{
             RefreshSonarr();
         }
 
-        if (CrunOptions.LogMode){
-            CfgManager.EnableLogMode();
-        } else{
-            CfgManager.DisableLogMode();
-        }
 
-        calendarLanguage = new(){
-            { "en-us", "https://www.crunchyroll.com/simulcastcalendar" },
-            { "es", "https://www.crunchyroll.com/es/simulcastcalendar" },
-            { "es-es", "https://www.crunchyroll.com/es-es/simulcastcalendar" },
-            { "pt-br", "https://www.crunchyroll.com/pt-br/simulcastcalendar" },
-            { "pt-pt", "https://www.crunchyroll.com/pt-pt/simulcastcalendar" },
-            { "fr", "https://www.crunchyroll.com/fr/simulcastcalendar" },
-            { "de", "https://www.crunchyroll.com/de/simulcastcalendar" },
-            { "ar", "https://www.crunchyroll.com/ar/simulcastcalendar" },
-            { "it", "https://www.crunchyroll.com/it/simulcastcalendar" },
-            { "ru", "https://www.crunchyroll.com/ru/simulcastcalendar" },
-            { "hi", "https://www.crunchyroll.com/hi/simulcastcalendar" },
-        };
+
     }
 
     public async void RefreshSonarr(){
@@ -300,7 +300,7 @@ public class Crunchyroll{
                         calEpisode.DateTime = episodeTime;
                         calEpisode.HasPassed = hasPassed;
                         calEpisode.EpisodeName = episodeName;
-                        calEpisode.SeasonUrl = seasonLink;
+                        calEpisode.SeriesUrl = seasonLink;
                         calEpisode.EpisodeUrl = episodeLink;
                         calEpisode.ThumbnailUrl = thumbnailUrl;
                         calEpisode.IsPremiumOnly = isPremiumOnly;
@@ -1194,8 +1194,10 @@ public class Crunchyroll{
                                         var keyId = BitConverter.ToString(encryptionKeys[0].KeyID).Replace("-", "").ToLower();
                                         var key = BitConverter.ToString(encryptionKeys[0].Bytes).Replace("-", "").ToLower();
                                         var commandBase = $"--show-progress --key {keyId}:{key}";
-                                        var commandVideo = commandBase + $" \"{tempTsFile}.video.enc.m4s\" \"{tempTsFile}.video.m4s\"";
-                                        var commandAudio = commandBase + $" \"{tempTsFile}.audio.enc.m4s\" \"{tempTsFile}.audio.m4s\"";
+                                        var tempTsFileName = Path.GetFileName(tempTsFile);
+                                        var tempTsFileWorkDir = Path.GetDirectoryName(tempTsFile) ?? CfgManager.PathVIDEOS_DIR;
+                                        var commandVideo = commandBase + $" \"{tempTsFileName}.video.enc.m4s\" \"{tempTsFileName}.video.m4s\"";
+                                        var commandAudio = commandBase + $" \"{tempTsFileName}.audio.enc.m4s\" \"{tempTsFileName}.audio.m4s\"";
                                         if (videoDownloaded){
                                             Console.WriteLine("Started decrypting video");
                                             data.DownloadProgress = new DownloadProgress(){
@@ -1206,7 +1208,7 @@ public class Crunchyroll{
                                                 Doing = "Decrypting video"
                                             };
                                             Queue.Refresh();
-                                            var decryptVideo = await Helpers.ExecuteCommandAsync("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo);
+                                            var decryptVideo = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo,tempTsFileWorkDir);
 
                                             if (!decryptVideo.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptVideo.ErrorCode}");
@@ -1216,40 +1218,46 @@ public class Crunchyroll{
                                                 } catch (IOException ex){
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
                                                 }
-                                            } else{
-                                                Console.WriteLine("Decryption done for video");
-                                                if (!options.Nocleanup){
-                                                    try{
-                                                        if (File.Exists($"{tempTsFile}.video.enc.m4s")){
-                                                            File.Delete($"{tempTsFile}.video.enc.m4s");
-                                                        }
-
-                                                        if (File.Exists($"{tempTsFile}.video.enc.m4s.resume")){
-                                                            File.Delete($"{tempTsFile}.video.enc.m4s.resume");
-                                                        }
-                                                    } catch (Exception ex){
-                                                        Console.WriteLine($"Failed to delete file {tempTsFile}.video.enc.m4s. Error: {ex.Message}");
-                                                        // Handle exceptions if you need to log them or throw
-                                                    }
-                                                }
-
-                                                try{
-                                                    if (File.Exists($"{tsFile}.video.m4s")){
-                                                        File.Delete($"{tsFile}.video.m4s");
-                                                    }
-
-                                                    File.Move($"{tempTsFile}.video.m4s", $"{tsFile}.video.m4s");
-                                                } catch (IOException ex){
-                                                    Console.WriteLine($"An error occurred: {ex.Message}");
-                                                }
-
-                                                files.Add(new DownloadedMedia{
-                                                    Type = DownloadMediaType.Video,
-                                                    Path = $"{tsFile}.video.m4s",
-                                                    Lang = lang.Value,
-                                                    IsPrimary = isPrimary
-                                                });
+                                                return new DownloadResponse{
+                                                    Data = files,
+                                                    Error = dlFailed,
+                                                    FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
+                                                    ErrorText = "Decryption failed"
+                                                };
                                             }
+
+                                            Console.WriteLine("Decryption done for video");
+                                            if (!options.Nocleanup){
+                                                try{
+                                                    if (File.Exists($"{tempTsFile}.video.enc.m4s")){
+                                                        File.Delete($"{tempTsFile}.video.enc.m4s");
+                                                    }
+
+                                                    if (File.Exists($"{tempTsFile}.video.enc.m4s.resume")){
+                                                        File.Delete($"{tempTsFile}.video.enc.m4s.resume");
+                                                    }
+                                                } catch (Exception ex){
+                                                    Console.WriteLine($"Failed to delete file {tempTsFile}.video.enc.m4s. Error: {ex.Message}");
+                                                    // Handle exceptions if you need to log them or throw
+                                                }
+                                            }
+
+                                            try{
+                                                if (File.Exists($"{tsFile}.video.m4s")){
+                                                    File.Delete($"{tsFile}.video.m4s");
+                                                }
+
+                                                File.Move($"{tempTsFile}.video.m4s", $"{tsFile}.video.m4s");
+                                            } catch (IOException ex){
+                                                Console.WriteLine($"An error occurred: {ex.Message}");
+                                            }
+
+                                            files.Add(new DownloadedMedia{
+                                                Type = DownloadMediaType.Video,
+                                                Path = $"{tsFile}.video.m4s",
+                                                Lang = lang.Value,
+                                                IsPrimary = isPrimary
+                                            });
                                         } else{
                                             Console.WriteLine("No Video downloaded");
                                         }
@@ -1264,7 +1272,7 @@ public class Crunchyroll{
                                                 Doing = "Decrypting audio"
                                             };
                                             Queue.Refresh();
-                                            var decryptAudio = await Helpers.ExecuteCommandAsync("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio);
+                                            var decryptAudio = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio,tempTsFileWorkDir);
 
                                             if (!decryptAudio.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptAudio.ErrorCode}");
@@ -1273,40 +1281,46 @@ public class Crunchyroll{
                                                 } catch (IOException ex){
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
                                                 }
-                                            } else{
-                                                Console.WriteLine("Decryption done for audio");
-                                                if (!options.Nocleanup){
-                                                    try{
-                                                        if (File.Exists($"{tempTsFile}.audio.enc.m4s")){
-                                                            File.Delete($"{tempTsFile}.audio.enc.m4s");
-                                                        }
-
-                                                        if (File.Exists($"{tempTsFile}.audio.enc.m4s.resume")){
-                                                            File.Delete($"{tempTsFile}.audio.enc.m4s.resume");
-                                                        }
-                                                    } catch (Exception ex){
-                                                        Console.WriteLine($"Failed to delete file {tempTsFile}.audio.enc.m4s. Error: {ex.Message}");
-                                                        // Handle exceptions if you need to log them or throw
-                                                    }
-                                                }
-
-                                                try{
-                                                    if (File.Exists($"{tsFile}.audio.m4s")){
-                                                        File.Delete($"{tsFile}.audio.m4s");
-                                                    }
-
-                                                    File.Move($"{tempTsFile}.audio.m4s", $"{tsFile}.audio.m4s");
-                                                } catch (IOException ex){
-                                                    Console.WriteLine($"An error occurred: {ex.Message}");
-                                                }
-
-                                                files.Add(new DownloadedMedia{
-                                                    Type = DownloadMediaType.Audio,
-                                                    Path = $"{tsFile}.audio.m4s",
-                                                    Lang = lang.Value,
-                                                    IsPrimary = isPrimary
-                                                });
+                                                return new DownloadResponse{
+                                                    Data = files,
+                                                    Error = dlFailed,
+                                                    FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
+                                                    ErrorText = "Decryption failed"
+                                                };
                                             }
+
+                                            Console.WriteLine("Decryption done for audio");
+                                            if (!options.Nocleanup){
+                                                try{
+                                                    if (File.Exists($"{tempTsFile}.audio.enc.m4s")){
+                                                        File.Delete($"{tempTsFile}.audio.enc.m4s");
+                                                    }
+
+                                                    if (File.Exists($"{tempTsFile}.audio.enc.m4s.resume")){
+                                                        File.Delete($"{tempTsFile}.audio.enc.m4s.resume");
+                                                    }
+                                                } catch (Exception ex){
+                                                    Console.WriteLine($"Failed to delete file {tempTsFile}.audio.enc.m4s. Error: {ex.Message}");
+                                                    // Handle exceptions if you need to log them or throw
+                                                }
+                                            }
+
+                                            try{
+                                                if (File.Exists($"{tsFile}.audio.m4s")){
+                                                    File.Delete($"{tsFile}.audio.m4s");
+                                                }
+
+                                                File.Move($"{tempTsFile}.audio.m4s", $"{tsFile}.audio.m4s");
+                                            } catch (IOException ex){
+                                                Console.WriteLine($"An error occurred: {ex.Message}");
+                                            }
+
+                                            files.Add(new DownloadedMedia{
+                                                Type = DownloadMediaType.Audio,
+                                                Path = $"{tsFile}.audio.m4s",
+                                                Lang = lang.Value,
+                                                IsPrimary = isPrimary
+                                            });
                                         } else{
                                             Console.WriteLine("No Audio downloaded");
                                         }

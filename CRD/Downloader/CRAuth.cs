@@ -138,7 +138,7 @@ public class CrAuth{
         }
     }
 
-    public async void LoginWithToken(){
+    public async Task LoginWithToken(){
         if (crunInstance.Token?.refresh_token == null){
             Console.Error.WriteLine("Missing Refresh Token");
             return;

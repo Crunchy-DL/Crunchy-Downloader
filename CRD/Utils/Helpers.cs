@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 using Newtonsoft.Json;
 
 namespace CRD.Utils;
@@ -193,6 +195,47 @@ public class Helpers{
             return (IsOk: false, ErrorCode: -1);
         }
     }
+    
+    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsyncWorkDir(string type, string bin, string command,string workingDir){
+        try{
+            using (var process = new Process()){
+                process.StartInfo.WorkingDirectory = workingDir;
+                process.StartInfo.FileName = bin;
+                process.StartInfo.Arguments = command;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
+
+                process.OutputDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.WriteLine(e.Data);
+                    }
+                };
+
+                process.ErrorDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.WriteLine($"{e.Data}");
+                    }
+                };
+
+                process.Start();
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                // Define success condition more appropriately based on the application
+                bool isSuccess = process.ExitCode == 0;
+
+                return (IsOk: isSuccess, ErrorCode: process.ExitCode);
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred: {ex.Message}");
+            return (IsOk: false, ErrorCode: -1);
+        }
+    }
 
     public static double CalculateCosineSimilarity(string text1, string text2){
         var vector1 = ComputeWordFrequency(text1);
@@ -272,4 +315,23 @@ public class Helpers{
             return null;
         }
     }
+    
+    
+    public static async Task<Bitmap?> LoadImage(string imageUrl){
+        try{
+            using (var client = new HttpClient()){
+                var response = await client.GetAsync(imageUrl);
+                response.EnsureSuccessStatusCode();
+                using (var stream = await response.Content.ReadAsStreamAsync()){
+                    return new Bitmap(stream);
+                }
+            }
+        } catch (Exception ex){
+            // Handle exceptions
+            Console.Error.WriteLine("Failed to load image: " + ex.Message);
+        }
+
+        return null;
+    }
+    
 }

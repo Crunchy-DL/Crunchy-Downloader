@@ -26,7 +26,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
     public DateTime? DateTime{ get; set; }
     public bool? HasPassed{ get; set; }
     public string? EpisodeName{ get; set; }
-    public string? SeasonUrl{ get; set; }
+    public string? SeriesUrl{ get; set; }
     public string? EpisodeUrl{ get; set; }
     public string? ThumbnailUrl{ get; set; }
     public Bitmap? ImageBitmap{ get; set; }

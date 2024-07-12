@@ -11,17 +11,17 @@ using System.Web;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Views;
+using DynamicData;
 using Newtonsoft.Json;
 using ReactiveUI;
 
 namespace CRD.Downloader;
 
 public class CrSeries(){
-    
     private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
-    
+
     public async Task<List<CrunchyEpMeta>> DownloadFromSeriesId(string id, CrunchyMultiDownload data){
-        var series = await ListSeriesId(id, "" ,data);
+        var series = await ListSeriesId(id, "", data);
 
         if (series != null){
             var selected = ItemSelectMultiDub(series.Value.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
@@ -47,7 +47,7 @@ public class CrSeries(){
         foreach (var kvp in eps){
             var key = kvp.Key;
             var episode = kvp.Value;
-            
+
             for (int index = 0; index < episode.Items.Count; index++){
                 var item = episode.Items[index];
 
@@ -55,7 +55,7 @@ public class CrSeries(){
                     MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
                     continue;
                 }
-                
+
                 if (!dubLang.Contains(episode.Langs[index].CrLocale))
                     continue;
 
@@ -83,7 +83,7 @@ public class CrSeries(){
                 epMeta.EpisodeNumber = item.Episode;
                 epMeta.EpisodeTitle = item.Title;
                 epMeta.SeasonId = item.SeasonId;
-                epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + ""; 
+                epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + "";
                 epMeta.ShowId = item.SeriesId;
                 epMeta.AbsolutEpisodeNumberE = epNum;
                 epMeta.Image = images[images.Count / 2].FirstOrDefault().Source;
@@ -101,7 +101,7 @@ public class CrSeries(){
                         .Where(language => episode.Langs.Any(epLang => epLang.CrLocale == language))
                         .ToList();
                 }
-       
+
 
                 var epMetaData = epMeta.Data[0];
                 if (!string.IsNullOrEmpty(item.StreamsLink)){
@@ -133,12 +133,12 @@ public class CrSeries(){
     }
 
 
-    public async Task<CrunchySeriesList?> ListSeriesId(string id,string crLocale, CrunchyMultiDownload? data){
+    public async Task<CrunchySeriesList?> ListSeriesId(string id, string crLocale, CrunchyMultiDownload? data){
         await crunInstance.CrAuth.RefreshToken(true);
 
         bool serieshasversions = true;
 
-        CrSeriesSearch? parsedSeries = await ParseSeriesById(id,crLocale); // one piece - GRMG8ZQZR
+        CrSeriesSearch? parsedSeries = await ParseSeriesById(id, crLocale); // one piece - GRMG8ZQZR
 
         if (parsedSeries == null){
             Console.Error.WriteLine("Parse Data Invalid");
@@ -154,13 +154,12 @@ public class CrSeries(){
                 var s = result[season][key];
                 if (data?.S != null && s.Id != data.Value.S) continue;
                 int fallbackIndex = 0;
-                var seasonData = await GetSeasonDataById(s.Id,"");
+                var seasonData = await GetSeasonDataById(s.Id, "");
                 if (seasonData.Data != null){
-
                     if (crunInstance.CrunOptions.History){
                         crunInstance.CrHistory.UpdateWithSeasonData(seasonData);
                     }
-                    
+
                     foreach (var episode in seasonData.Data){
                         // Prepare the episode array
                         EpisodeAndLanguage item;
@@ -285,27 +284,21 @@ public class CrSeries(){
         return crunchySeriesList;
     }
 
-    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonID,string? crLocale,bool forcedLang = false, bool log = false){
+    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonID, string? crLocale, bool forcedLang = false, bool log = false){
         CrunchyEpisodeList episodeList = new CrunchyEpisodeList(){ Data = new List<CrunchyEpisode>(), Total = 0, Meta = new Meta() };
-
-        if (crunInstance.CmsToken?.Cms == null){
-            Console.Error.WriteLine("Missing CMS Token");
-            return episodeList;
-        }
 
         NameValueCollection query;
         if (log){
-            
             query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-      
+
             query["preferred_audio_language"] = "ja-JP";
             if (!string.IsNullOrEmpty(crLocale)){
                 query["locale"] = crLocale;
                 if (forcedLang){
-                    query["force_locale"] = crLocale;   
+                    query["force_locale"] = crLocale;
                 }
             }
-            
+
             var showRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}", HttpMethod.Get, true, true, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
@@ -318,17 +311,17 @@ public class CrSeries(){
         }
 
         query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-      
+
         query["preferred_audio_language"] = "ja-JP";
         if (!string.IsNullOrEmpty(crLocale)){
             query["locale"] = crLocale;
             if (forcedLang){
-                query["force_locale"] = crLocale;   
+                query["force_locale"] = crLocale;
             }
         }
-        
-        var episodeRequest = HttpClientReq.CreateRequestMessage( $"{Api.Cms}/seasons/{seasonID}/episodes",HttpMethod.Get, true,true,query);
-        
+
+        var episodeRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}/episodes", HttpMethod.Get, true, true, query);
+
         var episodeRequestResponse = await HttpClientReq.Instance.SendHttpRequest(episodeRequest);
 
         if (!episodeRequestResponse.IsOk){
@@ -375,27 +368,21 @@ public class CrSeries(){
 
         return ret;
     }
-    
-    public async Task<CrSeriesSearch?> ParseSeriesById(string id,string? crLocale,bool forced = false){
-        if (crunInstance.CmsToken?.Cms == null){
-            Console.Error.WriteLine("Missing CMS Access Token");
-            return null;
-        }
 
+    public async Task<CrSeriesSearch?> ParseSeriesById(string id, string? crLocale, bool forced = false){
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-      
+
         query["preferred_audio_language"] = "ja-JP";
         if (!string.IsNullOrEmpty(crLocale)){
             query["locale"] = crLocale;
             if (forced){
-                query["force_locale"] = crLocale;   
+                query["force_locale"] = crLocale;
             }
-            
         }
-       
+
 
         var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/series/{id}/seasons", HttpMethod.Get, true, true, query);
-        
+
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (!response.IsOk){
@@ -412,26 +399,20 @@ public class CrSeries(){
 
         return seasonsList;
     }
-    
-    public async Task<CrSeriesBase?> SeriesById(string id,string? crLocale,bool forced = false){
-        if (crunInstance.CmsToken?.Cms == null){
-            Console.Error.WriteLine("Missing CMS Access Token");
-            return null;
-        }
 
+    public async Task<CrSeriesBase?> SeriesById(string id, string? crLocale, bool forced = false){
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
-      
+
         query["preferred_audio_language"] = "ja-JP";
         if (!string.IsNullOrEmpty(crLocale)){
             query["locale"] = crLocale;
             if (forced){
-                query["force_locale"] = crLocale;   
+                query["force_locale"] = crLocale;
             }
-            
         }
 
         var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/series/{id}", HttpMethod.Get, true, true, query);
-        
+
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (!response.IsOk){
@@ -448,5 +429,72 @@ public class CrSeries(){
 
         return series;
     }
-    
+
+
+    public async Task<CrSearchSeriesBase?> Search(string searchString,string? crLocale){
+        
+        NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+        }
+        query["q"] = searchString;
+        query["n"] = "6";
+        query["type"] = "top_results";
+
+        var request = HttpClientReq.CreateRequestMessage($"{Api.Search}", HttpMethod.Get, true, false, query);
+
+        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+        if (!response.IsOk){
+            Console.Error.WriteLine("Series Request Failed");
+            return null;
+        }
+
+        CrSearchSeriesBase? series = Helpers.Deserialize<CrSearchSeriesBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+        
+        return series;
+    }
+
+    public async Task<CrBrowseSeriesBase?> GetAllSeries(string? crLocale){
+        CrBrowseSeriesBase? complete = new CrBrowseSeriesBase();
+        complete.Data =[];
+
+        var i = 0;
+
+        do{
+            NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+
+            if (!string.IsNullOrEmpty(crLocale)){
+                query["locale"] = crLocale;
+            }
+
+            query["start"] = i + "";
+            query["n"] = "50";
+            query["sort_by"] = "alphabetical";
+
+            var request = HttpClientReq.CreateRequestMessage($"{Api.Browse}", HttpMethod.Get, true, false, query);
+
+            var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+            if (!response.IsOk){
+                Console.Error.WriteLine("Series Request Failed");
+                return null;
+            }
+
+            CrBrowseSeriesBase? series = Helpers.Deserialize<CrBrowseSeriesBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+
+            if (series != null){
+                complete.Total = series.Total;
+                if (series.Data != null) complete.Data.AddRange(series.Data);
+            } else{
+                break;
+            }
+
+            i += 50;
+        } while (i < complete.Total);
+
+
+        return complete;
+    }
 }

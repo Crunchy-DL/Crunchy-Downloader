@@ -123,6 +123,7 @@ public static class Api{
     public static readonly string BetaProfile = ApiBeta + "/accounts/v1/me/profile";
     public static readonly string BetaCmsToken = ApiBeta + "/index/v2";
     public static readonly string Search = ApiBeta + "/content/v2/discover/search";
+    public static readonly string Browse = ApiBeta + "/content/v2/discover/browse";
     public static readonly string Cms = ApiBeta + "/content/v2/cms";
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
