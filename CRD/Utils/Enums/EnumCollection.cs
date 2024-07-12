@@ -184,6 +184,8 @@ public enum SortingType{
     SeriesTitle,
     [EnumMember(Value = "Next Air Date")]
     NextAirDate,
+    [EnumMember(Value = "History Series Add Date")]
+    HistorySeriesAddDate,
 }
 
 public enum SonarrCoverType{

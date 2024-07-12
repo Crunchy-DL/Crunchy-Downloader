@@ -239,30 +239,46 @@ public class CrEpisode(){
         return retMeta;
     }
 
-    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale){
-        
-        NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount){
+        CrBrowseEpisodeBase? complete = new CrBrowseEpisodeBase();
+        complete.Data =[];
 
-        if (!string.IsNullOrEmpty(crLocale)){
-            query["locale"] = crLocale;
-        }
+        var i = 0;
 
-        query["n"] = "200";
-        query["sort_by"] = "newly_added";
-        query["type"] = "episode";
+        do{
+            NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
-        var request = HttpClientReq.CreateRequestMessage($"{Api.Browse}", HttpMethod.Get, true, false, query);
+            if (!string.IsNullOrEmpty(crLocale)){
+                query["locale"] = crLocale;
+            }
 
-        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+            query["start"] = i + "";
+            query["n"] = "50";
+            query["sort_by"] = "newly_added";
+            query["type"] = "episode";
 
-        if (!response.IsOk){
-            Console.Error.WriteLine("Series Request Failed");
-            return null;
-        }
+            var request = HttpClientReq.CreateRequestMessage($"{Api.Browse}", HttpMethod.Get, true, false, query);
 
-        CrBrowseEpisodeBase? series = Helpers.Deserialize<CrBrowseEpisodeBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
-        
+            var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
-        return series;
+            if (!response.IsOk){
+                Console.Error.WriteLine("Series Request Failed");
+                return null;
+            }
+
+            CrBrowseEpisodeBase? series = Helpers.Deserialize<CrBrowseEpisodeBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+
+            if (series != null){
+                complete.Total = series.Total;
+                if (series.Data != null) complete.Data.AddRange(series.Data);
+            } else{
+                break;
+            }
+
+            i += 50;
+        } while (i < requestAmount);
+
+
+        return complete;
     }
 }

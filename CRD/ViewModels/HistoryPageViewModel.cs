@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
@@ -41,9 +42,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
     public ObservableCollection<ComboBoxItem> ViewsList{ get; } =[];
 
     [ObservableProperty]
-    public ComboBoxItem _selectedSorting;
+    public SortingListElement _selectedSorting;
 
-    public ObservableCollection<ComboBoxItem> SortingList{ get; } =[];
+    public ObservableCollection<SortingListElement> SortingList{ get; } =[];
 
     [ObservableProperty]
     public double _posterWidth;
@@ -81,6 +82,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     private SortingType currentSortingType = SortingType.NextAirDate;
 
+    [ObservableProperty]
+    public static bool _sortDir = false;
+
     public HistoryPageViewModel(){
         Items = Crunchyroll.Instance.HistoryList;
 
@@ -89,6 +93,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         currentViewType = properties?.SelectedView ?? HistoryViewType.Posters;
         currentSortingType = properties?.SelectedSorting ?? SortingType.SeriesTitle;
         ScaleValue = properties?.ScaleValue ?? 0.73;
+        SortDir = properties?.Ascending ?? false;
 
         foreach (HistoryViewType viewType in Enum.GetValues(typeof(HistoryViewType))){
             var combobox = new ComboBoxItem{ Content = viewType };
@@ -99,7 +104,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         }
 
         foreach (SortingType sortingType in Enum.GetValues(typeof(SortingType))){
-            var combobox = new ComboBoxItem{ Content = sortingType.GetEnumMemberValue() };
+            var combobox = new SortingListElement(){ SortingTitle = sortingType.GetEnumMemberValue(), SelectedSorting = sortingType };
             SortingList.Add(combobox);
             if (sortingType == currentSortingType){
                 SelectedSorting = combobox;
@@ -147,9 +152,23 @@ public partial class HistoryPageViewModel : ViewModelBase{
         UpdateSettings();
     }
 
-    partial void OnSelectedSortingChanged(ComboBoxItem value){
-        if (TryParseEnum<SortingType>(value.Content + "", out var sortingType)){
-            currentSortingType = sortingType;
+
+    partial void OnSelectedSortingChanged(SortingListElement? oldValue, SortingListElement? newValue){
+        if (newValue == null){
+            if (Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null){
+                Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending = !Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending;
+                SortDir = Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending;
+            }
+
+            Dispatcher.UIThread.InvokeAsync(() => {
+                SelectedSorting = oldValue ?? SortingList.First();
+                RaisePropertyChanged(nameof(SelectedSorting));
+            });
+            return;
+        }
+
+        if (newValue.SelectedSorting != null){
+            currentSortingType = newValue.SelectedSorting;
             if (Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null) Crunchyroll.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
             Crunchyroll.Instance.CrHistory.SortItems();
         } else{
@@ -195,13 +214,13 @@ public partial class HistoryPageViewModel : ViewModelBase{
         Crunchyroll.Instance.SelectedSeries = value;
 
         NavToSeries();
-        
+
         if (!string.IsNullOrEmpty(value.SonarrSeriesId) && Crunchyroll.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
             CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
         }
 
-        
+
         _selectedSeries = null;
     }
 
@@ -313,4 +332,11 @@ public class HistoryPageProperties(){
     public SortingType? SelectedSorting{ get; set; }
     public HistoryViewType SelectedView{ get; set; }
     public double? ScaleValue{ get; set; }
+
+    public bool Ascending{ get; set; }
+}
+
+public class SortingListElement(){
+    public SortingType SelectedSorting{ get; set; }
+    public string? SortingTitle{ get; set; }
 }

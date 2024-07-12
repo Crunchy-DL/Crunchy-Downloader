@@ -13,7 +13,7 @@
     <UserControl.Resources>
         <ui:UiValueConverterCalendarBackground x:Key="UiValueConverterCalendarBackground" />
     </UserControl.Resources>
-    
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" /> <!-- For the button  -->
@@ -36,18 +36,86 @@
 
         <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center"
                     Margin="0 10 0 0">
-            <Button HorizontalAlignment="Center" Command="{Binding  Refresh}">
+            <Button Margin="5 0 5 0" HorizontalAlignment="Center" Command="{Binding  Refresh}">
                 <StackPanel Orientation="Horizontal">
                     <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
                 </StackPanel>
             </Button>
-            <ComboBox HorizontalAlignment="Center" Margin="10 0 0 0" MinWidth="200"
-                      SelectedItem="{Binding CurrentCalendarLanguage}"
-                      ItemsSource="{Binding CalendarLanguage}">
-            </ComboBox>
-            <CheckBox IsChecked="{Binding CustomCalendar}"
-                      Content="Custom Calendar" Margin="5 0 0 0">
-            </CheckBox>
+            <!-- <ComboBox HorizontalAlignment="Center" Margin="10 0 0 0" MinWidth="200" -->
+            <!--           SelectedItem="{Binding CurrentCalendarLanguage}" -->
+            <!--           ItemsSource="{Binding CalendarLanguage}"> -->
+            <!-- </ComboBox> -->
+            <!-- <CheckBox IsChecked="{Binding CustomCalendar}" -->
+            <!--           Content="Custom Calendar" Margin="5 0 0 0"> -->
+            <!-- </CheckBox> -->
+
+            <StackPanel Margin="5 0 5 0">
+                <ToggleButton x:Name="CalendarSettings" HorizontalContentAlignment="Stretch">
+                    <StackPanel Orientation="Horizontal">
+                        <controls:SymbolIcon Symbol="Settings" FontSize="18" />
+                    </StackPanel>
+                </ToggleButton>
+                <Popup IsLightDismissEnabled="True"
+                       MaxWidth="400"
+                       MaxHeight="600"
+                       IsOpen="{Binding IsChecked, ElementName=CalendarSettings, Mode=TwoWay}"
+                       Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=CalendarSettings}">
+                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+
+                        <StackPanel>
+                            <controls:SettingsExpander IsVisible="{Binding !CustomCalendar}" Header="Simulcast Calendar Language">
+                                
+                                
+                                <controls:SettingsExpander.Footer>
+                                    
+                                    <ComboBox HorizontalAlignment="Center" Margin="10 0 0 0" MinWidth="200"
+                                              SelectedItem="{Binding CurrentCalendarLanguage}"
+                                              ItemsSource="{Binding CalendarLanguage}">
+                                    </ComboBox>
+                                    
+                                </controls:SettingsExpander.Footer>
+                                
+                            </controls:SettingsExpander>
+                            
+                            <controls:SettingsExpander Header="Custom Calendar">
+                                <controls:SettingsExpander.Footer>
+                                    <CheckBox IsChecked="{Binding CustomCalendar}"
+                                              Content="Enabled" Margin="5 0 0 0">
+                                    </CheckBox>
+                                </controls:SettingsExpander.Footer>
+                            </controls:SettingsExpander>
+                            
+                            
+                            <controls:SettingsExpander IsVisible="{Binding CustomCalendar}" Header="Custom Calendar Dub Filter">
+                                
+                                <controls:SettingsExpander.Footer>
+                                    
+                                    <ComboBox HorizontalAlignment="Center" Margin="10 0 0 0" MinWidth="200"
+                                              SelectedItem="{Binding CurrentCalendarDubFilter}"
+                                              ItemsSource="{Binding CalendarDubFilter}">
+                                    </ComboBox>
+                                    
+                                </controls:SettingsExpander.Footer>
+                                
+                            </controls:SettingsExpander>
+                            
+                            <controls:SettingsExpander Header="Calendar ">
+                                <controls:SettingsExpander.Footer>
+                                    <CheckBox IsChecked="{Binding HideDubs}"
+                                              Content="Hide Dubs" Margin="5 0 0 0">
+                                    </CheckBox>
+                                </controls:SettingsExpander.Footer>
+                            </controls:SettingsExpander>
+                            
+                        </StackPanel>
+                        
+                    </Border>
+                </Popup>
+
+            </StackPanel>
+
+
         </StackPanel>
 
 
@@ -65,7 +133,7 @@
             <!--              MaxWidth="100" -->
             <!--              IsVisible="{Binding ShowLoading}"> -->
             <!-- </ProgressBar> -->
-            
+
             <controls:ProgressRing IsVisible="{Binding ShowLoading}" Width="100" Height="100"></controls:ProgressRing>
         </Grid>
 
@@ -94,7 +162,7 @@
                             </StackPanel>
                         </Border>
 
-                        <ScrollViewer Grid.Row="1" > 
+                        <ScrollViewer Grid.Row="1">
                             <ItemsControl ItemsSource="{Binding CalendarEpisodes}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -147,7 +215,7 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </ScrollViewer>
-                        
+
                     </Grid>
                 </DataTemplate>
             </ItemsControl.ItemTemplate>

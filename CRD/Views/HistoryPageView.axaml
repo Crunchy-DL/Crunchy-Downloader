@@ -114,14 +114,23 @@
                        Placement="BottomEdgeAlignedRight"
                        PlacementTarget="{Binding ElementName=DropdownButtonSorting}">
                     <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
-                        <ListBox SelectionMode="Single" Width="210"
+                        <ListBox SelectionMode="Single,Toggle" Width="210"
                                  MaxHeight="400"
                                  ItemsSource="{Binding SortingList}" SelectedItem="{Binding SelectedSorting}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                        <controls:SymbolIcon IsVisible="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).SortDir}" Symbol="ChevronUp" FontSize="12" Margin="0 0 10 0"/>
+                                        <controls:SymbolIcon IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SortDir}" Symbol="ChevronDown" FontSize="12" Margin="0 0 10 0"/>
+                                        <TextBlock Text="{Binding SortingTitle}"></TextBlock>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
                     </Border>
                 </Popup>
             </StackPanel>
-            
+
             <Button Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
                     VerticalAlignment="Center"
                     IsEnabled="False">
@@ -199,10 +208,8 @@
                             <Button
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterWidth}"
-                                Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterHeight}"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                                 FontStyle="Italic"
-                                VerticalAlignment="Center"
                                 Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
                                 CommandParameter="{Binding SeriesId}"
                                 IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).FetchingData}">
@@ -353,7 +360,7 @@
                                                     </StackPanel>
 
                                                 </Grid>
-                                                
+
 
                                             </Grid>
 

@@ -159,10 +159,12 @@ public class Crunchyroll{
         CrunOptions.AccentColor = Colors.SlateBlue.ToString();
         CrunOptions.Theme = "System";
         CrunOptions.SelectedCalendarLanguage = "default";
+        CrunOptions.CalendarDubFilter = "none";
         CrunOptions.DlVideoOnce = true;
         CrunOptions.StreamEndpoint = "web/firefox";
         CrunOptions.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         CrunOptions.HistoryLang = "";
+        
 
         CrunOptions.History = true;
 

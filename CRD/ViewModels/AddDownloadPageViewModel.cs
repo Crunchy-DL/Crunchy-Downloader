@@ -75,7 +75,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private async Task UpdateSearch(string value){
-        var searchResults = await Crunchyroll.Instance.CrSeries.Search(value, "");
+        var searchResults = await Crunchyroll.Instance.CrSeries.Search(value, Crunchyroll.Instance.CrunOptions.HistoryLang);
 
         var searchItems = searchResults?.Data?.First().Items;
         SearchItems.Clear();

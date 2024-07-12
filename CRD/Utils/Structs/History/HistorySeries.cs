@@ -49,6 +49,9 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonProperty("series_download_path")]
     public string? SeriesDownloadPath{ get; set; }
 
+    [JsonProperty("history_series_add_date")]
+    public DateTime? HistorySeriesAddDate{ get; set; }
+    
     public event PropertyChangedEventHandler? PropertyChanged;
 
     [JsonIgnore]

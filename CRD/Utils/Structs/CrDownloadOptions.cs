@@ -131,6 +131,15 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "calendar_language", ApplyNamingConventions = false)]
     public string? SelectedCalendarLanguage{ get; set; }
+    
+    [YamlMember(Alias = "calendar_dub_filter", ApplyNamingConventions = false)]
+    public string? CalendarDubFilter{ get; set; }
+    
+    [YamlMember(Alias = "calendar_custom", ApplyNamingConventions = false)]
+    public bool CustomCalendar{ get; set; }
+    
+    [YamlMember(Alias = "calendar_hide_dubs", ApplyNamingConventions = false)]
+    public bool CalendarHideDubs{ get; set; }
 
     [YamlMember(Alias = "history", ApplyNamingConventions = false)]
     public bool History{ get; set; }
