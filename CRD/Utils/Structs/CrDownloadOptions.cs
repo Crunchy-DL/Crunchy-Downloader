@@ -140,6 +140,9 @@ public class CrDownloadOptions{
     
     [YamlMember(Alias = "calendar_hide_dubs", ApplyNamingConventions = false)]
     public bool CalendarHideDubs{ get; set; }
+    
+    [YamlMember(Alias = "calendar_filter_by_air_date", ApplyNamingConventions = false)]
+    public bool CalendarFilterByAirDate{ get; set; }
 
     [YamlMember(Alias = "history", ApplyNamingConventions = false)]
     public bool History{ get; set; }
