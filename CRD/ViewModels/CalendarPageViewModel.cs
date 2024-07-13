@@ -65,7 +65,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         CustomCalendar = Crunchyroll.Instance.CrunOptions.CustomCalendar;
         HideDubs = Crunchyroll.Instance.CrunOptions.CalendarHideDubs;
-        HideDubs = Crunchyroll.Instance.CrunOptions.CalendarFilterByAirDate;
+        FilterByAirDate = Crunchyroll.Instance.CrunOptions.CalendarFilterByAirDate;
 
         ComboBoxItem? dubfilter = CalendarDubFilter.FirstOrDefault(a => a.Content != null && (string)a.Content == Crunchyroll.Instance.CrunOptions.CalendarDubFilter) ?? null;
         CurrentCalendarDubFilter = dubfilter ?? CalendarDubFilter[0];

@@ -51,6 +51,7 @@ public class Crunchyroll{
     #region Calendar Variables
 
     private Dictionary<string, CalendarWeek> calendar = new();
+
     private Dictionary<string, string> calendarLanguage = new(){
         { "en-us", "https://www.crunchyroll.com/simulcastcalendar" },
         { "es", "https://www.crunchyroll.com/es/simulcastcalendar" },
@@ -134,7 +135,7 @@ public class Crunchyroll{
             PreferredContentSubtitleLanguage = "de-DE",
             HasPremium = false,
         };
-        
+
         Console.WriteLine($"Can Decrypt: {_widevine.canDecrypt}");
 
         CrunOptions.AutoDownload = false;
@@ -158,18 +159,18 @@ public class Crunchyroll{
         CrunOptions.SimultaneousDownloads = 2;
         CrunOptions.AccentColor = Colors.SlateBlue.ToString();
         CrunOptions.Theme = "System";
-        CrunOptions.SelectedCalendarLanguage = "default";
+        CrunOptions.SelectedCalendarLanguage = "en-us";
         CrunOptions.CalendarDubFilter = "none";
         CrunOptions.DlVideoOnce = true;
         CrunOptions.StreamEndpoint = "web/firefox";
         CrunOptions.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         CrunOptions.HistoryLang = "";
-        
+
 
         CrunOptions.History = true;
 
         CfgManager.UpdateSettingsFromFile();
-        
+
         if (CrunOptions.LogMode){
             CfgManager.EnableLogMode();
         } else{
@@ -182,7 +183,7 @@ public class Crunchyroll{
         } else{
             await CrAuth.AuthAnonymous();
         }
-        
+
         if (CrunOptions.History){
             if (File.Exists(CfgManager.PathCrHistory)){
                 HistoryList = JsonConvert.DeserializeObject<ObservableCollection<HistorySeries>>(File.ReadAllText(CfgManager.PathCrHistory)) ??[];
@@ -190,9 +191,6 @@ public class Crunchyroll{
 
             RefreshSonarr();
         }
-
-
-
     }
 
     public async void RefreshSonarr(){
@@ -218,7 +216,7 @@ public class Crunchyroll{
 
         UpdateDownloadListItems();
     }
-    
+
     public void UpdateDownloadListItems(){
         var list = Queue;
 
@@ -244,11 +242,14 @@ public class Crunchyroll{
             return forDate;
         }
 
-        var request = HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null);
+        var request = calendarLanguage.ContainsKey(CrunOptions.SelectedCalendarLanguage ?? "de")
+            ? HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null)
+            : HttpClientReq.CreateRequestMessage($"{calendarLanguage["en-us"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null);
+
 
         request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
         request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
-        
+
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         CalendarWeek week = new CalendarWeek();
@@ -338,9 +339,9 @@ public class Crunchyroll{
                 return;
             }
 
-            var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL,updateHistory);
+            var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL, updateHistory);
             var selected = CrEpisode.EpisodeMeta(sList, dubLang);
-            
+
             if (CrunOptions.IncludeVideoDescription){
                 if (selected.Data is{ Count: > 0 }){
                     var episode = await CrEpisode.ParseEpisodeById(selected.Data.First().MediaId, string.IsNullOrEmpty(CrunOptions.DescriptionLang) ? DefaultLocale : CrunOptions.DescriptionLang, true);
@@ -356,21 +357,21 @@ public class Crunchyroll{
                             if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
                                 selected.EpisodeNumber = historyEpisode.historyEpisode.SonarrEpisodeNumber;
                             }
-            
+
                             if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrSeasonNumber)){
                                 selected.Season = historyEpisode.historyEpisode.SonarrSeasonNumber;
                             }
                         }
                     }
-            
+
                     if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
                         selected.DownloadPath = historyEpisode.downloadDirPath;
                     }
                 }
-            
+
                 Queue.Add(selected);
-            
-            
+
+
                 if (selected.Data.Count < dubLang.Count){
                     Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
                     MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
@@ -410,7 +411,7 @@ public class Crunchyroll{
                         crunchyEpMeta.DownloadPath = historyEpisode.downloadDirPath;
                     }
                 }
-                
+
                 if (CrunOptions.IncludeVideoDescription){
                     if (crunchyEpMeta.Data is{ Count: > 0 }){
                         var episode = await CrEpisode.ParseEpisodeById(crunchyEpMeta.Data.First().MediaId, string.IsNullOrEmpty(CrunOptions.DescriptionLang) ? DefaultLocale : CrunOptions.DescriptionLang, true);
@@ -1210,7 +1211,7 @@ public class Crunchyroll{
                                                 Doing = "Decrypting video"
                                             };
                                             Queue.Refresh();
-                                            var decryptVideo = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo,tempTsFileWorkDir);
+                                            var decryptVideo = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo, tempTsFileWorkDir);
 
                                             if (!decryptVideo.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptVideo.ErrorCode}");
@@ -1220,6 +1221,7 @@ public class Crunchyroll{
                                                 } catch (IOException ex){
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
                                                 }
+
                                                 return new DownloadResponse{
                                                     Data = files,
                                                     Error = dlFailed,
@@ -1274,7 +1276,7 @@ public class Crunchyroll{
                                                 Doing = "Decrypting audio"
                                             };
                                             Queue.Refresh();
-                                            var decryptAudio = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio,tempTsFileWorkDir);
+                                            var decryptAudio = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio, tempTsFileWorkDir);
 
                                             if (!decryptAudio.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptAudio.ErrorCode}");
@@ -1283,6 +1285,7 @@ public class Crunchyroll{
                                                 } catch (IOException ex){
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
                                                 }
+
                                                 return new DownloadResponse{
                                                     Data = files,
                                                     Error = dlFailed,
