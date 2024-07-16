@@ -16,6 +16,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Utils;
+using CRD.Utils.CustomList;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using FluentAvalonia.Styling;
@@ -51,6 +52,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
+    
+    [ObservableProperty]
+    private bool _syncTimings;
+
 
     [ObservableProperty]
     private bool _includeEpisodeDescription;
@@ -102,8 +107,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedDescriptionLang;
-
-
+    
     [ObservableProperty]
     private string _selectedDubs = "ja-JP";
 
@@ -268,7 +272,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "ar-SA" },
     };
 
-    public ObservableCollection<ComboBoxItem> DubLangList{ get; } = new(){
+    public ObservableCollection<ListBoxItem> DubLangList{ get; } = new(){
     };
 
 
@@ -318,7 +322,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         foreach (var languageItem in Languages.languages){
             HardSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
             SubLangList.Add(new ListBoxItem{ Content = languageItem.CrLocale });
-            DubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
+            DubLangList.Add(new ListBoxItem{ Content = languageItem.CrLocale });
             DefaultDubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
             DefaultSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
         }
@@ -358,9 +362,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         foreach (var listBoxItem in dubLang){
             SelectedDubLang.Add(listBoxItem);
         }
-
-        UpdateSubAndDubString();
-
+        
         var props = options.SonarrProperties;
 
         if (props != null){
@@ -383,6 +385,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         DownloadVideoForEveryDub = !options.DlVideoOnce;
         DownloadChapters = options.Chapters;
         MuxToMp4 = options.Mp4;
+        SyncTimings = options.SyncTiming;
         SkipSubMux = options.SkipSubsMux;
         LeadingNumbers = options.Numbers;
         FileName = options.FileName;
@@ -417,6 +420,12 @@ public partial class SettingsPageViewModel : ViewModelBase{
                 FfmpegOptions.Add(new MuxingParam(){ ParamValue = ffmpegParam });
             }
         }
+        
+        var dubs = SelectedDubLang.Select(item => item.Content?.ToString());
+        SelectedDubs = string.Join(", ", dubs) ?? "";
+        
+        var subs = SelectedSubLang.Select(item => item.Content?.ToString());
+        SelectedSubs = string.Join(", ", subs) ?? "";
 
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
@@ -431,9 +440,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         if (!settingsLoaded){
             return;
         }
-
-        UpdateSubAndDubString();
-
+        
         Crunchyroll.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
         Crunchyroll.Instance.CrunOptions.VideoTitle = FileTitle;
         Crunchyroll.Instance.CrunOptions.Novids = !DownloadVideo;
@@ -441,6 +448,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         Crunchyroll.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
         Crunchyroll.Instance.CrunOptions.Chapters = DownloadChapters;
         Crunchyroll.Instance.CrunOptions.Mp4 = MuxToMp4;
+        Crunchyroll.Instance.CrunOptions.SyncTiming = SyncTimings;
         Crunchyroll.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
         Crunchyroll.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0),0,10);
         Crunchyroll.Instance.CrunOptions.FileName = FileName;
@@ -459,11 +467,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         string descLang = SelectedDescriptionLang.Content + "";
 
-        Crunchyroll.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : "";
+        Crunchyroll.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : Crunchyroll.Instance.DefaultLocale;
 
         string historyLang = SelectedHistoryLang.Content + "";
 
-        Crunchyroll.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : "";
+        Crunchyroll.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : Crunchyroll.Instance.DefaultLocale;
 
         string hslang = SelectedHSLang.Content + "";
 
@@ -481,10 +489,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         }
 
         Crunchyroll.Instance.CrunOptions.DubLang = dubLangs;
-
-
-      
-
+        
         Crunchyroll.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
         Crunchyroll.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
@@ -556,28 +561,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
                 return ScaledBorderAndShadow[0];
         }
     }
-
-
-    private void UpdateSubAndDubString(){
-        if (SelectedSubLang.Count == 0){
-            SelectedSubs = "none";
-        } else{
-            SelectedSubs = SelectedSubLang[0].Content.ToString();
-            for (var i = 1; i < SelectedSubLang.Count; i++){
-                SelectedSubs += "," + SelectedSubLang[i].Content;
-            }
-        }
-
-        if (SelectedDubLang.Count == 0){
-            SelectedDubs = "none";
-        } else{
-            SelectedDubs = SelectedDubLang[0].Content.ToString();
-            for (var i = 1; i < SelectedDubLang.Count; i++){
-                SelectedDubs += "," + SelectedDubLang[i].Content;
-            }
-        }
-    }
-
+    
     [RelayCommand]
     public void AddMkvMergeParam(){
         MkvMergeOptions.Add(new MuxingParam(){ ParamValue = MkvMergeOption });
@@ -681,13 +665,21 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
     private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
+        
         UpdateSettings();
+        
+        var dubs = SelectedDubLang.Select(item => item.Content?.ToString());
+        SelectedDubs = string.Join(", ", dubs) ?? "";
+        
+        var subs = SelectedSubLang.Select(item => item.Content?.ToString());
+        SelectedSubs = string.Join(", ", subs) ?? "";
+        
     }
     
     protected override void OnPropertyChanged(PropertyChangedEventArgs e){
         base.OnPropertyChanged(e);
 
-        if (e.PropertyName is nameof(SelectedSubs) or nameof(SelectedDubs) or nameof(CustomAccentColor) or nameof(ListBoxColor) or nameof(CurrentAppTheme) or nameof(UseCustomAccent) or nameof(LogMode)){
+        if (e.PropertyName is  nameof(SelectedDubs) or nameof(SelectedSubs) or nameof(CustomAccentColor) or nameof(ListBoxColor) or nameof(CurrentAppTheme) or nameof(UseCustomAccent) or nameof(LogMode)){
             return;
         }
         

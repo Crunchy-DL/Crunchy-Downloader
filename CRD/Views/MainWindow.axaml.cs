@@ -43,7 +43,7 @@ public partial class MainWindow : AppWindow{
     public MainWindow(){
         AvaloniaXamlLoader.Load(this);
         InitializeComponent();
-
+        
         TitleBar.ExtendsContentIntoTitleBar = true;
         TitleBar.TitleBarHitTestType = TitleBarHitTestType.Complex;
 

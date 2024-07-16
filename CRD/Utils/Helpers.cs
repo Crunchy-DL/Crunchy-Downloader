@@ -196,6 +196,21 @@ public class Helpers{
         }
     }
     
+    public static void DeleteFile(string filePath){
+        if (string.IsNullOrEmpty(filePath)){
+            return;
+        }
+        
+        try{
+            if (File.Exists(filePath)){
+                File.Delete(filePath);
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
+            // Handle exceptions if you need to log them or throw
+        }
+    }
+    
     public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsyncWorkDir(string type, string bin, string command,string workingDir){
         try{
             using (var process = new Process()){

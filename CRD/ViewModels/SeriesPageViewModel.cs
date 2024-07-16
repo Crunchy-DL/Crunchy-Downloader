@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -21,28 +23,34 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     public static bool _editMode;
-    
+
     [ObservableProperty]
     public static bool _sonarrAvailable;
-
-    private IStorageProvider _storageProvider;
     
+
+
+    
+    
+    private IStorageProvider? _storageProvider;
+
     public SeriesPageViewModel(){
+        
+
+        
         _selectedSeries = Crunchyroll.Instance.SelectedSeries;
 
         if (_selectedSeries.ThumbnailImage == null){
             _selectedSeries.LoadImage();
         }
-        
+
         if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId) && Crunchyroll.Instance.CrunOptions.SonarrProperties != null){
             SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
-        }else{
+        } else{
             SonarrAvailable = false;
         }
-
         
     }
-    
+
     [RelayCommand]
     public async Task OpenFolderDialogAsync(HistorySeason? season){
         if (_storageProvider == null){
@@ -62,25 +70,25 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
             if (season != null){
                 season.SeasonDownloadPath = selectedFolder.Path.LocalPath;
+                CfgManager.UpdateHistoryFile();
             } else{
                 SelectedSeries.SeriesDownloadPath = selectedFolder.Path.LocalPath;
+                CfgManager.UpdateHistoryFile();
             }
-            
-            CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
         }
     }
 
     public void SetStorageProvider(IStorageProvider storageProvider){
         _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
     }
-    
-    
+
+
     [RelayCommand]
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);
-        
+
         SelectedSeries.Seasons.Refresh();
-        
+
         // MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
 
@@ -89,9 +97,8 @@ public partial class SeriesPageViewModel : ViewModelBase{
         HistorySeason? objectToRemove = SelectedSeries.Seasons.FirstOrDefault(se => se.SeasonId == season) ?? null;
         if (objectToRemove != null){
             SelectedSeries.Seasons.Remove(objectToRemove);
+            CfgManager.UpdateHistoryFile();
         }
-
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
         MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
 
@@ -101,7 +108,4 @@ public partial class SeriesPageViewModel : ViewModelBase{
         SelectedSeries.UpdateNewEpisodes();
         MessageBus.Current.SendMessage(new NavigationMessage(null, true, false));
     }
-
-
-
 }

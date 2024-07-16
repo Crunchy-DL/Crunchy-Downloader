@@ -56,6 +56,13 @@ public class CrSeries(){
                     continue;
                 }
 
+                if (crunInstance.CrunOptions.History){
+                    var dubLangList = crunInstance.CrHistory.GetDubList(item.SeriesId, item.SeasonId);
+                    if (dubLangList.Count > 0){
+                        dubLang = dubLangList;
+                    }
+                }
+
                 if (!dubLang.Contains(episode.Langs[index].CrLocale))
                     continue;
 
@@ -157,7 +164,7 @@ public class CrSeries(){
                 var seasonData = await GetSeasonDataById(s.Id, "");
                 if (seasonData.Data != null){
                     if (crunInstance.CrunOptions.History){
-                        crunInstance.CrHistory.UpdateWithSeasonData(seasonData);
+                        crunInstance.CrHistory.UpdateWithSeasonData(seasonData,false);
                     }
 
                     foreach (var episode in seasonData.Data){
@@ -204,6 +211,15 @@ public class CrSeries(){
             }
         }
 
+        if (crunInstance.CrunOptions.History){
+            var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == id);
+            if (historySeries != null){
+                crunInstance.CrHistory.MatchHistorySeriesWithSonarr(false);
+                await crunInstance.CrHistory.MatchHistoryEpisodesWithSonarr(false, historySeries);
+                CfgManager.UpdateHistoryFile();
+            }
+        }
+
         int specialIndex = 1;
         int epIndex = 1;
 
@@ -212,7 +228,7 @@ public class CrSeries(){
         foreach (var key in keys){
             EpisodeAndLanguage item = episodes[key];
             var episode = item.Items[0].Episode;
-            var isSpecial = episode != null && !Regex.IsMatch(episode, @"^\d+$"); // Checking if the episode is not a number (i.e., special).
+            var isSpecial = episode != null && !Regex.IsMatch(episode, @"^\d+(\.\d+)?$"); // Checking if the episode is not a number (i.e., special).
             // var newKey = $"{(isSpecial ? 'S' : 'E')}{(isSpecial ? specialIndex : epIndex).ToString()}";
 
             string newKey;
@@ -431,13 +447,13 @@ public class CrSeries(){
     }
 
 
-    public async Task<CrSearchSeriesBase?> Search(string searchString,string? crLocale){
-        
+    public async Task<CrSearchSeriesBase?> Search(string searchString, string? crLocale){
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         if (!string.IsNullOrEmpty(crLocale)){
             query["locale"] = crLocale;
         }
+
         query["q"] = searchString;
         query["n"] = "6";
         query["type"] = "top_results";
@@ -452,7 +468,7 @@ public class CrSeries(){
         }
 
         CrSearchSeriesBase? series = Helpers.Deserialize<CrSearchSeriesBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
-        
+
         return series;
     }
 

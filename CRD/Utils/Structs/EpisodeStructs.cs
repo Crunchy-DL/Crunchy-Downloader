@@ -250,7 +250,8 @@ public class CrunchyEpMeta{
     public List<string>? AvailableSubs{ get; set; }
     
     public string? DownloadPath{ get; set; }
-    
+    public List<string> DownloadSubs{ get; set; } =[];
+
 }
 
 public class DownloadProgress{

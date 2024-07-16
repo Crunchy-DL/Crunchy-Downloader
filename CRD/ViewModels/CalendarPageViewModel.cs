@@ -258,7 +258,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
     private async void BuildCustomCalendar(){
         ShowLoading = true;
 
-        var newEpisodesBase = await Crunchyroll.Instance.CrEpisode.GetNewEpisodes(Crunchyroll.Instance.CrunOptions.HistoryLang, 200);
+        var newEpisodesBase = await Crunchyroll.Instance.CrEpisode.GetNewEpisodes(Crunchyroll.Instance.CrunOptions.HistoryLang, 200,true);
 
         CalendarWeek week = new CalendarWeek();
         week.CalendarDays = new List<CalendarDay>();
@@ -283,7 +283,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
             foreach (var crBrowseEpisode in newEpisodes){
                 var targetDate = FilterByAirDate ? crBrowseEpisode.EpisodeMetadata.EpisodeAirDate : crBrowseEpisode.LastPublic;
                 
-                if (HideDubs && crBrowseEpisode.EpisodeMetadata.SeasonTitle != null && crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)")){
+                if (HideDubs && crBrowseEpisode.EpisodeMetadata.SeasonTitle != null && (crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)") || crBrowseEpisode.EpisodeMetadata.AudioLocale != Locale.JaJp)){
                     continue;
                 }
 
@@ -304,8 +304,8 @@ public partial class CalendarPageViewModel : ViewModelBase{
                     calEpisode.DateTime = targetDate;
                     calEpisode.HasPassed = DateTime.Now > targetDate;
                     calEpisode.EpisodeName = crBrowseEpisode.Title;
-                    calEpisode.SeriesUrl = "https://www.crunchyroll.com/series/" + crBrowseEpisode.EpisodeMetadata.SeriesId;
-                    calEpisode.EpisodeUrl = $"https://www.crunchyroll.com/de/watch/{crBrowseEpisode.Id}/";
+                    calEpisode.SeriesUrl = $"https://www.crunchyroll.com/{Crunchyroll.Instance.CrunOptions.HistoryLang}/series/" + crBrowseEpisode.EpisodeMetadata.SeriesId;
+                    calEpisode.EpisodeUrl = $"https://www.crunchyroll.com/{Crunchyroll.Instance.CrunOptions.HistoryLang}/watch/{crBrowseEpisode.Id}/";
                     calEpisode.ThumbnailUrl = crBrowseEpisode.Images.Thumbnail.First().First().Source;
                     calEpisode.IsPremiumOnly = crBrowseEpisode.EpisodeMetadata.IsPremiumOnly;
                     calEpisode.IsPremiere = crBrowseEpisode.EpisodeMetadata.Episode == "1";

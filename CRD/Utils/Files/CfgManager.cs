@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Reflection;
 using CRD.Downloader;
 using CRD.Utils.Structs;
@@ -34,24 +35,41 @@ public class CfgManager{
     private static StreamWriter logFile;
     private static bool isLogModeEnabled = false;
 
+    static CfgManager(){
+        AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+    }
+
+    private static void OnProcessExit(object? sender, EventArgs e){
+        DisableLogMode();
+    }
+
     public static void EnableLogMode(){
         if (!isLogModeEnabled){
-            logFile = new StreamWriter(PathLogFile);
-            logFile.AutoFlush = true;
-            Console.SetError(logFile);
-            isLogModeEnabled = true;
-            Console.Error.WriteLine("Log mode enabled.");
+            try{
+                var fileStream = new FileStream(PathLogFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+                logFile = new StreamWriter(fileStream);
+                logFile.AutoFlush = true;
+                Console.SetError(logFile);
+                isLogModeEnabled = true;
+                Console.Error.WriteLine("Log mode enabled.");
+            } catch (Exception e){
+                Console.Error.WriteLine($"Couldn't enable logging: {e}");
+            }
         }
     }
 
     public static void DisableLogMode(){
         if (isLogModeEnabled){
-            logFile.Close();
-            StreamWriter standardError = new StreamWriter(Console.OpenStandardError());
-            standardError.AutoFlush = true;
-            Console.SetError(standardError);
-            isLogModeEnabled = false;
-            Console.Error.WriteLine("Log mode disabled.");
+            try{
+                logFile.Close();
+                StreamWriter standardError = new StreamWriter(Console.OpenStandardError());
+                standardError.AutoFlush = true;
+                Console.SetError(standardError);
+                isLogModeEnabled = false;
+                Console.Error.WriteLine("Log mode disabled.");
+            } catch (Exception e){
+                Console.Error.WriteLine($"Couldn't disable logging: {e}");
+            }
         }
     }
 
@@ -127,7 +145,7 @@ public class CfgManager{
         File.WriteAllText(PathCrDownloadOptions, yaml);
     }
 
- 
+
     public static void UpdateSettingsFromFile(){
         string dirPath = Path.GetDirectoryName(PathCrDownloadOptions) ?? string.Empty;
 
@@ -188,6 +206,10 @@ public class CfgManager{
         return properties;
     }
 
+    public static void UpdateHistoryFile(){
+        WriteJsonToFile(PathCrHistory, Crunchyroll.Instance.HistoryList);
+    }
+
     private static object fileLock = new object();
 
     public static void WriteJsonToFile(string pathToFile, object obj){
@@ -199,9 +221,9 @@ public class CfgManager{
             }
 
             lock (fileLock){
-                // Write the JSON string to file using a streaming approach.
                 using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write))
-                using (var streamWriter = new StreamWriter(fileStream))
+                using (var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal))
+                using (var streamWriter = new StreamWriter(gzipStream))
                 using (var jsonWriter = new JsonTextWriter(streamWriter){ Formatting = Formatting.Indented }){
                     var serializer = new JsonSerializer();
                     serializer.Serialize(jsonWriter, obj);
@@ -211,6 +233,39 @@ public class CfgManager{
             Console.Error.WriteLine($"An error occurred: {ex.Message}");
         }
     }
+
+    public static string DecompressJsonFile(string pathToFile){
+        try{
+            using (var fileStream = new FileStream(pathToFile, FileMode.Open, FileAccess.Read)){
+                // Check if the file is compressed
+                if (IsFileCompressed(fileStream)){
+                    // Reset the stream position to the beginning
+                    fileStream.Position = 0;
+                    using (var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress))
+                    using (var streamReader = new StreamReader(gzipStream)){
+                        return streamReader.ReadToEnd();
+                    }
+                }
+
+                // If not compressed, read the file as is
+                fileStream.Position = 0;
+                using (var streamReader = new StreamReader(fileStream)){
+                    return streamReader.ReadToEnd();
+                }
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred: {ex.Message}");
+            return null;
+        }
+    }
+
+    private static bool IsFileCompressed(FileStream fileStream){
+        // Check the first two bytes for the GZip header
+        var buffer = new byte[2];
+        fileStream.Read(buffer, 0, 2);
+        return buffer[0] == 0x1F && buffer[1] == 0x8B;
+    }
+
 
     public static bool CheckIfFileExists(string filePath){
         string dirPath = Path.GetDirectoryName(filePath) ?? string.Empty;

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using CRD.Downloader;
 using CRD.Utils.CustomList;
@@ -40,9 +42,6 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonProperty("series_new_episodes")]
     public int NewEpisodes{ get; set; }
 
-    [JsonIgnore]
-    public Bitmap? ThumbnailImage{ get; set; }
-
     [JsonProperty("series_season_list")]
     public required RefreshableObservableCollection<HistorySeason> Seasons{ get; set; }
 
@@ -51,8 +50,17 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonProperty("history_series_add_date")]
     public DateTime? HistorySeriesAddDate{ get; set; }
-    
+
+    [JsonProperty("history_series_soft_subs_override")]
+    public List<string> HistorySeriesSoftSubsOverride{ get; set; } =[];
+
+    [JsonProperty("history_series_dub_lang_override")]
+    public List<string> HistorySeriesDubLangOverride{ get; set; } =[];
+
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    [JsonIgnore]
+    public Bitmap? ThumbnailImage{ get; set; }
 
     [JsonIgnore]
     public bool FetchingData{ get; set; }
@@ -73,6 +81,90 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonIgnore]
     private bool _editModeEnabled;
+
+    #region Language Override
+
+    [JsonIgnore]
+    public string SelectedSubs{ get; set; } = "";
+
+    [JsonIgnore]
+    public string SelectedDubs{ get; set; } = "";
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> SelectedSubLang{ get; set; } = new();
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> SelectedDubLang{ get; set; } = new();
+
+
+    private void UpdateSubAndDubString(){
+        HistorySeriesSoftSubsOverride.Clear();
+        HistorySeriesDubLangOverride.Clear();
+
+        if (SelectedSubLang.Count != 0){
+            for (var i = 0; i < SelectedSubLang.Count; i++){
+                HistorySeriesSoftSubsOverride.Add(SelectedSubLang[i].stringValue);
+            }
+        }
+
+        if (SelectedDubLang.Count != 0){
+            for (var i = 0; i < SelectedDubLang.Count; i++){
+                HistorySeriesDubLangOverride.Add(SelectedDubLang[i].stringValue);
+            }
+        }
+
+        SelectedDubs = string.Join(", ", HistorySeriesDubLangOverride) ?? "";
+        SelectedSubs = string.Join(", ", HistorySeriesSoftSubsOverride) ?? "";
+
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedSubs)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedDubs)));
+
+        CfgManager.UpdateHistoryFile();
+    }
+
+    private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
+        UpdateSubAndDubString();
+    }
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> DubLangList{ get; } = new(){
+    };
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> SubLangList{ get; } = new(){
+        new StringItem(){ stringValue = "all" },
+        new StringItem(){ stringValue = "none" },
+    };
+
+    public void Init(){
+        if (!(SubLangList.Count > 2 || DubLangList.Count > 0)){
+            foreach (var languageItem in Languages.languages){
+                SubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
+                DubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
+            }
+        }
+
+        var softSubLang = SubLangList.Where(a => HistorySeriesSoftSubsOverride.Contains(a.stringValue)).ToList();
+        var dubLang = DubLangList.Where(a => HistorySeriesDubLangOverride.Contains(a.stringValue)).ToList();
+
+        SelectedSubLang.Clear();
+        foreach (var listBoxItem in softSubLang){
+            SelectedSubLang.Add(listBoxItem);
+        }
+
+        SelectedDubLang.Clear();
+        foreach (var listBoxItem in dubLang){
+            SelectedDubLang.Add(listBoxItem);
+        }
+
+        SelectedDubs = string.Join(", ", HistorySeriesDubLangOverride) ?? "";
+        SelectedSubs = string.Join(", ", HistorySeriesSoftSubsOverride) ?? "";
+
+        SelectedSubLang.CollectionChanged += Changes;
+        SelectedDubLang.CollectionChanged += Changes;
+    }
+
+    #endregion
 
     public async Task LoadImage(){
         try{
@@ -165,9 +257,8 @@ public class HistorySeries : INotifyPropertyChanged{
         if (objectToRemove != null){
             Seasons.Remove(objectToRemove);
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Seasons)));
+            CfgManager.UpdateHistoryFile();
         }
-
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
     }
 
     public void OpenSonarrPage(){

@@ -84,7 +84,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     public static bool _sortDir = false;
-
+    
     public HistoryPageViewModel(){
         Items = Crunchyroll.Instance.HistoryList;
 
@@ -217,7 +217,6 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         if (!string.IsNullOrEmpty(value.SonarrSeriesId) && Crunchyroll.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
-            CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
         }
 
 
@@ -230,9 +229,8 @@ public partial class HistoryPageViewModel : ViewModelBase{
         if (objectToRemove != null){
             Crunchyroll.Instance.HistoryList.Remove(objectToRemove);
             Items.Remove(objectToRemove);
+            CfgManager.UpdateHistoryFile();
         }
-
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
     }
 
 
@@ -291,9 +289,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
             if (season != null){
                 season.SeasonDownloadPath = selectedFolder.Path.LocalPath;
+                CfgManager.UpdateHistoryFile();
             }
-
-            CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
+            
         }
     }
 
@@ -316,9 +314,8 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
             if (series != null){
                 series.SeriesDownloadPath = selectedFolder.Path.LocalPath;
+                CfgManager.UpdateHistoryFile();
             }
-
-            CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
         }
     }
 

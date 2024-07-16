@@ -89,7 +89,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                         episode.LoadImage(imageUrl);
                     }
                 }
-                
+
                 SearchItems.Add(episode);
             }
 
@@ -103,7 +103,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         RaisePropertyChanged(nameof(SearchVisible));
         SearchItems.Clear();
     }
-    
+
     partial void OnUrlInputChanged(string value){
         if (SearchEnabled){
             UpdateSearch(value);
@@ -186,7 +186,10 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 if (match.Success){
                     var locale = match.Groups[1].Value; // Capture the locale part
                     var id = match.Groups[2].Value; // Capture the ID part
-                    Crunchyroll.Instance.AddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, Crunchyroll.Instance.CrunOptions.DubLang, true);
+                    Crunchyroll.Instance.AddEpisodeToQue(id,
+                        string.IsNullOrEmpty(locale)
+                            ? string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang
+                            : Languages.Locale2language(locale).CrLocale, Crunchyroll.Instance.CrunOptions.DubLang, true);
                     UrlInput = "";
                     selectedEpisodes.Clear();
                     SelectedItems.Clear();
@@ -209,7 +212,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                     ButtonEnabled = false;
                     ShowLoading = true;
-                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id, Languages.Locale2language(locale).CrLocale, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
+                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id, string.IsNullOrEmpty(locale)
+                        ? string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang
+                        : Languages.Locale2language(locale).CrLocale, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
                     ShowLoading = false;
                     if (list != null){
                         currentSeriesList = list;
@@ -275,8 +280,8 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         }
     }
 
-    async partial void OnSelectedSearchItemChanged(CrBrowseSeries value){
-        if (value == null){
+    async partial void OnSelectedSearchItemChanged(CrBrowseSeries? value){
+        if (value == null || string.IsNullOrEmpty(value.Id)){
             return;
         }
 
@@ -286,7 +291,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         SearchVisible = false;
         ButtonEnabled = false;
         ShowLoading = true;
-        var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(value.Id, "", new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
+        var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(value.Id,
+            string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang,
+            new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
         ShowLoading = false;
         if (list != null){
             currentSeriesList = list;
@@ -296,7 +303,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                         episode.Lang));
                 } else{
                     episodesBySeason.Add("S" + episode.Season, new List<ItemModel>{
-                        new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, "E" + episode.EpisodeNum, episode.E, episode.Lang)
+                        new(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, "E" + episode.EpisodeNum, episode.E, episode.Lang)
                     });
                     SeasonList.Add(new ComboBoxItem{ Content = "S" + episode.Season });
                 }
@@ -351,11 +358,11 @@ public class ItemModel(string imageUrl, string description, string time, string 
     public string TitleFull{ get; set; } = season + episode + " - " + title;
 
     public List<string> AvailableAudios{ get; set; } = availableAudios;
-    
+
     public event PropertyChangedEventHandler? PropertyChanged;
+
     public async void LoadImage(string url){
         ImageBitmap = await Helpers.LoadImage(url);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageBitmap)));
     }
-    
 }

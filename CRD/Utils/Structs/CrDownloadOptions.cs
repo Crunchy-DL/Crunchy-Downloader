@@ -108,7 +108,7 @@ public class CrDownloadOptions{
     [YamlIgnore]
     public bool? Skipmux{ get; set; }
 
-    [YamlIgnore]
+    [YamlMember(Alias = "mux_sync_dubs", ApplyNamingConventions = false)]
     public bool SyncTiming{ get; set; }
 
     [YamlIgnore]

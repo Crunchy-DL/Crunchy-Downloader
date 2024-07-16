@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using CRD.Utils.Structs;
@@ -11,7 +12,7 @@ using DynamicData;
 namespace CRD.Utils.Muxing;
 
 public class Merger{
-    private MergerOptions options;
+    public MergerOptions options;
 
     public Merger(MergerOptions options){
         this.options = options;
@@ -45,6 +46,10 @@ public class Merger{
             }
 
             foreach (var aud in options.OnlyAudio){
+                if (aud.Delay != null && aud.Delay != 0){
+                    args.Add($"-itsoffset {aud.Delay}");
+                }
+
                 args.Add($"-i \"{aud.Path}\"");
                 metaData.Add($"-map {index}:a");
                 metaData.Add($"-metadata:s:a:{audioIndex} language={aud.Language.Code}");
@@ -53,14 +58,13 @@ public class Merger{
             }
 
             if (options.Chapters != null && options.Chapters.Count > 0){
-                
                 Helpers.ConvertChapterFileForFFMPEG(options.Chapters[0].Path);
-                
+
                 args.Add($"-i \"{options.Chapters[0].Path}\"");
                 metaData.Add($"-map_metadata {index}");
                 index++;
             }
-            
+
             foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
                 if (sub.value.Delay != null){
                     args.Add($"-itsoffset -{Math.Ceiling((double)sub.value.Delay * 1000)}ms");
@@ -68,7 +72,7 @@ public class Merger{
 
                 args.Add($"-i \"{sub.value.File}\"");
             }
-            
+
             if (options.Output.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)){
                 if (options.Fonts != null){
                     int fontIndex = 0;
@@ -78,7 +82,7 @@ public class Merger{
                     }
                 }
             }
-            
+
             args.AddRange(metaData);
             args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
             args.Add("-c:v copy");
@@ -87,9 +91,8 @@ public class Merger{
             args.AddRange(options.Subtitles.Select((sub, subindex) =>
                 $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
 
-        
-            if (!string.IsNullOrEmpty(options.VideoTitle)){
 
+            if (!string.IsNullOrEmpty(options.VideoTitle)){
                 args.Add($"-metadata title=\"{options.VideoTitle}\"");
             }
 
@@ -125,7 +128,6 @@ public class Merger{
     }
 
 
-
     public string MkvMerge(){
         List<string> args = new List<string>();
 
@@ -157,13 +159,16 @@ public class Merger{
             args.Add("--no-video");
             args.Add($"--track-name 0:\"{trackName}\"");
             args.Add($"--language 0:{aud.Language.Code}");
-          
-            
+
 
             if (options.Defaults.Audio.Code == aud.Language.Code){
                 args.Add("--default-track 0");
             } else{
                 args.Add("--default-track 0:0");
+            }
+
+            if (aud.Delay != null && aud.Delay != 0){
+                args.Add($"--sync 0:{aud.Delay}");
             }
 
             args.Add($"\"{aud.Path}\"");
@@ -216,11 +221,62 @@ public class Merger{
         if (options.Description is{ Count: > 0 }){
             args.Add($"--global-tags \"{options.Description[0].Path}\"");
         }
-        
-     
 
 
         return string.Join(" ", args);
+    }
+
+
+    public async Task<double> ProcessVideo(string baseVideoPath, string compareVideoPath){
+        var tempDir = Path.GetTempPath(); //TODO - maybe move this out of temp
+        var baseFramesDir = Path.Combine(tempDir, "base_frames");
+        var compareFramesDir = Path.Combine(tempDir, "compare_frames");
+
+        Directory.CreateDirectory(baseFramesDir);
+        Directory.CreateDirectory(compareFramesDir);
+
+        var extractFramesBase = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDir, 0, 60);
+        var extractFramesCompare = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDir, 0, 60);
+
+        if (!extractFramesBase.IsOk || !extractFramesCompare.IsOk){
+            Console.Error.WriteLine("Failed to extract Frames to Compare");
+            return 0;
+        }
+        
+        var baseFrames = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData
+        {
+            FilePath = fp,
+            Time = GetTimeFromFileName(fp, extractFramesBase.frameRate)
+        }).ToList();
+
+        var compareFrames = Directory.GetFiles(compareFramesDir).Select(fp => new FrameData
+        {
+            FilePath = fp,
+            Time = GetTimeFromFileName(fp, extractFramesBase.frameRate)
+        }).ToList();
+
+        var offset = SyncingHelper.CalculateOffset(baseFrames, compareFrames);
+        Console.WriteLine($"Calculated offset: {offset} seconds");
+
+        CleanupDirectory(baseFramesDir);
+        CleanupDirectory(compareFramesDir);
+
+        return offset;
+    }
+
+    private static void CleanupDirectory(string dirPath){
+        if (Directory.Exists(dirPath)){
+            Directory.Delete(dirPath, true);
+        }
+    }
+
+    private static double GetTimeFromFileName(string fileName, double frameRate){
+        var match = Regex.Match(Path.GetFileName(fileName), @"frame(\d+)");
+        if (match.Success){
+            return int.Parse(match.Groups[1].Value) / frameRate; // Assuming 30 fps
+        }
+
+        return 0;
     }
 
 
@@ -253,28 +309,19 @@ public class Merger{
         // Combine all media file lists and iterate through them
         var allMediaFiles = options.OnlyAudio.Concat(options.OnlyVid)
             .ToList();
-        allMediaFiles.ForEach(file => DeleteFile(file.Path));
-        allMediaFiles.ForEach(file => DeleteFile(file.Path + ".resume"));
-        
-        options.Description?.ForEach(chapter => DeleteFile(chapter.Path));
-        
+        allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path));
+        allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".resume"));
+
+        options.Description?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
+
         // Delete chapter files if any
-        options.Chapters?.ForEach(chapter => DeleteFile(chapter.Path));
+        options.Chapters?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
 
         // Delete subtitle files
-        options.Subtitles.ForEach(subtitle => DeleteFile(subtitle.File));
+        options.Subtitles.ForEach(subtitle => Helpers.DeleteFile(subtitle.File));
     }
 
-    private void DeleteFile(string filePath){
-        try{
-            if (File.Exists(filePath)){
-                File.Delete(filePath);
-            }
-        } catch (Exception ex){
-            Console.Error.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
-            // Handle exceptions if you need to log them or throw
-        }
-    }
+
 }
 
 public class MergerInput{
@@ -291,6 +338,8 @@ public class SubtitleInput{
     public bool? ClosedCaption{ get; set; }
     public bool? Signs{ get; set; }
     public int? Delay{ get; set; }
+    
+    public DownloadedMedia? RelatedVideoDownloadMedia;
 }
 
 public class ParsedFont{

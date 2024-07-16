@@ -68,6 +68,12 @@ public class CrEpisode(){
 
         if (crunInstance.CrunOptions.History && updateHistory){
             await crunInstance.CrHistory.UpdateWithEpisode(dlEpisode);
+            var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == dlEpisode.SeriesId);
+            if (historySeries != null){
+                Crunchyroll.Instance.CrHistory.MatchHistorySeriesWithSonarr(false);
+                await Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false, historySeries);
+                CfgManager.UpdateHistoryFile();
+            }
         }
 
         var seasonIdentifier = !string.IsNullOrEmpty(dlEpisode.Identifier) ? dlEpisode.Identifier.Split('|')[1] : $"S{dlEpisode.SeasonNumber}";
@@ -102,7 +108,7 @@ public class CrEpisode(){
         int epIndex = 1;
 
 
-        var isSpecial = !Regex.IsMatch(episode.EpisodeAndLanguages.Items[0].Episode ?? string.Empty, @"^\d+$"); // Checking if the episode is not a number (i.e., special).
+        var isSpecial = !Regex.IsMatch(episode.EpisodeAndLanguages.Items[0].Episode ?? string.Empty,  @"^\d+(\.\d+)?$"); // Checking if the episode is not a number (i.e., special).
         string newKey;
         if (isSpecial && !string.IsNullOrEmpty(episode.EpisodeAndLanguages.Items[0].Episode)){
             newKey = episode.EpisodeAndLanguages.Items[0].Episode ?? "SP" + (specialIndex + " " + episode.EpisodeAndLanguages.Items[0].Id);
@@ -239,7 +245,7 @@ public class CrEpisode(){
         return retMeta;
     }
 
-    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount){
+    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount , bool forcedLang = false){
         CrBrowseEpisodeBase? complete = new CrBrowseEpisodeBase();
         complete.Data =[];
 
@@ -250,6 +256,9 @@ public class CrEpisode(){
 
             if (!string.IsNullOrEmpty(crLocale)){
                 query["locale"] = crLocale;
+                if (forcedLang){
+                    query["force_locale"] = crLocale;
+                }
             }
 
             query["start"] = i + "";

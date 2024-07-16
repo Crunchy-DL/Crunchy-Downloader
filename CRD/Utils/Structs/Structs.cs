@@ -9,7 +9,9 @@ public struct AuthData{
 }
 
 public class DrmAuthData{
-    [JsonProperty("custom_data")] public string? CustomData{ get; set; }
+    [JsonProperty("custom_data")]
+    public string? CustomData{ get; set; }
+
     public string? Token{ get; set; }
 }
 
@@ -21,6 +23,7 @@ public struct Meta{
 public struct LanguageItem{
     [JsonProperty("cr_locale")]
     public string CrLocale{ get; set; }
+
     public string Locale{ get; set; }
     public string Code{ get; set; }
     public string Name{ get; set; }
@@ -62,7 +65,7 @@ public struct Episode{
 public struct DownloadResponse{
     public List<DownloadedMedia> Data{ get; set; }
     public string FileName{ get; set; }
-    
+
     public string VideoTitle{ get; set; }
     public bool Error{ get; set; }
     public string ErrorText{ get; set; }
@@ -75,6 +78,8 @@ public class DownloadedMedia : SxItem{
 
     public bool? Cc{ get; set; }
     public bool? Signs{ get; set; }
+
+    public DownloadedMedia? RelatedVideoDownloadMedia;
 }
 
 public class SxItem{
@@ -85,3 +90,11 @@ public class SxItem{
     public Dictionary<string, List<string>>? Fonts{ get; set; }
 }
 
+public class FrameData{
+    public string FilePath{ get; set; }
+    public double Time{ get; set; }
+}
+
+public class StringItem{
+    public string stringValue{ get; set; }
+}

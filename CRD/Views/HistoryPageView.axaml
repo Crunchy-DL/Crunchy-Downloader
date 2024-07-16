@@ -6,6 +6,7 @@
              xmlns:ui="clr-namespace:CRD.Utils.UI"
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              xmlns:history="clr-namespace:CRD.Utils.Structs.History"
+             xmlns:structs="clr-namespace:CRD.Utils.Structs"
              x:DataType="vm:HistoryPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.HistoryPageView">
@@ -13,7 +14,6 @@
     <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
         <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
-        <ui:UiUpdateDownloadedHistorySeasonConverter x:Key="UiUpdateDownloadedHistorySeasonConverter" />
     </UserControl.Resources>
 
     <Grid>
@@ -120,8 +120,8 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                        <controls:SymbolIcon IsVisible="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).SortDir}" Symbol="ChevronUp" FontSize="12" Margin="0 0 10 0"/>
-                                        <controls:SymbolIcon IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SortDir}" Symbol="ChevronDown" FontSize="12" Margin="0 0 10 0"/>
+                                        <controls:SymbolIcon IsVisible="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).SortDir}" Symbol="ChevronUp" FontSize="12" Margin="0 0 10 0" />
+                                        <controls:SymbolIcon IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SortDir}" Symbol="ChevronDown" FontSize="12" Margin="0 0 10 0" />
                                         <TextBlock Text="{Binding SortingTitle}"></TextBlock>
                                     </StackPanel>
                                 </DataTemplate>
@@ -338,7 +338,7 @@
                                                         </StackPanel>
 
                                                         <StackPanel Orientation="Horizontal">
-                                                            <Button Command="{Binding FetchData}" Margin="0 0 5  10">Fetch Series</Button>
+                                                            <Button Command="{Binding FetchData}" Margin="0 0 5  10">Refresh Series</Button>
                                                             <ToggleButton x:Name="SeriesEditModeToggle" IsChecked="{Binding EditModeEnabled}" Margin="0 0 5  10">Edit</ToggleButton>
 
                                                             <Button Margin="0 0 5 10" FontStyle="Italic"
@@ -353,6 +353,115 @@
                                                                     <controls:SymbolIcon Symbol="Folder" FontSize="18" />
                                                                 </StackPanel>
                                                             </Button>
+
+                                                            <StackPanel>
+                                                                <ToggleButton x:Name="SeriesOverride" Margin="0 0 5 10" FontStyle="Italic"
+                                                                              VerticalAlignment="Center"
+                                                                              IsVisible="{Binding EditModeEnabled}">
+                                                                    <StackPanel Orientation="Horizontal">
+                                                                        <controls:SymbolIcon Symbol="Speaker2" FontSize="18" />
+                                                                    </StackPanel>
+                                                                </ToggleButton>
+
+                                                                <Popup IsLightDismissEnabled="True"
+                                                                       MaxWidth="400"
+                                                                       MaxHeight="600"
+                                                                       IsOpen="{Binding IsChecked, ElementName=SeriesOverride, Mode=TwoWay}"
+                                                                       Placement="Bottom"
+                                                                       PlacementTarget="{Binding ElementName=SeriesOverride}">
+                                                                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+
+                                                                        <StackPanel>
+                                                                            <controls:SettingsExpander Header="Language Override">
+
+                                                                                <controls:SettingsExpander.Footer>
+                                                                                    <StackPanel>
+                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 0 0 10">
+                                                                                            <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
+                                                                                            <StackPanel>
+                                                                                                <ToggleButton x:Name="DropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
+                                                                                                    <ToggleButton.Content>
+                                                                                                        <Grid>
+                                                                                                            <Grid.ColumnDefinitions>
+                                                                                                                <ColumnDefinition Width="*" />
+                                                                                                                <ColumnDefinition Width="Auto" />
+                                                                                                            </Grid.ColumnDefinitions>
+                                                                                                            <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedDubs}"
+                                                                                                                       VerticalAlignment="Center" />
+                                                                                                            <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                                                  VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                                        </Grid>
+                                                                                                    </ToggleButton.Content>
+                                                                                                </ToggleButton>
+                                                                                                <Popup IsLightDismissEnabled="True"
+                                                                                                       IsOpen="{Binding IsChecked, ElementName=DropdownButtonDub, Mode=TwoWay}"
+                                                                                                       Placement="Bottom"
+                                                                                                       PlacementTarget="{Binding ElementName=DropdownButtonDub}">
+                                                                                                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                                        <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
+                                                                                                                 MaxHeight="400"
+                                                                                                                 ItemsSource="{Binding DubLangList, Mode=OneWay}"
+                                                                                                                 SelectedItems="{Binding SelectedDubLang}">
+                                                                                                            <ListBox.ItemTemplate>
+                                                                                                                <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                                                    <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                                                </DataTemplate>
+                                                                                                            </ListBox.ItemTemplate>
+                                                                                                        </ListBox>
+                                                                                                    </Border>
+                                                                                                </Popup>
+                                                                                            </StackPanel>
+                                                                                        </StackPanel>
+
+                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                                            <TextBlock Text="Sub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
+                                                                                            <StackPanel>
+                                                                                                <ToggleButton x:Name="DropdownButtonSub" Width="210" HorizontalContentAlignment="Stretch">
+                                                                                                    <ToggleButton.Content>
+                                                                                                        <Grid>
+                                                                                                            <Grid.ColumnDefinitions>
+                                                                                                                <ColumnDefinition Width="*" />
+                                                                                                                <ColumnDefinition Width="Auto" />
+                                                                                                            </Grid.ColumnDefinitions>
+                                                                                                            <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedSubs}"
+                                                                                                                       VerticalAlignment="Center" />
+                                                                                                            <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                                                  VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                                        </Grid>
+                                                                                                    </ToggleButton.Content>
+                                                                                                </ToggleButton>
+                                                                                                <Popup IsLightDismissEnabled="True"
+                                                                                                       IsOpen="{Binding IsChecked, ElementName=DropdownButtonSub, Mode=TwoWay}" Placement="Bottom"
+                                                                                                       PlacementTarget="{Binding ElementName=DropdownButtonSub}">
+                                                                                                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                                        <ListBox SelectionMode="Multiple,Toggle" Width="210"
+                                                                                                                 MaxHeight="400"
+                                                                                                                 ItemsSource="{Binding SubLangList, Mode=OneWay}"
+                                                                                                                 SelectedItems="{Binding SelectedSubLang}">
+                                                                                                            <ListBox.ItemTemplate>
+                                                                                                                <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                                                    <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                                                </DataTemplate>
+                                                                                                            </ListBox.ItemTemplate>
+                                                                                                        </ListBox>
+                                                                                                    </Border>
+                                                                                                </Popup>
+                                                                                            </StackPanel>
+                                                                                        </StackPanel>
+
+
+                                                                                    </StackPanel>
+
+
+                                                                                </controls:SettingsExpander.Footer>
+
+                                                                            </controls:SettingsExpander>
+
+                                                                        </StackPanel>
+
+                                                                    </Border>
+                                                                </Popup>
+                                                            </StackPanel>
 
                                                         </StackPanel>
 
@@ -481,7 +590,7 @@
                                                                             Command="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).FetchData}"
                                                                             CommandParameter="{Binding SeasonId}">
                                                                         <ToolTip.Tip>
-                                                                            <TextBlock Text="Fetch Season" FontSize="15" />
+                                                                            <TextBlock Text="Refresh Season" FontSize="15" />
                                                                         </ToolTip.Tip>
                                                                         <StackPanel Orientation="Horizontal">
                                                                             <controls:SymbolIcon Symbol="Refresh"
@@ -502,6 +611,117 @@
                                                                                                  FontSize="18" />
                                                                         </StackPanel>
                                                                     </Button>
+
+
+                                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                        <ToggleButton x:Name="SeasonOverride" Margin="10 0 0 0" FontStyle="Italic"
+                                                                                      VerticalAlignment="Center"
+                                                                                      IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).EditModeEnabled}">
+                                                                            <StackPanel Orientation="Horizontal">
+                                                                                <controls:SymbolIcon Symbol="Speaker2" FontSize="18" />
+                                                                            </StackPanel>
+                                                                        </ToggleButton>
+
+                                                                        <Popup IsLightDismissEnabled="True"
+                                                                               MaxWidth="400"
+                                                                               MaxHeight="600"
+                                                                               IsOpen="{Binding IsChecked, ElementName=SeasonOverride, Mode=TwoWay}"
+                                                                               Placement="Bottom"
+                                                                               PlacementTarget="{Binding ElementName=SeasonOverride}">
+                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+
+                                                                                <StackPanel>
+                                                                                    <controls:SettingsExpander Header="Language Override">
+
+                                                                                        <controls:SettingsExpander.Footer>
+                                                                                            <StackPanel>
+                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 0 0 10">
+                                                                                                    <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
+                                                                                                    <StackPanel>
+                                                                                                        <ToggleButton x:Name="SeasonOverrideDropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
+                                                                                                            <ToggleButton.Content>
+                                                                                                                <Grid>
+                                                                                                                    <Grid.ColumnDefinitions>
+                                                                                                                        <ColumnDefinition Width="*" />
+                                                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                                                    </Grid.ColumnDefinitions>
+                                                                                                                    <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedDubs}"
+                                                                                                                               VerticalAlignment="Center" />
+                                                                                                                    <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                                                          VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                                                </Grid>
+                                                                                                            </ToggleButton.Content>
+                                                                                                        </ToggleButton>
+                                                                                                        <Popup IsLightDismissEnabled="True"
+                                                                                                               IsOpen="{Binding IsChecked, ElementName=SeasonOverrideDropdownButtonDub, Mode=TwoWay}"
+                                                                                                               Placement="Bottom"
+                                                                                                               PlacementTarget="{Binding ElementName=SeasonOverrideDropdownButtonDub}">
+                                                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                                                <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
+                                                                                                                         MaxHeight="400"
+                                                                                                                         ItemsSource="{Binding DubLangList}"
+                                                                                                                         SelectedItems="{Binding SelectedDubLang}">
+                                                                                                                    <ListBox.ItemTemplate>
+                                                                                                                        <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                                                            <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                                                        </DataTemplate>
+                                                                                                                    </ListBox.ItemTemplate>
+                                                                                                                </ListBox>
+                                                                                                            </Border>
+                                                                                                        </Popup>
+                                                                                                    </StackPanel>
+                                                                                                </StackPanel>
+
+                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                                                    <TextBlock Text="Sub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
+                                                                                                    <StackPanel>
+                                                                                                        <ToggleButton x:Name="SeasonOverrideDropdownButtonSub" Width="210" HorizontalContentAlignment="Stretch">
+                                                                                                            <ToggleButton.Content>
+                                                                                                                <Grid>
+                                                                                                                    <Grid.ColumnDefinitions>
+                                                                                                                        <ColumnDefinition Width="*" />
+                                                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                                                    </Grid.ColumnDefinitions>
+                                                                                                                    <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedSubs}"
+                                                                                                                               VerticalAlignment="Center" />
+                                                                                                                    <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                                                          VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                                                </Grid>
+                                                                                                            </ToggleButton.Content>
+                                                                                                        </ToggleButton>
+                                                                                                        <Popup IsLightDismissEnabled="True"
+                                                                                                               IsOpen="{Binding IsChecked, ElementName=SeasonOverrideDropdownButtonSub, Mode=TwoWay}" Placement="Bottom"
+                                                                                                               PlacementTarget="{Binding ElementName=SeasonOverrideDropdownButtonSub}">
+                                                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                                                <ListBox SelectionMode="Multiple,Toggle" Width="210"
+                                                                                                                         MaxHeight="400"
+                                                                                                                         ItemsSource="{Binding SubLangList}"
+                                                                                                                         SelectedItems="{Binding SelectedSubLang}">
+                                                                                                                    <ListBox.ItemTemplate>
+                                                                                                                        <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                                                            <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                                                        </DataTemplate>
+                                                                                                                    </ListBox.ItemTemplate>
+                                                                                                                </ListBox>
+                                                                                                            </Border>
+                                                                                                        </Popup>
+                                                                                                    </StackPanel>
+                                                                                                </StackPanel>
+
+
+                                                                                            </StackPanel>
+
+
+                                                                                        </controls:SettingsExpander.Footer>
+
+                                                                                    </controls:SettingsExpander>
+
+                                                                                </StackPanel>
+
+                                                                            </Border>
+                                                                        </Popup>
+                                                                    </StackPanel>
+
 
                                                                     <Button Margin="10 0 0 0" FontStyle="Italic"
                                                                             IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).EditModeEnabled}"

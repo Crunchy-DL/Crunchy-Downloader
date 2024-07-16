@@ -34,6 +34,7 @@ public class FileNameManager{
                 string[] parts = replacement.Split(',');
                 string formattedIntegerPart = parts[0].PadLeft(numbers, '0');
                 replacement = formattedIntegerPart + (parts.Length > 1 ? "," + parts[1] : "");
+                replacement = replacement.Replace(",", ".");
             } else if (variable.Sanitize){
                 replacement = CleanupFilename(replacement);
             }

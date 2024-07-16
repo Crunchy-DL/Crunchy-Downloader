@@ -104,7 +104,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
         var softSubs = "Softsub: ";
 
-        if (Crunchyroll.Instance.CrunOptions.DlSubs.Contains("all")){
+        if (epMeta.DownloadSubs.Contains("all")){
             if (epMeta.AvailableSubs != null){
                 foreach (var epMetaAvailableSub in epMeta.AvailableSubs){
                     softSubs += epMetaAvailableSub + " ";
@@ -114,7 +114,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             }
         }
 
-        foreach (var crunOptionsDlSub in Crunchyroll.Instance.CrunOptions.DlSubs){
+        foreach (var crunOptionsDlSub in epMeta.DownloadSubs){
             if (epMeta.AvailableSubs != null && epMeta.AvailableSubs.Contains(crunOptionsDlSub)){
                 softSubs += crunOptionsDlSub + " ";
             }

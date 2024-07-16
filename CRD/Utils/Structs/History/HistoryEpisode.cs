@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 namespace CRD.Utils.Structs.History;
 
 public class HistoryEpisode : INotifyPropertyChanged{
+    
     [JsonProperty("episode_title")]
     public string? EpisodeTitle{ get; set; }
 
@@ -48,7 +49,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
         WasDownloaded = !WasDownloaded;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
     }
-    
+
     public void ToggleWasDownloadedSeries(HistorySeries? series){
         WasDownloaded = !WasDownloaded;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(WasDownloaded)));
@@ -57,14 +58,15 @@ public class HistoryEpisode : INotifyPropertyChanged{
             foreach (var historySeason in series.Seasons){
                 historySeason.UpdateDownloadedSilent();
             }
+
             series.UpdateNewEpisodes();
         }
-            
-        
-        CfgManager.WriteJsonToFile(CfgManager.PathCrHistory, Crunchyroll.Instance.HistoryList);
+
+        CfgManager.UpdateHistoryFile();
     }
 
     public async Task DownloadEpisode(){
-        await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, Crunchyroll.Instance.DefaultLocale, Crunchyroll.Instance.CrunOptions.DubLang);
+        await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang,
+            Crunchyroll.Instance.CrunOptions.DubLang);
     }
 }

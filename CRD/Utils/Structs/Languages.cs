@@ -111,7 +111,7 @@ public class Languages{
 
 
     public static LanguageItem Locale2language(string locale){
-        LanguageItem? filteredLocale = languages.FirstOrDefault(l => { return l.Locale == locale; });
+        LanguageItem? filteredLocale = languages.FirstOrDefault(l => { return l.Locale == locale || l.CrLocale == locale; });
         if (filteredLocale != null){
             return (LanguageItem)filteredLocale;
         } else{

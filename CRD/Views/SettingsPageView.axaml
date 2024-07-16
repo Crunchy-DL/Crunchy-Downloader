@@ -12,8 +12,7 @@
     <Design.DataContext>
         <vm:SettingsPageViewModel />
     </Design.DataContext>
-
-
+    
     <ScrollViewer Padding="20 20 20 0">
         <StackPanel Spacing="8">
 
@@ -51,7 +50,8 @@
                             <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
                                 <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
                                          MaxHeight="400"
-                                         ItemsSource="{Binding DubLangList}" SelectedItems="{Binding SelectedDubLang}">
+                                         ItemsSource="{Binding DubLangList}" 
+                                         SelectedItems="{Binding SelectedDubLang}">
                                 </ListBox>
                             </Border>
                         </Popup>
@@ -333,6 +333,11 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="Sync Timings" Description="Does not work for all episodes but for the ones that only have a different intro">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SyncTimings}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Additional MKVMerge Options">
                     <controls:SettingsExpanderItem.Footer>

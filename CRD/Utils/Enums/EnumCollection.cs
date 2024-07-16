@@ -154,6 +154,9 @@ public enum MediaType{
 public enum DownloadMediaType{
     [EnumMember(Value = "Video")]
     Video,
+    
+    [EnumMember(Value = "SyncVideo")]
+    SyncVideo,
 
     [EnumMember(Value = "Audio")]
     Audio,

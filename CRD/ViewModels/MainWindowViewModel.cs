@@ -48,8 +48,8 @@ public partial class MainWindowViewModel : ViewModelBase{
     public async void Init(){
         UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
 
-        await Crunchyroll.Instance.Init();
-
+        Crunchyroll.Instance.InitOptions();
+        
         if (Crunchyroll.Instance.CrunOptions.AccentColor != null){
             _faTheme.CustomAccentColor = Color.Parse(Crunchyroll.Instance.CrunOptions.AccentColor);
         }
@@ -63,5 +63,8 @@ public partial class MainWindowViewModel : ViewModelBase{
             _faTheme.PreferSystemTheme = false;
             Application.Current.RequestedThemeVariant = ThemeVariant.Light;
         }
+        
+        await Crunchyroll.Instance.Init();
+        
     }
 }
