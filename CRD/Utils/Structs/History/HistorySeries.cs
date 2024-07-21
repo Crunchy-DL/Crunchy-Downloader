@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.CustomList;
 using Newtonsoft.Json;
 
@@ -243,10 +244,10 @@ public class HistorySeries : INotifyPropertyChanged{
     public async Task FetchData(string? seasonId){
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-        await Crunchyroll.Instance.CrHistory.UpdateSeries(SeriesId, seasonId);
+        await CrunchyrollManager.Instance.History.CRUpdateSeries(SeriesId, seasonId);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesTitle)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesDescription)));
-        Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false, this);
+        CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, this);
         UpdateNewEpisodes();
         FetchingData = false;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
@@ -262,7 +263,7 @@ public class HistorySeries : INotifyPropertyChanged{
     }
 
     public void OpenSonarrPage(){
-        var sonarrProp = Crunchyroll.Instance.CrunOptions.SonarrProperties;
+        var sonarrProp = CrunchyrollManager.Instance.CrunOptions.SonarrProperties;
 
         if (sonarrProp == null) return;
 

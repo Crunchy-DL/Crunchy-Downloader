@@ -8,6 +8,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
@@ -37,14 +38,14 @@ public partial class SeriesPageViewModel : ViewModelBase{
         
 
         
-        _selectedSeries = Crunchyroll.Instance.SelectedSeries;
+        _selectedSeries = CrunchyrollManager.Instance.SelectedSeries;
 
         if (_selectedSeries.ThumbnailImage == null){
             _selectedSeries.LoadImage();
         }
 
-        if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId) && Crunchyroll.Instance.CrunOptions.SonarrProperties != null){
-            SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
+        if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId) && CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
+            SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
         } else{
             SonarrAvailable = false;
         }

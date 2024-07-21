@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Updater;
 using FluentAvalonia.Styling;
 using Newtonsoft.Json;
@@ -48,15 +49,15 @@ public partial class MainWindowViewModel : ViewModelBase{
     public async void Init(){
         UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
 
-        Crunchyroll.Instance.InitOptions();
+        CrunchyrollManager.Instance.InitOptions();
         
-        if (Crunchyroll.Instance.CrunOptions.AccentColor != null){
-            _faTheme.CustomAccentColor = Color.Parse(Crunchyroll.Instance.CrunOptions.AccentColor);
+        if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null){
+            _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
         }
 
-        if (Crunchyroll.Instance.CrunOptions.Theme == "System"){
+        if (CrunchyrollManager.Instance.CrunOptions.Theme == "System"){
             _faTheme.PreferSystemTheme = true;
-        } else if (Crunchyroll.Instance.CrunOptions.Theme == "Dark"){
+        } else if (CrunchyrollManager.Instance.CrunOptions.Theme == "Dark"){
             _faTheme.PreferSystemTheme = false;
             Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
         } else{
@@ -64,7 +65,7 @@ public partial class MainWindowViewModel : ViewModelBase{
             Application.Current.RequestedThemeVariant = ThemeVariant.Light;
         }
         
-        await Crunchyroll.Instance.Init();
+        await CrunchyrollManager.Instance.Init();
         
     }
 }

@@ -1,4 +1,5 @@
 ﻿using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 
 namespace CRD.Utils.HLS;
 
@@ -31,11 +32,11 @@ public class GlobalThrottler{
 
     public void Throttle(int bytesRead){
         
-        if (Crunchyroll.Instance.CrunOptions.DownloadSpeedLimit == 0) return;
+        if (CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit == 0) return;
         
         lock (_lock){
             _totalBytesRead += bytesRead;
-            if (_totalBytesRead >= ((Crunchyroll.Instance.CrunOptions.DownloadSpeedLimit * 1024) / 10)){
+            if (_totalBytesRead >= ((CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit * 1024) / 10)){
                 var timeElapsed = DateTime.Now - _lastReadTime;
                 if (timeElapsed.TotalMilliseconds < 100){
                     Thread.Sleep(100 - (int)timeElapsed.TotalMilliseconds);
@@ -77,8 +78,8 @@ public class ThrottledStream : Stream{
 
     public override int Read(byte[] buffer, int offset, int count){
         int bytesRead = 0;
-        if (Crunchyroll.Instance.CrunOptions.DownloadSpeedLimit != 0){
-            int bytesToRead = Math.Min(count, (Crunchyroll.Instance.CrunOptions.DownloadSpeedLimit * 1024) / 10);
+        if (CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit != 0){
+            int bytesToRead = Math.Min(count, (CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit * 1024) / 10);
             bytesRead = _baseStream.Read(buffer, offset, bytesToRead);
             _throttler.Throttle(bytesRead);
         } else{

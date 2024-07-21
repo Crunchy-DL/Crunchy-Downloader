@@ -6,6 +6,7 @@ using System.Collections.Specialized;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 
 namespace CRD.Utils;
 
@@ -93,7 +94,7 @@ public class HttpClientReq{
         var request = new HttpRequestMessage(requestMethod, uriBuilder.ToString());
 
         if (authHeader){
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Crunchyroll.Instance.Token?.access_token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CrunchyrollManager.Instance.Token?.access_token);
         }
 
         if (disableDrmHeader){

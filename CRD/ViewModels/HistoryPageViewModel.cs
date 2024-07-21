@@ -12,6 +12,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
@@ -86,9 +87,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
     public static bool _sortDir = false;
     
     public HistoryPageViewModel(){
-        Items = Crunchyroll.Instance.HistoryList;
+        Items = CrunchyrollManager.Instance.HistoryList;
 
-        HistoryPageProperties? properties = Crunchyroll.Instance.CrunOptions.HistoryPageProperties;
+        HistoryPageProperties? properties = CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties;
 
         currentViewType = properties?.SelectedView ?? HistoryViewType.Posters;
         currentSortingType = properties?.SelectedSorting ?? SortingType.SeriesTitle;
@@ -123,17 +124,17 @@ public partial class HistoryPageViewModel : ViewModelBase{
             historySeries.UpdateNewEpisodes();
         }
 
-        Crunchyroll.Instance.CrHistory.SortItems();
+        CrunchyrollManager.Instance.History.SortItems();
     }
 
 
     private void UpdateSettings(){
-        if (Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null){
-            Crunchyroll.Instance.CrunOptions.HistoryPageProperties.ScaleValue = ScaleValue;
-            Crunchyroll.Instance.CrunOptions.HistoryPageProperties.SelectedView = currentViewType;
-            Crunchyroll.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
+        if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null){
+            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.ScaleValue = ScaleValue;
+            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedView = currentViewType;
+            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
         } else{
-            Crunchyroll.Instance.CrunOptions.HistoryPageProperties = new HistoryPageProperties(){ ScaleValue = ScaleValue, SelectedView = currentViewType, SelectedSorting = currentSortingType };
+            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties = new HistoryPageProperties(){ ScaleValue = ScaleValue, SelectedView = currentViewType, SelectedSorting = currentSortingType };
         }
 
         CfgManager.WriteSettingsToFile();
@@ -155,9 +156,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     partial void OnSelectedSortingChanged(SortingListElement? oldValue, SortingListElement? newValue){
         if (newValue == null){
-            if (Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null){
-                Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending = !Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending;
-                SortDir = Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending;
+            if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null){
+                CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.Ascending = !CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.Ascending;
+                SortDir = CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.Ascending;
             }
 
             Dispatcher.UIThread.InvokeAsync(() => {
@@ -169,8 +170,8 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         if (newValue.SelectedSorting != null){
             currentSortingType = newValue.SelectedSorting;
-            if (Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null) Crunchyroll.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
-            Crunchyroll.Instance.CrHistory.SortItems();
+            if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null) CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
+            CrunchyrollManager.Instance.History.SortItems();
         } else{
             Console.Error.WriteLine("Invalid viewtype selected");
         }
@@ -211,12 +212,12 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
 
     partial void OnSelectedSeriesChanged(HistorySeries value){
-        Crunchyroll.Instance.SelectedSeries = value;
+        CrunchyrollManager.Instance.SelectedSeries = value;
 
         NavToSeries();
 
-        if (!string.IsNullOrEmpty(value.SonarrSeriesId) && Crunchyroll.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
-            Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
+        if (!string.IsNullOrEmpty(value.SonarrSeriesId) && CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
+            CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
         }
 
 
@@ -225,9 +226,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public void RemoveSeries(string? seriesId){
-        HistorySeries? objectToRemove = Crunchyroll.Instance.HistoryList.ToList().Find(se => se.SeriesId == seriesId) ?? null;
+        HistorySeries? objectToRemove = CrunchyrollManager.Instance.HistoryList.ToList().Find(se => se.SeriesId == seriesId) ?? null;
         if (objectToRemove != null){
-            Crunchyroll.Instance.HistoryList.Remove(objectToRemove);
+            CrunchyrollManager.Instance.HistoryList.Remove(objectToRemove);
             Items.Remove(objectToRemove);
             CfgManager.UpdateHistoryFile();
         }
@@ -260,7 +261,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         FetchingData = false;
         RaisePropertyChanged(nameof(FetchingData));
-        Crunchyroll.Instance.CrHistory.SortItems();
+        CrunchyrollManager.Instance.History.SortItems();
     }
 
     [RelayCommand]

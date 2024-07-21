@@ -1,6 +1,7 @@
 ﻿using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using FluentAvalonia.UI.Controls;
@@ -31,7 +32,7 @@ public partial class ContentDialogInputLoginViewModel : ViewModelBase{
 
     private async void LoginButton(ContentDialog sender, ContentDialogButtonClickEventArgs args){
         dialog.PrimaryButtonClick -= LoginButton;
-        await Crunchyroll.Instance.CrAuth.Auth(new AuthData{Password = Password,Username = Email});
+        await CrunchyrollManager.Instance.CrAuth.Auth(new AuthData{Password = Password,Username = Email});
         accountPageViewModel.UpdatetProfile();
     }
 

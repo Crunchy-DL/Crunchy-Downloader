@@ -15,6 +15,7 @@ using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.CustomList;
 using CRD.Utils.Sonarr;
@@ -327,7 +328,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
             DefaultSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
         }
 
-        CrDownloadOptions options = Crunchyroll.Instance.CrunOptions;
+        CrDownloadOptions options = CrunchyrollManager.Instance.CrunOptions;
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
 
@@ -337,7 +338,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         ComboBoxItem? historyLang = HistoryLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.HistoryLang) ?? null;
         SelectedHistoryLang = historyLang ?? HistoryLangList[0];
 
-        ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
+        ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == Languages.Locale2language(options.Hslang).CrLocale) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
 
         ComboBoxItem? defaultDubLang = DefaultDubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.DefaultAudio ?? "")) ?? null;
@@ -441,62 +442,62 @@ public partial class SettingsPageViewModel : ViewModelBase{
             return;
         }
         
-        Crunchyroll.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
-        Crunchyroll.Instance.CrunOptions.VideoTitle = FileTitle;
-        Crunchyroll.Instance.CrunOptions.Novids = !DownloadVideo;
-        Crunchyroll.Instance.CrunOptions.Noaudio = !DownloadAudio;
-        Crunchyroll.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
-        Crunchyroll.Instance.CrunOptions.Chapters = DownloadChapters;
-        Crunchyroll.Instance.CrunOptions.Mp4 = MuxToMp4;
-        Crunchyroll.Instance.CrunOptions.SyncTiming = SyncTimings;
-        Crunchyroll.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
-        Crunchyroll.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0),0,10);
-        Crunchyroll.Instance.CrunOptions.FileName = FileName;
-        Crunchyroll.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs; 
-        Crunchyroll.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0),0,1000000000);
-        Crunchyroll.Instance.CrunOptions.SimultaneousDownloads =  Math.Clamp((int)(SimultaneousDownloads ?? 0),1,10);
+        CrunchyrollManager.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
+        CrunchyrollManager.Instance.CrunOptions.VideoTitle = FileTitle;
+        CrunchyrollManager.Instance.CrunOptions.Novids = !DownloadVideo;
+        CrunchyrollManager.Instance.CrunOptions.Noaudio = !DownloadAudio;
+        CrunchyrollManager.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
+        CrunchyrollManager.Instance.CrunOptions.Chapters = DownloadChapters;
+        CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
+        CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
+        CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
+        CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0),0,10);
+        CrunchyrollManager.Instance.CrunOptions.FileName = FileName;
+        CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs; 
+        CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0),0,1000000000);
+        CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads =  Math.Clamp((int)(SimultaneousDownloads ?? 0),1,10);
 
-        Crunchyroll.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
+        CrunchyrollManager.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
         List<string> softSubs = new List<string>();
         foreach (var listBoxItem in SelectedSubLang){
             softSubs.Add(listBoxItem.Content + "");
         }
 
-        Crunchyroll.Instance.CrunOptions.DlSubs = softSubs;
+        CrunchyrollManager.Instance.CrunOptions.DlSubs = softSubs;
 
         string descLang = SelectedDescriptionLang.Content + "";
 
-        Crunchyroll.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : Crunchyroll.Instance.DefaultLocale;
+        CrunchyrollManager.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : CrunchyrollManager.Instance.DefaultLocale;
 
         string historyLang = SelectedHistoryLang.Content + "";
 
-        Crunchyroll.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : Crunchyroll.Instance.DefaultLocale;
+        CrunchyrollManager.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : CrunchyrollManager.Instance.DefaultLocale;
 
         string hslang = SelectedHSLang.Content + "";
 
-        Crunchyroll.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;
+        CrunchyrollManager.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;
 
-        Crunchyroll.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
-        Crunchyroll.Instance.CrunOptions.DefaultSub = SelectedDefaultSubLang.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.DefaultSub = SelectedDefaultSubLang.Content + "";
 
 
-        Crunchyroll.Instance.CrunOptions.StreamEndpoint = SelectedStreamEndpoint.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.StreamEndpoint = SelectedStreamEndpoint.Content + "";
 
         List<string> dubLangs = new List<string>();
         foreach (var listBoxItem in SelectedDubLang){
             dubLangs.Add(listBoxItem.Content + "");
         }
 
-        Crunchyroll.Instance.CrunOptions.DubLang = dubLangs;
+        CrunchyrollManager.Instance.CrunOptions.DubLang = dubLangs;
         
-        Crunchyroll.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
-        Crunchyroll.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
-        Crunchyroll.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
 
-        Crunchyroll.Instance.CrunOptions.AccentColor = _faTheme.CustomAccentColor.ToString();
+        CrunchyrollManager.Instance.CrunOptions.AccentColor = _faTheme.CustomAccentColor.ToString();
 
-        Crunchyroll.Instance.CrunOptions.History = History;
+        CrunchyrollManager.Instance.CrunOptions.History = History;
 
         var props = new SonarrProperties();
 
@@ -513,23 +514,23 @@ public partial class SettingsPageViewModel : ViewModelBase{
         props.ApiKey = SonarrApiKey;
 
 
-        Crunchyroll.Instance.CrunOptions.SonarrProperties = props;
+        CrunchyrollManager.Instance.CrunOptions.SonarrProperties = props;
 
-        Crunchyroll.Instance.CrunOptions.LogMode = LogMode;
+        CrunchyrollManager.Instance.CrunOptions.LogMode = LogMode;
 
         List<string> mkvmergeParams = new List<string>();
         foreach (var mkvmergeParam in MkvMergeOptions){
             mkvmergeParams.Add(mkvmergeParam.ParamValue);
         }
 
-        Crunchyroll.Instance.CrunOptions.MkvmergeOptions = mkvmergeParams;
+        CrunchyrollManager.Instance.CrunOptions.MkvmergeOptions = mkvmergeParams;
 
         List<string> ffmpegParams = new List<string>();
         foreach (var ffmpegParam in FfmpegOptions){
             ffmpegParams.Add(ffmpegParam.ParamValue);
         }
 
-        Crunchyroll.Instance.CrunOptions.FfmpegOptions = ffmpegParams;
+        CrunchyrollManager.Instance.CrunOptions.FfmpegOptions = ffmpegParams;
 
         CfgManager.WriteSettingsToFile();
     }
@@ -604,8 +605,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
             var selectedFolder = result[0];
             // Do something with the selected folder path
             Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
-            Crunchyroll.Instance.CrunOptions.DownloadDirPath = selectedFolder.Path.LocalPath;
-            DownloadDirPath = string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : Crunchyroll.Instance.CrunOptions.DownloadDirPath;
+            CrunchyrollManager.Instance.CrunOptions.DownloadDirPath = selectedFolder.Path.LocalPath;
+            DownloadDirPath = string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : CrunchyrollManager.Instance.CrunOptions.DownloadDirPath;
             CfgManager.WriteSettingsToFile();
         }
     }

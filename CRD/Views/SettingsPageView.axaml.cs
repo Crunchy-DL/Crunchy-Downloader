@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Sonarr;
 using CRD.ViewModels;
 
@@ -16,7 +17,7 @@ public partial class SettingsPageView : UserControl{
 
     private void OnUnloaded(object? sender, RoutedEventArgs e){
         if (DataContext is SettingsPageViewModel viewModel){
-            Crunchyroll.Instance.RefreshSonarr();
+            SonarrClient.Instance.RefreshSonarr();
         }
     }
 }

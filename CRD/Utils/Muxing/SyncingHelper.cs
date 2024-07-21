@@ -135,7 +135,7 @@ public class SyncingHelper{
 
     public static bool AreFramesSimilar(string imagePath1, string imagePath2, double ssimThreshold){
         double ssim = ComputeSSIM(imagePath1, imagePath2, 256, 256);
-        Console.WriteLine($"SSIM: {ssim}");
+        // Console.WriteLine($"SSIM: {ssim}");
         return ssim > ssimThreshold;
     }
 

@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Sonarr.Models;
 using CRD.Views;
 using Newtonsoft.Json;
@@ -22,6 +23,8 @@ public class SonarrClient{
 
     private SonarrProperties properties;
 
+    public List<SonarrSeries> SonarrSeries =[];
+    
     #region Singelton
 
     private static SonarrClient? _instance;
@@ -47,8 +50,16 @@ public class SonarrClient{
         httpClient = new HttpClient();
     }
 
+    public async void RefreshSonarr(){
+        await CheckSonarrSettings();
+        if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
+            SonarrSeries = await GetSeries();
+            CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(true);
+        }
+    }
+    
     public void SetApiUrl(){
-        if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null) properties = Crunchyroll.Instance.CrunOptions.SonarrProperties;
+        if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null) properties = CrunchyrollManager.Instance.CrunOptions.SonarrProperties;
 
         if (properties != null ){
             apiUrl = $"http{(properties.UseSsl ? "s" : "")}://{(!string.IsNullOrEmpty(properties.Host) ? properties.Host : "localhost")}:{properties.Port}{(properties.UrlBase ?? "")}/api";
@@ -59,10 +70,10 @@ public class SonarrClient{
        
         SetApiUrl();
 
-        if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null){
-            Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled = false;
+        if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
+            CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled = false;
         } else{
-            Crunchyroll.Instance.CrunOptions.SonarrProperties = new SonarrProperties(){SonarrEnabled = false};
+            CrunchyrollManager.Instance.CrunOptions.SonarrProperties = new SonarrProperties(){SonarrEnabled = false};
             return;
         }
         
@@ -74,10 +85,10 @@ public class SonarrClient{
         try{
             response = await httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
-            if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null) Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled = true; 
+            if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null) CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled = true; 
         } catch (Exception ex){
             Debug.WriteLine($"[ERROR] [SonarrClient.GetJson] Endpoint URL: '{apiUrl}', {ex}");
-            if (Crunchyroll.Instance.CrunOptions.SonarrProperties != null) Crunchyroll.Instance.CrunOptions.SonarrProperties.SonarrEnabled = false;
+            if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null) CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled = false;
         } 
 
         

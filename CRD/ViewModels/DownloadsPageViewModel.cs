@@ -8,6 +8,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
 
 namespace CRD.ViewModels;
@@ -20,25 +21,24 @@ public partial class DownloadsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     public bool _removeFinished;
-    
+
     public DownloadsPageViewModel(){
-        Crunchyroll.Instance.UpdateDownloadListItems();
-        Items = Crunchyroll.Instance.DownloadItemModels;
-        AutoDownload = Crunchyroll.Instance.CrunOptions.AutoDownload;
-        RemoveFinished = Crunchyroll.Instance.CrunOptions.RemoveFinishedDownload;
+        QueueManager.Instance.UpdateDownloadListItems();
+        Items = QueueManager.Instance.DownloadItemModels;
+        AutoDownload = CrunchyrollManager.Instance.CrunOptions.AutoDownload;
+        RemoveFinished = CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload;
     }
 
     partial void OnAutoDownloadChanged(bool value){
-        Crunchyroll.Instance.CrunOptions.AutoDownload = value;
+        CrunchyrollManager.Instance.CrunOptions.AutoDownload = value;
         if (value){
-            Crunchyroll.Instance.UpdateDownloadListItems();
+            QueueManager.Instance.UpdateDownloadListItems();
         }
     }
 
     partial void OnRemoveFinishedChanged(bool value){
-        Crunchyroll.Instance.CrunOptions.RemoveFinishedDownload = value;
+        CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload = value;
     }
-    
 }
 
 public partial class DownloadItemModel : INotifyPropertyChanged{
@@ -81,11 +81,6 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     private string GetDubString(){
-        var hardSubs = Crunchyroll.Instance.CrunOptions.Hslang != "none" ? "Hardsub: " + Crunchyroll.Instance.CrunOptions.Hslang : "";
-        if (hardSubs != string.Empty){
-            return hardSubs;
-        }
-
         var dubs = "Dub: ";
 
         if (epMeta.SelectedDubs != null)
@@ -97,8 +92,13 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     private string GetSubtitleString(){
-        var hardSubs = Crunchyroll.Instance.CrunOptions.Hslang != "none" ? "Hardsub: " + Crunchyroll.Instance.CrunOptions.Hslang : "";
+        var hardSubs = CrunchyrollManager.Instance.CrunOptions.Hslang != "none" ? "Hardsub: " : "";
         if (hardSubs != string.Empty){
+            var locale = Languages.Locale2language(CrunchyrollManager.Instance.CrunOptions.Hslang).CrLocale;
+            if (epMeta.AvailableSubs != null && epMeta.AvailableSubs.Contains(locale)){
+                hardSubs += locale + " ";
+            }
+
             return hardSubs;
         }
 
@@ -181,15 +181,15 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             epMeta.DownloadProgress.IsDownloading = true;
             Paused = !epMeta.Paused && !isDownloading || epMeta.Paused;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
-            await Crunchyroll.Instance.DownloadEpisode(epMeta, Crunchyroll.Instance.CrunOptions);
+            await CrunchyrollManager.Instance.DownloadEpisode(epMeta, CrunchyrollManager.Instance.CrunOptions);
         }
     }
 
     [RelayCommand]
     public void RemoveFromQueue(){
-        CrunchyEpMeta? downloadItem = Crunchyroll.Instance.Queue.FirstOrDefault(e => e.Equals(epMeta)) ?? null;
+        CrunchyEpMeta? downloadItem = QueueManager.Instance.Queue.FirstOrDefault(e => e.Equals(epMeta)) ?? null;
         if (downloadItem != null){
-            Crunchyroll.Instance.Queue.Remove(downloadItem);
+            QueueManager.Instance.Queue.Remove(downloadItem);
         }
     }
 

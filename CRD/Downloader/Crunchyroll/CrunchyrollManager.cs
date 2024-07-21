@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -13,62 +11,27 @@ using System.Threading.Tasks;
 using System.Xml;
 using Avalonia.Media;
 using CRD.Utils;
-using CRD.Utils.CustomList;
 using CRD.Utils.DRM;
 using CRD.Utils.Files;
 using CRD.Utils.HLS;
 using CRD.Utils.Muxing;
 using CRD.Utils.Sonarr;
-using CRD.Utils.Sonarr.Models;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
-using CRD.ViewModels;
 using CRD.Views;
-using HtmlAgilityPack;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 using LanguageItem = CRD.Utils.Structs.LanguageItem;
 
-namespace CRD.Downloader;
+namespace CRD.Downloader.Crunchyroll;
 
-public class Crunchyroll{
+public class CrunchyrollManager{
     public CrToken? Token;
     public CrCmsToken? CmsToken;
 
     public CrProfile Profile = new();
     public CrDownloadOptions CrunOptions;
-
-    #region Download Variables
-
-    public RefreshableObservableCollection<CrunchyEpMeta> Queue = new RefreshableObservableCollection<CrunchyEpMeta>();
-    public ObservableCollection<DownloadItemModel> DownloadItemModels = new ObservableCollection<DownloadItemModel>();
-    public int ActiveDownloads;
-
-    #endregion
-
-
-    #region Calendar Variables
-
-    private Dictionary<string, CalendarWeek> calendar = new();
-
-    private Dictionary<string, string> calendarLanguage = new(){
-        { "en-us", "https://www.crunchyroll.com/simulcastcalendar" },
-        { "es", "https://www.crunchyroll.com/es/simulcastcalendar" },
-        { "es-es", "https://www.crunchyroll.com/es-es/simulcastcalendar" },
-        { "pt-br", "https://www.crunchyroll.com/pt-br/simulcastcalendar" },
-        { "pt-pt", "https://www.crunchyroll.com/pt-pt/simulcastcalendar" },
-        { "fr", "https://www.crunchyroll.com/fr/simulcastcalendar" },
-        { "de", "https://www.crunchyroll.com/de/simulcastcalendar" },
-        { "ar", "https://www.crunchyroll.com/ar/simulcastcalendar" },
-        { "it", "https://www.crunchyroll.com/it/simulcastcalendar" },
-        { "ru", "https://www.crunchyroll.com/ru/simulcastcalendar" },
-        { "hi", "https://www.crunchyroll.com/hi/simulcastcalendar" },
-    };
-
-    #endregion
-
-
+    
     #region History Variables
 
     public ObservableCollection<HistorySeries> HistoryList = new();
@@ -76,9 +39,7 @@ public class Crunchyroll{
     public HistorySeries SelectedSeries = new HistorySeries{
         Seasons =[]
     };
-
-    public List<SonarrSeries> SonarrSeries =[];
-
+    
     #endregion
 
 
@@ -93,19 +54,19 @@ public class Crunchyroll{
     public CrAuth CrAuth;
     public CrEpisode CrEpisode;
     public CrSeries CrSeries;
-    public History CrHistory;
+    public History History;
 
     #region Singelton
 
-    private static Crunchyroll? _instance;
+    private static CrunchyrollManager? _instance;
     private static readonly object Padlock = new();
 
-    public static Crunchyroll Instance{
+    public static CrunchyrollManager Instance{
         get{
             if (_instance == null){
                 lock (Padlock){
                     if (_instance == null){
-                        _instance = new Crunchyroll();
+                        _instance = new CrunchyrollManager();
                     }
                 }
             }
@@ -116,9 +77,8 @@ public class Crunchyroll{
 
     #endregion
 
-    public Crunchyroll(){
+    public CrunchyrollManager(){
         CrunOptions = new CrDownloadOptions();
-        Queue.CollectionChanged += UpdateItemListOnRemove;
     }
 
     public void InitOptions(){
@@ -159,7 +119,7 @@ public class Crunchyroll{
         CrAuth = new CrAuth();
         CrEpisode = new CrEpisode();
         CrSeries = new CrSeries();
-        CrHistory = new History();
+        History = new History();
 
         Profile = new CrProfile{
             Username = "???",
@@ -204,267 +164,15 @@ public class Crunchyroll{
                     HistoryList =[];
                 }
 
-                RefreshSonarr();
-            }
-        }
-    }
-
-    public async void RefreshSonarr(){
-        await SonarrClient.Instance.CheckSonarrSettings();
-        if (CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
-            SonarrSeries = await SonarrClient.Instance.GetSeries();
-            CrHistory.MatchHistorySeriesWithSonarr(true);
-        }
-    }
-
-    private void UpdateItemListOnRemove(object? sender, NotifyCollectionChangedEventArgs e){
-        if (e.Action == NotifyCollectionChangedAction.Remove){
-            if (e.OldItems != null)
-                foreach (var eOldItem in e.OldItems){
-                    var downloadItem = DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(eOldItem));
-                    if (downloadItem != null){
-                        DownloadItemModels.Remove(downloadItem);
-                    } else{
-                        Console.Error.WriteLine("Failed to Remove Episode from list");
-                    }
-                }
-        }
-
-        UpdateDownloadListItems();
-    }
-
-    public void UpdateDownloadListItems(){
-        var list = Queue;
-
-        foreach (CrunchyEpMeta crunchyEpMeta in list){
-            var downloadItem = DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(crunchyEpMeta));
-            if (downloadItem != null){
-                downloadItem.Refresh();
-            } else{
-                downloadItem = new DownloadItemModel(crunchyEpMeta);
-                downloadItem.LoadImage();
-                DownloadItemModels.Add(downloadItem);
-            }
-
-            if (downloadItem is{ isDownloading: false, Error: false } && CrunOptions.AutoDownload && ActiveDownloads < CrunOptions.SimultaneousDownloads){
-                downloadItem.StartDownload();
+                SonarrClient.Instance.RefreshSonarr();
             }
         }
     }
 
 
-    public async Task<CalendarWeek> GetCalendarForDate(string weeksMondayDate, bool forceUpdate){
-        if (!forceUpdate && calendar.TryGetValue(weeksMondayDate, out var forDate)){
-            return forDate;
-        }
-
-        var request = calendarLanguage.ContainsKey(CrunOptions.SelectedCalendarLanguage ?? "de")
-            ? HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null)
-            : HttpClientReq.CreateRequestMessage($"{calendarLanguage["en-us"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null);
-
-
-        request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
-        request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
-
-        var response = await HttpClientReq.Instance.SendHttpRequest(request);
-
-        CalendarWeek week = new CalendarWeek();
-        week.CalendarDays = new List<CalendarDay>();
-
-        // Load the HTML content from a file
-        HtmlDocument doc = new HtmlDocument();
-        doc.LoadHtml(WebUtility.HtmlDecode(response.ResponseContent));
-
-        // Select each 'li' element with class 'day'
-        var dayNodes = doc.DocumentNode.SelectNodes("//li[contains(@class, 'day')]");
-
-        if (dayNodes != null){
-            foreach (var day in dayNodes){
-                // Extract the date and day name
-                var date = day.SelectSingleNode(".//time[@datetime]")?.GetAttributeValue("datetime", "No date");
-                DateTime dayDateTime = DateTime.Parse(date, null, DateTimeStyles.RoundtripKind);
-
-                if (week.FirstDayOfWeek == null){
-                    week.FirstDayOfWeek = dayDateTime;
-                    week.FirstDayOfWeekString = dayDateTime.ToString("yyyy-MM-dd");
-                }
-
-                var dayName = day.SelectSingleNode(".//h1[@class='day-name']/time")?.InnerText.Trim();
-
-                CalendarDay calDay = new CalendarDay();
-
-                calDay.CalendarEpisodes = new List<CalendarEpisode>();
-                calDay.DayName = dayName;
-                calDay.DateTime = dayDateTime;
-
-                // Iterate through each episode listed under this day
-                var episodes = day.SelectNodes(".//article[contains(@class, 'release')]");
-                if (episodes != null){
-                    foreach (var episode in episodes){
-                        var episodeTimeStr = episode.SelectSingleNode(".//time[contains(@class, 'available-time')]")?.GetAttributeValue("datetime", null);
-                        DateTime episodeTime = DateTime.Parse(episodeTimeStr, null, DateTimeStyles.RoundtripKind);
-                        var hasPassed = DateTime.Now > episodeTime;
-
-                        var episodeName = episode.SelectSingleNode(".//h1[contains(@class, 'episode-name')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
-                        var seasonLink = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.GetAttributeValue("href", "No link");
-                        var episodeLink = episode.SelectSingleNode(".//a[contains(@class, 'available-episode-link')]")?.GetAttributeValue("href", "No link");
-                        var thumbnailUrl = episode.SelectSingleNode(".//img[contains(@class, 'thumbnail')]")?.GetAttributeValue("src", "No image");
-                        var isPremiumOnly = episode.SelectSingleNode(".//svg[contains(@class, 'premium-flag')]") != null;
-                        var isPremiere = episode.SelectSingleNode(".//div[contains(@class, 'premiere-flag')]") != null;
-                        var seasonName = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
-                        var episodeNumber = episode.SelectSingleNode(".//meta[contains(@itemprop, 'episodeNumber')]")?.GetAttributeValue("content", "?");
-
-                        CalendarEpisode calEpisode = new CalendarEpisode();
-
-                        calEpisode.DateTime = episodeTime;
-                        calEpisode.HasPassed = hasPassed;
-                        calEpisode.EpisodeName = episodeName;
-                        calEpisode.SeriesUrl = seasonLink;
-                        calEpisode.EpisodeUrl = episodeLink;
-                        calEpisode.ThumbnailUrl = thumbnailUrl;
-                        calEpisode.IsPremiumOnly = isPremiumOnly;
-                        calEpisode.IsPremiere = isPremiere;
-                        calEpisode.SeasonName = seasonName;
-                        calEpisode.EpisodeNumber = episodeNumber;
-
-                        calDay.CalendarEpisodes.Add(calEpisode);
-                    }
-                }
-
-                week.CalendarDays.Add(calDay);
-            }
-        } else{
-            Console.Error.WriteLine("No days found in the HTML document.");
-        }
-
-        calendar[weeksMondayDate] = week;
-
-
-        return week;
-    }
-
-    public async Task AddEpisodeToQue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false){
-        await CrAuth.RefreshToken(true);
-
-        var episodeL = await CrEpisode.ParseEpisodeById(epId, crLocale);
-
-
-        if (episodeL != null){
-            if (episodeL.Value.IsPremiumOnly && !Profile.HasPremium){
-                MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
-                return;
-            }
-
-            var sList = await CrEpisode.EpisodeData((CrunchyEpisode)episodeL, updateHistory);
-
-            (HistoryEpisode? historyEpisode, List<string> dublist, string downloadDirPath) historyEpisode = (null, [], "");
-
-            if (CrunOptions.History){
-                var episode = sList.EpisodeAndLanguages.Items.First();
-                historyEpisode = CrHistory.GetHistoryEpisodeWithDubListAndDownloadDir(episode.SeriesId, episode.SeasonId, episode.Id);
-                if (historyEpisode.dublist.Count > 0){
-                    dubLang = historyEpisode.dublist;
-                }
-            }
-
-
-            var selected = CrEpisode.EpisodeMeta(sList, dubLang);
-
-            if (CrunOptions.IncludeVideoDescription){
-                if (selected.Data is{ Count: > 0 }){
-                    var episode = await CrEpisode.ParseEpisodeById(selected.Data.First().MediaId, string.IsNullOrEmpty(CrunOptions.DescriptionLang) ? DefaultLocale : CrunOptions.DescriptionLang, true);
-                    selected.Description = episode?.Description ?? selected.Description;
-                }
-            }
-
-            if (selected.Data is{ Count: > 0 }){
-                if (CrunOptions.History){
-                    // var historyEpisode = CrHistory.GetHistoryEpisodeWithDownloadDir(selected.ShowId, selected.SeasonId, selected.Data.First().MediaId);
-                    if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
-                        if (historyEpisode.historyEpisode != null){
-                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
-                                selected.EpisodeNumber = historyEpisode.historyEpisode.SonarrEpisodeNumber;
-                            }
-
-                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrSeasonNumber)){
-                                selected.Season = historyEpisode.historyEpisode.SonarrSeasonNumber;
-                            }
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
-                        selected.DownloadPath = historyEpisode.downloadDirPath;
-                    }
-                }
-
-                selected.DownloadSubs = CrunOptions.DlSubs;
-                Queue.Add(selected);
-
-
-                if (selected.Data.Count < dubLang.Count){
-                    Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
-                    MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
-                } else{
-                    Console.WriteLine("Added Episode to Queue");
-                    MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
-                }
-            } else{
-                Console.WriteLine("Episode couldn't be added to Queue");
-                MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
-            }
-        }
-    }
-
-    public async Task AddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
-        var selected = CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
-
-        bool failed = false;
-
-        foreach (var crunchyEpMeta in selected.Values.ToList()){
-            if (crunchyEpMeta.Data?.First().Playback != null){
-                if (CrunOptions.History){
-                    var historyEpisode = CrHistory.GetHistoryEpisodeWithDownloadDir(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
-                    if (CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
-                        if (historyEpisode.historyEpisode != null){
-                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
-                                crunchyEpMeta.EpisodeNumber = historyEpisode.historyEpisode.SonarrEpisodeNumber;
-                            }
-
-                            if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrSeasonNumber)){
-                                crunchyEpMeta.Season = historyEpisode.historyEpisode.SonarrSeasonNumber;
-                            }
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(historyEpisode.downloadDirPath)){
-                        crunchyEpMeta.DownloadPath = historyEpisode.downloadDirPath;
-                    }
-                }
-
-                if (CrunOptions.IncludeVideoDescription){
-                    if (crunchyEpMeta.Data is{ Count: > 0 }){
-                        var episode = await CrEpisode.ParseEpisodeById(crunchyEpMeta.Data.First().MediaId, string.IsNullOrEmpty(CrunOptions.DescriptionLang) ? DefaultLocale : CrunOptions.DescriptionLang, true);
-                        crunchyEpMeta.Description = episode?.Description ?? crunchyEpMeta.Description;
-                    }
-                }
-
-                crunchyEpMeta.DownloadSubs = CrunOptions.DlSubs;
-                Queue.Add(crunchyEpMeta);
-            } else{
-                failed = true;
-            }
-        }
-
-        if (failed){
-            MainWindow.Instance.ShowError("Not all episodes could be added – make sure that you are signed in with an account that has an active premium subscription?");
-        } else{
-            MessageBus.Current.SendMessage(new ToastMessage($"Added episodes to the queue", ToastType.Information, 1));
-        }
-    }
-
-
+    
     public async Task<bool> DownloadEpisode(CrunchyEpMeta data, CrDownloadOptions options){
-        ActiveDownloads++;
+        QueueManager.Instance.ActiveDownloads++;
 
         data.DownloadProgress = new DownloadProgress(){
             IsDownloading = true,
@@ -474,11 +182,11 @@ public class Crunchyroll{
             DownloadSpeed = 0,
             Doing = "Starting"
         };
-        Queue.Refresh();
+        QueueManager.Instance.Queue.Refresh();
         var res = await DownloadMediaList(data, options);
 
         if (res.Error){
-            ActiveDownloads--;
+            QueueManager.Instance.ActiveDownloads--;
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = false,
                 Error = true,
@@ -487,7 +195,7 @@ public class Crunchyroll{
                 DownloadSpeed = 0,
                 Doing = "Download Error" + (!string.IsNullOrEmpty(res.ErrorText) ? " - " + res.ErrorText : ""),
             };
-            Queue.Refresh();
+            QueueManager.Instance.Queue.Refresh();
             return false;
         }
 
@@ -500,7 +208,7 @@ public class Crunchyroll{
                 Doing = "Muxing"
             };
 
-            Queue.Refresh();
+            QueueManager.Instance.Queue.Refresh();
 
             await MuxStreams(res.Data,
                 new CrunchyMuxOptions{
@@ -532,17 +240,17 @@ public class Crunchyroll{
             };
 
             if (CrunOptions.RemoveFinishedDownload){
-                Queue.Remove(data);
+                QueueManager.Instance.Queue.Remove(data);
             }
         } else{
             Console.WriteLine("Skipping mux");
         }
 
-        ActiveDownloads--;
-        Queue.Refresh();
+        QueueManager.Instance.ActiveDownloads--;
+        QueueManager.Instance.Queue.Refresh();
 
         if (CrunOptions.History && data.Data != null && data.Data.Count > 0){
-            CrHistory.SetAsDownloaded(data.ShowId, data.SeasonId, data.Data.First().MediaId);
+            History.SetAsDownloaded(data.ShowId, data.SeasonId, data.Data.First().MediaId);
         }
 
 
@@ -1190,7 +898,7 @@ public class Crunchyroll{
                                         DownloadSpeed = 0,
                                         Doing = "Decrypting"
                                     };
-                                    Queue.Refresh();
+                                    QueueManager.Instance.Queue.Refresh();
 
                                     var assetIdRegexMatch = Regex.Match(chosenVideoSegments.segments[0].uri, @"/assets/(?:p/)?([^_,]+)");
                                     var assetId = assetIdRegexMatch.Success ? assetIdRegexMatch.Groups[1].Value : null;
@@ -1272,7 +980,7 @@ public class Crunchyroll{
                                                 DownloadSpeed = 0,
                                                 Doing = "Decrypting video"
                                             };
-                                            Queue.Refresh();
+                                            QueueManager.Instance.Queue.Refresh();
                                             var decryptVideo = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo, tempTsFileWorkDir);
 
                                             if (!decryptVideo.IsOk){
@@ -1338,7 +1046,7 @@ public class Crunchyroll{
                                                 DownloadSpeed = 0,
                                                 Doing = "Decrypting audio"
                                             };
-                                            Queue.Refresh();
+                                            QueueManager.Instance.Queue.Refresh();
                                             var decryptAudio = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio, tempTsFileWorkDir);
 
                                             if (!decryptAudio.IsOk){

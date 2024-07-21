@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
 using YamlDotNet.Core;
@@ -139,7 +140,7 @@ public class CfgManager{
             }
         }
 
-        var yaml = serializer.Serialize(Crunchyroll.Instance.CrunOptions);
+        var yaml = serializer.Serialize(CrunchyrollManager.Instance.CrunOptions);
 
         // Write to file
         File.WriteAllText(PathCrDownloadOptions, yaml);
@@ -173,7 +174,7 @@ public class CfgManager{
 
         var propertiesPresentInYaml = GetTopLevelPropertiesInYaml(input);
         var loadedOptions = deserializer.Deserialize<CrDownloadOptions>(new StringReader(input));
-        var instanceOptions = Crunchyroll.Instance.CrunOptions;
+        var instanceOptions = CrunchyrollManager.Instance.CrunOptions;
 
         foreach (PropertyInfo property in typeof(CrDownloadOptions).GetProperties()){
             var yamlMemberAttribute = property.GetCustomAttribute<YamlMemberAttribute>();
@@ -207,7 +208,7 @@ public class CfgManager{
     }
 
     public static void UpdateHistoryFile(){
-        WriteJsonToFile(PathCrHistory, Crunchyroll.Instance.HistoryList);
+        WriteJsonToFile(PathCrHistory, CrunchyrollManager.Instance.HistoryList);
     }
 
     private static object fileLock = new object();

@@ -1,24 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Views;
-using DynamicData;
-using Newtonsoft.Json;
 using ReactiveUI;
 
-namespace CRD.Downloader;
+namespace CRD.Downloader.Crunchyroll;
 
 public class CrSeries(){
-    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+    private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task<List<CrunchyEpMeta>> DownloadFromSeriesId(string id, CrunchyMultiDownload data){
         var series = await ListSeriesId(id, "", data);
@@ -57,7 +53,7 @@ public class CrSeries(){
                 }
 
                 if (crunInstance.CrunOptions.History){
-                    var dubLangList = crunInstance.CrHistory.GetDubList(item.SeriesId, item.SeasonId);
+                    var dubLangList = crunInstance.History.GetDubList(item.SeriesId, item.SeasonId);
                     if (dubLangList.Count > 0){
                         dubLang = dubLangList;
                     }
@@ -164,7 +160,7 @@ public class CrSeries(){
                 var seasonData = await GetSeasonDataById(s.Id, "");
                 if (seasonData.Data != null){
                     if (crunInstance.CrunOptions.History){
-                        crunInstance.CrHistory.UpdateWithSeasonData(seasonData,false);
+                        crunInstance.History.UpdateWithSeasonData(seasonData,false);
                     }
 
                     foreach (var episode in seasonData.Data){
@@ -214,8 +210,8 @@ public class CrSeries(){
         if (crunInstance.CrunOptions.History){
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == id);
             if (historySeries != null){
-                crunInstance.CrHistory.MatchHistorySeriesWithSonarr(false);
-                await crunInstance.CrHistory.MatchHistoryEpisodesWithSonarr(false, historySeries);
+                crunInstance.History.MatchHistorySeriesWithSonarr(false);
+                await crunInstance.History.MatchHistoryEpisodesWithSonarr(false, historySeries);
                 CfgManager.UpdateHistoryFile();
             }
         }

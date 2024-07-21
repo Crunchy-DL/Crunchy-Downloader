@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Threading.Tasks;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs.History;
@@ -66,7 +67,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
     }
 
     public async Task DownloadEpisode(){
-        await Crunchyroll.Instance.AddEpisodeToQue(EpisodeId, string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang,
-            Crunchyroll.Instance.CrunOptions.DubLang);
+        await QueueManager.Instance.CRAddEpisodeToQue(EpisodeId, string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
+            CrunchyrollManager.Instance.CrunOptions.DubLang);
     }
 }

@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
@@ -45,28 +46,28 @@ public partial class AccountPageViewModel : ViewModelBase{
     }
 
     public void UpdatetProfile(){
-        ProfileName = Crunchyroll.Instance.Profile.Username; // Default or fetched user name
-        LoginLogoutText = Crunchyroll.Instance.Profile.Username == "???" ? "Login" : "Logout"; // Default state
-        LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" + Crunchyroll.Instance.Profile.Avatar);
+        ProfileName = CrunchyrollManager.Instance.Profile.Username; // Default or fetched user name
+        LoginLogoutText = CrunchyrollManager.Instance.Profile.Username == "???" ? "Login" : "Logout"; // Default state
+        LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" + CrunchyrollManager.Instance.Profile.Avatar);
 
 
-        if (Crunchyroll.Instance.Profile.Subscription != null && Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts != null){
-            if (Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.Count >= 1){
-                var sub = Crunchyroll.Instance.Profile.Subscription?.SubscriptionProducts.First();
+        if (CrunchyrollManager.Instance.Profile.Subscription != null && CrunchyrollManager.Instance.Profile.Subscription?.SubscriptionProducts != null){
+            if (CrunchyrollManager.Instance.Profile.Subscription?.SubscriptionProducts.Count >= 1){
+                var sub = CrunchyrollManager.Instance.Profile.Subscription?.SubscriptionProducts.First();
                 if (sub != null){
                     IsCancelled = sub.IsCancelled;
                 }
-            }else if (Crunchyroll.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.Count >= 1){
-                var sub = Crunchyroll.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.First();
+            }else if (CrunchyrollManager.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.Count >= 1){
+                var sub = CrunchyrollManager.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.First();
                 if (sub != null){
                     IsCancelled = !sub.AutoRenew;
                 }
-            }else if(Crunchyroll.Instance.Profile.Subscription?.NonrecurringSubscriptionProducts.Count >= 1){
+            }else if(CrunchyrollManager.Instance.Profile.Subscription?.NonrecurringSubscriptionProducts.Count >= 1){
                 IsCancelled = true;
             }
 
-            if (Crunchyroll.Instance.Profile.Subscription?.NextRenewalDate != null){
-                _targetTime = Crunchyroll.Instance.Profile.Subscription.NextRenewalDate;
+            if (CrunchyrollManager.Instance.Profile.Subscription?.NextRenewalDate != null){
+                _targetTime = CrunchyrollManager.Instance.Profile.Subscription.NextRenewalDate;
                 _timer = new DispatcherTimer{
                     Interval = TimeSpan.FromSeconds(1)
                 };
@@ -100,7 +101,7 @@ public partial class AccountPageViewModel : ViewModelBase{
 
             _ = await dialog.ShowAsync();
         } else{
-            await Crunchyroll.Instance.CrAuth.AuthAnonymous();
+            await CrunchyrollManager.Instance.CrAuth.AuthAnonymous();
             UpdatetProfile();
         }
     }

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Sonarr.Models;
@@ -16,9 +17,9 @@ using ReactiveUI;
 namespace CRD.Downloader;
 
 public class History(){
-    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+    private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
-    public async Task UpdateSeries(string seriesId, string? seasonId){
+    public async Task CRUpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
 
         CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja-JP", true);
@@ -266,11 +267,11 @@ public class History(){
                 if (seasonData.Data.First().Versions != null){
                     var version = seasonData.Data.First().Versions.Find(a => a.Original);
                     if (version.AudioLocale != seasonData.Data.First().AudioLocale){
-                        UpdateSeries(seasonData.Data.First().SeriesId, version.SeasonGuid);
+                        CRUpdateSeries(seasonData.Data.First().SeriesId, version.SeasonGuid);
                         return;
                     }
                 } else{
-                    UpdateSeries(seasonData.Data.First().SeriesId, "");
+                    CRUpdateSeries(seasonData.Data.First().SeriesId, "");
                     return;
                 }
             }
@@ -380,18 +381,18 @@ public class History(){
     }
 
     public void SortItems(){
-        var currentSortingType = Crunchyroll.Instance.CrunOptions.HistoryPageProperties?.SelectedSorting ?? SortingType.SeriesTitle;
-        var sortingDir = Crunchyroll.Instance.CrunOptions.HistoryPageProperties != null && Crunchyroll.Instance.CrunOptions.HistoryPageProperties.Ascending;
+        var currentSortingType = CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties?.SelectedSorting ?? SortingType.SeriesTitle;
+        var sortingDir = CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null && CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.Ascending;
         DateTime today = DateTime.UtcNow.Date;
         switch (currentSortingType){
             case SortingType.SeriesTitle:
                 var sortedList = sortingDir
-                    ? Crunchyroll.Instance.HistoryList.OrderByDescending(s => s.SeriesTitle).ToList()
-                    : Crunchyroll.Instance.HistoryList.OrderBy(s => s.SeriesTitle).ToList();
+                    ? CrunchyrollManager.Instance.HistoryList.OrderByDescending(s => s.SeriesTitle).ToList()
+                    : CrunchyrollManager.Instance.HistoryList.OrderBy(s => s.SeriesTitle).ToList();
 
-                Crunchyroll.Instance.HistoryList.Clear();
+                CrunchyrollManager.Instance.HistoryList.Clear();
 
-                Crunchyroll.Instance.HistoryList.AddRange(sortedList);
+                CrunchyrollManager.Instance.HistoryList.AddRange(sortedList);
 
 
                 return;
@@ -399,7 +400,7 @@ public class History(){
             case SortingType.NextAirDate:
 
                 var sortedSeriesDates = sortingDir
-                    ? Crunchyroll.Instance.HistoryList
+                    ? CrunchyrollManager.Instance.HistoryList
                         .OrderByDescending(s => {
                             var date = ParseDate(s.SonarrNextAirDate, today);
                             return date.HasValue ? date.Value : DateTime.MinValue;
@@ -408,7 +409,7 @@ public class History(){
                         .ThenBy(s => string.IsNullOrEmpty(s.SonarrNextAirDate) ? 1 : 0)
                         .ThenBy(s => s.SeriesTitle)
                         .ToList()
-                    : Crunchyroll.Instance.HistoryList
+                    : CrunchyrollManager.Instance.HistoryList
                         .OrderByDescending(s => s.SonarrNextAirDate == "Today")
                         .ThenBy(s => s.SonarrNextAirDate == "Today" ? s.SeriesTitle : null)
                         .ThenBy(s => {
@@ -418,16 +419,16 @@ public class History(){
                         .ThenBy(s => s.SeriesTitle)
                         .ToList();
 
-                Crunchyroll.Instance.HistoryList.Clear();
+                CrunchyrollManager.Instance.HistoryList.Clear();
 
-                Crunchyroll.Instance.HistoryList.AddRange(sortedSeriesDates);
+                CrunchyrollManager.Instance.HistoryList.AddRange(sortedSeriesDates);
 
 
                 return;
 
             case SortingType.HistorySeriesAddDate:
 
-                var sortedSeriesAddDates = Crunchyroll.Instance.HistoryList
+                var sortedSeriesAddDates = CrunchyrollManager.Instance.HistoryList
                     .OrderBy(s => sortingDir
                         ? -(s.HistorySeriesAddDate?.Date.Ticks ?? DateTime.MinValue.Ticks)
                         : s.HistorySeriesAddDate?.Date.Ticks ?? DateTime.MaxValue.Ticks)
@@ -435,9 +436,9 @@ public class History(){
                     .ToList();
 
 
-                Crunchyroll.Instance.HistoryList.Clear();
+                CrunchyrollManager.Instance.HistoryList.Clear();
 
-                Crunchyroll.Instance.HistoryList.AddRange(sortedSeriesAddDates);
+                CrunchyrollManager.Instance.HistoryList.AddRange(sortedSeriesAddDates);
 
                 return;
         }
@@ -668,7 +669,7 @@ public class History(){
         SonarrSeries? closestMatch = null;
         double highestSimilarity = 0.0;
 
-        Parallel.ForEach(crunInstance.SonarrSeries, series => {
+        Parallel.ForEach(SonarrClient.Instance.SonarrSeries, series => {
             double similarity = CalculateSimilarity(series.Title.ToLower(), title.ToLower());
             if (similarity > highestSimilarity){
                 highestSimilarity = similarity;

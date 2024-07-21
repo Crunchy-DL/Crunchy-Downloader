@@ -13,6 +13,7 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Views;
@@ -75,7 +76,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private async Task UpdateSearch(string value){
-        var searchResults = await Crunchyroll.Instance.CrSeries.Search(value, Crunchyroll.Instance.CrunOptions.HistoryLang);
+        var searchResults = await CrunchyrollManager.Instance.CrSeries.Search(value, CrunchyrollManager.Instance.CrunOptions.HistoryLang);
 
         var searchItems = searchResults?.Data?.First().Items;
         SearchItems.Clear();
@@ -157,7 +158,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             }
 
             if (currentSeriesList != null){
-                await Crunchyroll.Instance.AddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
+                await QueueManager.Instance.CRAddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
             }
 
 
@@ -186,10 +187,10 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 if (match.Success){
                     var locale = match.Groups[1].Value; // Capture the locale part
                     var id = match.Groups[2].Value; // Capture the ID part
-                    Crunchyroll.Instance.AddEpisodeToQue(id,
+                    QueueManager.Instance.CRAddEpisodeToQue(id,
                         string.IsNullOrEmpty(locale)
-                            ? string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang
-                            : Languages.Locale2language(locale).CrLocale, Crunchyroll.Instance.CrunOptions.DubLang, true);
+                            ? string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang
+                            : Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
                     UrlInput = "";
                     selectedEpisodes.Clear();
                     SelectedItems.Clear();
@@ -212,9 +213,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                     ButtonEnabled = false;
                     ShowLoading = true;
-                    var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(id, string.IsNullOrEmpty(locale)
-                        ? string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang
-                        : Languages.Locale2language(locale).CrLocale, new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
+                    var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(id, string.IsNullOrEmpty(locale)
+                        ? string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang
+                        : Languages.Locale2language(locale).CrLocale, new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
                     ShowLoading = false;
                     if (list != null){
                         currentSeriesList = list;
@@ -291,9 +292,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         SearchVisible = false;
         ButtonEnabled = false;
         ShowLoading = true;
-        var list = await Crunchyroll.Instance.CrSeries.ListSeriesId(value.Id,
-            string.IsNullOrEmpty(Crunchyroll.Instance.CrunOptions.HistoryLang) ? Crunchyroll.Instance.DefaultLocale : Crunchyroll.Instance.CrunOptions.HistoryLang,
-            new CrunchyMultiDownload(Crunchyroll.Instance.CrunOptions.DubLang, true));
+        var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(value.Id,
+            string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
+            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
         ShowLoading = false;
         if (list != null){
             currentSeriesList = list;

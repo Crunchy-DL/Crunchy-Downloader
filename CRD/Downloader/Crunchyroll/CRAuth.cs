@@ -9,13 +9,12 @@ using System.Web;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
-using YamlDotNet.Core.Tokens;
 
-namespace CRD.Downloader;
+namespace CRD.Downloader.Crunchyroll;
 
 public class CrAuth{
 
-    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+    private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task AuthAnonymous(){
         var formData = new Dictionary<string, string>{
@@ -46,7 +45,7 @@ public class CrAuth{
             PreferredContentSubtitleLanguage = "de-DE"
         };
 
-        Crunchyroll.Instance.CmsToken = new CrCmsToken();
+        CrunchyrollManager.Instance.CmsToken = new CrCmsToken();
 
     }
 

@@ -1,21 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
-using Avalonia.Remote.Protocol.Input;
 using CRD.Utils;
 using CRD.Utils.Structs;
-using Newtonsoft.Json;
 
-namespace CRD.Downloader;
+namespace CRD.Downloader.Crunchyroll;
 
 public class CrEpisode(){
-    private readonly Crunchyroll crunInstance = Crunchyroll.Instance;
+    private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale, bool forcedLang = false){
         if (crunInstance.CmsToken?.Cms == null){
@@ -67,11 +64,11 @@ public class CrEpisode(){
         CrunchyRollEpisodeData episode = new CrunchyRollEpisodeData();
 
         if (crunInstance.CrunOptions.History && updateHistory){
-            await crunInstance.CrHistory.UpdateWithEpisode(dlEpisode);
+            await crunInstance.History.UpdateWithEpisode(dlEpisode);
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == dlEpisode.SeriesId);
             if (historySeries != null){
-                Crunchyroll.Instance.CrHistory.MatchHistorySeriesWithSonarr(false);
-                await Crunchyroll.Instance.CrHistory.MatchHistoryEpisodesWithSonarr(false, historySeries);
+                CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(false);
+                await CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, historySeries);
                 CfgManager.UpdateHistoryFile();
             }
         }
@@ -245,7 +242,7 @@ public class CrEpisode(){
         return retMeta;
     }
 
-    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount , bool forcedLang = false){
+    public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount,DateTime? firstWeekDay = null , bool forcedLang = false){
         CrBrowseEpisodeBase? complete = new CrBrowseEpisodeBase();
         complete.Data =[];
 
@@ -279,13 +276,21 @@ public class CrEpisode(){
 
             if (series != null){
                 complete.Total = series.Total;
-                if (series.Data != null) complete.Data.AddRange(series.Data);
+                if (series.Data != null){
+                    complete.Data.AddRange(series.Data);
+                    if (firstWeekDay != null){
+                        if (firstWeekDay.Value.Date <= series.Data.Last().LastPublic && i + 50 == requestAmount){
+                            requestAmount += 50;
+                        }
+                    }
+                    
+                }
             } else{
                 break;
             }
 
             i += 50;
-        } while (i < requestAmount);
+        } while (i < requestAmount && requestAmount < 500);
 
 
         return complete;

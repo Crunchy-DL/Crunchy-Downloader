@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 
 namespace CRD.Utils.Structs;
 
@@ -47,7 +48,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
         if (match.Success){
             var locale = match.Groups[1].Value; // Capture the locale part
             var id = match.Groups[2].Value; // Capture the ID part
-            Crunchyroll.Instance.AddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, Crunchyroll.Instance.CrunOptions.DubLang,true);
+            QueueManager.Instance.CRAddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang,true);
         }
     }
     

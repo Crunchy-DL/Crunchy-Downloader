@@ -266,15 +266,15 @@ public class HlsDownloader{
                     Doing = _isAudio ? "Downloading Audio" : (_isVideo ? "Downloading Video" : "")
                 };
 
-                if (!Crunchyroll.Instance.Queue.Contains(_currentEpMeta)){
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
                     return (Ok: false, _data.Parts);
                 }
 
-                Crunchyroll.Instance.Queue.Refresh();
+                QueueManager.Instance.Queue.Refresh();
 
                 while (_currentEpMeta.Paused){
                     await Task.Delay(500);
-                    if (!Crunchyroll.Instance.Queue.Contains(_currentEpMeta)){
+                    if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
                         return (Ok: false, _data.Parts);
                     }
                 }
