@@ -26,6 +26,17 @@ A simple crunchyroll downloader that allows you to download your favorite series
 > I am in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
 > The official Crunchyroll website can be found at https://crunchyroll.com/.
 
+# 📜 Disclaimer
+
+> I am in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
+> The official Crunchyroll website can be found at https://crunchyroll.com/.
+
+This tool is meant for private use only. You need a [Crunchyroll Premium](https://www.crunchyroll.com/premium) subscription to access premium content.
+
+The usage of this application may also cause a violation of the Terms of Service between you and the stream provider.
+
+This application enables you to download videos for offline viewing which may be forbidden by law in your country. You are entirely responsible for what happens when you use crunchy-downloader.
+
 # ✏️ Software Requirements
 
 Windows 10 or Windows 11
@@ -33,6 +44,8 @@ Windows 10 or Windows 11
 .NET Desktop Runtime
 
 ## ✨ Features
+
+[Github Wiki](https://github.com/Crunchy-DL/Crunchy-Downloader/wiki)
 
 - **Account Management**: Sign in and download according to your Crunchyroll subscription status.
 - **Download Options**: Choose to download only the video, only the audio of episodes.
@@ -66,7 +79,6 @@ Settings:
 ![ui_settings](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/Settings.png)
 
 
-
 # 🛠️ DRM Decryption Guide
 
 ## Decryption Requirements
@@ -82,8 +94,5 @@ To decrypt DRM content, it's essential to first acquire a CDM (Content Decryptio
 
 For legal reasons, the CDM is not included with the software package, and you must source it independently.
 
-# 📜 Disclaimer
 
-This tool is meant for private use only. You need a Crunchyroll Premium subscription to access premium content.
 
-You are entirely responsible for what happens when you use crunchy-downloader.
