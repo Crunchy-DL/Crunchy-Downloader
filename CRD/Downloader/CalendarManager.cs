@@ -148,8 +148,6 @@ public class CalendarManager{
 
 
     public async Task<CalendarWeek> BuildCustomCalendar(bool forceUpdate){
-        Console.WriteLine("C" + DateTime.Now.ToString("yyyy-MM-dd"));
-
         if (!forceUpdate && calendar.TryGetValue("C" + DateTime.Now.ToString("yyyy-MM-dd"), out var forDate)){
             return forDate;
         }

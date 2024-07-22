@@ -20,27 +20,26 @@ public partial class MainWindowViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _updateAvailable = true;
-    
+
     public MainWindowViewModel(){
         _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
 
         Init();
 
         CleanUpOldUpdater();
-
     }
 
-    private void CleanUpOldUpdater() {
+    private void CleanUpOldUpdater(){
         string backupFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Updater.exe.bak");
 
-        if (File.Exists(backupFilePath)) {
-            try {
+        if (File.Exists(backupFilePath)){
+            try{
                 File.Delete(backupFilePath);
                 Console.WriteLine($"Deleted old updater file: {backupFilePath}");
-            } catch (Exception ex) {
+            } catch (Exception ex){
                 Console.Error.WriteLine($"Failed to delete old updater file: {ex.Message}");
             }
-        } else {
+        } else{
             Console.WriteLine("No old updater file found to delete.");
         }
     }
@@ -48,7 +47,7 @@ public partial class MainWindowViewModel : ViewModelBase{
 
     public async void Init(){
         UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
-
+        
         CrunchyrollManager.Instance.InitOptions();
         
         if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null){
@@ -64,8 +63,7 @@ public partial class MainWindowViewModel : ViewModelBase{
             _faTheme.PreferSystemTheme = false;
             Application.Current.RequestedThemeVariant = ThemeVariant.Light;
         }
-        
+
         await CrunchyrollManager.Instance.Init();
-        
     }
 }

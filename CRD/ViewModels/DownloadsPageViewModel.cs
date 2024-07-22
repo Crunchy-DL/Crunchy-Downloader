@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils;
 using CRD.Utils.Structs;
 
 namespace CRD.ViewModels;
@@ -17,10 +18,10 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     public ObservableCollection<DownloadItemModel> Items{ get; }
 
     [ObservableProperty]
-    public bool _autoDownload;
+    private bool _autoDownload;
 
     [ObservableProperty]
-    public bool _removeFinished;
+    private bool _removeFinished;
 
     public DownloadsPageViewModel(){
         QueueManager.Instance.UpdateDownloadListItems();
@@ -28,16 +29,18 @@ public partial class DownloadsPageViewModel : ViewModelBase{
         AutoDownload = CrunchyrollManager.Instance.CrunOptions.AutoDownload;
         RemoveFinished = CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload;
     }
-
+    
     partial void OnAutoDownloadChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.AutoDownload = value;
         if (value){
             QueueManager.Instance.UpdateDownloadListItems();
         }
+        CfgManager.WriteSettingsToFile();
     }
 
     partial void OnRemoveFinishedChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload = value;
+        CfgManager.WriteSettingsToFile();
     }
 }
 

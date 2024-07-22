@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Avalonia.Media;
@@ -18,6 +19,7 @@ using CRD.Utils.Muxing;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
+using CRD.ViewModels;
 using CRD.Views;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -30,7 +32,8 @@ public class CrunchyrollManager{
     public CrCmsToken? CmsToken;
 
     public CrProfile Profile = new();
-    public CrDownloadOptions CrunOptions;
+    private readonly Lazy<CrDownloadOptions> _optionsLazy;
+    public CrDownloadOptions CrunOptions => _optionsLazy.Value;
     
     #region History Variables
 
@@ -55,7 +58,7 @@ public class CrunchyrollManager{
     public CrEpisode CrEpisode;
     public CrSeries CrSeries;
     public History History;
-
+    
     #region Singelton
 
     private static CrunchyrollManager? _instance;
@@ -78,42 +81,50 @@ public class CrunchyrollManager{
     #endregion
 
     public CrunchyrollManager(){
-        CrunOptions = new CrDownloadOptions();
+        _optionsLazy = new Lazy<CrDownloadOptions>(InitDownloadOptions, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    public void InitOptions(){
-        CrunOptions.AutoDownload = false;
-        CrunOptions.RemoveFinishedDownload = false;
-        CrunOptions.Chapters = true;
-        CrunOptions.Hslang = "none";
-        CrunOptions.Force = "Y";
-        CrunOptions.FileName = "${seriesTitle} - S${season}E${episode} [${height}p]";
-        CrunOptions.Partsize = 10;
-        CrunOptions.DlSubs = new List<string>{ "de-DE" };
-        CrunOptions.Skipmux = false;
-        CrunOptions.MkvmergeOptions = new List<string>{ "--no-date", "--disable-track-statistics-tags", "--engage no_variable_data" };
-        CrunOptions.FfmpegOptions = new();
-        CrunOptions.DefaultAudio = "ja-JP";
-        CrunOptions.DefaultSub = "de-DE";
-        CrunOptions.CcTag = "cc";
-        CrunOptions.FsRetryTime = 5;
-        CrunOptions.Numbers = 2;
-        CrunOptions.Timeout = 15000;
-        CrunOptions.DubLang = new List<string>(){ "ja-JP" };
-        CrunOptions.SimultaneousDownloads = 2;
-        CrunOptions.AccentColor = Colors.SlateBlue.ToString();
-        CrunOptions.Theme = "System";
-        CrunOptions.SelectedCalendarLanguage = "en-us";
-        CrunOptions.CalendarDubFilter = "none";
-        CrunOptions.DlVideoOnce = true;
-        CrunOptions.StreamEndpoint = "web/firefox";
-        CrunOptions.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
-        CrunOptions.HistoryLang = DefaultLocale;
 
-        CrunOptions.History = true;
+    private CrDownloadOptions InitDownloadOptions(){
 
-        CfgManager.UpdateSettingsFromFile();
+        var options = new CrDownloadOptions();
         
+        options.AutoDownload = false;
+        options.RemoveFinishedDownload = false;
+        options.Chapters = true;
+        options.Hslang = "none";
+        options.Force = "Y";
+        options.FileName = "${seriesTitle} - S${season}E${episode} [${height}p]";
+        options.Partsize = 10;
+        options.DlSubs = new List<string>{ "de-DE" };
+        options.Skipmux = false;
+        options.MkvmergeOptions = new List<string>{ "--no-date", "--disable-track-statistics-tags", "--engage no_variable_data" };
+        options.FfmpegOptions = new();
+        options.DefaultAudio = "ja-JP";
+        options.DefaultSub = "de-DE";
+        options.CcTag = "cc";
+        options.FsRetryTime = 5;
+        options.Numbers = 2;
+        options.Timeout = 15000;
+        options.DubLang = new List<string>(){ "ja-JP" };
+        options.SimultaneousDownloads = 2;
+        options.AccentColor = Colors.SlateBlue.ToString();
+        options.Theme = "System";
+        options.SelectedCalendarLanguage = "en-us";
+        options.CalendarDubFilter = "none";
+        options.DlVideoOnce = true;
+        options.StreamEndpoint = "web/firefox";
+        options.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+        options.HistoryLang = DefaultLocale;
+
+        options.History = true;
+
+        CfgManager.UpdateSettingsFromFile(options);
+
+        return options;
+    }
+    
+    public void InitOptions(){
         _widevine = Widevine.Instance;
 
         CrAuth = new CrAuth();

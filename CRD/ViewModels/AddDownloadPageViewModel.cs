@@ -93,7 +93,6 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                 SearchItems.Add(episode);
             }
-
             SearchPopupVisible = true;
             RaisePropertyChanged(nameof(SearchItems));
             RaisePropertyChanged(nameof(SearchVisible));

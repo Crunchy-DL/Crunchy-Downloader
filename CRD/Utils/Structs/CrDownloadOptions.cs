@@ -7,11 +7,11 @@ namespace CRD.Utils.Structs;
 
 public class CrDownloadOptions{
     
-    [YamlIgnore]
+    [YamlMember(Alias = "auto_download", ApplyNamingConventions = false)]
     public bool AutoDownload{ get; set; }
 
     
-    [YamlIgnore]
+    [YamlMember(Alias = "remove_finished_downloads", ApplyNamingConventions = false)]
     public bool RemoveFinishedDownload{ get; set; }
 
     

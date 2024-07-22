@@ -25,12 +25,13 @@
             <TextBox x:Name="SearchBar" Watermark="Enter series or episode url" Text="{Binding UrlInput}" Margin="10"
                      VerticalAlignment="Top" />
 
-            <Popup IsLightDismissEnabled="False"
+            <Popup IsLightDismissEnabled="True"
                    MaxWidth="{Binding Bounds.Width, ElementName=SearchBar}"
                    MaxHeight="{Binding Bounds.Height, ElementName=Grid}"
                    IsOpen="{Binding SearchPopupVisible}"
                    Placement="Bottom"
-                   PlacementTarget="{Binding ElementName=SearchBar}">
+                   PlacementTarget="{Binding ElementName=SearchBar}"
+                   Closed="Popup_Closed">
                 <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
                     <ListBox x:Name="ListBoxDubsSelection"
 

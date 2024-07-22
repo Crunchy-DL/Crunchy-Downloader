@@ -147,7 +147,7 @@ public class CfgManager{
     }
 
 
-    public static void UpdateSettingsFromFile(){
+    public static void UpdateSettingsFromFile(CrDownloadOptions options){
         string dirPath = Path.GetDirectoryName(PathCrDownloadOptions) ?? string.Empty;
 
         if (!Directory.Exists(dirPath)){
@@ -174,7 +174,7 @@ public class CfgManager{
 
         var propertiesPresentInYaml = GetTopLevelPropertiesInYaml(input);
         var loadedOptions = deserializer.Deserialize<CrDownloadOptions>(new StringReader(input));
-        var instanceOptions = CrunchyrollManager.Instance.CrunOptions;
+        var instanceOptions = options;
 
         foreach (PropertyInfo property in typeof(CrDownloadOptions).GetProperties()){
             var yamlMemberAttribute = property.GetCustomAttribute<YamlMemberAttribute>();
