@@ -115,6 +115,10 @@
                 <CheckBox IsEnabled="{Binding AllButtonEnabled}" IsChecked="{Binding AddAllEpisodes}"
                           Content="All" Margin="5 0 0 0">
                 </CheckBox>
+                
+                <Button IsVisible="{Binding SlectSeasonVisible}" IsEnabled="{Binding !ShowLoading}"  Width="200" Command="{Binding OnSelectSeasonPressed}"
+                        Content="{Binding ButtonTextSelectSeason}">
+                </Button>
 
                 <CheckBox IsVisible="{Binding SearchVisible}" IsChecked="{Binding SearchEnabled}"
                           Content="Search" Margin="5 0 0 0">

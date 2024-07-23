@@ -18,6 +18,7 @@ using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Views;
 using DynamicData;
+using FluentAvalonia.Core;
 using ReactiveUI;
 
 
@@ -25,31 +26,37 @@ namespace CRD.ViewModels;
 
 public partial class AddDownloadPageViewModel : ViewModelBase{
     [ObservableProperty]
-    public string _urlInput = "";
+    private string _urlInput = "";
 
     [ObservableProperty]
-    public string _buttonText = "Enter Url";
+    private string _buttonText = "Enter Url";
 
     [ObservableProperty]
-    public bool _addAllEpisodes = false;
+    private string _buttonTextSelectSeason = "Select Season";
 
     [ObservableProperty]
-    public bool _buttonEnabled = false;
+    private bool _addAllEpisodes = false;
 
     [ObservableProperty]
-    public bool _allButtonEnabled = false;
+    private bool _buttonEnabled = false;
 
     [ObservableProperty]
-    public bool _showLoading = false;
+    private bool _allButtonEnabled = false;
 
     [ObservableProperty]
-    public bool _searchEnabled = false;
+    private bool _showLoading = false;
 
     [ObservableProperty]
-    public bool _searchVisible = true;
+    private bool _searchEnabled = false;
 
     [ObservableProperty]
-    public bool _searchPopupVisible = false;
+    private bool _searchVisible = true;
+    
+    [ObservableProperty]
+    private bool _slectSeasonVisible = false;
+
+    [ObservableProperty]
+    private bool _searchPopupVisible = false;
 
     public ObservableCollection<ItemModel> Items{ get; } = new();
     public ObservableCollection<CrBrowseSeries> SearchItems{ get; set; } = new();
@@ -68,6 +75,8 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     private List<string> selectedEpisodes = new();
 
     private CrunchySeriesList? currentSeriesList;
+
+    private bool CurrentSeasonFullySelected = false;
 
     private readonly SemaphoreSlim _updateSearchSemaphore = new SemaphoreSlim(1, 1);
 
@@ -93,6 +102,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                 SearchItems.Add(episode);
             }
+
             SearchPopupVisible = true;
             RaisePropertyChanged(nameof(SearchItems));
             RaisePropertyChanged(nameof(SearchVisible));
@@ -117,19 +127,23 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 ButtonText = "Add Episode to Queue";
                 ButtonEnabled = true;
                 SearchVisible = false;
+                SlectSeasonVisible = false;
             } else if (UrlInput.Contains("/series/")){
                 //Series
                 ButtonText = "List Episodes";
                 ButtonEnabled = true;
                 SearchVisible = false;
+                SlectSeasonVisible = false;
             } else{
                 ButtonEnabled = false;
                 SearchVisible = true;
+                SlectSeasonVisible = false;
             }
         } else{
             ButtonText = "Enter Url";
             ButtonEnabled = false;
             SearchVisible = true;
+            SlectSeasonVisible = false;
         }
     }
 
@@ -173,6 +187,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             ButtonText = "Enter Url";
             ButtonEnabled = false;
             SearchVisible = true;
+            SlectSeasonVisible = false;
         } else if (UrlInput.Length > 9){
             episodesBySeason.Clear();
             SeasonList.Clear();
@@ -233,6 +248,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                         CurrentSelectedSeason = SeasonList[0];
                         ButtonEnabled = false;
                         AllButtonEnabled = true;
+                        SlectSeasonVisible = true;
                         ButtonText = "Select Episodes";
                     } else{
                         ButtonEnabled = true;
@@ -241,6 +257,28 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             }
         } else{
             Console.Error.WriteLine("Unnkown input");
+        }
+    }
+
+    [RelayCommand]
+    public void OnSelectSeasonPressed(){
+        if (CurrentSeasonFullySelected){
+            foreach (var item in Items){
+                selectedEpisodes.Remove(item.AbsolutNum);
+                SelectedItems.Remove(item);
+            }
+
+            ButtonTextSelectSeason = "Select Season";
+        } else{
+            var selectedItemsSet = new HashSet<ItemModel>(SelectedItems);
+
+            foreach (var item in Items){
+                if (selectedItemsSet.Add(item)){
+                    SelectedItems.Add(item);
+                }
+            }
+
+            ButtonTextSelectSeason = "Deselect Season";
         }
     }
 
@@ -261,6 +299,14 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void OnSelectedItemsChanged(object? sender, NotifyCollectionChangedEventArgs e){
+        CurrentSeasonFullySelected = Items.All(item => SelectedItems.Contains(item));
+
+        if (CurrentSeasonFullySelected){
+            ButtonTextSelectSeason = "Deselect Season";
+        } else{
+            ButtonTextSelectSeason = "Select Season";
+        }
+
         if (selectedEpisodes.Count > 0 || SelectedItems.Count > 0 || AddAllEpisodes){
             ButtonText = "Add Episodes to Queue";
             ButtonEnabled = true;
@@ -289,6 +335,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         RaisePropertyChanged(nameof(SearchVisible));
         SearchItems.Clear();
         SearchVisible = false;
+        SlectSeasonVisible = true;
         ButtonEnabled = false;
         ShowLoading = true;
         var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(value.Id,
@@ -340,6 +387,14 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                     }
                 }
             }
+        }
+
+        CurrentSeasonFullySelected = Items.All(item => SelectedItems.Contains(item));
+
+        if (CurrentSeasonFullySelected){
+            ButtonTextSelectSeason = "Deselect Season";
+        } else{
+            ButtonTextSelectSeason = "Select Season";
         }
     }
 }

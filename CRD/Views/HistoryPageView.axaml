@@ -237,14 +237,13 @@
             <ScrollViewer>
                 <ItemsControl ItemsSource="{Binding Items}"
                               IsEnabled="{Binding !FetchingData}"
-
                               Margin="5" IsVisible="{Binding IsTableViewSelected}">
 
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-
                             <Grid>
                                 <controls:SettingsExpander
+                                    x:Name="SettingsExpanderSeries"
                                     Header="{Binding .}"
                                     ItemsSource="{Binding .}"
                                     IsExpanded="{Binding IsExpanded}">
@@ -516,8 +515,7 @@
 
                                                                             <StackPanel VerticalAlignment="Center"
                                                                                         Margin="0 0 5 0"
-                                                                                        IsVisible="{Binding $parent[ItemsControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
-
+                                                                                        IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).SonarrSeriesId, Converter={StaticResource UiSonarrIdToVisibilityConverter}}">
 
                                                                                 <controls:ImageIcon
                                                                                     IsVisible="{Binding SonarrHasFile}"
@@ -597,6 +595,51 @@
                                                                                                  FontSize="18" />
                                                                         </StackPanel>
                                                                     </Button>
+
+                                                                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                        <ToggleButton x:Name="ToggleDownloadAdd" Margin="10 0 0 0" FontStyle="Italic"
+                                                                                      VerticalAlignment="Center">
+                                                                            <StackPanel Orientation="Horizontal">
+                                                                                <controls:SymbolIcon Symbol="Download" FontSize="18" />
+                                                                            </StackPanel>
+                                                                        </ToggleButton>
+
+                                                                        <Popup IsLightDismissEnabled="True"
+                                                                               MaxWidth="400"
+                                                                               MaxHeight="600"
+                                                                               IsOpen="{Binding IsChecked, ElementName=ToggleDownloadAdd, Mode=TwoWay}"
+                                                                               Placement="Bottom"
+                                                                               PlacementTarget="{Binding ElementName=ToggleDownloadAdd}">
+                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+
+                                                                                <StackPanel>
+                                                                                    <Button Margin="10 5"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Stretch"
+                                                                                            Content="Download All"
+                                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).DownloadSeasonAll}"
+                                                                                            CommandParameter="{Binding }">
+                                                                                    </Button>
+                                                                                    <Button Margin="10 5"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Stretch"
+                                                                                            Content="Download Missing"
+                                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).DownloadSeasonMissing}"
+                                                                                            CommandParameter="{Binding }">
+                                                                                    </Button>
+                                                                                    <Button Margin="10 5"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Stretch"
+                                                                                            Content="Download Missing from Sonarr"
+                                                                                            IsEnabled="{Binding  $parent[ScrollViewer].((history:HistorySeries)DataContext).SonarrSeriesId, Converter={StaticResource UiSonarrIdToVisibilityConverter}}"
+                                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).DownloadSeasonMissingSonarr}"
+                                                                                            CommandParameter="{Binding }">
+                                                                                    </Button>
+                                                                                </StackPanel>
+
+                                                                            </Border>
+                                                                        </Popup>
+                                                                    </StackPanel>
 
                                                                     <Button Margin="10 0 0 0" FontStyle="Italic"
                                                                             VerticalAlignment="Center"

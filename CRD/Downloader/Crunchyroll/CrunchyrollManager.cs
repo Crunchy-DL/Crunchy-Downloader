@@ -642,12 +642,20 @@ public class CrunchyrollManager{
                             Console.WriteLine($"Selecting stream with {Languages.Locale2language(options.Hslang).Language} hardsubs");
                             streams = streams.Where((s) => s.HardsubLang != "-" && s.HardsubLang == options.Hslang).ToList();
                         } else{
-                            Console.WriteLine($"Selected stream with {Languages.Locale2language(options.Hslang).Language} hardsubs not available");
+                            Console.Error.WriteLine($"Selected stream with {Languages.Locale2language(options.Hslang).Language} hardsubs not available");
                             if (hsLangs.Count > 0){
-                                Console.WriteLine("Try hardsubs stream: " + string.Join(", ", hsLangs));
+                                Console.Error.WriteLine("Try hardsubs stream: " + string.Join(", ", hsLangs));
                             }
 
                             dlFailed = true;
+                            
+                            return new DownloadResponse{
+                                Data = new List<DownloadedMedia>(),
+                                Error = dlFailed,
+                                FileName = "./unknown",
+                                ErrorText = "Hardsubs not available"
+                            };
+                            
                         }
                     } else{
                         streams = streams.Where((s) => {
@@ -659,9 +667,9 @@ public class CrunchyrollManager{
                         }).ToList();
 
                         if (streams.Count < 1){
-                            Console.WriteLine("Raw streams not available!");
+                            Console.Error.WriteLine("Raw streams not available!");
                             if (hsLangs.Count > 0){
-                                Console.WriteLine("Try hardsubs stream: " + string.Join(", ", hsLangs));
+                                Console.Error.WriteLine("Try hardsubs stream: " + string.Join(", ", hsLangs));
                             }
 
                             dlFailed = true;
@@ -776,7 +784,7 @@ public class CrunchyrollManager{
                                 }
 
                                 if (chosenVideoQuality > videos.Count){
-                                    Console.WriteLine($"The requested quality of {chosenVideoQuality} is greater than the maximum {videos.Count}.\n[WARN] Therefore, the maximum will be capped at {videos.Count}.");
+                                    Console.Error.WriteLine($"The requested quality of {chosenVideoQuality} is greater than the maximum {videos.Count}.\n[WARN] Therefore, the maximum will be capped at {videos.Count}.");
                                     chosenVideoQuality = videos.Count;
                                 }
 

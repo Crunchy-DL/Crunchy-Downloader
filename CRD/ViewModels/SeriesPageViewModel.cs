@@ -28,10 +28,6 @@ public partial class SeriesPageViewModel : ViewModelBase{
     [ObservableProperty]
     public static bool _sonarrAvailable;
     
-
-
-    
-    
     private IStorageProvider? _storageProvider;
 
     public SeriesPageViewModel(){
@@ -84,6 +80,27 @@ public partial class SeriesPageViewModel : ViewModelBase{
     }
 
 
+    [RelayCommand]
+    public async Task DownloadSeasonAll(HistorySeason season){
+        foreach (var historyEpisode in season.EpisodesList){
+            await historyEpisode.DownloadEpisode();
+        }
+    }
+    
+    [RelayCommand]
+    public async Task DownloadSeasonMissing(HistorySeason season){
+        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.WasDownloaded)){
+            await historyEpisode.DownloadEpisode();
+        }
+    }
+    
+    [RelayCommand]
+    public async Task DownloadSeasonMissingSonarr(HistorySeason season){
+        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.SonarrHasFile)){
+            await historyEpisode.DownloadEpisode();
+        }
+    }
+    
     [RelayCommand]
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);

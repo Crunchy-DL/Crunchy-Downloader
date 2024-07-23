@@ -319,6 +319,27 @@ public partial class HistoryPageViewModel : ViewModelBase{
             }
         }
     }
+    
+    [RelayCommand]
+    public async Task DownloadSeasonAll(HistorySeason season){
+        foreach (var historyEpisode in season.EpisodesList){
+            await historyEpisode.DownloadEpisode();
+        }
+    }
+    
+    [RelayCommand]
+    public async Task DownloadSeasonMissing(HistorySeason season){
+        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.WasDownloaded)){
+            await historyEpisode.DownloadEpisode();
+        }
+    }
+    
+    [RelayCommand]
+    public async Task DownloadSeasonMissingSonarr(HistorySeason season){
+        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.SonarrHasFile)){
+            await historyEpisode.DownloadEpisode();
+        }
+    }
 
 
     public void SetStorageProvider(IStorageProvider storageProvider){
