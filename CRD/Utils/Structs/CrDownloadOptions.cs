@@ -150,6 +150,9 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "history_lang", ApplyNamingConventions = false)]
     public string? HistoryLang{ get; set; }
     
+    [YamlMember(Alias = "history_add_specials", ApplyNamingConventions = false)]
+    public bool HistoryAddSpecials{ get; set; }
+    
     [YamlMember(Alias = "sonarr_properties", ApplyNamingConventions = false)]
     public SonarrProperties? SonarrProperties{ get; set; }
     

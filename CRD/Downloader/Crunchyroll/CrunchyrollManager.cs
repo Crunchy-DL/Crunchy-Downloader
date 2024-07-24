@@ -357,13 +357,13 @@ public class CrunchyrollManager{
                         var delay = await merger.ProcessVideo(basePath, syncVideo.Path);
                         var audio = merger.options.OnlyAudio.FirstOrDefault(audio => audio.Language.CrLocale == syncVideo.Lang.CrLocale);
                         if (audio != null){
-                            audio.Delay = (int)delay * 1000;
+                            audio.Delay = (int)(delay * 1000);
                         }
 
                         var subtitles = merger.options.Subtitles.Where(a => a.RelatedVideoDownloadMedia == syncVideo).ToList();
                         if (subtitles.Count > 0){
                             foreach (var subMergerInput in subtitles){
-                                subMergerInput.Delay = (int)delay * 1000;
+                                subMergerInput.Delay = (int)(delay * 1000);
                             }
                         }
                     }

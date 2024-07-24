@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -47,7 +48,8 @@ public class Merger{
 
             foreach (var aud in options.OnlyAudio){
                 if (aud.Delay != null && aud.Delay != 0){
-                    args.Add($"-itsoffset {aud.Delay}");
+                    double delay = aud.Delay / 1000.0 ?? 0;
+                    args.Add($"-itsoffset {delay.ToString(CultureInfo.InvariantCulture)}");
                 }
 
                 args.Add($"-i \"{aud.Path}\"");
@@ -66,8 +68,9 @@ public class Merger{
             }
 
             foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
-                if (sub.value.Delay != null){
-                    args.Add($"-itsoffset -{Math.Ceiling((double)sub.value.Delay * 1000)}ms");
+                if (sub.value.Delay != null && sub.value.Delay != 0){
+                    double delay = sub.value.Delay / 1000.0 ?? 0;
+                    args.Add($"-itsoffset {delay.ToString(CultureInfo.InvariantCulture)}");
                 }
 
                 args.Add($"-i \"{sub.value.File}\"");
@@ -178,7 +181,7 @@ public class Merger{
             foreach (var subObj in options.Subtitles){
                 if (subObj.Delay.HasValue){
                     double delay = subObj.Delay ?? 0;
-                    args.Add($"--sync 0:-{Math.Ceiling(delay * 1000)}");
+                    args.Add($"--sync 0:{delay}");
                 }
 
                 string trackNameExtra = subObj.ClosedCaption == true ? $" {options.CcTag}" : "";
@@ -242,15 +245,13 @@ public class Merger{
             Console.Error.WriteLine("Failed to extract Frames to Compare");
             return 0;
         }
-        
-        var baseFrames = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData
-        {
+
+        var baseFrames = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData{
             FilePath = fp,
             Time = GetTimeFromFileName(fp, extractFramesBase.frameRate)
         }).ToList();
 
-        var compareFrames = Directory.GetFiles(compareFramesDir).Select(fp => new FrameData
-        {
+        var compareFrames = Directory.GetFiles(compareFramesDir).Select(fp => new FrameData{
             FilePath = fp,
             Time = GetTimeFromFileName(fp, extractFramesBase.frameRate)
         }).ToList();
@@ -320,8 +321,6 @@ public class Merger{
         // Delete subtitle files
         options.Subtitles.ForEach(subtitle => Helpers.DeleteFile(subtitle.File));
     }
-
-
 }
 
 public class MergerInput{
@@ -338,7 +337,7 @@ public class SubtitleInput{
     public bool? ClosedCaption{ get; set; }
     public bool? Signs{ get; set; }
     public int? Delay{ get; set; }
-    
+
     public DownloadedMedia? RelatedVideoDownloadMedia;
 }
 

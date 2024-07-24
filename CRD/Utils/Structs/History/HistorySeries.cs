@@ -186,24 +186,48 @@ public class HistorySeries : INotifyPropertyChanged{
     public void UpdateNewEpisodes(){
         int count = 0;
         bool foundWatched = false;
+        var historyAddSpecials = CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials;
 
-        // Iterate over the Seasons list from the end to the beginning
-        for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
-            if (Seasons[i].SpecialSeason == true){
+        for (int i = Seasons.Count - 1; i >= 0; i--){
+            var season = Seasons[i];
+
+            if (season.SpecialSeason == true){
+                if (historyAddSpecials){
+                    var episodes = season.EpisodesList;
+                    for (int j = episodes.Count - 1; j >= 0; j--){
+                        if (!episodes[j].WasDownloaded){
+                            count++;
+                        }
+                    }
+                }
+
                 continue;
             }
 
-            // Iterate over the Episodes from the end to the beginning
-            for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (Seasons[i].EpisodesList[j].SpecialEpisode){
+            var episodesList = season.EpisodesList;
+            for (int j = episodesList.Count - 1; j >= 0; j--){
+                var episode = episodesList[j];
+
+                if (episode.SpecialEpisode){
+                    if (historyAddSpecials && !episode.WasDownloaded){
+                        count++;
+                    }
+
                     continue;
                 }
 
-                if (!Seasons[i].EpisodesList[j].WasDownloaded){
+                if (!episode.WasDownloaded && !foundWatched){
                     count++;
                 } else{
                     foundWatched = true;
+                    if (!historyAddSpecials){
+                        break;
+                    }
                 }
+            }
+
+            if (foundWatched && !historyAddSpecials){
+                break;
             }
         }
 
@@ -218,25 +242,48 @@ public class HistorySeries : INotifyPropertyChanged{
 
     public async Task AddNewMissingToDownloads(){
         bool foundWatched = false;
+        var historyAddSpecials = CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials;
 
-        // Iterate over the Seasons list from the end to the beginning
-        for (int i = Seasons.Count - 1; i >= 0 && !foundWatched; i--){
-            if (Seasons[i].SpecialSeason == true){
+        for (int i = Seasons.Count - 1; i >= 0; i--){
+            var season = Seasons[i];
+
+            if (season.SpecialSeason == true){
+                if (historyAddSpecials){
+                    var episodes = season.EpisodesList;
+                    for (int j = episodes.Count - 1; j >= 0; j--){
+                        if (!episodes[j].WasDownloaded){
+                            await Seasons[i].EpisodesList[j].DownloadEpisode();
+                        }
+                    }
+                }
+
                 continue;
             }
 
-            // Iterate over the Episodes from the end to the beginning
-            for (int j = Seasons[i].EpisodesList.Count - 1; j >= 0 && !foundWatched; j--){
-                if (Seasons[i].EpisodesList[j].SpecialEpisode){
+            var episodesList = season.EpisodesList;
+            for (int j = episodesList.Count - 1; j >= 0; j--){
+                var episode = episodesList[j];
+
+                if (episode.SpecialEpisode){
+                    if (historyAddSpecials && !episode.WasDownloaded){
+                        await Seasons[i].EpisodesList[j].DownloadEpisode();
+                    }
+
                     continue;
                 }
 
-                if (!Seasons[i].EpisodesList[j].WasDownloaded){
-                    //ADD to download queue
+                if (!episode.WasDownloaded && !foundWatched){
                     await Seasons[i].EpisodesList[j].DownloadEpisode();
                 } else{
                     foundWatched = true;
+                    if (!historyAddSpecials){
+                        break;
+                    }
                 }
+            }
+
+            if (foundWatched && !historyAddSpecials){
+                break;
             }
         }
     }
