@@ -98,6 +98,9 @@ public class CrDownloadOptions{
     
     [YamlMember(Alias = "mux_default_sub_signs", ApplyNamingConventions = false)]
     public bool DefaultSubSigns{ get; set; }
+    
+    [YamlMember(Alias = "mux_default_sub_forced_display", ApplyNamingConventions = false)]
+    public bool DefaultSubForcedDisplay{ get; set; }
 
     [YamlMember(Alias = "mux_default_dub", ApplyNamingConventions = false)]
     public string DefaultAudio{ get; set; }

@@ -90,5 +90,8 @@ public class ThirdPartySubscriptionProduct{
     public bool AutoRenew{ get; set; }
     [JsonProperty("expiration_date")]
     public DateTime ExpirationDate{ get; set; }
+    
+    [JsonProperty("in_grace_expiration_date")]
+    public DateTime InGraceExpirationDate{ get; set; }
 
 }

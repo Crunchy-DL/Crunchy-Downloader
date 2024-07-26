@@ -108,16 +108,17 @@ public class CrAuth{
                 var requestSubs = HttpClientReq.CreateRequestMessage(Api.Subscription + crunInstance.Token.account_id, HttpMethod.Get, true, false, null);
 
                 var responseSubs = await HttpClientReq.Instance.SendHttpRequest(requestSubs);
-
+                
                 if (responseSubs.IsOk){
                     var subsc = Helpers.Deserialize<Subscription>(responseSubs.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
                     crunInstance.Profile.Subscription = subsc;
                     if ( subsc is{ SubscriptionProducts:{ Count: 0 }, ThirdPartySubscriptionProducts.Count: > 0 }){
                         var thirdPartySub = subsc.ThirdPartySubscriptionProducts.First();
-                        var remaining = thirdPartySub.ExpirationDate - DateTime.UtcNow;
+                        var expiration = thirdPartySub.InGrace ? thirdPartySub.InGraceExpirationDate : thirdPartySub.ExpirationDate;
+                        var remaining = expiration - DateTime.UtcNow;
                         crunInstance.Profile.HasPremium = remaining > TimeSpan.Zero;
                         crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
-                        crunInstance.Profile.Subscription.NextRenewalDate = thirdPartySub.ExpirationDate;
+                        crunInstance.Profile.Subscription.NextRenewalDate = expiration;
                     } else if(subsc is{ SubscriptionProducts:{ Count: 0 }, NonrecurringSubscriptionProducts.Count: > 0 }){
                         var nonRecurringSub = subsc.NonrecurringSubscriptionProducts.First();
                         var remaining = nonRecurringSub.EndDate - DateTime.UtcNow;

@@ -309,10 +309,14 @@
 
                 <controls:SettingsExpanderItem Content="Default Subtitle ">
                     <controls:SettingsExpanderItem.Footer>
-                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
-                                  ItemsSource="{Binding DefaultSubLangList}"
-                                  SelectedItem="{Binding SelectedDefaultSubLang}">
-                        </ComboBox>
+                        <StackPanel Orientation="Vertical">
+                            <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                      ItemsSource="{Binding DefaultSubLangList}"
+                                      SelectedItem="{Binding SelectedDefaultSubLang}">
+                            </ComboBox>
+                            <CheckBox Content="Forced Display" IsChecked="{Binding DefaultSubForcedDisplay}"> </CheckBox>
+                        </StackPanel>
+                        
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
                 

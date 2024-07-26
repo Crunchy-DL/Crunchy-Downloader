@@ -194,6 +194,9 @@ public class Merger{
 
                 if (options.Defaults.Sub.Code == subObj.Language.Code && CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == subObj.Signs && subObj.ClosedCaption == false){
                     args.Add("--default-track 0");
+                    if (CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay){
+                        args.Add("--forced-track 0:yes");
+                    }
                 } else{
                     args.Add("--default-track 0:0");
                 }
