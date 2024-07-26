@@ -38,6 +38,7 @@ public class Languages{
         new(){ CrLocale = "te-IN", Locale = "te-IN", Code = "tel", Name = "Telugu (India)", Language = "తెలుగు" },
         new(){ CrLocale = "id-ID", Locale = "id", Code = "in", Name = "Indonesian " }
     };
+    
 
     public static LanguageItem FixAndFindCrLc(string cr_locale){
         if (string.IsNullOrEmpty(cr_locale)){

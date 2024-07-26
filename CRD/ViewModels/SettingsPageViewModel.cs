@@ -57,6 +57,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
     [ObservableProperty]
     private bool _syncTimings;
 
+    [ObservableProperty]
+    private bool _defaultSubSigns;
 
     [ObservableProperty]
     private bool _includeEpisodeDescription;
@@ -380,6 +382,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        DefaultSubSigns = options.DefaultSubSigns;
         HistoryAddSpecials = options.HistoryAddSpecials;
         DownloadSpeed = options.DownloadSpeedLimit;
         IncludeEpisodeDescription = options.IncludeVideoDescription;
@@ -445,7 +448,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
         if (!settingsLoaded){
             return;
         }
-        
+
+        CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns = DefaultSubSigns;
         CrunchyrollManager.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
         CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials = HistoryAddSpecials;
         CrunchyrollManager.Instance.CrunOptions.VideoTitle = FileTitle;

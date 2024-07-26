@@ -205,7 +205,7 @@ public class CalendarManager{
                     calEpisode.EpisodeName = crBrowseEpisode.Title;
                     calEpisode.SeriesUrl = $"https://www.crunchyroll.com/{CrunchyrollManager.Instance.CrunOptions.HistoryLang}/series/" + crBrowseEpisode.EpisodeMetadata.SeriesId;
                     calEpisode.EpisodeUrl = $"https://www.crunchyroll.com/{CrunchyrollManager.Instance.CrunOptions.HistoryLang}/watch/{crBrowseEpisode.Id}/";
-                    calEpisode.ThumbnailUrl = crBrowseEpisode.Images.Thumbnail.First().First().Source;
+                    calEpisode.ThumbnailUrl = crBrowseEpisode.Images.Thumbnail?.FirstOrDefault()?.FirstOrDefault().Source ?? ""; //https://www.crunchyroll.com/i/coming_soon_beta_thumb.jpg
                     calEpisode.IsPremiumOnly = crBrowseEpisode.EpisodeMetadata.IsPremiumOnly;
                     calEpisode.IsPremiere = crBrowseEpisode.EpisodeMetadata.Episode == "1";
                     calEpisode.SeasonName = crBrowseEpisode.EpisodeMetadata.SeasonTitle;

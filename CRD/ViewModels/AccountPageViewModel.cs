@@ -11,6 +11,7 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
+using Newtonsoft.Json;
 
 namespace CRD.ViewModels;
 
@@ -40,6 +41,9 @@ public partial class AccountPageViewModel : ViewModelBase{
         if (remaining <= TimeSpan.Zero){
             RemainingTime = "No active Subscription";
             _timer.Stop();
+            if (CrunchyrollManager.Instance.Profile.Subscription != null){
+                Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.Profile.Subscription, Formatting.Indented));
+            }
         } else{
             RemainingTime = $"{(IsCancelled ? "Subscription ending in: " : "Subscription refreshing in: ")}{remaining:dd\\:hh\\:mm\\:ss}";
         }
@@ -82,6 +86,11 @@ public partial class AccountPageViewModel : ViewModelBase{
                 _timer.Tick -= Timer_Tick;
             }
             RaisePropertyChanged(nameof(RemainingTime));
+
+            if (CrunchyrollManager.Instance.Profile.Subscription != null){
+                Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.Profile.Subscription, Formatting.Indented));
+            }
+            
         }
     }
 

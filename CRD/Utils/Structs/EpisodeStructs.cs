@@ -185,7 +185,7 @@ public struct Images{
     [JsonProperty("promo_image")]
     public List<List<Image>>? PromoImage{ get; set; }
 
-    public List<List<Image>> Thumbnail{ get; set; }
+    public List<List<Image>>? Thumbnail{ get; set; }
 }
 
 public struct Image{

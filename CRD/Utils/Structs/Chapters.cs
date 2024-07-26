@@ -13,12 +13,12 @@ public struct CrunchyChapters{
 public struct CrunchyChapter{
     public string approverId { get; set; }
     public string distributionNumber { get; set; }
-    public int? end { get; set; }
-    public int? start { get; set; }
+    public double? end { get; set; }
+    public double? start { get; set; }
     public string title { get; set; }
     public string seriesId { get; set; }
     [JsonProperty("new")]
-    public bool New { get; set; }
+    public string? New { get; set; }
     public string type { get; set; }
 }
 

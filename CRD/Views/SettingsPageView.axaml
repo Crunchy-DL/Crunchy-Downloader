@@ -315,6 +315,12 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Default Subtitle Signs" Description="Will set the signs subtitle as default instead">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DefaultSubSigns}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="File title"
                                                Description="${showTitle} ${seriesTitle} ${title} ${season} ${episode} ${height} ${width}">

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
 using DynamicData;
 
@@ -191,7 +192,7 @@ public class Merger{
                 args.Add($"--track-name {trackName}");
                 args.Add($"--language 0:\"{subObj.Language.Code}\"");
 
-                if (options.Defaults.Sub.Code == subObj.Language.Code && subObj.ClosedCaption == false){
+                if (options.Defaults.Sub.Code == subObj.Language.Code && CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == subObj.Signs && subObj.ClosedCaption == false){
                     args.Add("--default-track 0");
                 } else{
                     args.Add("--default-track 0:0");

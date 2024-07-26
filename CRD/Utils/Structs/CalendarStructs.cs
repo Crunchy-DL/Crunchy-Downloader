@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
@@ -33,7 +36,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
     public Bitmap? ImageBitmap{ get; set; }
 
     public string? EpisodeNumber{ get; set; }
-    
+
     public bool IsPremiumOnly{ get; set; }
     public bool IsPremiere{ get; set; }
 
@@ -48,18 +51,22 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
         if (match.Success){
             var locale = match.Groups[1].Value; // Capture the locale part
             var id = match.Groups[2].Value; // Capture the ID part
-            QueueManager.Instance.CRAddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang,true);
+            QueueManager.Instance.CRAddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
         }
     }
-    
+
     public async Task LoadImage(){
         try{
-            using (var client = new HttpClient()){
-                var response = await client.GetAsync(ThumbnailUrl);
-                response.EnsureSuccessStatusCode();
-                using (var stream = await response.Content.ReadAsStreamAsync()){
-                    ImageBitmap = new Bitmap(stream);
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageBitmap)));
+            if (string.IsNullOrEmpty(ThumbnailUrl)){
+
+            } else{
+                using (var client = new HttpClient()){
+                    var response = await client.GetAsync(ThumbnailUrl);
+                    response.EnsureSuccessStatusCode();
+                    using (var stream = await response.Content.ReadAsStreamAsync()){
+                        ImageBitmap = new Bitmap(stream);
+                        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageBitmap)));
+                    }
                 }
             }
         } catch (Exception ex){

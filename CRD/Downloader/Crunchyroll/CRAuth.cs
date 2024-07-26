@@ -127,7 +127,6 @@ public class CrAuth{
                     } else{
                         crunInstance.Profile.HasPremium = subsc.IsActive; 
                     }
-                    
                 } else{
                     crunInstance.Profile.HasPremium = false;
                     Console.Error.WriteLine("Failed to check premium subscription status");

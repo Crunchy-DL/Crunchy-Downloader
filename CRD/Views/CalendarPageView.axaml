@@ -177,7 +177,12 @@
                                                            Text="{Binding DateTime, StringFormat='hh:mm tt'}"
                                                            Margin="0,0,0,0" />
                                                 <Grid HorizontalAlignment="Center">
-                                                    <Image HorizontalAlignment="Center" Source="{Binding ImageBitmap}" />
+                                                    <Grid>
+                                                        <Image HorizontalAlignment="Center" Source="../Assets/coming_soon_ep.jpg" />
+                                                        <Image HorizontalAlignment="Center" Source="{Binding ImageBitmap}" />
+                                                    </Grid>
+                                                    
+                                                    
                                                     <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
                                                         <TextBlock VerticalAlignment="Center" TextAlignment="Center"
                                                                    Margin="0 0 5 0" Width="30" Height="30"

@@ -19,7 +19,6 @@ using CRD.Utils.Muxing;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
-using CRD.ViewModels;
 using CRD.Views;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -34,7 +33,7 @@ public class CrunchyrollManager{
     public CrProfile Profile = new();
     private readonly Lazy<CrDownloadOptions> _optionsLazy;
     public CrDownloadOptions CrunOptions => _optionsLazy.Value;
-    
+
     #region History Variables
 
     public ObservableCollection<HistorySeries> HistoryList = new();
@@ -42,7 +41,7 @@ public class CrunchyrollManager{
     public HistorySeries SelectedSeries = new HistorySeries{
         Seasons =[]
     };
-    
+
     #endregion
 
 
@@ -58,7 +57,7 @@ public class CrunchyrollManager{
     public CrEpisode CrEpisode;
     public CrSeries CrSeries;
     public History History;
-    
+
     #region Singelton
 
     private static CrunchyrollManager? _instance;
@@ -86,9 +85,8 @@ public class CrunchyrollManager{
 
 
     private CrDownloadOptions InitDownloadOptions(){
-
         var options = new CrDownloadOptions();
-        
+
         options.AutoDownload = false;
         options.RemoveFinishedDownload = false;
         options.Chapters = true;
@@ -123,7 +121,7 @@ public class CrunchyrollManager{
 
         return options;
     }
-    
+
     public void InitOptions(){
         _widevine = Widevine.Instance;
 
@@ -144,8 +142,6 @@ public class CrunchyrollManager{
     }
 
     public async Task Init(){
-       
-
         if (CrunOptions.LogMode){
             CfgManager.EnableLogMode();
         } else{
@@ -181,7 +177,6 @@ public class CrunchyrollManager{
     }
 
 
-    
     public async Task<bool> DownloadEpisode(CrunchyEpMeta data, CrDownloadOptions options){
         QueueManager.Instance.ActiveDownloads++;
 
@@ -369,7 +364,7 @@ public class CrunchyrollManager{
                     }
                 }
             }
-            
+
             syncVideosList.ForEach(syncVideo => Helpers.DeleteFile(syncVideo.Path));
         }
 
@@ -648,14 +643,13 @@ public class CrunchyrollManager{
                             }
 
                             dlFailed = true;
-                            
+
                             return new DownloadResponse{
                                 Data = new List<DownloadedMedia>(),
                                 Error = dlFailed,
                                 FileName = "./unknown",
                                 ErrorText = "Hardsubs not available"
                             };
-                            
                         }
                     } else{
                         streams = streams.Where((s) => {
@@ -1601,27 +1595,42 @@ public class CrunchyrollManager{
         var showRequestResponse = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
         if (showRequestResponse.IsOk){
-            JObject jObject = JObject.Parse(showRequestResponse.ResponseContent);
-
             CrunchyChapters chapterData = new CrunchyChapters();
-            chapterData.lastUpdate = jObject["lastUpdate"]?.ToObject<DateTime?>();
-            chapterData.mediaId = jObject["mediaId"]?.ToObject<string>();
             chapterData.Chapters = new List<CrunchyChapter>();
 
-            foreach (var property in jObject.Properties()){
-                // Check if the property value is an object and the property is not one of the known non-dictionary properties
-                if (property.Value.Type == JTokenType.Object && property.Name != "lastUpdate" && property.Name != "mediaId"){
-                    // Deserialize the property value into a CrunchyChapter and add it to the dictionary
-                    CrunchyChapter chapter = property.Value.ToObject<CrunchyChapter>();
-                    chapterData.Chapters.Add(chapter);
+            try{
+                JObject jObject = JObject.Parse(showRequestResponse.ResponseContent);
+                
+                if (jObject.TryGetValue("lastUpdate", out JToken lastUpdateToken)){
+                    chapterData.lastUpdate = lastUpdateToken.ToObject<DateTime?>();
                 }
+                
+                if (jObject.TryGetValue("mediaId", out JToken mediaIdToken)){
+                    chapterData.mediaId = mediaIdToken.ToObject<string>();
+                }
+
+                chapterData.Chapters = new List<CrunchyChapter>();
+
+                foreach (var property in jObject.Properties()){
+                    if (property.Value.Type == JTokenType.Object && property.Name != "lastUpdate" && property.Name != "mediaId"){
+                        try{
+                            CrunchyChapter chapter = property.Value.ToObject<CrunchyChapter>();
+                            chapterData.Chapters.Add(chapter);
+                        } catch (Exception ex){
+                            Console.Error.WriteLine($"Error parsing chapter: {ex.Message}");
+                        }
+                    }
+                }
+            } catch (Exception ex){
+                Console.Error.WriteLine($"Error parsing JSON response: {ex.Message}");
             }
 
             if (chapterData.Chapters.Count > 0){
                 chapterData.Chapters.Sort((a, b) => {
-                    if (a.start != null && b.start != null)
-                        return a.start.Value - b.start.Value;
-                    return 0;
+                    if (a.start.HasValue && b.start.HasValue){
+                        return a.start.Value.CompareTo(b.start.Value);
+                    }
+                    return 0; // Both values are null, they are considered equal
                 });
 
                 if (!((chapterData.Chapters.Any(c => c.type == "intro")) || chapterData.Chapters.Any(c => c.type == "recap"))){

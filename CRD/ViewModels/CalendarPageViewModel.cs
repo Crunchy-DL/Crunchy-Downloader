@@ -1,8 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
@@ -56,8 +62,9 @@ public partial class CalendarPageViewModel : ViewModelBase{
     private CalendarWeek? currentWeek;
 
     private bool loading = true;
-
+    
     public CalendarPageViewModel(){
+
         CalendarDays = new ObservableCollection<CalendarDay>();
 
         foreach (var languageItem in Languages.languages){
@@ -75,7 +82,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
         loading = false;
         LoadCalendar(GetThisWeeksMondayDate(), false);
     }
-
+    
     private string GetThisWeeksMondayDate(){
         // Get today's date
         DateTime today = DateTime.Today;
@@ -226,7 +233,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.CustomCalendar = value;
 
         LoadCalendar(GetThisWeeksMondayDate(), true);
-        
+
         CfgManager.WriteSettingsToFile();
     }
 
