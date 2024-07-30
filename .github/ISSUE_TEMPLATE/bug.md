@@ -21,4 +21,4 @@ Before you open a new issue, please make sure you have done the following:**
    - If the program displays an error or behaves unexpectedly, please enable log mode and check the logs for any error messages. Include these logs when you submit your issue.
 
 4. **Check the Windows Event Log (if the program crashes)**
-   - If the program crashes, please check the Windows Event Log for any related error messages and include that information in your issue report.
+   - If the program crashes, please check the Windows Event Log for any related error messages (.NET runtime) and include that information in your issue report.
