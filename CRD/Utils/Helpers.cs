@@ -133,6 +133,7 @@ public class Helpers{
     public static void ConvertChapterFileForFFMPEG(string chapterFilePath){
         var chapterLines = File.ReadAllLines(chapterFilePath);
         var ffmpegChapterLines = new List<string>{ ";FFMETADATA1" };
+        var chapters = new List<(double StartTime, string Title)>();
 
         for (int i = 0; i < chapterLines.Length; i += 2){
             var timeLine = chapterLines[i];
@@ -143,14 +144,28 @@ public class Helpers{
 
             if (timeParts.Length == 2 && nameParts.Length == 2){
                 var startTime = TimeSpan.Parse(timeParts[1]).TotalMilliseconds;
-                var endTime = i + 2 < chapterLines.Length ? TimeSpan.Parse(chapterLines[i + 2].Split('=')[1]).TotalMilliseconds : startTime + 10000;
-
-                ffmpegChapterLines.Add("[CHAPTER]");
-                ffmpegChapterLines.Add("TIMEBASE=1/1000");
-                ffmpegChapterLines.Add($"START={startTime}");
-                ffmpegChapterLines.Add($"END={endTime}");
-                ffmpegChapterLines.Add($"title={nameParts[1]}");
+                var title = nameParts[1];
+                chapters.Add((startTime, title));
             }
+        }
+
+        // Sort chapters by start time
+        chapters = chapters.OrderBy(c => c.StartTime).ToList();
+
+        for (int i = 0; i < chapters.Count; i++){
+            var startTime = chapters[i].StartTime;
+            var title = chapters[i].Title;
+            var endTime = (i + 1 < chapters.Count) ? chapters[i + 1].StartTime : startTime + 10000; // Add 10 seconds to the last chapter end time
+
+            if (endTime < startTime) {
+                endTime = startTime + 10000; // Correct end time if it is before start time
+            }
+
+            ffmpegChapterLines.Add("[CHAPTER]");
+            ffmpegChapterLines.Add("TIMEBASE=1/1000");
+            ffmpegChapterLines.Add($"START={startTime}");
+            ffmpegChapterLines.Add($"END={endTime}");
+            ffmpegChapterLines.Add($"title={title}");
         }
 
         File.WriteAllLines(chapterFilePath, ffmpegChapterLines);

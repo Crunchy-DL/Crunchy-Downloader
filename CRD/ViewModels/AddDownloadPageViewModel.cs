@@ -235,11 +235,11 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                         currentSeriesList = list;
                         foreach (var episode in currentSeriesList.Value.List){
                             if (episodesBySeason.ContainsKey("S" + episode.Season)){
-                                episodesBySeason["S" + episode.Season].Add(new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, "E" + episode.EpisodeNum, episode.E,
+                                episodesBySeason["S" + episode.Season].Add(new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E,
                                     episode.Lang));
                             } else{
                                 episodesBySeason.Add("S" + episode.Season, new List<ItemModel>{
-                                    new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, "E" + episode.EpisodeNum, episode.E, episode.Lang)
+                                    new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E, episode.Lang)
                                 });
                                 SeasonList.Add(new ComboBoxItem{ Content = "S" + episode.Season });
                             }
@@ -346,11 +346,11 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             currentSeriesList = list;
             foreach (var episode in currentSeriesList.Value.List){
                 if (episodesBySeason.ContainsKey("S" + episode.Season)){
-                    episodesBySeason["S" + episode.Season].Add(new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, "E" + episode.EpisodeNum, episode.E,
+                    episodesBySeason["S" + episode.Season].Add(new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E,
                         episode.Lang));
                 } else{
                     episodesBySeason.Add("S" + episode.Season, new List<ItemModel>{
-                        new(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, "E" + episode.EpisodeNum, episode.E, episode.Lang)
+                        new(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E, episode.Lang)
                     });
                     SeasonList.Add(new ComboBoxItem{ Content = "S" + episode.Season });
                 }

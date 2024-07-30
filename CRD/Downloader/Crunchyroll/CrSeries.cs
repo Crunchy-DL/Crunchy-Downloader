@@ -160,7 +160,7 @@ public class CrSeries(){
                 var seasonData = await GetSeasonDataById(s.Id, "");
                 if (seasonData.Data != null){
                     if (crunInstance.CrunOptions.History){
-                        crunInstance.History.UpdateWithSeasonData(seasonData,false);
+                        crunInstance.History.UpdateWithSeasonData(seasonData, false);
                     }
 
                     foreach (var episode in seasonData.Data){
@@ -229,9 +229,16 @@ public class CrSeries(){
 
             string newKey;
             if (isSpecial && !string.IsNullOrEmpty(item.Items[0].Episode)){
-                newKey = item.Items[0].Episode ?? "SP" + (specialIndex + " " + item.Items[0].Id);
+                newKey = $"SP{specialIndex}_" + item.Items[0].Episode ?? "SP" + (specialIndex + " " + item.Items[0].Id);
             } else{
                 newKey = $"{(isSpecial ? "SP" : 'E')}{(isSpecial ? (specialIndex + " " + item.Items[0].Id) : epIndex + "")}";
+            }
+
+            int counter = 1;
+            string originalKey = newKey;
+            while (episodes.ContainsKey(newKey)){
+                newKey = originalKey + "_" + counter;
+                counter++;
             }
 
             episodes.Remove(key);
@@ -285,7 +292,7 @@ public class CrSeries(){
                 Season = Helpers.ExtractNumberAfterS(value.Items[0].Identifier) ?? value.Items[0].SeasonNumber.ToString(),
                 SeriesTitle = Regex.Replace(value.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd(),
                 SeasonTitle = Regex.Replace(value.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd(),
-                EpisodeNum = value.Items[0].EpisodeNumber?.ToString() ?? value.Items[0].Episode ?? "?",
+                EpisodeNum = key.StartsWith("SP") ? key : value.Items[0].EpisodeNumber?.ToString() ?? value.Items[0].Episode ?? "?",
                 Id = value.Items[0].SeasonId,
                 Img = images[images.Count / 2].FirstOrDefault().Source,
                 Description = value.Items[0].Description,
