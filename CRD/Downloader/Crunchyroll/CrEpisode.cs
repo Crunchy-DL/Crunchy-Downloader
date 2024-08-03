@@ -15,10 +15,10 @@ public class CrEpisode(){
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale, bool forcedLang = false){
-        if (crunInstance.CmsToken?.Cms == null){
-            Console.Error.WriteLine("Missing CMS Access Token");
-            return null;
-        }
+        // if (crunInstance.CmsToken?.Cms == null){
+        //     Console.Error.WriteLine("Missing CMS Access Token");
+        //     return null;
+        // }
 
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
@@ -130,30 +130,7 @@ public class CrEpisode(){
         if (!serieshasversions){
             Console.WriteLine("Couldn\'t find versions on episode, fell back to old method.");
         }
-
-
-        // crunchySeriesList.Data = sortedEpisodes;
-        //
-        //
-        // var images = (episode.EpisodeAndLanguages.Items[0].Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
-        // var seconds = (int)Math.Floor(episode.EpisodeAndLanguages.Items[0].DurationMs / 1000.0);
-        //
-        // var newEpisode = new Episode{
-        //     E = episode.Key.StartsWith("E") ? episode.Key.Substring(1) : episode.Key,
-        //     Lang = episode.EpisodeAndLanguages.Langs.Select(a => a.Code).ToList(),
-        //     Name = episode.EpisodeAndLanguages.Items[0].Title,
-        //     Season = Helpers.ExtractNumberAfterS(episode.EpisodeAndLanguages.Items[0].Identifier) ?? episode.EpisodeAndLanguages.Items[0].SeasonNumber.ToString(),
-        //     SeriesTitle = Regex.Replace(episode.EpisodeAndLanguages.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd(),
-        //     SeasonTitle = Regex.Replace(episode.EpisodeAndLanguages.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd(),
-        //     EpisodeNum = episode.EpisodeAndLanguages.Items[0].EpisodeNumber?.ToString() ?? episode.EpisodeAndLanguages.Items[0].Episode ?? "?",
-        //     Id = episode.EpisodeAndLanguages.Items[0].SeasonId,
-        //     Img = images[images.Count / 2].FirstOrDefault().Source,
-        //     Description = episode.EpisodeAndLanguages.Items[0].Description,
-        //     Time = $"{seconds / 60}:{seconds % 60:D2}" // Ensures two digits for seconds.
-        // };
-        //
-        // CrunchySeriesList crunchySeriesList = new CrunchySeriesList();
-
+        
         return episode;
     }
 
@@ -243,6 +220,7 @@ public class CrEpisode(){
     }
 
     public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount,DateTime? firstWeekDay = null , bool forcedLang = false){
+        await crunInstance.CrAuth.RefreshToken(true);
         CrBrowseEpisodeBase? complete = new CrBrowseEpisodeBase();
         complete.Data =[];
 

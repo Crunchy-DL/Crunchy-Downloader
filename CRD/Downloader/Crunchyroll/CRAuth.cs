@@ -45,7 +45,7 @@ public class CrAuth{
             PreferredContentSubtitleLanguage = "de-DE"
         };
 
-        CrunchyrollManager.Instance.CmsToken = new CrCmsToken();
+        // CrunchyrollManager.Instance.CmsToken = new CrCmsToken();
 
     }
 
@@ -171,7 +171,7 @@ public class CrAuth{
             await GetProfile();
         }
 
-        await GetCmsToken();
+        // await GetCmsToken();
     }
 
     public async Task RefreshToken(bool needsToken){
@@ -210,52 +210,52 @@ public class CrAuth{
             Console.Error.WriteLine("Refresh Token Auth Failed");
         }
 
-        await GetCmsToken();
+        // await GetCmsToken();
     }
 
 
-    public async Task GetCmsToken(){
-        if (crunInstance.Token?.access_token == null){
-            Console.Error.WriteLine($"Missing Access Token: {crunInstance.Token?.access_token}");
-            return;
-        }
-
-        var request = HttpClientReq.CreateRequestMessage(Api.BetaCmsToken, HttpMethod.Get, true, true, null);
-
-        var response = await HttpClientReq.Instance.SendHttpRequest(request);
-
-        if (response.IsOk){
-            crunInstance.CmsToken = JsonConvert.DeserializeObject<CrCmsToken>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
-        } else{
-            Console.Error.WriteLine("CMS Token Auth Failed");
-        }
-    }
-
-    public async Task GetCmsData(){
-        if (crunInstance.CmsToken?.Cms == null){
-            Console.Error.WriteLine("Missing CMS Token");
-            return;
-        }
-
-        UriBuilder uriBuilder = new UriBuilder(Api.BetaCms + crunInstance.CmsToken.Cms.Bucket + "/index?");
-
-        NameValueCollection query = HttpUtility.ParseQueryString(uriBuilder.Query);
-
-        query["preferred_audio_language"] = "ja-JP";
-        query["Policy"] = crunInstance.CmsToken.Cms.Policy;
-        query["Signature"] = crunInstance.CmsToken.Cms.Signature;
-        query["Key-Pair-Id"] = crunInstance.CmsToken.Cms.KeyPairId;
-
-        uriBuilder.Query = query.ToString();
-
-        var request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.ToString());
-
-        var response = await HttpClientReq.Instance.SendHttpRequest(request);
-
-        if (response.IsOk){
-            Console.WriteLine(response.ResponseContent);
-        } else{
-            Console.Error.WriteLine("Failed to Get CMS Index");
-        }
-    }
+    // public async Task GetCmsToken(){
+    //     if (crunInstance.Token?.access_token == null){
+    //         Console.Error.WriteLine($"Missing Access Token: {crunInstance.Token?.access_token}");
+    //         return;
+    //     }
+    //
+    //     var request = HttpClientReq.CreateRequestMessage(Api.BetaCmsToken, HttpMethod.Get, true, true, null);
+    //
+    //     var response = await HttpClientReq.Instance.SendHttpRequest(request);
+    //
+    //     if (response.IsOk){
+    //         crunInstance.CmsToken = JsonConvert.DeserializeObject<CrCmsToken>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+    //     } else{
+    //         Console.Error.WriteLine("CMS Token Auth Failed");
+    //     }
+    // }
+    //
+    // public async Task GetCmsData(){
+    //     if (crunInstance.CmsToken?.Cms == null){
+    //         Console.Error.WriteLine("Missing CMS Token");
+    //         return;
+    //     }
+    //
+    //     UriBuilder uriBuilder = new UriBuilder(Api.BetaCms + crunInstance.CmsToken.Cms.Bucket + "/index?");
+    //
+    //     NameValueCollection query = HttpUtility.ParseQueryString(uriBuilder.Query);
+    //
+    //     query["preferred_audio_language"] = "ja-JP";
+    //     query["Policy"] = crunInstance.CmsToken.Cms.Policy;
+    //     query["Signature"] = crunInstance.CmsToken.Cms.Signature;
+    //     query["Key-Pair-Id"] = crunInstance.CmsToken.Cms.KeyPairId;
+    //
+    //     uriBuilder.Query = query.ToString();
+    //
+    //     var request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.ToString());
+    //
+    //     var response = await HttpClientReq.Instance.SendHttpRequest(request);
+    //
+    //     if (response.IsOk){
+    //         Console.WriteLine(response.ResponseContent);
+    //     } else{
+    //         Console.Error.WriteLine("Failed to Get CMS Index");
+    //     }
+    // }
 }

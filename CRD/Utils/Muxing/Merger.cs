@@ -56,6 +56,11 @@ public class Merger{
                 args.Add($"-i \"{aud.Path}\"");
                 metaData.Add($"-map {index}:a");
                 metaData.Add($"-metadata:s:a:{audioIndex} language={aud.Language.Code}");
+                if (options.Defaults.Audio.Code == aud.Language.Code){
+                    metaData.Add($"-disposition:a:{audioIndex} default");
+                } else{
+                    metaData.Add($"-disposition:a:{audioIndex} 0");
+                }
                 index++;
                 audioIndex++;
             }
@@ -75,20 +80,17 @@ public class Merger{
                 }
 
                 args.Add($"-i \"{sub.value.File}\"");
-            }
-
-            if (options.Output.EndsWith(".mkv", StringComparison.OrdinalIgnoreCase)){
-                if (options.Fonts != null){
-                    int fontIndex = 0;
-                    foreach (var font in options.Fonts){
-                        args.Add($"-attach {font.Path} -metadata:s:t:{fontIndex} mimetype={font.Mime}");
-                        fontIndex++;
-                    }
+                metaData.Add($"-map {index}:s");
+                if (options.Defaults.Sub.Code == sub.value.Language.Code && CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == sub.value.Signs && sub.value.ClosedCaption == false){
+                    args.Add($"-disposition:s:{sub.i} default");
+                } else{
+                    args.Add($"-disposition:s:{sub.i} 0");
                 }
+                index++;
             }
-
+            
             args.AddRange(metaData);
-            args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
+            // args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
             args.Add("-c:v copy");
             args.Add("-c:a copy");
             args.Add(options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");

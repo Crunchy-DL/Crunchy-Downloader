@@ -207,5 +207,6 @@ public enum SonarrSeriesType{
 public enum SonarrStatus{
     Continuing,
     Upcoming,
-    Ended
+    Ended,
+    Deleted 
 };

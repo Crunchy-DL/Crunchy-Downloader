@@ -234,14 +234,16 @@ public class CrSeries(){
                 newKey = $"{(isSpecial ? "SP" : 'E')}{(isSpecial ? (specialIndex + " " + item.Items[0].Id) : epIndex + "")}";
             }
 
+            
+            episodes.Remove(key);
+            
             int counter = 1;
             string originalKey = newKey;
             while (episodes.ContainsKey(newKey)){
                 newKey = originalKey + "_" + counter;
                 counter++;
             }
-
-            episodes.Remove(key);
+            
             episodes.Add(newKey, item);
 
             if (isSpecial){
@@ -389,6 +391,7 @@ public class CrSeries(){
     }
 
     public async Task<CrSeriesSearch?> ParseSeriesById(string id, string? crLocale, bool forced = false){
+        await crunInstance.CrAuth.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";
@@ -420,6 +423,7 @@ public class CrSeries(){
     }
 
     public async Task<CrSeriesBase?> SeriesById(string id, string? crLocale, bool forced = false){
+        await crunInstance.CrAuth.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";
@@ -451,6 +455,7 @@ public class CrSeries(){
 
 
     public async Task<CrSearchSeriesBase?> Search(string searchString, string? crLocale){
+        await crunInstance.CrAuth.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         if (!string.IsNullOrEmpty(crLocale)){

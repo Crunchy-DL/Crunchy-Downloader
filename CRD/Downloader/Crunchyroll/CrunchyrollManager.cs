@@ -28,7 +28,7 @@ namespace CRD.Downloader.Crunchyroll;
 
 public class CrunchyrollManager{
     public CrToken? Token;
-    public CrCmsToken? CmsToken;
+    // public CrCmsToken? CmsToken;
 
     public CrProfile Profile = new();
     private readonly Lazy<CrDownloadOptions> _optionsLazy;
@@ -382,16 +382,16 @@ public class CrunchyrollManager{
     }
 
     private async Task<DownloadResponse> DownloadMediaList(CrunchyEpMeta data, CrDownloadOptions options){
-        if (CmsToken?.Cms == null){
-            Console.WriteLine("Missing CMS Token");
-            MainWindow.Instance.ShowError("Missing CMS Token - are you signed in?");
-            return new DownloadResponse{
-                Data = new List<DownloadedMedia>(),
-                Error = true,
-                FileName = "./unknown",
-                ErrorText = "Login problem"
-            };
-        }
+        // if (CmsToken?.Cms == null){
+        //     Console.WriteLine("Missing CMS Token");
+        //     MainWindow.Instance.ShowError("Missing CMS Token - are you signed in?");
+        //     return new DownloadResponse{
+        //         Data = new List<DownloadedMedia>(),
+        //         Error = true,
+        //         FileName = "./unknown",
+        //         ErrorText = "Login problem"
+        //     };
+        // }
 
         if (Profile.Username == "???"){
             MainWindow.Instance.ShowError("User Account not recognized - are you signed in?");
@@ -453,16 +453,16 @@ public class CrunchyrollManager{
 
         List<DownloadedMedia> files = new List<DownloadedMedia>();
 
-        if (data.Data != null && data.Data.All(a => a.Playback == null)){
-            Console.WriteLine("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
-            MainWindow.Instance.ShowError("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
-            return new DownloadResponse{
-                Data = files,
-                Error = true,
-                FileName = "./unknown",
-                ErrorText = "Video Data not found"
-            };
-        }
+        // if (data.Data != null && data.Data.All(a => a.Playback == null)){
+        //     Console.WriteLine("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
+        //     MainWindow.Instance.ShowError("No Video Data found - Are you trying to download a premium episode without havíng a premium account?");
+        //     return new DownloadResponse{
+        //         Data = files,
+        //         Error = true,
+        //         FileName = "./unknown",
+        //         ErrorText = "Video Data not found"
+        //     };
+        // }
 
 
         bool dlFailed = false;
