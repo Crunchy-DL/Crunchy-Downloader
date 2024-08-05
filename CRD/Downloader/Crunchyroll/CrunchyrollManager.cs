@@ -28,7 +28,6 @@ namespace CRD.Downloader.Crunchyroll;
 
 public class CrunchyrollManager{
     public CrToken? Token;
-    // public CrCmsToken? CmsToken;
 
     public CrProfile Profile = new();
     private readonly Lazy<CrDownloadOptions> _optionsLazy;
@@ -44,6 +43,8 @@ public class CrunchyrollManager{
 
     #endregion
 
+    public CrBrowseSeriesBase? AllCRSeries;
+    
 
     public string DefaultLocale = "en-US";
 
@@ -170,9 +171,9 @@ public class CrunchyrollManager{
                 } else{
                     HistoryList =[];
                 }
-
-                SonarrClient.Instance.RefreshSonarr();
             }
+            
+            SonarrClient.Instance.RefreshSonarr();
         }
     }
 
@@ -215,27 +216,55 @@ public class CrunchyrollManager{
             };
 
             QueueManager.Instance.Queue.Refresh();
+            
+            if (CrunOptions is{ DlVideoOnce: false, KeepDubsSeperate: true }){
+                var groupByDub = Helpers.GroupByLanguageWithSubtitles(res.Data);
 
-            await MuxStreams(res.Data,
-                new CrunchyMuxOptions{
-                    FfmpegOptions = options.FfmpegOptions,
-                    SkipSubMux = options.SkipSubsMux,
-                    Output = res.FileName,
-                    Mp4 = options.Mp4,
-                    VideoTitle = res.VideoTitle,
-                    Novids = options.Novids,
-                    NoCleanup = options.Nocleanup,
-                    DefaultAudio = Languages.FindLang(options.DefaultAudio),
-                    DefaultSub = Languages.FindLang(options.DefaultSub),
-                    MkvmergeOptions = options.MkvmergeOptions,
-                    ForceMuxer = options.Force,
-                    SyncTiming = options.SyncTiming,
-                    CcTag = options.CcTag,
-                    KeepAllVideos = true,
-                    MuxDescription = options.IncludeVideoDescription
-                },
-                res.FileName);
-
+                foreach (var keyValue in groupByDub){
+                    await MuxStreams(keyValue.Value,
+                        new CrunchyMuxOptions{
+                            FfmpegOptions = options.FfmpegOptions,
+                            SkipSubMux = options.SkipSubsMux,
+                            Output = res.FileName,
+                            Mp4 = options.Mp4,
+                            VideoTitle = res.VideoTitle,
+                            Novids = options.Novids,
+                            NoCleanup = options.Nocleanup,
+                            DefaultAudio = Languages.FindLang(options.DefaultAudio),
+                            DefaultSub = Languages.FindLang(options.DefaultSub),
+                            MkvmergeOptions = options.MkvmergeOptions,
+                            ForceMuxer = options.Force,
+                            SyncTiming = options.SyncTiming,
+                            CcTag = options.CcTag,
+                            KeepAllVideos = true,
+                            MuxDescription = options.IncludeVideoDescription
+                        },
+                        res.FileName); 
+                }
+                
+                
+            } else{
+                await MuxStreams(res.Data,
+                    new CrunchyMuxOptions{
+                        FfmpegOptions = options.FfmpegOptions,
+                        SkipSubMux = options.SkipSubsMux,
+                        Output = res.FileName,
+                        Mp4 = options.Mp4,
+                        VideoTitle = res.VideoTitle,
+                        Novids = options.Novids,
+                        NoCleanup = options.Nocleanup,
+                        DefaultAudio = Languages.FindLang(options.DefaultAudio),
+                        DefaultSub = Languages.FindLang(options.DefaultSub),
+                        MkvmergeOptions = options.MkvmergeOptions,
+                        ForceMuxer = options.Force,
+                        SyncTiming = options.SyncTiming,
+                        CcTag = options.CcTag,
+                        KeepAllVideos = true,
+                        MuxDescription = options.IncludeVideoDescription
+                    },
+                    res.FileName); 
+            }
+            
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = true,
                 Done = true,

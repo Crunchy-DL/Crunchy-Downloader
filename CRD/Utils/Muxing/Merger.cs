@@ -82,9 +82,9 @@ public class Merger{
                 args.Add($"-i \"{sub.value.File}\"");
                 metaData.Add($"-map {index}:s");
                 if (options.Defaults.Sub.Code == sub.value.Language.Code && CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == sub.value.Signs && sub.value.ClosedCaption == false){
-                    args.Add($"-disposition:s:{sub.i} default");
+                    metaData.Add($"-disposition:s:{sub.i} default");
                 } else{
-                    args.Add($"-disposition:s:{sub.i} 0");
+                    metaData.Add($"-disposition:s:{sub.i} 0");
                 }
                 index++;
             }

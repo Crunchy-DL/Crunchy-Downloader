@@ -191,6 +191,17 @@ public enum SortingType{
     HistorySeriesAddDate,
 }
 
+public enum FilterType{
+    [EnumMember(Value = "All")]
+    All,
+    [EnumMember(Value = "Missing Episodes")]
+    MissingEpisodes,
+    [EnumMember(Value = "Missing Episodes Sonarr")]
+    MissingEpisodesSonarr,
+    [EnumMember(Value = "Continuing Only")]
+    ContinuingOnly,
+}
+
 public enum SonarrCoverType{
     Banner,
     FanArt,

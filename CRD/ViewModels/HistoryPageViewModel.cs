@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -14,85 +16,116 @@ using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;
 using DynamicData;
+using HarfBuzzSharp;
 using ReactiveUI;
 
 namespace CRD.ViewModels;
 
 public partial class HistoryPageViewModel : ViewModelBase{
     public ObservableCollection<HistorySeries> Items{ get; }
+    public ObservableCollection<HistorySeries> FilteredItems{ get; }
 
     [ObservableProperty]
     private static bool _fetchingData;
 
     [ObservableProperty]
-    public HistorySeries _selectedSeries;
+    private HistorySeries _selectedSeries;
 
     [ObservableProperty]
-    public static bool _editMode;
+    private static bool _editMode;
 
     [ObservableProperty]
-    public double _scaleValue;
+    private double _scaleValue;
 
     [ObservableProperty]
-    public ComboBoxItem _selectedView;
+    private ComboBoxItem? _selectedView;
 
     public ObservableCollection<ComboBoxItem> ViewsList{ get; } =[];
 
     [ObservableProperty]
-    public SortingListElement _selectedSorting;
+    private SortingListElement? _selectedSorting;
 
     public ObservableCollection<SortingListElement> SortingList{ get; } =[];
 
     [ObservableProperty]
-    public double _posterWidth;
+    private FilterListElement? _selectedFilter;
+
+    public ObservableCollection<FilterListElement> FilterList{ get; } =[];
 
     [ObservableProperty]
-    public double _posterHeight;
+    private double _posterWidth;
 
     [ObservableProperty]
-    public double _posterImageWidth;
+    private double _posterHeight;
 
     [ObservableProperty]
-    public double _posterImageHeight;
+    private double _posterImageWidth;
 
     [ObservableProperty]
-    public double _posterTextSize;
+    private double _posterImageHeight;
 
     [ObservableProperty]
-    public Thickness _cornerMargin;
-
-    private HistoryViewType currentViewType = HistoryViewType.Posters;
+    private double _posterTextSize;
 
     [ObservableProperty]
-    public bool _isPosterViewSelected = false;
+    private Thickness _cornerMargin;
+
 
     [ObservableProperty]
-    public bool _isTableViewSelected = false;
+    private bool _isPosterViewSelected = false;
 
     [ObservableProperty]
-    public static bool _viewSelectionOpen;
+    private bool _isTableViewSelected = false;
 
     [ObservableProperty]
-    public static bool _sortingSelectionOpen;
+    private static bool _viewSelectionOpen;
+
+    [ObservableProperty]
+    private static bool _sortingSelectionOpen;
+
+    [ObservableProperty]
+    private static bool _addingMissingSonarrSeries;
+
+    [ObservableProperty]
+    private static bool _sonarrOptionsOpen;
 
     private IStorageProvider _storageProvider;
 
-    private SortingType currentSortingType = SortingType.NextAirDate;
+    private HistoryViewType currentViewType;
+
+    private SortingType currentSortingType;
+
+    private FilterType currentFilterType;
 
     [ObservableProperty]
-    public static bool _sortDir = false;
+    private static bool _sortDir = false;
+
+    [ObservableProperty]
+    private static bool _sonarrAvailable;
     
+    [ObservableProperty]
+    private static string _progressText;
+
     public HistoryPageViewModel(){
+        if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
+            SonarrAvailable = CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
+        } else{
+            SonarrAvailable = false;
+        }
+
         Items = CrunchyrollManager.Instance.HistoryList;
+        FilteredItems = new ObservableCollection<HistorySeries>();
 
         HistoryPageProperties? properties = CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties;
 
         currentViewType = properties?.SelectedView ?? HistoryViewType.Posters;
         currentSortingType = properties?.SelectedSorting ?? SortingType.SeriesTitle;
+        currentFilterType = properties?.SelectedFilter ?? FilterType.All;
         ScaleValue = properties?.ScaleValue ?? 0.73;
         SortDir = properties?.Ascending ?? false;
 
@@ -109,6 +142,19 @@ public partial class HistoryPageViewModel : ViewModelBase{
             SortingList.Add(combobox);
             if (sortingType == currentSortingType){
                 SelectedSorting = combobox;
+            }
+        }
+
+        foreach (FilterType filterType in Enum.GetValues(typeof(FilterType))){
+
+            if (!SonarrAvailable && (filterType == FilterType.MissingEpisodesSonarr || filterType == FilterType.ContinuingOnly)){
+                continue;
+            }
+            
+            var item = new FilterListElement(){ FilterTitle = filterType.GetEnumMemberValue(), SelectedType = filterType };
+            FilterList.Add(item);
+            if (filterType == currentFilterType){
+                SelectedFilter = item;
             }
         }
 
@@ -172,6 +218,10 @@ public partial class HistoryPageViewModel : ViewModelBase{
             currentSortingType = newValue.SelectedSorting;
             if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null) CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
             CrunchyrollManager.Instance.History.SortItems();
+            if (SelectedFilter != null){
+                OnSelectedFilterChanged(SelectedFilter);
+            }
+            
         } else{
             Console.Error.WriteLine("Invalid viewtype selected");
         }
@@ -180,17 +230,46 @@ public partial class HistoryPageViewModel : ViewModelBase{
         UpdateSettings();
     }
 
-    private bool TryParseEnum<T>(string value, out T result) where T : struct, Enum{
-        foreach (var field in typeof(T).GetFields()){
-            var attribute = field.GetCustomAttribute<EnumMemberAttribute>();
-            if (attribute != null && attribute.Value == value){
-                result = (T)field.GetValue(null);
-                return true;
-            }
-        }
 
-        result = default;
-        return false;
+    partial void OnSelectedFilterChanged(FilterListElement? value){
+
+        if (value == null){
+            return;
+        }
+        
+        currentFilterType = value.SelectedType;
+        if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null) CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedFilter = currentFilterType;
+
+
+        switch (currentFilterType){
+            case FilterType.All:
+                FilteredItems.Clear();
+                FilteredItems.AddRange(Items);
+                break;
+            case FilterType.MissingEpisodes:
+                List<HistorySeries> filteredItems = Items.Where(item => item.NewEpisodes > 0).ToList();
+                FilteredItems.Clear();
+                FilteredItems.AddRange(filteredItems);
+                break;
+            case FilterType.MissingEpisodesSonarr:
+
+                var missingSonarrFiltered = Items.Where(historySeries =>
+                        !string.IsNullOrEmpty(historySeries.SonarrSeriesId) && // Check series ID
+                        historySeries.Seasons.Any(season => // Check each season
+                            season.EpisodesList.Any(historyEpisode => // Check each episode
+                                !string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId) && !historyEpisode.SonarrHasFile))) // Filter condition
+                    .ToList();
+
+                FilteredItems.Clear();
+                FilteredItems.AddRange(missingSonarrFiltered);
+
+                break;
+            case FilterType.ContinuingOnly:
+                List<HistorySeries> continuingFiltered = Items.Where(item => !string.IsNullOrEmpty(item.SonarrNextAirDate)).ToList();
+                FilteredItems.Clear();
+                FilteredItems.AddRange(continuingFiltered);
+                break;
+        }
     }
 
 
@@ -230,6 +309,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         if (objectToRemove != null){
             CrunchyrollManager.Instance.HistoryList.Remove(objectToRemove);
             Items.Remove(objectToRemove);
+            FilteredItems.Remove(objectToRemove);
             CfgManager.UpdateHistoryFile();
         }
     }
@@ -245,18 +325,18 @@ public partial class HistoryPageViewModel : ViewModelBase{
     }
 
     [RelayCommand]
-    public async void RefreshAll(){
+    public async Task RefreshAll(){
         FetchingData = true;
         RaisePropertyChanged(nameof(FetchingData));
-        for (int i = 0; i < Items.Count; i++){
-            Items[i].SetFetchingData();
+        foreach (var item in FilteredItems){
+            item.SetFetchingData();
         }
 
-        for (int i = 0; i < Items.Count; i++){
+        for (int i = 0; i < FilteredItems.Count; i++){
             FetchingData = true;
             RaisePropertyChanged(nameof(FetchingData));
-            await Items[i].FetchData("");
-            Items[i].UpdateNewEpisodes();
+            await FilteredItems[i].FetchData("");
+            FilteredItems[i].UpdateNewEpisodes();
         }
 
         FetchingData = false;
@@ -266,8 +346,76 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async void AddMissingToQueue(){
-        for (int i = 0; i < Items.Count; i++){
-            await Items[i].AddNewMissingToDownloads();
+        var tasks = FilteredItems
+            .Select(item => item.AddNewMissingToDownloads());
+
+        await Task.WhenAll(tasks);
+    }
+
+    [RelayCommand]
+    public async Task DownloadMissingSonarr(){
+        await Task.WhenAll(
+            FilteredItems.Where(series => !string.IsNullOrEmpty(series.SonarrSeriesId))
+                .SelectMany(item => item.Seasons)
+                .SelectMany(season => season.EpisodesList)
+                .Where(historyEpisode => !string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId) && !historyEpisode.SonarrHasFile)
+                .Select(historyEpisode => historyEpisode.DownloadEpisode())
+        );
+    }
+
+    [RelayCommand]
+    public async Task AddMissingSonarrSeriesToHistory(){
+        SonarrOptionsOpen = false;
+        AddingMissingSonarrSeries = true;
+        FetchingData = true;
+
+        var crInstance = CrunchyrollManager.Instance;
+
+        if (crInstance.AllCRSeries == null){
+            crInstance.AllCRSeries = await crInstance.CrSeries.GetAllSeries(string.IsNullOrEmpty(crInstance.CrunOptions.HistoryLang) ? crInstance.DefaultLocale : crInstance.CrunOptions.HistoryLang);
+        }
+
+        if (crInstance.AllCRSeries?.Data is{ Count: > 0 }){
+            var concurrentSeriesIds = new ConcurrentBag<string>();
+
+            Parallel.ForEach(SonarrClient.Instance.SonarrSeries, series => {
+                if (crInstance.HistoryList.All(historySeries => historySeries.SonarrSeriesId != series.Id.ToString())){
+                    var match = crInstance.History.FindClosestMatchCrSeries(crInstance.AllCRSeries.Data, series.Title);
+
+                    if (match != null){
+                        Console.WriteLine($"[Sonarr Match] Found match with {series.Title} and CR - {match.Title}");
+                        if (!string.IsNullOrEmpty(match.Id)){
+                            concurrentSeriesIds.Add(match.Id);
+                        } else{
+                            Console.Error.WriteLine($"[Sonarr Match] Series ID empty for {series.Title}");
+                        }
+                    } else{
+                        Console.Error.WriteLine($"[Sonarr Match] Could not match {series.Title}");
+                    }
+                } else{
+                    Console.Error.WriteLine($"[Sonarr Match] {series.Title} already matched");
+                }
+            });
+            
+            var seriesIds = concurrentSeriesIds.ToList();
+            var totalSeries = seriesIds.Count;
+            
+            for (int count = 0; count < totalSeries; count++){
+                ProgressText = $"{count + 1}/{totalSeries}";
+                
+                // Await the CRUpdateSeries task for each seriesId
+                await crInstance.History.CRUpdateSeries(seriesIds[count], "");
+            }
+            
+            // var updateTasks = seriesIds.Select(seriesId => crInstance.History.CRUpdateSeries(seriesId, ""));
+            // await Task.WhenAll(updateTasks);
+        }
+
+        ProgressText = "";
+        AddingMissingSonarrSeries = false;
+        FetchingData = false;
+        if (SelectedFilter != null){
+            OnSelectedFilterChanged(SelectedFilter);
         }
     }
 
@@ -292,7 +440,6 @@ public partial class HistoryPageViewModel : ViewModelBase{
                 season.SeasonDownloadPath = selectedFolder.Path.LocalPath;
                 CfgManager.UpdateHistoryFile();
             }
-            
         }
     }
 
@@ -319,26 +466,31 @@ public partial class HistoryPageViewModel : ViewModelBase{
             }
         }
     }
-    
+
     [RelayCommand]
     public async Task DownloadSeasonAll(HistorySeason season){
-        foreach (var historyEpisode in season.EpisodesList){
-            await historyEpisode.DownloadEpisode();
-        }
+        var downloadTasks = season.EpisodesList
+            .Select(episode => episode.DownloadEpisode());
+
+        await Task.WhenAll(downloadTasks);
     }
-    
+
     [RelayCommand]
     public async Task DownloadSeasonMissing(HistorySeason season){
-        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.WasDownloaded)){
-            await historyEpisode.DownloadEpisode();
-        }
+        var downloadTasks = season.EpisodesList
+            .Where(episode => !episode.WasDownloaded)
+            .Select(episode => episode.DownloadEpisode());
+
+        await Task.WhenAll(downloadTasks);
     }
-    
+
     [RelayCommand]
     public async Task DownloadSeasonMissingSonarr(HistorySeason season){
-        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.SonarrHasFile)){
-            await historyEpisode.DownloadEpisode();
-        }
+        var downloadTasks = season.EpisodesList
+            .Where(episode => !episode.SonarrHasFile)
+            .Select(episode => episode.DownloadEpisode());
+
+        await Task.WhenAll(downloadTasks);
     }
 
 
@@ -350,6 +502,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 public class HistoryPageProperties(){
     public SortingType? SelectedSorting{ get; set; }
     public HistoryViewType SelectedView{ get; set; }
+    public FilterType SelectedFilter{ get; set; }
     public double? ScaleValue{ get; set; }
 
     public bool Ascending{ get; set; }
@@ -358,4 +511,9 @@ public class HistoryPageProperties(){
 public class SortingListElement(){
     public SortingType SelectedSorting{ get; set; }
     public string? SortingTitle{ get; set; }
+}
+
+public class FilterListElement(){
+    public FilterType SelectedType{ get; set; }
+    public string? FilterTitle{ get; set; }
 }

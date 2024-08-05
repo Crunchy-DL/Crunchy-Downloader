@@ -8,6 +8,7 @@ using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using CRD.Utils.Structs;
 using Newtonsoft.Json;
 
 namespace CRD.Utils;
@@ -157,7 +158,7 @@ public class Helpers{
             var title = chapters[i].Title;
             var endTime = (i + 1 < chapters.Count) ? chapters[i + 1].StartTime : startTime + 10000; // Add 10 seconds to the last chapter end time
 
-            if (endTime < startTime) {
+            if (endTime < startTime){
                 endTime = startTime + 10000; // Correct end time if it is before start time
             }
 
@@ -210,12 +211,12 @@ public class Helpers{
             return (IsOk: false, ErrorCode: -1);
         }
     }
-    
+
     public static void DeleteFile(string filePath){
         if (string.IsNullOrEmpty(filePath)){
             return;
         }
-        
+
         try{
             if (File.Exists(filePath)){
                 File.Delete(filePath);
@@ -225,8 +226,8 @@ public class Helpers{
             // Handle exceptions if you need to log them or throw
         }
     }
-    
-    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsyncWorkDir(string type, string bin, string command,string workingDir){
+
+    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsyncWorkDir(string type, string bin, string command, string workingDir){
         try{
             using (var process = new Process()){
                 process.StartInfo.WorkingDirectory = workingDir;
@@ -345,8 +346,8 @@ public class Helpers{
             return null;
         }
     }
-    
-    
+
+
     public static async Task<Bitmap?> LoadImage(string imageUrl){
         try{
             using (var client = new HttpClient()){
@@ -363,5 +364,18 @@ public class Helpers{
 
         return null;
     }
-    
+
+    public static Dictionary<string, List<DownloadedMedia>> GroupByLanguageWithSubtitles(List<DownloadedMedia> allMedia){
+        var languageGroups = allMedia
+            .GroupBy(media => {
+                if (media.Type == DownloadMediaType.Subtitle && media.RelatedVideoDownloadMedia != null){
+                    return media.RelatedVideoDownloadMedia.Lang.CrLocale;
+                }
+
+                return media.Lang.CrLocale;
+            })
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        return languageGroups;
+    }
 }

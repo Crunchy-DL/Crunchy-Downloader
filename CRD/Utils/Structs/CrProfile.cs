@@ -46,6 +46,9 @@ public class Subscription{
     
     [JsonProperty("nonrecurring_subscription_products")]
     public List<NonRecurringSubscriptionProduct>? NonrecurringSubscriptionProducts{ get; set; }
+    
+    [JsonProperty("funimation_subscriptions")]
+    public List<object>? FunimationSubscriptions{ get; set; }
 }
 
 public class NonRecurringSubscriptionProduct{

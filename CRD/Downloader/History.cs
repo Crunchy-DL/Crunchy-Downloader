@@ -544,6 +544,8 @@ public class History(){
         }
     }
 
+    private static readonly object _lock = new object();
+    
     public async Task MatchHistoryEpisodesWithSonarr(bool updateAll, HistorySeries historySeries){
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;
@@ -574,9 +576,13 @@ public class History(){
                         historyEpisode.SonarrHasFile = episode.HasFile;
                         historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
                         historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
-                        episodes.Remove(episode);
+                        lock (_lock) {
+                            episodes.Remove(episode);
+                        }
                     } else{
-                        failedEpisodes.Add(historyEpisode);
+                        lock (_lock) {
+                            failedEpisodes.Add(historyEpisode);
+                        }
                     }
                 }
             });
@@ -598,7 +604,9 @@ public class History(){
                     historyEpisode.SonarrHasFile = episode.HasFile;
                     historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
                     historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
-                    episodes.Remove(episode);
+                    lock (_lock) {
+                        episodes.Remove(episode);
+                    }
                 } else{
                     var episode1 = episodes.Find(ele => {
                         if (ele == null){
@@ -614,7 +622,9 @@ public class History(){
                         historyEpisode.SonarrHasFile = episode1.HasFile;
                         historyEpisode.SonarrAbsolutNumber = episode1.AbsoluteEpisodeNumber + "";
                         historyEpisode.SonarrSeasonNumber = episode1.SeasonNumber + "";
-                        episodes.Remove(episode1);
+                        lock (_lock) {
+                            episodes.Remove(episode1);
+                        }
                     } else{
                         var episode2 = episodes.Find(ele => {
                             if (ele == null){
@@ -629,7 +639,9 @@ public class History(){
                             historyEpisode.SonarrHasFile = episode2.HasFile;
                             historyEpisode.SonarrAbsolutNumber = episode2.AbsoluteEpisodeNumber + "";
                             historyEpisode.SonarrSeasonNumber = episode2.SeasonNumber + "";
-                            episodes.Remove(episode2);
+                            lock (_lock) {
+                                episodes.Remove(episode2);
+                            }
                         } else{
                             Console.Error.WriteLine($"Could not match episode {historyEpisode.EpisodeTitle} to sonarr episode");
                         }
@@ -682,6 +694,27 @@ public class History(){
 
     public SonarrEpisode? FindClosestMatchEpisodes(List<SonarrEpisode> episodeList, string title){
         SonarrEpisode? closestMatch = null;
+        double highestSimilarity = 0.0;
+        object lockObject = new object(); // To synchronize access to shared variables
+
+        Parallel.ForEach(episodeList, episode => {
+            if (episode != null){
+                double similarity = CalculateSimilarity(episode.Title, title);
+                lock (lockObject) // Ensure thread-safe access to shared variables
+                {
+                    if (similarity > highestSimilarity){
+                        highestSimilarity = similarity;
+                        closestMatch = episode;
+                    }
+                }
+            }
+        });
+
+        return highestSimilarity < 0.8 ? null : closestMatch;
+    }
+    
+    public CrBrowseSeries? FindClosestMatchCrSeries(List<CrBrowseSeries> episodeList, string title){
+        CrBrowseSeries? closestMatch = null;
         double highestSimilarity = 0.0;
         object lockObject = new object(); // To synchronize access to shared variables
 

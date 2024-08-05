@@ -82,23 +82,28 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task DownloadSeasonAll(HistorySeason season){
-        foreach (var historyEpisode in season.EpisodesList){
-            await historyEpisode.DownloadEpisode();
-        }
+        var downloadTasks = season.EpisodesList
+            .Select(episode => episode.DownloadEpisode());
+
+        await Task.WhenAll(downloadTasks);
     }
-    
+
     [RelayCommand]
     public async Task DownloadSeasonMissing(HistorySeason season){
-        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.WasDownloaded)){
-            await historyEpisode.DownloadEpisode();
-        }
+        var downloadTasks = season.EpisodesList
+            .Where(episode => !episode.WasDownloaded)
+            .Select(episode => episode.DownloadEpisode());
+
+        await Task.WhenAll(downloadTasks);
     }
-    
+
     [RelayCommand]
     public async Task DownloadSeasonMissingSonarr(HistorySeason season){
-        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => !historyEpisode.SonarrHasFile)){
-            await historyEpisode.DownloadEpisode();
-        }
+        var downloadTasks = season.EpisodesList
+            .Where(episode => !episode.SonarrHasFile)
+            .Select(episode => episode.DownloadEpisode());
+
+        await Task.WhenAll(downloadTasks);
     }
     
     [RelayCommand]

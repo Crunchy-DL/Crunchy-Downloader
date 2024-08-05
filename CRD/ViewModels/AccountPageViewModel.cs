@@ -31,6 +31,7 @@ public partial class AccountPageViewModel : ViewModelBase{
     private static DispatcherTimer? _timer;
     private DateTime _targetTime;
     private bool IsCancelled = false;
+    private bool UnknownEndDate = false;
 
     public AccountPageViewModel(){
         UpdatetProfile();
@@ -68,6 +69,9 @@ public partial class AccountPageViewModel : ViewModelBase{
                 }
             }else if(CrunchyrollManager.Instance.Profile.Subscription?.NonrecurringSubscriptionProducts.Count >= 1){
                 IsCancelled = true;
+            }else if(CrunchyrollManager.Instance.Profile.Subscription?.FunimationSubscriptions.Count >= 1){
+                IsCancelled = true;
+                UnknownEndDate = true;
             }
 
             if (CrunchyrollManager.Instance.Profile.Subscription?.NextRenewalDate != null){
@@ -91,6 +95,10 @@ public partial class AccountPageViewModel : ViewModelBase{
                 Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.Profile.Subscription, Formatting.Indented));
             }
             
+        }
+
+        if (UnknownEndDate){
+            RemainingTime = "Unknown Subscription end date";
         }
     }
 

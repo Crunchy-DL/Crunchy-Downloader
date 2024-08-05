@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Web;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
@@ -13,7 +11,6 @@ using Newtonsoft.Json;
 namespace CRD.Downloader.Crunchyroll;
 
 public class CrAuth{
-
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task AuthAnonymous(){
@@ -44,9 +41,7 @@ public class CrAuth{
             PreferredContentAudioLanguage = "ja-JP",
             PreferredContentSubtitleLanguage = "de-DE"
         };
-
-        // CrunchyrollManager.Instance.CmsToken = new CrCmsToken();
-
+        
     }
 
     private void JsonTokenToFileAndVariable(string content){
@@ -104,35 +99,36 @@ public class CrAuth{
 
             if (profileTemp != null){
                 crunInstance.Profile = profileTemp;
-                
+
                 var requestSubs = HttpClientReq.CreateRequestMessage(Api.Subscription + crunInstance.Token.account_id, HttpMethod.Get, true, false, null);
 
                 var responseSubs = await HttpClientReq.Instance.SendHttpRequest(requestSubs);
-                
+
                 if (responseSubs.IsOk){
                     var subsc = Helpers.Deserialize<Subscription>(responseSubs.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
                     crunInstance.Profile.Subscription = subsc;
-                    if ( subsc is{ SubscriptionProducts:{ Count: 0 }, ThirdPartySubscriptionProducts.Count: > 0 }){
+                    if (subsc is{ SubscriptionProducts:{ Count: 0 }, ThirdPartySubscriptionProducts.Count: > 0 }){
                         var thirdPartySub = subsc.ThirdPartySubscriptionProducts.First();
                         var expiration = thirdPartySub.InGrace ? thirdPartySub.InGraceExpirationDate : thirdPartySub.ExpirationDate;
                         var remaining = expiration - DateTime.UtcNow;
                         crunInstance.Profile.HasPremium = remaining > TimeSpan.Zero;
                         crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
                         crunInstance.Profile.Subscription.NextRenewalDate = expiration;
-                    } else if(subsc is{ SubscriptionProducts:{ Count: 0 }, NonrecurringSubscriptionProducts.Count: > 0 }){
+                    } else if (subsc is{ SubscriptionProducts:{ Count: 0 }, NonrecurringSubscriptionProducts.Count: > 0 }){
                         var nonRecurringSub = subsc.NonrecurringSubscriptionProducts.First();
                         var remaining = nonRecurringSub.EndDate - DateTime.UtcNow;
                         crunInstance.Profile.HasPremium = remaining > TimeSpan.Zero;
                         crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
                         crunInstance.Profile.Subscription.NextRenewalDate = nonRecurringSub.EndDate;
+                    } else if (subsc is{ SubscriptionProducts:{ Count: 0 }, FunimationSubscriptions.Count: > 0 }){
+                        crunInstance.Profile.HasPremium = true;
                     } else{
-                        crunInstance.Profile.HasPremium = subsc.IsActive; 
+                        crunInstance.Profile.HasPremium = subsc.IsActive;
                     }
                 } else{
                     crunInstance.Profile.HasPremium = false;
                     Console.Error.WriteLine("Failed to check premium subscription status");
                 }
-                
             }
         }
     }
@@ -167,11 +163,10 @@ public class CrAuth{
 
         if (crunInstance.Token?.refresh_token != null){
             HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
-            
+
             await GetProfile();
         }
-
-        // await GetCmsToken();
+        
     }
 
     public async Task RefreshToken(bool needsToken){
@@ -209,53 +204,7 @@ public class CrAuth{
         } else{
             Console.Error.WriteLine("Refresh Token Auth Failed");
         }
-
-        // await GetCmsToken();
+        
     }
-
-
-    // public async Task GetCmsToken(){
-    //     if (crunInstance.Token?.access_token == null){
-    //         Console.Error.WriteLine($"Missing Access Token: {crunInstance.Token?.access_token}");
-    //         return;
-    //     }
-    //
-    //     var request = HttpClientReq.CreateRequestMessage(Api.BetaCmsToken, HttpMethod.Get, true, true, null);
-    //
-    //     var response = await HttpClientReq.Instance.SendHttpRequest(request);
-    //
-    //     if (response.IsOk){
-    //         crunInstance.CmsToken = JsonConvert.DeserializeObject<CrCmsToken>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
-    //     } else{
-    //         Console.Error.WriteLine("CMS Token Auth Failed");
-    //     }
-    // }
-    //
-    // public async Task GetCmsData(){
-    //     if (crunInstance.CmsToken?.Cms == null){
-    //         Console.Error.WriteLine("Missing CMS Token");
-    //         return;
-    //     }
-    //
-    //     UriBuilder uriBuilder = new UriBuilder(Api.BetaCms + crunInstance.CmsToken.Cms.Bucket + "/index?");
-    //
-    //     NameValueCollection query = HttpUtility.ParseQueryString(uriBuilder.Query);
-    //
-    //     query["preferred_audio_language"] = "ja-JP";
-    //     query["Policy"] = crunInstance.CmsToken.Cms.Policy;
-    //     query["Signature"] = crunInstance.CmsToken.Cms.Signature;
-    //     query["Key-Pair-Id"] = crunInstance.CmsToken.Cms.KeyPairId;
-    //
-    //     uriBuilder.Query = query.ToString();
-    //
-    //     var request = new HttpRequestMessage(HttpMethod.Get, uriBuilder.ToString());
-    //
-    //     var response = await HttpClientReq.Instance.SendHttpRequest(request);
-    //
-    //     if (response.IsOk){
-    //         Console.WriteLine(response.ResponseContent);
-    //     } else{
-    //         Console.Error.WriteLine("Failed to Get CMS Index");
-    //     }
-    // }
+    
 }

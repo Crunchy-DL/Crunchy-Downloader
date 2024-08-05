@@ -68,6 +68,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _downloadVideoForEveryDub;
+    
+    [ObservableProperty]
+    private bool _keepDubsSeparate;
 
     [ObservableProperty]
     private bool _skipSubMux;
@@ -77,6 +80,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
     
     [ObservableProperty]
     private bool _historyAddSpecials;
+
+    [ObservableProperty]
+    private bool _historyCountSonarr;
 
     [ObservableProperty]
     private double? _leadingNumbers;
@@ -388,6 +394,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         DefaultSubForcedDisplay = options.DefaultSubForcedDisplay;
         DefaultSubSigns = options.DefaultSubSigns;
         HistoryAddSpecials = options.HistoryAddSpecials;
+        HistoryCountSonarr = options.HistoryCountSonarr;
         DownloadSpeed = options.DownloadSpeedLimit;
         IncludeEpisodeDescription = options.IncludeVideoDescription;
         FileTitle = options.VideoTitle ?? "";
@@ -395,6 +402,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
+        KeepDubsSeparate = options.KeepDubsSeperate;
         DownloadChapters = options.Chapters;
         MuxToMp4 = options.Mp4;
         SyncTimings = options.SyncTiming;
@@ -457,10 +465,12 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay = DefaultSubForcedDisplay;
         CrunchyrollManager.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
         CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials = HistoryAddSpecials;
+        CrunchyrollManager.Instance.CrunOptions.HistoryCountSonarr = HistoryCountSonarr;
         CrunchyrollManager.Instance.CrunOptions.VideoTitle = FileTitle;
         CrunchyrollManager.Instance.CrunOptions.Novids = !DownloadVideo;
         CrunchyrollManager.Instance.CrunOptions.Noaudio = !DownloadAudio;
         CrunchyrollManager.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
+        CrunchyrollManager.Instance.CrunOptions.KeepDubsSeperate = KeepDubsSeparate;
         CrunchyrollManager.Instance.CrunOptions.Chapters = DownloadChapters;
         CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;

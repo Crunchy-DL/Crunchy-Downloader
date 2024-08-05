@@ -181,6 +181,10 @@ public class CalendarManager{
             foreach (var crBrowseEpisode in newEpisodes){
                 var targetDate = CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate ? crBrowseEpisode.EpisodeMetadata.EpisodeAirDate : crBrowseEpisode.LastPublic;
 
+                if (targetDate.Kind == DateTimeKind.Utc){
+                    targetDate = targetDate.ToLocalTime();
+                }
+                
                 if (CrunchyrollManager.Instance.CrunOptions.CalendarHideDubs && crBrowseEpisode.EpisodeMetadata.SeasonTitle != null &&
                     (crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)") || crBrowseEpisode.EpisodeMetadata.AudioLocale != Locale.JaJp)){
                     continue;

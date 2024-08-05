@@ -110,6 +110,9 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "dl_video_once", ApplyNamingConventions = false)]
     public bool DlVideoOnce{ get; set; }
+    
+    [YamlMember(Alias = "keep_dubs_seperate", ApplyNamingConventions = false)]
+    public bool KeepDubsSeperate{ get; set; }
 
     [YamlIgnore]
     public bool? Skipmux{ get; set; }
@@ -158,6 +161,9 @@ public class CrDownloadOptions{
     
     [YamlMember(Alias = "history_add_specials", ApplyNamingConventions = false)]
     public bool HistoryAddSpecials{ get; set; }
+    
+    [YamlMember(Alias = "history_count_sonarr", ApplyNamingConventions = false)]
+    public bool HistoryCountSonarr{ get; set; }
     
     [YamlMember(Alias = "sonarr_properties", ApplyNamingConventions = false)]
     public SonarrProperties? SonarrProperties{ get; set; }

@@ -149,6 +149,12 @@
                         <CheckBox IsChecked="{Binding HistoryAddSpecials}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="History Missing/New Count from Sonarr" Description="The missing count (number in the orange corner) will count the episodes missing from sonarr">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding HistoryCountSonarr}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
             </controls:SettingsExpander>
 
@@ -213,7 +219,11 @@
 
                 <controls:SettingsExpanderItem Content="Download Video for every dub">
                     <controls:SettingsExpanderItem.Footer>
-                        <CheckBox IsChecked="{Binding DownloadVideoForEveryDub}"> </CheckBox>
+                        <StackPanel>
+                            <CheckBox IsChecked="{Binding DownloadVideoForEveryDub}"> </CheckBox>
+                            <CheckBox IsVisible="{Binding DownloadVideoForEveryDub}" Content="Keep files separate" IsChecked="{Binding KeepDubsSeparate}"> </CheckBox>
+                        </StackPanel>
+                        
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
