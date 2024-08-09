@@ -527,7 +527,7 @@ public class History(){
         return newSeason;
     }
 
-    public void MatchHistorySeriesWithSonarr(bool updateAll){
+    public async void MatchHistorySeriesWithSonarr(bool updateAll){
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;
         }
@@ -654,7 +654,7 @@ public class History(){
         }
     }
 
-    private string GetNextAirDate(List<SonarrEpisode> episodes){
+    public string GetNextAirDate(List<SonarrEpisode> episodes){
         DateTime today = DateTime.UtcNow.Date;
 
         // Check if any episode air date matches today

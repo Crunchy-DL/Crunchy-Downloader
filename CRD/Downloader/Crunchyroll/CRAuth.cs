@@ -6,7 +6,10 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using CRD.Utils;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
+using CRD.Views;
 using Newtonsoft.Json;
+using ReactiveUI;
 
 namespace CRD.Downloader.Crunchyroll;
 
@@ -75,6 +78,8 @@ public class CrAuth{
 
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent);
+        } else{
+            MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0,response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}", ToastType.Error, 10));
         }
 
         if (crunInstance.Token?.refresh_token != null){

@@ -6,6 +6,7 @@ using System.Reflection;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 using Newtonsoft.Json;
 using YamlDotNet.Core;
 using YamlDotNet.Core.Events;

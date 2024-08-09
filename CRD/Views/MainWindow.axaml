@@ -60,7 +60,7 @@
                                                IconSource="Add" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Calendar" Tag="Calendar"
                                                IconSource="Calendar" />
-                        <ui:NavigationViewItem Classes="SampleAppNav" Content="History" Tag="History"
+                        <ui:NavigationViewItem IsEnabled="{Binding FinishedLoading}" Classes="SampleAppNav" Content="History" Tag="History"
                                                IconSource="Library" />
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.FooterMenuItems>

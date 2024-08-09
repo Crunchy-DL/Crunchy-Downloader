@@ -16,6 +16,7 @@ using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll.Music;
 using CRD.Views;
 using DynamicData;
 using FluentAvalonia.Core;
@@ -51,7 +52,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _searchVisible = true;
-    
+
     [ObservableProperty]
     private bool _slectSeasonVisible = false;
 
@@ -75,6 +76,8 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     private List<string> selectedEpisodes = new();
 
     private CrunchySeriesList? currentSeriesList;
+
+    private CrunchyMusicVideoList? currentMusicVideoList;
 
     private bool CurrentSeasonFullySelected = false;
 
@@ -114,151 +117,286 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         SearchItems.Clear();
     }
 
+    #region UrlInput
+
     partial void OnUrlInputChanged(string value){
         if (SearchEnabled){
-            UpdateSearch(value);
-            ButtonText = "Select Searched Series";
-            ButtonEnabled = false;
+            _ = UpdateSearch(value);
+            SetButtonProperties("Select Searched Series", false);
         } else if (UrlInput.Length > 9){
-            if (UrlInput.Contains("/watch/concert/") || UrlInput.Contains("/artist/")){
-                MessageBus.Current.SendMessage(new ToastMessage("Concerts / Artists not implemented yet", ToastType.Error, 1));
-            } else if (UrlInput.Contains("/watch/")){
-                //Episode
-                ButtonText = "Add Episode to Queue";
-                ButtonEnabled = true;
-                SearchVisible = false;
-                SlectSeasonVisible = false;
-            } else if (UrlInput.Contains("/series/")){
-                //Series
-                ButtonText = "List Episodes";
-                ButtonEnabled = true;
-                SearchVisible = false;
-                SlectSeasonVisible = false;
-            } else{
-                ButtonEnabled = false;
-                SearchVisible = true;
-                SlectSeasonVisible = false;
-            }
+            EvaluateUrlInput();
         } else{
-            ButtonText = "Enter Url";
-            ButtonEnabled = false;
-            SearchVisible = true;
-            SlectSeasonVisible = false;
+            SetButtonProperties("Enter Url", false);
+            SetVisibility(true, false);
         }
     }
 
-    partial void OnSearchEnabledChanged(bool value){
-        if (SearchEnabled){
-            ButtonText = "Select Searched Series";
-            ButtonEnabled = false;
-        } else{
-            ButtonText = "Enter Url";
-            ButtonEnabled = false;
-        }
+    private void EvaluateUrlInput(){
+        var (buttonText, isButtonEnabled) = DetermineButtonTextAndState();
+
+        SetButtonProperties(buttonText, isButtonEnabled);
+        SetVisibility(false, false);
     }
+
+    private (string, bool) DetermineButtonTextAndState(){
+        return UrlInput switch{
+            _ when UrlInput.Contains("/artist/") => ("List Episodes", true),
+            _ when UrlInput.Contains("/watch/musicvideo/") => ("Add Music Video to Queue", true),
+            _ when UrlInput.Contains("/watch/concert/") => ("Add Concert to Queue", true),
+            _ when UrlInput.Contains("/watch/") => ("Add Episode to Queue", true),
+            _ when UrlInput.Contains("/series/") => ("List Episodes", true),
+            _ => ("Unknown", false),
+        };
+    }
+
+    private void SetButtonProperties(string text, bool isEnabled){
+        ButtonText = text;
+        ButtonEnabled = isEnabled;
+    }
+
+    private void SetVisibility(bool isSearchVisible, bool isSelectSeasonVisible){
+        SearchVisible = isSearchVisible;
+        SlectSeasonVisible = isSelectSeasonVisible;
+    }
+
+    #endregion
+
+
+    partial void OnSearchEnabledChanged(bool value){
+        ButtonText = SearchEnabled ? "Select Searched Series" : "Enter Url";
+        ButtonEnabled = false;
+    }
+
+    #region OnButtonPress
 
     [RelayCommand]
     public async void OnButtonPress(){
-        if ((selectedEpisodes.Count > 0 || SelectedItems.Count > 0 || AddAllEpisodes)){
+        if (HasSelectedItemsOrEpisodes()){
             Console.WriteLine("Added to Queue");
 
-            if (SelectedItems.Count > 0){
-                foreach (var selectedItem in SelectedItems){
-                    if (!selectedEpisodes.Contains(selectedItem.AbsolutNum)){
-                        selectedEpisodes.Add(selectedItem.AbsolutNum);
-                    }
-                }
+            if (currentMusicVideoList != null){
+                AddSelectedMusicVideosToQueue();
+            } else{
+                AddSelectedEpisodesToQueue();
             }
 
-            if (currentSeriesList != null){
-                await QueueManager.Instance.CRAddSeriesToQueue(currentSeriesList.Value, new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, AddAllEpisodes, false, selectedEpisodes));
-            }
-
-
-            UrlInput = "";
-            selectedEpisodes.Clear();
-            SelectedItems.Clear();
-            Items.Clear();
-            currentSeriesList = null;
-            SeasonList.Clear();
-            episodesBySeason.Clear();
-            AllButtonEnabled = false;
-            AddAllEpisodes = false;
-            ButtonText = "Enter Url";
-            ButtonEnabled = false;
-            SearchVisible = true;
-            SlectSeasonVisible = false;
+            ResetState();
         } else if (UrlInput.Length > 9){
-            episodesBySeason.Clear();
-            SeasonList.Clear();
-            if (UrlInput.Contains("/watch/concert/") || UrlInput.Contains("/artist/")){
-                MessageBus.Current.SendMessage(new ToastMessage("Concerts / Artists not implemented yet", ToastType.Error, 1));
-            } else if (UrlInput.Contains("/watch/")){
-                //Episode
-
-                var match = Regex.Match(UrlInput, "/([^/]+)/watch/([^/]+)");
-
-                if (match.Success){
-                    var locale = match.Groups[1].Value; // Capture the locale part
-                    var id = match.Groups[2].Value; // Capture the ID part
-                    QueueManager.Instance.CRAddEpisodeToQue(id,
-                        string.IsNullOrEmpty(locale)
-                            ? string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang
-                            : Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
-                    UrlInput = "";
-                    selectedEpisodes.Clear();
-                    SelectedItems.Clear();
-                    Items.Clear();
-                    currentSeriesList = null;
-                    SeasonList.Clear();
-                    episodesBySeason.Clear();
-                }
-            } else if (UrlInput.Contains("/series/")){
-                //Series
-                var match = Regex.Match(UrlInput, "/([^/]+)/series/([^/]+)");
-
-                if (match.Success){
-                    var locale = match.Groups[1].Value; // Capture the locale part
-                    var id = match.Groups[2].Value; // Capture the ID part
-
-                    if (id.Length != 9){
-                        return;
-                    }
-
-                    ButtonEnabled = false;
-                    ShowLoading = true;
-                    var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(id, string.IsNullOrEmpty(locale)
-                        ? string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang
-                        : Languages.Locale2language(locale).CrLocale, new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
-                    ShowLoading = false;
-                    if (list != null){
-                        currentSeriesList = list;
-                        foreach (var episode in currentSeriesList.Value.List){
-                            if (episodesBySeason.ContainsKey("S" + episode.Season)){
-                                episodesBySeason["S" + episode.Season].Add(new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E,
-                                    episode.Lang));
-                            } else{
-                                episodesBySeason.Add("S" + episode.Season, new List<ItemModel>{
-                                    new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E, episode.Lang)
-                                });
-                                SeasonList.Add(new ComboBoxItem{ Content = "S" + episode.Season });
-                            }
-                        }
-
-                        CurrentSelectedSeason = SeasonList[0];
-                        ButtonEnabled = false;
-                        AllButtonEnabled = true;
-                        SlectSeasonVisible = true;
-                        ButtonText = "Select Episodes";
-                    } else{
-                        ButtonEnabled = true;
-                    }
-                }
-            }
+            await HandleUrlInputAsync();
         } else{
-            Console.Error.WriteLine("Unnkown input");
+            Console.Error.WriteLine("Unknown input");
         }
     }
+
+    private bool HasSelectedItemsOrEpisodes(){
+        return selectedEpisodes.Count > 0 || SelectedItems.Count > 0 || AddAllEpisodes;
+    }
+
+    private void AddSelectedMusicVideosToQueue(){
+        if (SelectedItems.Count > 0){
+            var musicClass = CrunchyrollManager.Instance.CrMusic;
+            foreach (var selectedItem in SelectedItems){
+                var music = currentMusicVideoList.Value.Data?.FirstOrDefault(ele => ele.Id == selectedItem.Id);
+
+                if (music != null){
+                    var meta = musicClass.EpisodeMeta(music);
+                    QueueManager.Instance.CrAddEpMetaToQueue(meta);
+                }
+            }
+        }
+    }
+
+    private async void AddSelectedEpisodesToQueue(){
+        AddItemsToSelectedEpisodes();
+
+        if (currentSeriesList != null){
+            await QueueManager.Instance.CrAddSeriesToQueue(
+                currentSeriesList.Value,
+                new CrunchyMultiDownload(
+                    CrunchyrollManager.Instance.CrunOptions.DubLang,
+                    AddAllEpisodes,
+                    false,
+                    selectedEpisodes));
+        }
+    }
+
+    private void AddItemsToSelectedEpisodes(){
+        foreach (var selectedItem in SelectedItems){
+            if (!selectedEpisodes.Contains(selectedItem.AbsolutNum)){
+                selectedEpisodes.Add(selectedItem.AbsolutNum);
+            }
+        }
+    }
+
+    private void ResetState(){
+        currentMusicVideoList = null;
+        UrlInput = "";
+        selectedEpisodes.Clear();
+        SelectedItems.Clear();
+        Items.Clear();
+        currentSeriesList = null;
+        SeasonList.Clear();
+        episodesBySeason.Clear();
+        AllButtonEnabled = false;
+        AddAllEpisodes = false;
+        ButtonText = "Enter Url";
+        ButtonEnabled = false;
+        SearchVisible = true;
+        SlectSeasonVisible = false;
+    }
+
+    private async Task HandleUrlInputAsync(){
+        episodesBySeason.Clear();
+        SeasonList.Clear();
+
+        var matchResult = ExtractLocaleAndIdFromUrl();
+
+        if (matchResult is (string locale, string id)){
+            switch (GetUrlType()){
+                case CrunchyUrlType.Artist:
+                    await HandleArtistUrlAsync(locale, id);
+                    break;
+                case CrunchyUrlType.MusicVideo:
+                    HandleMusicVideoUrl(id);
+                    break;
+                case CrunchyUrlType.Concert:
+                    HandleConcertUrl(id);
+                    break;
+                case CrunchyUrlType.Episode:
+                    HandleEpisodeUrl(locale, id);
+                    break;
+                case CrunchyUrlType.Series:
+                    await HandleSeriesUrlAsync(locale, id);
+                    break;
+                default:
+                    Console.Error.WriteLine("Unknown input");
+                    break;
+            }
+        }
+    }
+
+    private (string locale, string id)? ExtractLocaleAndIdFromUrl(){
+        var match = Regex.Match(UrlInput, "/([^/]+)/(?:artist|watch|series)(?:/(?:musicvideo|concert))?/([^/]+)/?");
+        return match.Success ? (match.Groups[1].Value, match.Groups[2].Value) : null;
+    }
+
+    private CrunchyUrlType GetUrlType(){
+        return UrlInput switch{
+            _ when UrlInput.Contains("/artist/") => CrunchyUrlType.Artist,
+            _ when UrlInput.Contains("/watch/musicvideo/") => CrunchyUrlType.MusicVideo,
+            _ when UrlInput.Contains("/watch/concert/") => CrunchyUrlType.Concert,
+            _ when UrlInput.Contains("/watch/") => CrunchyUrlType.Episode,
+            _ when UrlInput.Contains("/series/") => CrunchyUrlType.Series,
+            _ => CrunchyUrlType.Unknown,
+        };
+    }
+
+    private async Task HandleArtistUrlAsync(string locale, string id){
+        SetLoadingState(true);
+
+        var list = await CrunchyrollManager.Instance.CrMusic.ParseArtistMusicVideosByIdAsync(
+            id, DetermineLocale(locale), true);
+
+        SetLoadingState(false);
+
+        if (list != null){
+            currentMusicVideoList = list;
+            PopulateItemsFromMusicVideoList();
+            UpdateUiForSelection();
+        }
+    }
+
+    private void HandleMusicVideoUrl(string id){
+        _ = QueueManager.Instance.CrAddMusicVideoToQueue(id);
+        ResetState();
+    }
+
+    private void HandleConcertUrl(string id){
+        _ = QueueManager.Instance.CrAddConcertToQueue(id);
+        ResetState();
+    }
+
+    private void HandleEpisodeUrl(string locale, string id){
+        _ = QueueManager.Instance.CrAddEpisodeToQueue(
+            id, DetermineLocale(locale),
+            CrunchyrollManager.Instance.CrunOptions.DubLang, true);
+        ResetState();
+    }
+
+    private async Task HandleSeriesUrlAsync(string locale, string id){
+        SetLoadingState(true);
+
+        var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(
+            id, DetermineLocale(locale),
+            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
+
+        SetLoadingState(false);
+
+        if (list != null){
+            currentSeriesList = list;
+            PopulateEpisodesBySeason();
+            UpdateUiForSelection();
+        } else{
+            ButtonEnabled = true;
+        }
+    }
+
+    private void PopulateItemsFromMusicVideoList(){
+        if (currentMusicVideoList?.Data != null){
+            foreach (var episode in currentMusicVideoList.Value.Data){
+                var imageUrl = episode.Images?.Thumbnail?.FirstOrDefault().Source ?? "";
+                var time = $"{(episode.DurationMs / 1000) / 60}:{(episode.DurationMs / 1000) % 60:D2}";
+
+                var newItem = new ItemModel(episode.Id ?? "", imageUrl, episode.Description ?? "", time, episode.Title ?? "", "",
+                    episode.SequenceNumber.ToString(), episode.SequenceNumber.ToString(), new List<string>());
+
+                newItem.LoadImage(imageUrl);
+                Items.Add(newItem);
+            }
+        }
+    }
+
+    private void PopulateEpisodesBySeason(){
+        foreach (var episode in currentSeriesList?.List ?? Enumerable.Empty<Episode>()){
+            var seasonKey = "S" + episode.Season;
+            var itemModel = new ItemModel(
+                episode.Id, episode.Img, episode.Description, episode.Time, episode.Name, seasonKey,
+                episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum,
+                episode.E, episode.Lang);
+
+            if (!episodesBySeason.ContainsKey(seasonKey)){
+                episodesBySeason[seasonKey] = new List<ItemModel>{ itemModel };
+                SeasonList.Add(new ComboBoxItem{ Content = seasonKey });
+            } else{
+                episodesBySeason[seasonKey].Add(itemModel);
+            }
+        }
+
+        CurrentSelectedSeason = SeasonList.First();
+    }
+
+    private string DetermineLocale(string locale){
+        return string.IsNullOrEmpty(locale)
+            ? (string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang)
+                ? CrunchyrollManager.Instance.DefaultLocale
+                : CrunchyrollManager.Instance.CrunOptions.HistoryLang)
+            : Languages.Locale2language(locale).CrLocale;
+    }
+
+    private void SetLoadingState(bool isLoading){
+        ButtonEnabled = !isLoading;
+        ShowLoading = isLoading;
+    }
+
+    private void UpdateUiForSelection(){
+        ButtonEnabled = false;
+        AllButtonEnabled = true;
+        SlectSeasonVisible = false;
+        ButtonText = "Select Episodes";
+    }
+
+    #endregion
+
 
     [RelayCommand]
     public void OnSelectSeasonPressed(){
@@ -326,11 +464,28 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         }
     }
 
+
+    #region SearchItemSelection
+
     async partial void OnSelectedSearchItemChanged(CrBrowseSeries? value){
-        if (value == null || string.IsNullOrEmpty(value.Id)){
+        if (value is null || string.IsNullOrEmpty(value.Id)){
             return;
         }
 
+        UpdateUiForSearchSelection();
+
+        var list = await FetchSeriesListAsync(value.Id);
+
+        if (list != null){
+            currentSeriesList = list;
+            SearchPopulateEpisodesBySeason();
+            UpdateUiForEpisodeSelection();
+        } else{
+            ButtonEnabled = true;
+        }
+    }
+
+    private void UpdateUiForSearchSelection(){
         SearchPopupVisible = false;
         RaisePropertyChanged(nameof(SearchVisible));
         SearchItems.Clear();
@@ -338,32 +493,57 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         SlectSeasonVisible = true;
         ButtonEnabled = false;
         ShowLoading = true;
-        var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(value.Id,
-            string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
-            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
-        ShowLoading = false;
-        if (list != null){
-            currentSeriesList = list;
-            foreach (var episode in currentSeriesList.Value.List){
-                if (episodesBySeason.ContainsKey("S" + episode.Season)){
-                    episodesBySeason["S" + episode.Season].Add(new ItemModel(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E,
-                        episode.Lang));
-                } else{
-                    episodesBySeason.Add("S" + episode.Season, new List<ItemModel>{
-                        new(episode.Img, episode.Description, episode.Time, episode.Name, "S" + episode.Season, episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum, episode.E, episode.Lang)
-                    });
-                    SeasonList.Add(new ComboBoxItem{ Content = "S" + episode.Season });
-                }
-            }
-
-            CurrentSelectedSeason = SeasonList[0];
-            ButtonEnabled = false;
-            AllButtonEnabled = true;
-            ButtonText = "Select Episodes";
-        } else{
-            ButtonEnabled = true;
-        }
     }
+
+    private async Task<CrunchySeriesList?> FetchSeriesListAsync(string seriesId){
+        var locale = string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang)
+            ? CrunchyrollManager.Instance.DefaultLocale
+            : CrunchyrollManager.Instance.CrunOptions.HistoryLang;
+
+        return await CrunchyrollManager.Instance.CrSeries.ListSeriesId(
+            seriesId,
+            locale,
+            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
+    }
+
+    private void SearchPopulateEpisodesBySeason(){
+        if (currentSeriesList?.List == null){
+            return;
+        }
+
+        foreach (var episode in currentSeriesList.Value.List){
+            var seasonKey = "S" + episode.Season;
+            var episodeModel = new ItemModel(
+                episode.Id,
+                episode.Img,
+                episode.Description,
+                episode.Time,
+                episode.Name,
+                seasonKey,
+                episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum,
+                episode.E,
+                episode.Lang);
+
+            if (!episodesBySeason.ContainsKey(seasonKey)){
+                episodesBySeason[seasonKey] = new List<ItemModel>{ episodeModel };
+                SeasonList.Add(new ComboBoxItem{ Content = seasonKey });
+            } else{
+                episodesBySeason[seasonKey].Add(episodeModel);
+            }
+        }
+
+        CurrentSelectedSeason = SeasonList.First();
+    }
+
+    private void UpdateUiForEpisodeSelection(){
+        ShowLoading = false;
+        ButtonEnabled = false;
+        AllButtonEnabled = true;
+        ButtonText = "Select Episodes";
+    }
+
+    #endregion
+
 
     partial void OnCurrentSelectedSeasonChanged(ComboBoxItem? value){
         if (value == null){
@@ -399,7 +579,8 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 }
 
-public class ItemModel(string imageUrl, string description, string time, string title, string season, string episode, string absolutNum, List<string> availableAudios) : INotifyPropertyChanged{
+public class ItemModel(string id, string imageUrl, string description, string time, string title, string season, string episode, string absolutNum, List<string> availableAudios) : INotifyPropertyChanged{
+    public string Id{ get; set; } = id;
     public string ImageUrl{ get; set; } = imageUrl;
     public Bitmap? ImageBitmap{ get; set; }
     public string Title{ get; set; } = title;

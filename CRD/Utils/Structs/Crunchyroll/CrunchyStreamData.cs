@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace CRD.Utils.Structs;
+namespace CRD.Utils.Structs.Crunchyroll;
 
 public class CrunchyStreamData{
     public string? AssetId{ get; set; }
@@ -20,7 +20,7 @@ public class CrunchyStreamData{
 
 public class Caption{
     public string? Format{ get; set; }
-    public string? Language{ get; set; }
+    public Locale? Language{ get; set; }
     public string? Url{ get; set; }
 }
 

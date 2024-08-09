@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace CRD.Utils.Structs;
+namespace CRD.Utils.Structs.Crunchyroll;
 
 public class CrProfile{
     public string? Avatar{ get; set; }

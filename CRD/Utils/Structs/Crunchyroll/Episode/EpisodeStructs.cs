@@ -84,7 +84,7 @@ public struct CrunchyEpisode{
     public string Id{ get; set; }
 
     [JsonProperty("media_type")]
-    public MediaType? MediaType{ get; set; }
+    public string? MediaType{ get; set; }
 
     [JsonProperty("availability_ends")]
     public DateTime? AvailabilityEnds{ get; set; }
@@ -95,7 +95,7 @@ public struct CrunchyEpisode{
     public string Playback{ get; set; }
 
     [JsonProperty("channel_id")]
-    public ChannelId? ChannelId{ get; set; }
+    public string? ChannelId{ get; set; }
 
     public string? Episode{ get; set; }
 
@@ -251,6 +251,8 @@ public class CrunchyEpMeta{
     
     public string? DownloadPath{ get; set; }
     public List<string> DownloadSubs{ get; set; } =[];
+    
+    public bool Music{ get; set; }
 
 }
 

@@ -29,12 +29,13 @@ public partial class DownloadsPageViewModel : ViewModelBase{
         AutoDownload = CrunchyrollManager.Instance.CrunOptions.AutoDownload;
         RemoveFinished = CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload;
     }
-    
+
     partial void OnAutoDownloadChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.AutoDownload = value;
         if (value){
             QueueManager.Instance.UpdateDownloadListItems();
         }
+
         CfgManager.WriteSettingsToFile();
     }
 
@@ -68,7 +69,8 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         epMeta = epMetaF;
 
         ImageUrl = epMeta.Image;
-        Title = epMeta.SeriesTitle + " - S" + epMeta.Season + "E" + (epMeta.EpisodeNumber != string.Empty ? epMeta.EpisodeNumber : epMeta.AbsolutEpisodeNumberE) + " - " + epMeta.EpisodeTitle;
+        Title = epMeta.SeriesTitle + (!string.IsNullOrEmpty(epMeta.Season) ? " - S" + epMeta.Season + "E" + (epMeta.EpisodeNumber != string.Empty ? epMeta.EpisodeNumber : epMeta.AbsolutEpisodeNumberE) : "") + " - " +
+                epMeta.EpisodeTitle;
         isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
 
         Done = epMeta.DownloadProgress.Done;
@@ -84,14 +86,11 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     private string GetDubString(){
-        var dubs = "Dub: ";
-
-        if (epMeta.SelectedDubs != null)
-            foreach (var crunOptionsDlDub in epMeta.SelectedDubs){
-                dubs += crunOptionsDlDub + " ";
-            }
-
-        return dubs;
+        if (epMeta.SelectedDubs == null || epMeta.SelectedDubs.Count < 1){
+            return "";
+        }
+        
+        return epMeta.SelectedDubs.Aggregate("Dub: ", (current, crunOptionsDlDub) => current + (crunOptionsDlDub + " "));
     }
 
     private string GetSubtitleString(){
@@ -105,15 +104,15 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             return hardSubs;
         }
 
+        if (epMeta.DownloadSubs.Count < 1){
+            return "";
+        }
+
         var softSubs = "Softsub: ";
 
         if (epMeta.DownloadSubs.Contains("all")){
             if (epMeta.AvailableSubs != null){
-                foreach (var epMetaAvailableSub in epMeta.AvailableSubs){
-                    softSubs += epMetaAvailableSub + " ";
-                }
-
-                return softSubs;
+                return epMeta.AvailableSubs.Aggregate(softSubs, (current, epMetaAvailableSub) => current + (epMetaAvailableSub + " "));
             }
         }
 

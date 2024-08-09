@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace CRD.Utils.Structs;
+namespace CRD.Utils.Structs.Crunchyroll;
 
 public class CrToken{
     public string? access_token { get; set; }

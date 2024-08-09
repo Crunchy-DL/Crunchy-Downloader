@@ -67,7 +67,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
     }
 
     public async Task DownloadEpisode(){
-        await QueueManager.Instance.CRAddEpisodeToQue(EpisodeId, string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
+        await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId, string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
             CrunchyrollManager.Instance.CrunOptions.DubLang);
     }
 }

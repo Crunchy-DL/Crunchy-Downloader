@@ -125,6 +125,12 @@
                         <CheckBox IsChecked="{Binding IncludeSignSubs}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Include CC Subtitles ">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding IncludeCcSubs}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
             </controls:SettingsExpander>
 

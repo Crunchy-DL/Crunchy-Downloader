@@ -5,10 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll.Music;
 using Newtonsoft.Json;
 
 namespace CRD.Utils;
@@ -28,6 +30,36 @@ public class Helpers{
             Console.Error.WriteLine($"Error deserializing JSON: {ex.Message}");
             throw;
         }
+    }
+
+    public static string ConvertTimeFormat(string time){
+        var timeParts = time.Split(':', '.');
+        int hours = int.Parse(timeParts[0]);
+        int minutes = int.Parse(timeParts[1]);
+        int seconds = int.Parse(timeParts[2]);
+        int milliseconds = int.Parse(timeParts[3]);
+
+        return $"{hours}:{minutes:D2}:{seconds:D2}.{milliseconds / 10:D2}";
+    }
+
+    public static string ExtractDialogue(string[] lines, int startLine){
+        var dialogueBuilder = new StringBuilder();
+
+        for (int i = startLine; i < lines.Length && !string.IsNullOrWhiteSpace(lines[i]); i++){
+            if (!lines[i].Contains("-->") && !lines[i].StartsWith("STYLE")){
+                string line = lines[i].Trim();
+                // Remove HTML tags and keep the inner text
+                line = Regex.Replace(line, @"<[^>]+>", "");
+                dialogueBuilder.Append(line + "\\N");
+            }
+        }
+
+        // Remove the last newline character
+        if (dialogueBuilder.Length > 0){
+            dialogueBuilder.Length -= 2; // Remove the last "\N"
+        }
+
+        return dialogueBuilder.ToString();
     }
 
     public static void OpenUrl(string url){
@@ -378,4 +410,7 @@ public class Helpers{
 
         return languageGroups;
     }
+    
+    
+    
 }

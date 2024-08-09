@@ -20,6 +20,9 @@ public partial class MainWindowViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _updateAvailable = true;
+    
+    [ObservableProperty]
+    private bool _finishedLoading = false;
 
     public MainWindowViewModel(){
         _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
@@ -65,5 +68,7 @@ public partial class MainWindowViewModel : ViewModelBase{
         }
 
         await CrunchyrollManager.Instance.Init();
+
+        FinishedLoading = true;
     }
 }

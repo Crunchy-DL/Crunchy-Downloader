@@ -64,37 +64,37 @@ public enum Locale{
 
     [EnumMember(Value = "id-ID")]
     IdId,
-    
+
     [EnumMember(Value = "en-IN")]
     EnIn,
-    
+
     [EnumMember(Value = "pt-PT")]
     PtPt,
-    
+
     [EnumMember(Value = "zh-TW")]
     ZhTw,
-    
+
     [EnumMember(Value = "ca-ES")]
     CaEs,
-    
+
     [EnumMember(Value = "pl-PL")]
     PlPl,
-    
+
     [EnumMember(Value = "th-TH")]
     ThTh,
-    
+
     [EnumMember(Value = "ta-IN")]
     TaIn,
-    
+
     [EnumMember(Value = "ms-MY")]
     MsMy,
-    
+
     [EnumMember(Value = "vi-VN")]
     ViVn,
-    
+
     [EnumMember(Value = "te-IN")]
     TeIn,
-    
+
     [EnumMember(Value = "id-ID")]
     idID,
 }
@@ -118,12 +118,6 @@ public static class EnumExtensions{
 }
 
 [DataContract]
-public enum ChannelId{
-    [EnumMember(Value = "crunchyroll")]
-    Crunchyroll,
-}
-
-[DataContract]
 public enum ImageType{
     [EnumMember(Value = "poster_tall")]
     PosterTall,
@@ -139,22 +133,10 @@ public enum ImageType{
 }
 
 [DataContract]
-public enum MaturityRating{
-    [EnumMember(Value = "TV-14")]
-    Tv14,
-}
-
-[DataContract]
-public enum MediaType{
-    [EnumMember(Value = "episode")]
-    Episode,
-}
-
-[DataContract]
 public enum DownloadMediaType{
     [EnumMember(Value = "Video")]
     Video,
-    
+
     [EnumMember(Value = "SyncVideo")]
     SyncVideo,
 
@@ -166,7 +148,7 @@ public enum DownloadMediaType{
 
     [EnumMember(Value = "Subtitle")]
     Subtitle,
-    
+
     [EnumMember(Value = "Description")]
     Description,
 }
@@ -185,8 +167,10 @@ public enum HistoryViewType{
 public enum SortingType{
     [EnumMember(Value = "Series Title")]
     SeriesTitle,
+
     [EnumMember(Value = "Next Air Date")]
     NextAirDate,
+
     [EnumMember(Value = "History Series Add Date")]
     HistorySeriesAddDate,
 }
@@ -194,12 +178,24 @@ public enum SortingType{
 public enum FilterType{
     [EnumMember(Value = "All")]
     All,
+
     [EnumMember(Value = "Missing Episodes")]
     MissingEpisodes,
+
     [EnumMember(Value = "Missing Episodes Sonarr")]
     MissingEpisodesSonarr,
+
     [EnumMember(Value = "Continuing Only")]
     ContinuingOnly,
+}
+
+public enum CrunchyUrlType{
+    Artist,
+    MusicVideo,
+    Concert,
+    Episode,
+    Series,
+    Unknown
 }
 
 public enum SonarrCoverType{
@@ -219,5 +215,5 @@ public enum SonarrStatus{
     Continuing,
     Upcoming,
     Ended,
-    Deleted 
+    Deleted
 };

@@ -75,7 +75,7 @@ public class QueueManager{
                 downloadItem.Refresh();
             } else{
                 downloadItem = new DownloadItemModel(crunchyEpMeta);
-                downloadItem.LoadImage();
+                _ = downloadItem.LoadImage();
                 DownloadItemModels.Add(downloadItem);
             }
 
@@ -86,7 +86,7 @@ public class QueueManager{
     }
 
 
-    public async Task CRAddEpisodeToQue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false){
+    public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false){
         await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
 
         var episodeL = await CrunchyrollManager.Instance.CrEpisode.ParseEpisodeById(epId, crLocale);
@@ -156,10 +156,60 @@ public class QueueManager{
                 Console.WriteLine("Episode couldn't be added to Queue");
                 MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
             }
+        } else{
+            Console.WriteLine("Couldn't find episode trying to find movie with id");
+
+            var movie = await CrunchyrollManager.Instance.CrMovies.ParseMovieById(epId, crLocale);
+
+            if (movie != null){
+                var movieMeta = CrunchyrollManager.Instance.CrMovies.EpisodeMeta(movie, dubLang);
+
+                if (movieMeta != null){
+                    movieMeta.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                    Queue.Add(movieMeta);
+
+                    Console.WriteLine("Added Movie to Queue");
+                    MessageBus.Current.SendMessage(new ToastMessage($"Added Movie to Queue", ToastType.Information, 1));
+                }
+            }
         }
     }
 
-    public async Task CRAddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
+    
+    public void CrAddEpMetaToQueue(CrunchyEpMeta epMeta){
+            Queue.Add(epMeta);
+            MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
+    }
+    
+    public async Task CrAddMusicVideoToQueue(string epId){
+        await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
+
+        var musicVideo = await CrunchyrollManager.Instance.CrMusic.ParseMusicVideoByIdAsync(epId, "");
+
+        if (musicVideo != null){
+            var musicVideoMeta = CrunchyrollManager.Instance.CrMusic.EpisodeMeta(musicVideo);
+            Queue.Add(musicVideoMeta);
+            MessageBus.Current.SendMessage(new ToastMessage($"Added music video to the queue", ToastType.Information, 1));
+        }
+        
+        
+    }
+
+    public async Task CrAddConcertToQueue(string epId){
+        await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
+        
+        var concert = await CrunchyrollManager.Instance.CrMusic.ParseConcertByIdAsync(epId, "");
+
+        if (concert != null){
+            var concertMeta = CrunchyrollManager.Instance.CrMusic.EpisodeMeta(concert);
+            Queue.Add(concertMeta);
+            MessageBus.Current.SendMessage(new ToastMessage($"Added concert to the queue", ToastType.Information, 1));
+        }
+        
+    }
+
+
+    public async Task CrAddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
         var selected = CrunchyrollManager.Instance.CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
 
         bool failed = false;

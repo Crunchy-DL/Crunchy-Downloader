@@ -69,6 +69,9 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "include_signs_subs", ApplyNamingConventions = false)]
     public bool IncludeSignsSubs{ get; set; }
     
+    [YamlMember(Alias = "include_cc_subs", ApplyNamingConventions = false)]
+    public bool IncludeCcSubs{ get; set; }
+    
     [YamlMember(Alias = "mux_mp4", ApplyNamingConventions = false)]
     public bool Mp4{ get; set; }
 

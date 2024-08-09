@@ -74,7 +74,7 @@ public partial class AccountPageViewModel : ViewModelBase{
                 UnknownEndDate = true;
             }
 
-            if (CrunchyrollManager.Instance.Profile.Subscription?.NextRenewalDate != null){
+            if (CrunchyrollManager.Instance.Profile.Subscription?.NextRenewalDate != null && !UnknownEndDate){
                 _targetTime = CrunchyrollManager.Instance.Profile.Subscription.NextRenewalDate;
                 _timer = new DispatcherTimer{
                     Interval = TimeSpan.FromSeconds(1)

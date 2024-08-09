@@ -51,7 +51,7 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
         if (match.Success){
             var locale = match.Groups[1].Value; // Capture the locale part
             var id = match.Groups[2].Value; // Capture the ID part
-            QueueManager.Instance.CRAddEpisodeToQue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
+            QueueManager.Instance.CrAddEpisodeToQueue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
         }
     }
 

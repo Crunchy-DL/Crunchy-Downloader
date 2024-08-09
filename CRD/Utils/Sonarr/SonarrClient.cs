@@ -50,11 +50,20 @@ public class SonarrClient{
         httpClient = new HttpClient();
     }
 
-    public async void RefreshSonarr(){
+    public async Task RefreshSonarr(){
         await CheckSonarrSettings();
         if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             SonarrSeries = await GetSeries();
             CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(true);
+            
+            foreach (var historySeries in CrunchyrollManager.Instance.HistoryList){
+                if (historySeries.SonarrSeriesId != null){
+                    List<SonarrEpisode>? episodes = await GetEpisodes(int.Parse(historySeries.SonarrSeriesId));
+                    historySeries.SonarrNextAirDate = CrunchyrollManager.Instance.History.GetNextAirDate(episodes);
+                }
+            }
+
+            
         }
     }
     

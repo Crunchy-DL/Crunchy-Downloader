@@ -41,7 +41,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private bool _addScaledBorderAndShadow = false;
 
     [ObservableProperty]
-    private bool _includeSignSubs = false;
+    private bool _includeSignSubs;
+    
+    [ObservableProperty]
+    private bool _includeCcSubs;
+    
 
     [ObservableProperty]
     private ComboBoxItem _selectedScaledBorderAndShadow;
@@ -399,6 +403,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         IncludeEpisodeDescription = options.IncludeVideoDescription;
         FileTitle = options.VideoTitle ?? "";
         IncludeSignSubs = options.IncludeSignsSubs;
+        IncludeCcSubs = options.IncludeCcSubs;
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
@@ -478,6 +483,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0),0,10);
         CrunchyrollManager.Instance.CrunOptions.FileName = FileName;
         CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs; 
+        CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs; 
         CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0),0,1000000000);
         CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads =  Math.Clamp((int)(SimultaneousDownloads ?? 0),1,10);
 

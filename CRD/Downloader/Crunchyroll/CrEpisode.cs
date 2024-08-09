@@ -15,11 +15,6 @@ public class CrEpisode(){
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale, bool forcedLang = false){
-        // if (crunInstance.CmsToken?.Cms == null){
-        //     Console.Error.WriteLine("Missing CMS Access Token");
-        //     return null;
-        // }
-
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";

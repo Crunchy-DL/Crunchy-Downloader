@@ -48,6 +48,7 @@ public class HttpClientReq{
         
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.9.0 Nintendo Switch/18.1.0.0 UE4/4.27");
+        // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/3.60.0 Android/9 okhttp/4.12.0");
         
     }
 
@@ -126,6 +127,7 @@ public static class Api{
     public static readonly string Search = ApiBeta + "/content/v2/discover/search";
     public static readonly string Browse = ApiBeta + "/content/v2/discover/browse";
     public static readonly string Cms = ApiBeta + "/content/v2/cms";
+    public static readonly string Content = ApiBeta + "/content/v2";
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
