@@ -100,7 +100,7 @@ public class QueueManager{
 
             var sList = await CrunchyrollManager.Instance.CrEpisode.EpisodeData((CrunchyEpisode)episodeL, updateHistory);
 
-            (HistoryEpisode? historyEpisode, List<string> dublist, string downloadDirPath) historyEpisode = (null, [], "");
+            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath) historyEpisode = (null, [], [], "");
 
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 var episode = sList.EpisodeAndLanguages.Items.First();
@@ -141,7 +141,8 @@ public class QueueManager{
                     }
                 }
 
-                selected.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                selected.DownloadSubs = historyEpisode.sublist.Count > 0 ? historyEpisode.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                
                 Queue.Add(selected);
 
 
@@ -175,12 +176,12 @@ public class QueueManager{
         }
     }
 
-    
+
     public void CrAddEpMetaToQueue(CrunchyEpMeta epMeta){
-            Queue.Add(epMeta);
-            MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
+        Queue.Add(epMeta);
+        MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
     }
-    
+
     public async Task CrAddMusicVideoToQueue(string epId){
         await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
 
@@ -191,13 +192,11 @@ public class QueueManager{
             Queue.Add(musicVideoMeta);
             MessageBus.Current.SendMessage(new ToastMessage($"Added music video to the queue", ToastType.Information, 1));
         }
-        
-        
     }
 
     public async Task CrAddConcertToQueue(string epId){
         await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
-        
+
         var concert = await CrunchyrollManager.Instance.CrMusic.ParseConcertByIdAsync(epId, "");
 
         if (concert != null){
@@ -205,7 +204,6 @@ public class QueueManager{
             Queue.Add(concertMeta);
             MessageBus.Current.SendMessage(new ToastMessage($"Added concert to the queue", ToastType.Information, 1));
         }
-        
     }
 
 
@@ -213,7 +211,7 @@ public class QueueManager{
         var selected = CrunchyrollManager.Instance.CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
 
         bool failed = false;
-
+        
         foreach (var crunchyEpMeta in selected.Values.ToList()){
             if (crunchyEpMeta.Data?.First().Playback != null){
                 if (CrunchyrollManager.Instance.CrunOptions.History){
@@ -243,7 +241,10 @@ public class QueueManager{
                     }
                 }
 
-                crunchyEpMeta.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                var subLangList = CrunchyrollManager.Instance.History.GetSubList(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId);
+                crunchyEpMeta.DownloadSubs = subLangList.Count > 0 ? subLangList : CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                
+                
                 Queue.Add(crunchyEpMeta);
             } else{
                 failed = true;

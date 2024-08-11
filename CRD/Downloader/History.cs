@@ -65,7 +65,6 @@ public class History(){
     }
 
 
-
     public void SetAsDownloaded(string? seriesId, string? seasonId, string episodeId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
@@ -129,18 +128,24 @@ public class History(){
 
         return (null, downloadDirPath);
     }
-    
-    public (HistoryEpisode? historyEpisode, List<string> dublist, string downloadDirPath) GetHistoryEpisodeWithDubListAndDownloadDir(string? seriesId, string? seasonId, string episodeId){
+
+    public (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath) GetHistoryEpisodeWithDubListAndDownloadDir(string? seriesId, string? seasonId, string episodeId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
         var downloadDirPath = "";
-        List<string> dublist = [];
+        List<string> dublist =[];
+        List<string> sublist =[];
 
         if (historySeries != null){
             var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
             if (historySeries.HistorySeriesDubLangOverride.Count > 0){
                 dublist = historySeries.HistorySeriesDubLangOverride;
             }
+
+            if (historySeries.HistorySeriesSoftSubsOverride.Count > 0){
+                sublist = historySeries.HistorySeriesSoftSubsOverride;
+            }
+
             if (!string.IsNullOrEmpty(historySeries.SeriesDownloadPath)){
                 downloadDirPath = historySeries.SeriesDownloadPath;
             }
@@ -150,23 +155,28 @@ public class History(){
                 if (historySeason.HistorySeasonDubLangOverride.Count > 0){
                     dublist = historySeason.HistorySeasonDubLangOverride;
                 }
+
+                if (historySeason.HistorySeasonSoftSubsOverride.Count > 0){
+                    sublist = historySeason.HistorySeasonSoftSubsOverride;
+                }
+
                 if (!string.IsNullOrEmpty(historySeason.SeasonDownloadPath)){
                     downloadDirPath = historySeason.SeasonDownloadPath;
                 }
 
                 if (historyEpisode != null){
-                    return (historyEpisode, dublist,downloadDirPath);
+                    return (historyEpisode, dublist, sublist, downloadDirPath);
                 }
             }
         }
 
-        return (null, dublist,downloadDirPath);
+        return (null, dublist, sublist, downloadDirPath);
     }
-    
+
     public List<string> GetDubList(string? seriesId, string? seasonId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
-        
-        List<string> dublist = [];
+
+        List<string> dublist =[];
 
         if (historySeries != null){
             var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
@@ -181,7 +191,25 @@ public class History(){
 
         return dublist;
     }
-    
+
+    public List<string> GetSubList(string? seriesId, string? seasonId){
+        var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
+
+        List<string> sublist =[];
+
+        if (historySeries != null){
+            var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
+            if (historySeries.HistorySeriesSoftSubsOverride.Count > 0){
+                sublist = historySeries.HistorySeriesSoftSubsOverride;
+            }
+
+            if (historySeason is{ HistorySeasonSoftSubsOverride.Count: > 0 }){
+                sublist = historySeason.HistorySeasonSoftSubsOverride;
+            }
+        }
+
+        return sublist;
+    }
 
 
     public async Task UpdateWithEpisode(CrunchyEpisode episodeParam){
@@ -256,13 +284,10 @@ public class History(){
 
         SortItems();
         SortSeasons(historySeries);
-
-
     }
 
-    public async Task UpdateWithSeasonData(CrunchyEpisodeList seasonData,bool skippVersionCheck = true){
+    public async Task UpdateWithSeasonData(CrunchyEpisodeList seasonData, bool skippVersionCheck = true){
         if (seasonData.Data != null){
-
             if (!skippVersionCheck){
                 if (seasonData.Data.First().Versions != null){
                     var version = seasonData.Data.First().Versions.Find(a => a.Original);
@@ -275,8 +300,8 @@ public class History(){
                     return;
                 }
             }
-            
-            
+
+
             var firstEpisode = seasonData.Data.First();
             var seriesId = firstEpisode.SeriesId;
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
@@ -471,7 +496,7 @@ public class History(){
         if (string.IsNullOrEmpty(identifier)){
             return false;
         }
-        
+
         // Regex pattern to match any sequence that does NOT contain "|S" followed by one or more digits immediately after
         string pattern = @"^(?!.*\|S\d+).*";
 
@@ -545,7 +570,7 @@ public class History(){
     }
 
     private static readonly object _lock = new object();
-    
+
     public async Task MatchHistoryEpisodesWithSonarr(bool updateAll, HistorySeries historySeries){
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;
@@ -576,11 +601,11 @@ public class History(){
                         historyEpisode.SonarrHasFile = episode.HasFile;
                         historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
                         historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
-                        lock (_lock) {
+                        lock (_lock){
                             episodes.Remove(episode);
                         }
                     } else{
-                        lock (_lock) {
+                        lock (_lock){
                             failedEpisodes.Add(historyEpisode);
                         }
                     }
@@ -604,7 +629,7 @@ public class History(){
                     historyEpisode.SonarrHasFile = episode.HasFile;
                     historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
                     historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
-                    lock (_lock) {
+                    lock (_lock){
                         episodes.Remove(episode);
                     }
                 } else{
@@ -622,7 +647,7 @@ public class History(){
                         historyEpisode.SonarrHasFile = episode1.HasFile;
                         historyEpisode.SonarrAbsolutNumber = episode1.AbsoluteEpisodeNumber + "";
                         historyEpisode.SonarrSeasonNumber = episode1.SeasonNumber + "";
-                        lock (_lock) {
+                        lock (_lock){
                             episodes.Remove(episode1);
                         }
                     } else{
@@ -639,7 +664,7 @@ public class History(){
                             historyEpisode.SonarrHasFile = episode2.HasFile;
                             historyEpisode.SonarrAbsolutNumber = episode2.AbsoluteEpisodeNumber + "";
                             historyEpisode.SonarrSeasonNumber = episode2.SeasonNumber + "";
-                            lock (_lock) {
+                            lock (_lock){
                                 episodes.Remove(episode2);
                             }
                         } else{
@@ -648,9 +673,8 @@ public class History(){
                     }
                 }
             });
-            
+
             CfgManager.UpdateHistoryFile();
-            
         }
     }
 
@@ -712,7 +736,7 @@ public class History(){
 
         return highestSimilarity < 0.8 ? null : closestMatch;
     }
-    
+
     public CrBrowseSeries? FindClosestMatchCrSeries(List<CrBrowseSeries> episodeList, string title){
         CrBrowseSeries? closestMatch = null;
         double highestSimilarity = 0.0;

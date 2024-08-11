@@ -42,6 +42,19 @@ public class Helpers{
         return $"{hours}:{minutes:D2}:{seconds:D2}.{milliseconds / 10:D2}";
     }
 
+    public static string ConvertVTTStylesToASS(string dialogue){
+        dialogue = Regex.Replace(dialogue, @"<b>", "{\\b1}");
+        dialogue = Regex.Replace(dialogue, @"</b>", "{\\b0}");
+        dialogue = Regex.Replace(dialogue, @"<i>", "{\\i1}");
+        dialogue = Regex.Replace(dialogue, @"</i>", "{\\i0}");
+        dialogue = Regex.Replace(dialogue, @"<u>", "{\\u1}");
+        dialogue = Regex.Replace(dialogue, @"</u>", "{\\u0}");
+        
+        dialogue = Regex.Replace(dialogue, @"<[^>]+>", ""); // Remove any other HTML-like tags
+
+        return dialogue;
+    }
+
     public static string ExtractDialogue(string[] lines, int startLine){
         var dialogueBuilder = new StringBuilder();
 
@@ -410,7 +423,4 @@ public class Helpers{
 
         return languageGroups;
     }
-    
-    
-    
 }

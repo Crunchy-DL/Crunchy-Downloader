@@ -1402,17 +1402,29 @@ public class CrunchyrollManager{
                             assBuilder.AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
 
                             // Parse the VTT content
-                            var lines = subsAssReqResponse.ResponseContent.Split(new[]{ Environment.NewLine }, StringSplitOptions.None);
+                            string normalizedContent = subsAssReqResponse.ResponseContent.Replace("\r\n", "\n").Replace("\r", "\n");
+                            var blocks = normalizedContent.Split(new[]{ "\n\n" }, StringSplitOptions.RemoveEmptyEntries);
                             Regex timePattern = new Regex(@"(?<start>\d{2}:\d{2}:\d{2}\.\d{3})\s-->\s(?<end>\d{2}:\d{2}:\d{2}\.\d{3})");
 
-                            for (int i = 0; i < lines.Length; i++){
-                                Match match = timePattern.Match(lines[i]);
+                            foreach (var block in blocks){
+                                // Split each block into lines
+                                var lines = block.Split(new[]{ '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                                if (lines.Length < 3) continue; // Skip blocks that don't have enough lines
+
+                                // Match the first line to get the time codes
+                                Match match = timePattern.Match(lines[1]);
 
                                 if (match.Success){
                                     string startTime = Helpers.ConvertTimeFormat(match.Groups["start"].Value);
                                     string endTime = Helpers.ConvertTimeFormat(match.Groups["end"].Value);
-                                    string dialogue = Helpers.ExtractDialogue(lines, i + 1);
 
+                                    // Join the remaining lines for dialogue, using \N for line breaks
+                                    string dialogue = string.Join("\\N", lines.Skip(2));
+
+                                    dialogue = Helpers.ConvertVTTStylesToASS(dialogue);
+                                    
+                                    // Append dialogue to ASS
                                     assBuilder.AppendLine($"Dialogue: 0,{startTime},{endTime},Default,,0000,0000,0000,,{dialogue}");
                                 }
                             }

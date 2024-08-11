@@ -301,7 +301,7 @@
                                        Description="MKVMerge and FFMpeg Settings"
                                        IsExpanded="False">
 
-                <controls:SettingsExpanderItem Content="MP4">
+                <controls:SettingsExpanderItem Content="MP4" Description="Outputs a mp4 instead of an mkv - not recommended to use this option">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
