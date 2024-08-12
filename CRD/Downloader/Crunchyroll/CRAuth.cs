@@ -79,7 +79,11 @@ public class CrAuth{
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent);
         } else{
-            MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0,response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}", ToastType.Error, 10));
+            if (response.ResponseContent.Contains("invalid_credentials")){
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 10));
+            } else{
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0,response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}", ToastType.Error, 10));  
+            }
         }
 
         if (crunInstance.Token?.refresh_token != null){

@@ -899,7 +899,7 @@ public class CrunchyrollManager{
                                     tsFile = videoDownloadResult.tsFile;
 
                                     if (!videoDownloadResult.Ok){
-                                        Console.Error.WriteLine($"DL Stats: {JsonConvert.SerializeObject(videoDownloadResult.Parts)}");
+                                        Console.Error.WriteLine($"Faild to download video - DL Stats: {JsonConvert.SerializeObject(videoDownloadResult.Parts)}");
                                         dlFailed = true;
                                     }
 
@@ -918,7 +918,7 @@ public class CrunchyrollManager{
                                     tsFile = audioDownloadResult.tsFile;
 
                                     if (!audioDownloadResult.Ok){
-                                        Console.Error.WriteLine($"DL Stats: {JsonConvert.SerializeObject(audioDownloadResult.Parts)}");
+                                        Console.Error.WriteLine($"Faild to download audio - DL Stats: {JsonConvert.SerializeObject(audioDownloadResult.Parts)}");
                                         dlFailed = true;
                                     }
 
