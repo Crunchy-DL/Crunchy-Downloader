@@ -61,6 +61,7 @@ public class Merger{
                 } else{
                     metaData.Add($"-disposition:a:{audioIndex} 0");
                 }
+
                 index++;
                 audioIndex++;
             }
@@ -86,9 +87,10 @@ public class Merger{
                 } else{
                     metaData.Add($"-disposition:s:{sub.i} 0");
                 }
+
                 index++;
             }
-            
+
             args.AddRange(metaData);
             // args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
             args.Add("-c:v copy");
@@ -106,7 +108,11 @@ public class Merger{
                 XmlDocument doc = new XmlDocument();
                 doc.Load(options.Description[0].Path);
                 XmlNode? node = doc.SelectSingleNode("//Tag/Simple[Name='DESCRIPTION']/String");
-                args.Add($"-metadata comment=\"{node?.InnerText ?? string.Empty}\"");
+                string description = node?.InnerText
+                                         .Replace("\\", "\\\\") // Escape backslashes
+                                         .Replace("\"", "\\\"") // Escape double quotes
+                                     ?? string.Empty;
+                args.Add($"-metadata comment=\"{description}\"");
             }
 
             if (options.Options.ffmpeg?.Count > 0){
