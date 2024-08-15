@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll.Music;
 using Newtonsoft.Json;
@@ -16,15 +17,11 @@ using Newtonsoft.Json;
 namespace CRD.Utils;
 
 public class Helpers{
-    /// <summary>
-    /// Deserializes a JSON string into a specified .NET type.
-    /// </summary>
-    /// <typeparam name="T">The type of the object to deserialize to.</typeparam>
-    /// <param name="json">The JSON string to deserialize.</param>
-    /// <param name="serializerSettings">The settings for deserialization if null default settings will be used</param>
-    /// <returns>The deserialized object of type T.</returns>
     public static T? Deserialize<T>(string json, JsonSerializerSettings? serializerSettings){
         try{
+            serializerSettings ??= new JsonSerializerSettings();
+            serializerSettings.Converters.Add(new UtcToLocalTimeConverter());
+
             return JsonConvert.DeserializeObject<T>(json, serializerSettings);
         } catch (JsonException ex){
             Console.Error.WriteLine($"Error deserializing JSON: {ex.Message}");
@@ -49,30 +46,10 @@ public class Helpers{
         dialogue = Regex.Replace(dialogue, @"</i>", "{\\i0}");
         dialogue = Regex.Replace(dialogue, @"<u>", "{\\u1}");
         dialogue = Regex.Replace(dialogue, @"</u>", "{\\u0}");
-        
+
         dialogue = Regex.Replace(dialogue, @"<[^>]+>", ""); // Remove any other HTML-like tags
 
         return dialogue;
-    }
-
-    public static string ExtractDialogue(string[] lines, int startLine){
-        var dialogueBuilder = new StringBuilder();
-
-        for (int i = startLine; i < lines.Length && !string.IsNullOrWhiteSpace(lines[i]); i++){
-            if (!lines[i].Contains("-->") && !lines[i].StartsWith("STYLE")){
-                string line = lines[i].Trim();
-                // Remove HTML tags and keep the inner text
-                line = Regex.Replace(line, @"<[^>]+>", "");
-                dialogueBuilder.Append(line + "\\N");
-            }
-        }
-
-        // Remove the last newline character
-        if (dialogueBuilder.Length > 0){
-            dialogueBuilder.Length -= 2; // Remove the last "\N"
-        }
-
-        return dialogueBuilder.ToString();
     }
 
     public static void OpenUrl(string url){
@@ -423,4 +400,5 @@ public class Helpers{
 
         return languageGroups;
     }
+    
 }

@@ -49,9 +49,9 @@ public class Updater : INotifyPropertyChanged{
     public async Task<bool> CheckForUpdatesAsync(){
         try{
             using (var client = new HttpClient()){
-                client.DefaultRequestHeaders.Add("User-Agent", "C# App"); // GitHub API requires a user agent
+                client.DefaultRequestHeaders.Add("User-Agent", "C# App");
                 var response = await client.GetStringAsync(apiEndpoint);
-                var releaseInfo = JsonConvert.DeserializeObject<dynamic>(response);
+                var releaseInfo = Helpers.Deserialize<dynamic>(response,null);
 
                 var latestVersion = releaseInfo.tag_name;
                 downloadUrl = releaseInfo.assets[0].browser_download_url;
@@ -63,10 +63,10 @@ public class Updater : INotifyPropertyChanged{
                 if (latestVersion != currentVersion){
                     Console.WriteLine("Update available: " + latestVersion + " - Current Version: " + currentVersion);
                     return true;
-                } else{
-                    Console.WriteLine("No updates available.");
-                    return false;
                 }
+
+                Console.WriteLine("No updates available.");
+                return false;
             }
         } catch (Exception e){
             Console.Error.WriteLine("Failed to get Update information");

@@ -13,7 +13,10 @@ using CRD.Utils;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
+using CRD.ViewModels.Utils;
 using CRD.Views;
+using CRD.Views.Utils;
+using FluentAvalonia.UI.Controls;
 using ReactiveUI;
 
 namespace CRD.ViewModels;
@@ -27,25 +30,39 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     public static bool _sonarrAvailable;
-    
+
+    [ObservableProperty]
+    public static bool _sonarrConnected;
+
     private IStorageProvider? _storageProvider;
 
-    public SeriesPageViewModel(){
-        
+    [ObservableProperty]
+    private string _availableDubs;
 
-        
+    [ObservableProperty]
+    private string _availableSubs;
+
+    public SeriesPageViewModel(){
         _selectedSeries = CrunchyrollManager.Instance.SelectedSeries;
 
         if (_selectedSeries.ThumbnailImage == null){
             _selectedSeries.LoadImage();
         }
 
-        if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId) && CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
-            SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
+        if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
+            SonarrConnected = CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
+
+            if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId)){
+                SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && SonarrConnected;
+            } else{
+                SonarrAvailable = false;
+            }
         } else{
-            SonarrAvailable = false;
+            SonarrConnected = SonarrAvailable = false;
         }
-        
+
+        AvailableDubs = "Available Dubs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableDubLang);
+        AvailableSubs = "Available Subs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableSoftSubs);
     }
 
     [RelayCommand]
@@ -79,6 +96,44 @@ public partial class SeriesPageViewModel : ViewModelBase{
         _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
     }
 
+    [RelayCommand]
+    public async Task MatchSonarrSeries_Button(){
+        var dialog = new ContentDialog(){
+            Title = "Sonarr Matching",
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Close",
+            FullSizeDesired = true
+        };
+
+        var viewModel = new ContentDialogSonarrMatchViewModel(dialog, SelectedSeries.SonarrSeriesId,SelectedSeries.SeriesTitle);
+        dialog.Content = new ContentDialogSonarrMatchView(){
+            DataContext = viewModel
+        };
+
+        var dialogResult = await dialog.ShowAsync();
+
+        if (dialogResult == ContentDialogResult.Primary){
+            SelectedSeries.SonarrSeriesId = viewModel.CurrentSonarrSeries.Id.ToString();
+            SelectedSeries.SonarrTvDbId = viewModel.CurrentSonarrSeries.TvdbId.ToString();
+            SelectedSeries.SonarrSlugTitle = viewModel.CurrentSonarrSeries.TitleSlug;
+            
+            if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
+                SonarrConnected = CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
+                
+                if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId)){
+                    SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && SonarrConnected;
+                } else{
+                    SonarrAvailable = false;
+                }
+            } else{
+                SonarrConnected = SonarrAvailable = false;
+            }
+
+            UpdateData("");
+        }
+        
+    }
+
 
     [RelayCommand]
     public async Task DownloadSeasonAll(HistorySeason season){
@@ -105,12 +160,15 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         await Task.WhenAll(downloadTasks);
     }
-    
+
     [RelayCommand]
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);
 
         SelectedSeries.Seasons.Refresh();
+
+        AvailableDubs = "Available Dubs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableDubLang);
+        AvailableSubs = "Available Subs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableSoftSubs);
 
         // MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
@@ -122,6 +180,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
             SelectedSeries.Seasons.Remove(objectToRemove);
             CfgManager.UpdateHistoryFile();
         }
+
         MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
 

@@ -74,7 +74,7 @@ public class SonarrClient{
             apiUrl = $"http{(properties.UseSsl ? "s" : "")}://{(!string.IsNullOrEmpty(properties.Host) ? properties.Host : "localhost")}:{properties.Port}{(properties.UrlBase ?? "")}/api";
         }
     }
-
+    
     public async Task CheckSonarrSettings(){
        
         SetApiUrl();
@@ -109,7 +109,7 @@ public class SonarrClient{
         List<SonarrSeries> series = [];
         
         try{
-            series = JsonConvert.DeserializeObject<List<SonarrSeries>>(json) ?? [];
+            series = Helpers.Deserialize<List<SonarrSeries>>(json,null) ?? [];
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetSeries error \n" + e);
             Console.Error.WriteLine("Sonarr GetSeries error \n" + e);
@@ -124,7 +124,7 @@ public class SonarrClient{
         List<SonarrEpisode> episodes = [];
         
         try{
-            episodes = JsonConvert.DeserializeObject<List<SonarrEpisode>>(json) ?? [];
+            episodes = Helpers.Deserialize<List<SonarrEpisode>>(json,null) ?? [];
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetEpisodes error \n" + e);
             Console.Error.WriteLine("Sonarr GetEpisodes error \n" + e);
@@ -138,7 +138,7 @@ public class SonarrClient{
         var json = await GetJson($"/v3/episode/id={episodeId}");
         var episode = new SonarrEpisode();
         try{
-            episode = JsonConvert.DeserializeObject<SonarrEpisode>(json) ?? new SonarrEpisode();
+            episode = Helpers.Deserialize<SonarrEpisode>(json,null) ?? new SonarrEpisode();
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetEpisode error \n" + e);
             Console.Error.WriteLine("Sonarr GetEpisode error \n" + e);

@@ -379,12 +379,22 @@ public class History(){
         }
     }
 
+    private CrSeriesBase? cachedSeries;
+
     private async Task RefreshSeriesData(string seriesId, HistorySeries historySeries){
-        var series = await crunInstance.CrSeries.SeriesById(seriesId, string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang, true);
-        if (series?.Data != null){
-            historySeries.SeriesDescription = series.Data.First().Description;
-            historySeries.ThumbnailImageUrl = GetSeriesThumbnail(series);
-            historySeries.SeriesTitle = series.Data.First().Title;
+        if (cachedSeries == null || (cachedSeries.Data != null && cachedSeries.Data.First().Id != seriesId)){
+            cachedSeries = await crunInstance.CrSeries.SeriesById(seriesId, string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang, true);
+        } else{
+            return;
+        }
+
+        if (cachedSeries?.Data != null){
+            var series = cachedSeries.Data.First();
+            historySeries.SeriesDescription = series.Description;
+            historySeries.ThumbnailImageUrl = GetSeriesThumbnail(cachedSeries);
+            historySeries.SeriesTitle = series.Title;
+            historySeries.HistorySeriesAvailableDubLang = series.AudioLocales;
+            historySeries.HistorySeriesAvailableSoftSubs = series.SubtitleLocales;
         }
     }
 
@@ -758,13 +768,13 @@ public class History(){
         return highestSimilarity < 0.8 ? null : closestMatch;
     }
 
-    private double CalculateSimilarity(string source, string target){
+    public double CalculateSimilarity(string source, string target){
         int distance = LevenshteinDistance(source, target);
         return 1.0 - (double)distance / Math.Max(source.Length, target.Length);
     }
 
 
-    public int LevenshteinDistance(string source, string target){
+    private int LevenshteinDistance(string source, string target){
         if (string.IsNullOrEmpty(source)){
             return string.IsNullOrEmpty(target) ? 0 : target.Length;
         }

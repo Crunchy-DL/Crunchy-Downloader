@@ -52,6 +52,12 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonProperty("history_series_add_date")]
     public DateTime? HistorySeriesAddDate{ get; set; }
 
+    [JsonProperty("history_series_available_soft_subs")]
+    public List<string> HistorySeriesAvailableSoftSubs{ get; set; } =[];
+
+    [JsonProperty("history_series_available_dub_lang")]
+    public List<string> HistorySeriesAvailableDubLang{ get; set; } =[];
+    
     [JsonProperty("history_series_soft_subs_override")]
     public List<string> HistorySeriesSoftSubsOverride{ get; set; } =[];
 

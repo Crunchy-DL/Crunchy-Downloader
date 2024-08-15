@@ -48,7 +48,7 @@ public class CrAuth{
     }
 
     private void JsonTokenToFileAndVariable(string content){
-        crunInstance.Token = JsonConvert.DeserializeObject<CrToken>(content, crunInstance.SettingsJsonSerializerSettings);
+        crunInstance.Token = Helpers.Deserialize<CrToken>(content, crunInstance.SettingsJsonSerializerSettings);
 
 
         if (crunInstance.Token != null && crunInstance.Token.expires_in != null){

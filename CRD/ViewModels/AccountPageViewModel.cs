@@ -111,7 +111,7 @@ public partial class AccountPageViewModel : ViewModelBase{
                 CloseButtonText = "Close"
             };
 
-            var viewModel = new ContentDialogInputLoginViewModel(dialog, this);
+            var viewModel = new Utils.ContentDialogInputLoginViewModel(dialog, this);
             dialog.Content = new ContentDialogInputLoginView(){
                 DataContext = viewModel
             };

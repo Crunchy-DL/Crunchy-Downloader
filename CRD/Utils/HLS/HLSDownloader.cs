@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Parser.Utils;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
@@ -62,7 +63,7 @@ public class HlsDownloader{
             try{
                 Console.WriteLine("Resume data found! Trying to resume...");
                 string resumeFileContent = File.ReadAllText($"{fn}.resume");
-                var resumeData = JsonConvert.DeserializeObject<ResumeData>(resumeFileContent);
+                var resumeData = Helpers.Deserialize<ResumeData>(resumeFileContent, null);
 
                 if (resumeData != null){
                     if (resumeData.Total == _data.M3U8Json?.Segments.Count &&

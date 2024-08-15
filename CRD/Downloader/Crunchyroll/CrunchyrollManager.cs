@@ -166,7 +166,7 @@ public class CrunchyrollManager{
             if (File.Exists(CfgManager.PathCrHistory)){
                 var decompressedJson = CfgManager.DecompressJsonFile(CfgManager.PathCrHistory);
                 if (!string.IsNullOrEmpty(decompressedJson)){
-                    HistoryList = JsonConvert.DeserializeObject<ObservableCollection<HistorySeries>>(decompressedJson) ?? new ObservableCollection<HistorySeries>();
+                    HistoryList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(decompressedJson,CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ?? new ObservableCollection<HistorySeries>();
 
                     foreach (var historySeries in HistoryList){
                         historySeries.Init();
@@ -1611,7 +1611,7 @@ public class CrunchyrollManager{
             Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>()
         };
 
-        var playStream = JsonConvert.DeserializeObject<CrunchyStreamData>(responseContent, SettingsJsonSerializerSettings);
+        var playStream = Helpers.Deserialize<CrunchyStreamData>(responseContent, SettingsJsonSerializerSettings);
         if (playStream == null) return temppbData;
 
         if (!string.IsNullOrEmpty(playStream.Token)){
@@ -1758,7 +1758,7 @@ public class CrunchyrollManager{
             showRequestResponse = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
             if (showRequestResponse.IsOk){
-                CrunchyOldChapter chapterData = JsonConvert.DeserializeObject<CrunchyOldChapter>(showRequestResponse.ResponseContent);
+                CrunchyOldChapter chapterData = Helpers.Deserialize<CrunchyOldChapter>(showRequestResponse.ResponseContent,SettingsJsonSerializerSettings);
 
                 DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

@@ -129,7 +129,10 @@ public class SonarrSeries{
     /// The images.
     /// </value>
     [JsonProperty("images")]
-    public List<SonarrImage> Images{ get; set; }
+    public List<SonarrImage>? Images{ get; set; }
+    
+    [JsonIgnore]
+    public string ImageUrl{ get; set; }
 
     /// <summary>
     /// Gets or sets the type of the series.

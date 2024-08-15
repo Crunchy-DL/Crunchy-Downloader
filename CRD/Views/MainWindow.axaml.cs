@@ -9,6 +9,7 @@ using FluentAvalonia.Core;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
 using ReactiveUI;
+using ContentDialogUpdateViewModel = CRD.ViewModels.Utils.ContentDialogUpdateViewModel;
 
 namespace CRD.Views;
 

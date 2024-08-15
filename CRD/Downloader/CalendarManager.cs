@@ -152,7 +152,6 @@ public class CalendarManager{
             return forDate;
         }
 
-    
 
         CalendarWeek week = new CalendarWeek();
         week.CalendarDays = new List<CalendarDay>();
@@ -170,21 +169,17 @@ public class CalendarManager{
         }
 
         week.CalendarDays.Reverse();
-        
+
         var firstDayOfWeek = week.CalendarDays.First().DateTime;
 
-        var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes(CrunchyrollManager.Instance.CrunOptions.HistoryLang, 200,firstDayOfWeek, true);
-        
+        var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes(CrunchyrollManager.Instance.CrunOptions.HistoryLang, 200, firstDayOfWeek, true);
+
         if (newEpisodesBase is{ Data.Count: > 0 }){
             var newEpisodes = newEpisodesBase.Data;
 
             foreach (var crBrowseEpisode in newEpisodes){
                 var targetDate = CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate ? crBrowseEpisode.EpisodeMetadata.EpisodeAirDate : crBrowseEpisode.LastPublic;
 
-                if (targetDate.Kind == DateTimeKind.Utc){
-                    targetDate = targetDate.ToLocalTime();
-                }
-                
                 if (CrunchyrollManager.Instance.CrunOptions.CalendarHideDubs && crBrowseEpisode.EpisodeMetadata.SeasonTitle != null &&
                     (crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)") || crBrowseEpisode.EpisodeMetadata.AudioLocale != Locale.JaJp)){
                     continue;
@@ -217,6 +212,18 @@ public class CalendarManager{
 
                     calendarDay.CalendarEpisodes?.Add(calEpisode);
                 }
+            }
+
+            foreach (var weekCalendarDay in week.CalendarDays){
+                if (weekCalendarDay.CalendarEpisodes != null)
+                    weekCalendarDay.CalendarEpisodes = weekCalendarDay.CalendarEpisodes
+                        .OrderBy(e => e.DateTime)
+                        .ThenBy(e => e.SeasonName)
+                        .ThenBy(e => {
+                            double parsedNumber;
+                            return double.TryParse(e.EpisodeNumber, out parsedNumber) ? parsedNumber : double.MinValue;
+                        })
+                        .ToList();
             }
         }
 

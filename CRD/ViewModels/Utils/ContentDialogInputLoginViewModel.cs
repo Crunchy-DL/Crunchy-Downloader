@@ -1,12 +1,10 @@
 ﻿using System;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils;
 using CRD.Utils.Structs;
 using FluentAvalonia.UI.Controls;
 
-namespace CRD.ViewModels;
+namespace CRD.ViewModels.Utils;
 
 public partial class ContentDialogInputLoginViewModel : ViewModelBase{
     private readonly ContentDialog dialog;

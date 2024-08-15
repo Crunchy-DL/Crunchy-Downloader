@@ -1,12 +1,10 @@
 ﻿using System;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CRD.Downloader;
-using CRD.Utils.Structs;
 using CRD.Utils.Updater;
 using FluentAvalonia.UI.Controls;
 
-namespace CRD.ViewModels;
+namespace CRD.ViewModels.Utils;
 
 public partial class ContentDialogUpdateViewModel : ViewModelBase{
     private readonly ContentDialog dialog;

@@ -14,7 +14,7 @@ public class StreamError{
 
     public static StreamError? FromJson(string json){
         try{
-            return JsonConvert.DeserializeObject<StreamError>(json);
+            return Helpers.Deserialize<StreamError>(json,null);
         } catch (Exception e){
             Console.Error.WriteLine(e);
             return null;
