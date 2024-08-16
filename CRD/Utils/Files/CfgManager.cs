@@ -22,6 +22,7 @@ public class CfgManager{
     public static readonly string PathCrToken = WorkingDirectory + "/config/cr_token.yml";
     public static readonly string PathCrDownloadOptions = WorkingDirectory + "/config/settings.yml";
     public static readonly string PathCrHistory = WorkingDirectory + "/config/history.json";
+    public static readonly string PathWindowSettings= WorkingDirectory + "/config/windowSettings.json";
 
     public static readonly string PathFFMPEG = WorkingDirectory + "/lib/ffmpeg.exe";
     public static readonly string PathMKVMERGE = WorkingDirectory + "/lib/mkvmerge.exe";

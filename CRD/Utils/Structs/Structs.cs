@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using CRD.Views;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs;
@@ -97,4 +99,30 @@ public class FrameData{
 
 public class StringItem{
     public string stringValue{ get; set; }
+}
+
+public class WindowSettings{
+    public double Width{ get; set; }
+    public double Height{ get; set; }
+    public int ScreenIndex{ get; set; }
+    public int PosX{ get; set; }
+    public int PosY{ get; set; }
+}
+
+public class ToastMessage(string message, ToastType type, int i){
+    public string? Message{ get; set; } = message;
+    public int Seconds{ get; set; } = i;
+    public ToastType Type{ get; set; } = type;
+}
+
+public class NavigationMessage{
+    public Type? ViewModelType{ get; }
+    public bool Back{ get; }
+    public bool Refresh{ get; }
+
+    public NavigationMessage(Type? viewModelType, bool back, bool refresh){
+        ViewModelType = viewModelType;
+        Back = back;
+        Refresh = refresh;
+    }
 }

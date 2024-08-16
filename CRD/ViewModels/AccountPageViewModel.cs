@@ -30,18 +30,28 @@ public partial class AccountPageViewModel : ViewModelBase{
 
     private static DispatcherTimer? _timer;
     private DateTime _targetTime;
+
     private bool IsCancelled = false;
     private bool UnknownEndDate = false;
+    private bool EndedButMaybeActive = false;
 
     public AccountPageViewModel(){
         UpdatetProfile();
     }
 
     private void Timer_Tick(object sender, EventArgs e){
-        var remaining = _targetTime - DateTime.UtcNow;
+        var remaining = _targetTime - DateTime.Now;
         if (remaining <= TimeSpan.Zero){
             RemainingTime = "No active Subscription";
             _timer.Stop();
+            if (UnknownEndDate){
+                RemainingTime = "Unknown Subscription end date";
+            }
+
+            if (EndedButMaybeActive){
+                RemainingTime = "Subscription maybe ended";
+            }
+
             if (CrunchyrollManager.Instance.Profile.Subscription != null){
                 Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.Profile.Subscription, Formatting.Indented));
             }
@@ -51,25 +61,26 @@ public partial class AccountPageViewModel : ViewModelBase{
     }
 
     public void UpdatetProfile(){
-        ProfileName = CrunchyrollManager.Instance.Profile.Username; // Default or fetched user name
+        ProfileName = CrunchyrollManager.Instance.Profile.Username ?? "???"; // Default or fetched user name
         LoginLogoutText = CrunchyrollManager.Instance.Profile.Username == "???" ? "Login" : "Logout"; // Default state
         LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" + CrunchyrollManager.Instance.Profile.Avatar);
 
 
-        if (CrunchyrollManager.Instance.Profile.Subscription != null && CrunchyrollManager.Instance.Profile.Subscription?.SubscriptionProducts != null){
-            if (CrunchyrollManager.Instance.Profile.Subscription?.SubscriptionProducts.Count >= 1){
-                var sub = CrunchyrollManager.Instance.Profile.Subscription?.SubscriptionProducts.First();
-                if (sub != null){
-                    IsCancelled = sub.IsCancelled;
-                }
-            }else if (CrunchyrollManager.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.Count >= 1){
-                var sub = CrunchyrollManager.Instance.Profile.Subscription?.ThirdPartySubscriptionProducts.First();
-                if (sub != null){
-                    IsCancelled = !sub.AutoRenew;
-                }
-            }else if(CrunchyrollManager.Instance.Profile.Subscription?.NonrecurringSubscriptionProducts.Count >= 1){
+        var subscriptions = CrunchyrollManager.Instance.Profile.Subscription;
+
+        if (subscriptions != null){
+            if (subscriptions.SubscriptionProducts is{ Count: >= 1 }){
+                var sub = subscriptions.SubscriptionProducts.First();
+                IsCancelled = sub.IsCancelled;
+                EndedButMaybeActive = !subscriptions.IsActive;
+            } else if (subscriptions.ThirdPartySubscriptionProducts is{ Count: >= 1 }){
+                var sub = subscriptions.ThirdPartySubscriptionProducts.First();
+                IsCancelled = !sub.AutoRenew;
+                EndedButMaybeActive = !subscriptions.IsActive;
+            } else if (subscriptions.NonrecurringSubscriptionProducts is{ Count: >= 1 }){
                 IsCancelled = true;
-            }else if(CrunchyrollManager.Instance.Profile.Subscription?.FunimationSubscriptions.Count >= 1){
+                EndedButMaybeActive = !subscriptions.IsActive;
+            } else if (subscriptions.FunimationSubscriptions is{ Count: >= 1 }){
                 IsCancelled = true;
                 UnknownEndDate = true;
             }
@@ -82,23 +93,26 @@ public partial class AccountPageViewModel : ViewModelBase{
                 _timer.Tick += Timer_Tick;
                 _timer.Start();
             }
-           
         } else{
             RemainingTime = "No active Subscription";
             if (_timer != null){
                 _timer.Stop();
                 _timer.Tick -= Timer_Tick;
             }
+
             RaisePropertyChanged(nameof(RemainingTime));
 
             if (CrunchyrollManager.Instance.Profile.Subscription != null){
                 Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.Profile.Subscription, Formatting.Indented));
             }
-            
         }
 
         if (UnknownEndDate){
             RemainingTime = "Unknown Subscription end date";
+        }
+
+        if (EndedButMaybeActive){
+            RemainingTime = "Subscription maybe ended";
         }
     }
 

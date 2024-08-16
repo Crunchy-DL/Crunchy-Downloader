@@ -322,7 +322,7 @@ public class HistorySeries : INotifyPropertyChanged{
         await CrunchyrollManager.Instance.History.CRUpdateSeries(SeriesId, seasonId);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesTitle)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesDescription)));
-        CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, this);
+        // CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, this);
         UpdateNewEpisodes();
         FetchingData = false;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));

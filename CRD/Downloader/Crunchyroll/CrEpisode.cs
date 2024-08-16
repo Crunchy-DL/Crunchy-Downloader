@@ -59,7 +59,7 @@ public class CrEpisode(){
         CrunchyRollEpisodeData episode = new CrunchyRollEpisodeData();
 
         if (crunInstance.CrunOptions.History && updateHistory){
-            await crunInstance.History.UpdateWithEpisode(dlEpisode);
+            await crunInstance.History.UpdateWithSeasonData(new List<CrunchyEpisode>(){dlEpisode});
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == dlEpisode.SeriesId);
             if (historySeries != null){
                 CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(false);

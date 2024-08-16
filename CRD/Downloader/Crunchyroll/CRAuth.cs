@@ -44,7 +44,6 @@ public class CrAuth{
             PreferredContentAudioLanguage = "ja-JP",
             PreferredContentSubtitleLanguage = "de-DE"
         };
-        
     }
 
     private void JsonTokenToFileAndVariable(string content){
@@ -52,7 +51,7 @@ public class CrAuth{
 
 
         if (crunInstance.Token != null && crunInstance.Token.expires_in != null){
-            crunInstance.Token.expires = DateTime.Now.AddMilliseconds((double)crunInstance.Token.expires_in);
+            crunInstance.Token.expires = DateTime.Now.AddSeconds((double)crunInstance.Token.expires_in);
 
             CfgManager.WriteTokenToYamlFile(crunInstance.Token, CfgManager.PathCrToken);
         }
@@ -82,7 +81,8 @@ public class CrAuth{
             if (response.ResponseContent.Contains("invalid_credentials")){
                 MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 10));
             } else{
-                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0,response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}", ToastType.Error, 10));  
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0, response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}",
+                    ToastType.Error, 10));
             }
         }
 
@@ -119,20 +119,27 @@ public class CrAuth{
                     if (subsc is{ SubscriptionProducts:{ Count: 0 }, ThirdPartySubscriptionProducts.Count: > 0 }){
                         var thirdPartySub = subsc.ThirdPartySubscriptionProducts.First();
                         var expiration = thirdPartySub.InGrace ? thirdPartySub.InGraceExpirationDate : thirdPartySub.ExpirationDate;
-                        var remaining = expiration - DateTime.UtcNow;
-                        crunInstance.Profile.HasPremium = remaining > TimeSpan.Zero;
-                        crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
-                        crunInstance.Profile.Subscription.NextRenewalDate = expiration;
+                        var remaining = expiration - DateTime.Now;
+                        crunInstance.Profile.HasPremium = true;
+                        if (crunInstance.Profile.Subscription != null){
+                            crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
+                            crunInstance.Profile.Subscription.NextRenewalDate = expiration;
+                        }
                     } else if (subsc is{ SubscriptionProducts:{ Count: 0 }, NonrecurringSubscriptionProducts.Count: > 0 }){
                         var nonRecurringSub = subsc.NonrecurringSubscriptionProducts.First();
-                        var remaining = nonRecurringSub.EndDate - DateTime.UtcNow;
-                        crunInstance.Profile.HasPremium = remaining > TimeSpan.Zero;
-                        crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
-                        crunInstance.Profile.Subscription.NextRenewalDate = nonRecurringSub.EndDate;
+                        var remaining = nonRecurringSub.EndDate - DateTime.Now;
+                        crunInstance.Profile.HasPremium = true;
+                        if (crunInstance.Profile.Subscription != null){
+                            crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
+                            crunInstance.Profile.Subscription.NextRenewalDate = nonRecurringSub.EndDate;
+                        }
                     } else if (subsc is{ SubscriptionProducts:{ Count: 0 }, FunimationSubscriptions.Count: > 0 }){
                         crunInstance.Profile.HasPremium = true;
+                    } else if (subsc is{ SubscriptionProducts.Count: > 0 }){
+                        crunInstance.Profile.HasPremium = true;
                     } else{
-                        crunInstance.Profile.HasPremium = subsc.IsActive;
+                        crunInstance.Profile.HasPremium = false;
+                        Console.Error.WriteLine($"No subscription available:\n {JsonConvert.SerializeObject(subsc, Formatting.Indented)} ");
                     }
                 } else{
                     crunInstance.Profile.HasPremium = false;
@@ -175,7 +182,6 @@ public class CrAuth{
 
             await GetProfile();
         }
-        
     }
 
     public async Task RefreshToken(bool needsToken){
@@ -213,7 +219,5 @@ public class CrAuth{
         } else{
             Console.Error.WriteLine("Refresh Token Auth Failed");
         }
-        
     }
-    
 }

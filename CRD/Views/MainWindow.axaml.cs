@@ -1,13 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
+using CRD.Utils;
+using CRD.Utils.Structs;
 using CRD.Utils.Updater;
 using CRD.ViewModels;
+using CRD.Views;
 using CRD.Views.Utils;
 using FluentAvalonia.Core;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
+using Newtonsoft.Json;
 using ReactiveUI;
 using ContentDialogUpdateViewModel = CRD.ViewModels.Utils.ContentDialogUpdateViewModel;
 
@@ -44,7 +51,10 @@ public partial class MainWindow : AppWindow{
     public MainWindow(){
         AvaloniaXamlLoader.Load(this);
         InitializeComponent();
-        
+
+        Opened += OnOpened;
+        Closing += OnClosing;
+
         TitleBar.ExtendsContentIntoTitleBar = true;
         TitleBar.TitleBarHitTestType = TitleBarHitTestType.Complex;
 
@@ -62,6 +72,7 @@ public partial class MainWindow : AppWindow{
                     if (viewModel is SeriesPageViewModel){
                         ((SeriesPageViewModel)viewModel).SetStorageProvider(StorageProvider);
                     }
+
                     navigationStack.Push(viewModel);
                     nv.Content = viewModel;
                 } else if (!message.Back && message.ViewModelType != null){
@@ -69,6 +80,7 @@ public partial class MainWindow : AppWindow{
                     if (viewModel is SeriesPageViewModel){
                         ((SeriesPageViewModel)viewModel).SetStorageProvider(StorageProvider);
                     }
+
                     navigationStack.Push(viewModel);
                     nv.Content = viewModel;
                 } else{
@@ -117,9 +129,10 @@ public partial class MainWindow : AppWindow{
                         break;
                     case "History":
                         navView.Content = Activator.CreateInstance(typeof(HistoryPageViewModel));
-                        if ( navView.Content is HistoryPageViewModel){
+                        if (navView.Content is HistoryPageViewModel){
                             ((HistoryPageViewModel)navView.Content).SetStorageProvider(StorageProvider);
                         }
+
                         navigationStack.Clear();
                         navigationStack.Push(navView.Content);
                         selectedNavVieItem = selectedItem;
@@ -159,22 +172,55 @@ public partial class MainWindow : AppWindow{
 
         _ = await dialog.ShowAsync();
     }
-}
 
-public class ToastMessage(string message, ToastType type, int i){
-    public string? Message{ get; set; } = message;
-    public int Seconds{ get; set; } = i;
-    public ToastType Type{ get; set; } = type;
-}
+    private void OnOpened(object sender, EventArgs e){
+        if (File.Exists(CfgManager.PathWindowSettings)){
+            var settings = JsonConvert.DeserializeObject<WindowSettings>(File.ReadAllText(CfgManager.PathWindowSettings));
+            if (settings != null){
+                Width = settings.Width;
+                Height = settings.Height;
 
-public class NavigationMessage{
-    public Type? ViewModelType{ get; }
-    public bool Back{ get; }
-    public bool Refresh{ get; }
+                var screens = Screens.All;
+                if (settings.ScreenIndex >= 0 && settings.ScreenIndex < screens.Count){
+                    var screen = screens[settings.ScreenIndex];
+                    var screenBounds = screen.Bounds;
 
-    public NavigationMessage(Type? viewModelType, bool back, bool refresh){
-        ViewModelType = viewModelType;
-        Back = back;
-        Refresh = refresh;
+                    var topLeft = screenBounds.TopLeft;
+                    var bottomRight = screenBounds.BottomRight;
+
+                    if (settings.PosX >= topLeft.X && settings.PosX <= bottomRight.X - Width &&
+                        settings.PosY >= topLeft.Y && settings.PosY <= bottomRight.Y - Height){
+                        Position = new PixelPoint(settings.PosX, settings.PosY);
+                    } else{
+                        Position = new PixelPoint(topLeft.X, topLeft.Y + 31);
+                    }
+                } else{
+                    var primaryScreen = screens?[0].Bounds ?? new PixelRect(0, 0, 1000, 600); // Default size if no screens
+                    Position = new PixelPoint(primaryScreen.TopLeft.X, primaryScreen.TopLeft.Y + 31);
+                }
+            }
+        }
+    }
+
+    private void OnClosing(object sender, System.ComponentModel.CancelEventArgs e){
+        var screens = Screens.All;
+        int screenIndex = 0;
+
+        for (int i = 0; i < screens.Count; i++){
+            if (screens[i].Bounds.Contains(Position)){
+                screenIndex = i;
+                break;
+            }
+        }
+
+        var settings = new WindowSettings{
+            Width = Width,
+            Height = Height,
+            ScreenIndex = screenIndex,
+            PosX = Position.X,
+            PosY = Position.Y
+        };
+
+        File.WriteAllText(CfgManager.PathWindowSettings, JsonConvert.SerializeObject(settings, Formatting.Indented));
     }
 }

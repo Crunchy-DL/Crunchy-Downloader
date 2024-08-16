@@ -16,26 +16,6 @@ namespace CRD.Downloader.Crunchyroll;
 public class CrSeries(){
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
-    public async Task<List<CrunchyEpMeta>> DownloadFromSeriesId(string id, CrunchyMultiDownload data){
-        var series = await ListSeriesId(id, "", data);
-
-        if (series != null){
-            var selected = ItemSelectMultiDub(series.Value.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
-
-            foreach (var crunchyEpMeta in selected.Values){
-                if (crunchyEpMeta.Data == null) continue;
-                var languages = crunchyEpMeta.Data.Select((a) =>
-                    $" {a.Lang?.Name ?? "Unknown Language"}");
-
-                Console.WriteLine($"[S{crunchyEpMeta.Season}E{crunchyEpMeta.EpisodeNumber} - {crunchyEpMeta.EpisodeTitle} [{string.Join(", ", languages)}]");
-            }
-
-            return selected.Values.ToList();
-        }
-
-        return new List<CrunchyEpMeta>();
-    }
-
     public Dictionary<string, CrunchyEpMeta> ItemSelectMultiDub(Dictionary<string, EpisodeAndLanguage> eps, List<string> dubLang, bool? but, bool? all, List<string>? e){
         var ret = new Dictionary<string, CrunchyEpMeta>();
 
@@ -143,25 +123,31 @@ public class CrSeries(){
 
         CrSeriesSearch? parsedSeries = await ParseSeriesById(id, crLocale); // one piece - GRMG8ZQZR
 
-        if (parsedSeries == null){
+        if (parsedSeries == null || parsedSeries.Data == null){
             Console.Error.WriteLine("Parse Data Invalid");
             return null;
         }
 
-        var result = ParseSeriesResult(parsedSeries);
+        // var result = ParseSeriesResult(parsedSeries);
         Dictionary<string, EpisodeAndLanguage> episodes = new Dictionary<string, EpisodeAndLanguage>();
+        
+        if (crunInstance.CrunOptions.History){
+            crunInstance.History.CRUpdateSeries(id,"");
+        }
 
-
-        foreach (int season in result.Keys){
-            foreach (var key in result[season].Keys){
-                var s = result[season][key];
+        var cachedSeasonID = "";
+        var seasonData = new CrunchyEpisodeList();
+        
+        foreach (var s in parsedSeries.Data){
                 if (data?.S != null && s.Id != data.Value.S) continue;
                 int fallbackIndex = 0;
-                var seasonData = await GetSeasonDataById(s.Id, "");
+                if (cachedSeasonID != s.Id){
+                    seasonData = await GetSeasonDataById(s.Id, "");
+                    cachedSeasonID = s.Id;
+                }
+                
                 if (seasonData.Data != null){
-                    if (crunInstance.CrunOptions.History){
-                        crunInstance.History.UpdateWithSeasonData(seasonData, false);
-                    }
+                    
 
                     foreach (var episode in seasonData.Data){
                         // Prepare the episode array
@@ -204,7 +190,6 @@ public class CrSeries(){
                         }
                     }
                 }
-            }
         }
 
         if (crunInstance.CrunOptions.History){
