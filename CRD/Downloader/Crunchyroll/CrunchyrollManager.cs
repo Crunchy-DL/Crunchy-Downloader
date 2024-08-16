@@ -166,7 +166,7 @@ public class CrunchyrollManager{
             if (File.Exists(CfgManager.PathCrHistory)){
                 var decompressedJson = CfgManager.DecompressJsonFile(CfgManager.PathCrHistory);
                 if (!string.IsNullOrEmpty(decompressedJson)){
-                    HistoryList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(decompressedJson,CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ?? new ObservableCollection<HistorySeries>();
+                    HistoryList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(decompressedJson, CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ?? new ObservableCollection<HistorySeries>();
 
                     foreach (var historySeries in HistoryList){
                         historySeries.Init();
@@ -565,7 +565,7 @@ public class CrunchyrollManager{
                 List<string> compiledChapters = new List<string>();
 
                 if (options.Chapters){
-                    await ParseChapters(primaryVersion.Guid, compiledChapters);
+                    await ParseChapters(primaryVersion.Guid ?? mediaGuid, compiledChapters);
                 }
 
                 #endregion
@@ -1423,7 +1423,7 @@ public class CrunchyrollManager{
                                     string dialogue = string.Join("\\N", lines.Skip(2));
 
                                     dialogue = Helpers.ConvertVTTStylesToASS(dialogue);
-                                    
+
                                     // Append dialogue to ASS
                                     assBuilder.AppendLine($"Dialogue: 0,{startTime},{endTime},Default,,0000,0000,0000,,{dialogue}");
                                 }
@@ -1664,7 +1664,7 @@ public class CrunchyrollManager{
     #endregion
 
 
-    private async Task ParseChapters(string currentMediaId, List<string> compiledChapters){
+    private async Task<bool> ParseChapters(string currentMediaId, List<string> compiledChapters){
         var showRequest = HttpClientReq.CreateRequestMessage($"https://static.crunchyroll.com/skip-events/production/{currentMediaId}.json", HttpMethod.Get, true, true, null);
 
         var showRequestResponse = await HttpClientReq.Instance.SendHttpRequest(showRequest);
@@ -1698,6 +1698,7 @@ public class CrunchyrollManager{
                 }
             } catch (Exception ex){
                 Console.Error.WriteLine($"Error parsing JSON response: {ex.Message}");
+                return false;
             }
 
             if (chapterData.Chapters.Count > 0){
@@ -1749,6 +1750,8 @@ public class CrunchyrollManager{
                         compiledChapters.Add($"CHAPTER{chapterNumber}NAME={formattedChapterType} End");
                     }
                 }
+
+                return true;
             }
         } else{
             Console.WriteLine("Chapter request failed, attempting old API ");
@@ -1758,7 +1761,7 @@ public class CrunchyrollManager{
             showRequestResponse = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
             if (showRequestResponse.IsOk){
-                CrunchyOldChapter chapterData = Helpers.Deserialize<CrunchyOldChapter>(showRequestResponse.ResponseContent,SettingsJsonSerializerSettings);
+                CrunchyOldChapter chapterData = Helpers.Deserialize<CrunchyOldChapter>(showRequestResponse.ResponseContent, SettingsJsonSerializerSettings);
 
                 DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -1786,9 +1789,13 @@ public class CrunchyrollManager{
                 chapterNumber = (compiledChapters.Count / 2) + 1;
                 compiledChapters.Add($"CHAPTER{chapterNumber}={endFormatted}");
                 compiledChapters.Add($"CHAPTER{chapterNumber}NAME=Episode");
-            } else{
-                Console.WriteLine("Old Chapter API request failed");
+                return true;
             }
+
+            Console.WriteLine("Old Chapter API request failed");
+            return false;
         }
+
+        return true;
     }
 }
