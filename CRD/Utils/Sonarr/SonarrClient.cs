@@ -67,6 +67,14 @@ public class SonarrClient{
         }
     }
     
+    public async Task RefreshSonarrLite(){
+        await CheckSonarrSettings();
+        if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
+            SonarrSeries = await GetSeries();
+            CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(true);
+        }
+    }
+    
     public void SetApiUrl(){
         if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null) properties = CrunchyrollManager.Instance.CrunOptions.SonarrProperties;
 

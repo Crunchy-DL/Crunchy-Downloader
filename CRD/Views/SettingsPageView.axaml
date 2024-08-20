@@ -12,7 +12,7 @@
     <Design.DataContext>
         <vm:SettingsPageViewModel />
     </Design.DataContext>
-    
+
     <ScrollViewer Padding="20 20 20 0">
         <StackPanel Spacing="8">
 
@@ -50,7 +50,7 @@
                             <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
                                 <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
                                          MaxHeight="400"
-                                         ItemsSource="{Binding DubLangList}" 
+                                         ItemsSource="{Binding DubLangList}"
                                          SelectedItems="{Binding SelectedDubLang}">
                                 </ListBox>
                             </Border>
@@ -125,7 +125,7 @@
                         <CheckBox IsChecked="{Binding IncludeSignSubs}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Include CC Subtitles ">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding IncludeCcSubs}"> </CheckBox>
@@ -149,13 +149,13 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="History Add Specials" Description="Add specials to the queue if they weren't downloaded before">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryAddSpecials}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="History Missing/New Count from Sonarr" Description="The missing count (number in the orange corner) will count the episodes missing from sonarr">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryCountSonarr}"> </CheckBox>
@@ -168,7 +168,7 @@
                                        IconSource="Download"
                                        Description="Adjust download settings"
                                        IsExpanded="False">
-                
+
                 <controls:SettingsExpanderItem Content="Max Download Speed"
                                                Description="Download in Kb/s - 0 is full speed">
                     <controls:SettingsExpanderItem.Footer>
@@ -178,7 +178,7 @@
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
 
                 <controls:SettingsExpanderItem Content="Stream Endpoint ">
                     <controls:SettingsExpanderItem.Footer>
@@ -186,6 +186,25 @@
                                   ItemsSource="{Binding StreamEndpoints}"
                                   SelectedItem="{Binding SelectedStreamEndpoint}">
                         </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Use Temp Download Folder">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock IsVisible="{Binding DownloadToTempFolder}" FontSize="15" Opacity="0.8" TextWrapping="NoWrap" Text="{Binding TempDownloadDirPath, Mode=OneWay}" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                            <Button IsVisible="{Binding DownloadToTempFolder}" Margin="10 0 10 0" FontStyle="Italic"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding OpenFolderDialogTempFolderAsync}">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="Set Download Directory" FontSize="15" />
+                                </ToolTip.Tip>
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                </StackPanel>
+                            </Button>
+                            <CheckBox IsChecked="{Binding DownloadToTempFolder}"> </CheckBox>
+                        </StackPanel>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -229,7 +248,7 @@
                             <CheckBox IsChecked="{Binding DownloadVideoForEveryDub}"> </CheckBox>
                             <CheckBox IsVisible="{Binding DownloadVideoForEveryDub}" Content="Keep files separate" IsChecked="{Binding KeepDubsSeparate}"> </CheckBox>
                         </StackPanel>
-                        
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -283,7 +302,7 @@
                 </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Filename"
-                                               Description="${showTitle} ${seriesTitle} ${title} ${season} ${episode} ${height} ${width}">
+                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width}">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox Name="FileNameTextBox" HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding FileName}" />
@@ -332,10 +351,10 @@
                             </ComboBox>
                             <CheckBox Content="Forced Display" IsChecked="{Binding DefaultSubForcedDisplay}"> </CheckBox>
                         </StackPanel>
-                        
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Default Subtitle Signs" Description="Will set the signs subtitle as default instead">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DefaultSubSigns}"> </CheckBox>
@@ -343,7 +362,7 @@
                 </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="File title"
-                                               Description="${showTitle} ${seriesTitle} ${title} ${season} ${episode} ${height} ${width}">
+                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width}">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding FileTitle}" />
@@ -355,8 +374,8 @@
                         <CheckBox IsChecked="{Binding IncludeEpisodeDescription}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                <controls:SettingsExpanderItem Content="Episode description Language" >
+
+                <controls:SettingsExpanderItem Content="Episode description Language">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                                   ItemsSource="{Binding DescriptionLangList}"

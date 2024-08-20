@@ -98,12 +98,12 @@ public class CrunchyrollManager{
         options.Force = "Y";
         options.FileName = "${seriesTitle} - S${season}E${episode} [${height}p]";
         options.Partsize = 10;
-        options.DlSubs = new List<string>{ "de-DE" };
+        options.DlSubs = new List<string>{ "en-US" };
         options.Skipmux = false;
         options.MkvmergeOptions = new List<string>{ "--no-date", "--disable-track-statistics-tags", "--engage no_variable_data" };
         options.FfmpegOptions = new();
         options.DefaultAudio = "ja-JP";
-        options.DefaultSub = "de-DE";
+        options.DefaultSub = "en-US";
         options.CcTag = "CC";
         options.FsRetryTime = 5;
         options.Numbers = 2;
@@ -223,15 +223,16 @@ public class CrunchyrollManager{
 
             QueueManager.Instance.Queue.Refresh();
 
+            var fileNameAndPath = CrunOptions.DownloadToTempFolder ? Path.Combine(res.TempFolderPath, res.FileName) : Path.Combine(res.FolderPath, res.FileName);
             if (CrunOptions is{ DlVideoOnce: false, KeepDubsSeperate: true }){
                 var groupByDub = Helpers.GroupByLanguageWithSubtitles(res.Data);
-
+                var mergers = new List<Merger>();
                 foreach (var keyValue in groupByDub){
-                    await MuxStreams(keyValue.Value,
+                    var result = await MuxStreams(keyValue.Value,
                         new CrunchyMuxOptions{
                             FfmpegOptions = options.FfmpegOptions,
                             SkipSubMux = options.SkipSubsMux,
-                            Output = res.FileName,
+                            Output = fileNameAndPath,
                             Mp4 = options.Mp4,
                             VideoTitle = res.VideoTitle,
                             Novids = options.Novids,
@@ -245,14 +246,23 @@ public class CrunchyrollManager{
                             KeepAllVideos = true,
                             MuxDescription = options.IncludeVideoDescription
                         },
-                        res.FileName);
+                        fileNameAndPath);
+
+                    if (result is{ merger: not null, isMuxed: true }){
+                        mergers.Add(result.merger);
+                    }
+                }
+
+                foreach (var merger in mergers){
+                    merger.CleanUp();
+                    await MoveFromTempFolder(merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
                 }
             } else{
-                await MuxStreams(res.Data,
+                var result = await MuxStreams(res.Data,
                     new CrunchyMuxOptions{
                         FfmpegOptions = options.FfmpegOptions,
                         SkipSubMux = options.SkipSubsMux,
-                        Output = res.FileName,
+                        Output = fileNameAndPath,
                         Mp4 = options.Mp4,
                         VideoTitle = res.VideoTitle,
                         Novids = options.Novids,
@@ -266,8 +276,15 @@ public class CrunchyrollManager{
                         KeepAllVideos = true,
                         MuxDescription = options.IncludeVideoDescription
                     },
-                    res.FileName);
+                    fileNameAndPath);
+
+                if (result is{ merger: not null, isMuxed: true }){
+                    result.merger.CleanUp();
+
+                    await MoveFromTempFolder(result.merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
+                }
             }
+
 
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = true,
@@ -296,7 +313,85 @@ public class CrunchyrollManager{
         return true;
     }
 
-    private async Task MuxStreams(List<DownloadedMedia> data, CrunchyMuxOptions options, string filename){
+    #region Temp Files Move
+
+    private async Task MoveFromTempFolder(Merger merger, CrunchyEpMeta data, string tempFolderPath, IEnumerable<DownloadedMedia> subtitles){
+        if (!CrunOptions.DownloadToTempFolder) return;
+
+        data.DownloadProgress = new DownloadProgress{
+            IsDownloading = true,
+            Done = true,
+            Percent = 100,
+            Time = 0,
+            DownloadSpeed = 0,
+            Doing = "Moving Files"
+        };
+
+        QueueManager.Instance.Queue.Refresh();
+
+        if (string.IsNullOrEmpty(tempFolderPath) || !Directory.Exists(tempFolderPath)){
+            Console.WriteLine("Invalid or non-existent temp folder path.");
+            return;
+        }
+
+        // Move the main output file
+        await MoveFile(merger.options.Output, tempFolderPath, data.DownloadPath);
+
+        // Move the subtitle files
+        if (CrunOptions.SkipSubsMux){
+            foreach (var downloadedMedia in subtitles){
+                await MoveFile(downloadedMedia.Path ?? string.Empty, tempFolderPath, data.DownloadPath);
+            }
+        }
+    }
+
+    private async Task MoveFile(string sourcePath, string tempFolderPath, string downloadPath){
+        if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath)){
+            Console.Error.WriteLine("Source file does not exist or path is invalid.");
+            return;
+        }
+
+        if (!sourcePath.StartsWith(tempFolderPath)){
+            Console.Error.WriteLine("Source file is not located in the temp folder.");
+            return;
+        }
+
+        try{
+            var fileName = sourcePath[tempFolderPath.Length..].TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var destinationFolder = !string.IsNullOrEmpty(downloadPath)
+                ? downloadPath
+                : !string.IsNullOrEmpty(CrunOptions.DownloadDirPath)
+                    ? CrunOptions.DownloadDirPath
+                    : CfgManager.PathVIDEOS_DIR;
+
+            var destinationPath = Path.Combine(destinationFolder, fileName);
+
+            string destinationDirectory = Path.GetDirectoryName(destinationPath);
+            if (string.IsNullOrEmpty(destinationDirectory)){
+                Console.WriteLine("Invalid destination directory path.");
+                return;
+            }
+
+            await Task.Run(() => {
+                if (!Directory.Exists(destinationDirectory)){
+                    Directory.CreateDirectory(destinationDirectory);
+                }
+            });
+
+            await Task.Run(() => File.Move(sourcePath, destinationPath));
+            Console.WriteLine($"File moved to {destinationPath}");
+        } catch (IOException ex){
+            Console.Error.WriteLine($"An error occurred while moving the file: {ex.Message}");
+        } catch (UnauthorizedAccessException ex){
+            Console.Error.WriteLine($"Access denied while moving the file: {ex.Message}");
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An unexpected error occurred: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    private async Task<(Merger? merger, bool isMuxed)> MuxStreams(List<DownloadedMedia> data, CrunchyMuxOptions options, string filename){
         var muxToMp3 = false;
 
         if (options.Novids == true || data.FindAll(a => a.Type == DownloadMediaType.Video).Count == 0){
@@ -305,7 +400,7 @@ public class CrunchyrollManager{
                 muxToMp3 = true;
             } else{
                 Console.WriteLine("Skip muxing since no videos are downloaded");
-                return;
+                return (null, false);
             }
         }
 
@@ -333,7 +428,8 @@ public class CrunchyrollManager{
 
         bool muxDesc = false;
         if (options.MuxDescription){
-            if (File.Exists($"{filename}.xml")){
+            var descriptionPath = data.Where(a => a.Type == DownloadMediaType.Description).First().Path;
+            if (File.Exists(descriptionPath)){
                 muxDesc = true;
             } else{
                 Console.Error.WriteLine("No xml description file found to mux description");
@@ -409,9 +505,7 @@ public class CrunchyrollManager{
             isMuxed = true;
         }
 
-        if (isMuxed && options.NoCleanup == false){
-            merger.CleanUp();
-        }
+        return (merger, isMuxed);
     }
 
     private async Task<DownloadResponse> DownloadMediaList(CrunchyEpMeta data, CrDownloadOptions options){
@@ -506,13 +600,18 @@ public class CrunchyrollManager{
             foreach (CrunchyEpMetaData epMeta in data.Data){
                 Console.WriteLine($"Requesting: [{epMeta.MediaId}] {mediaName}");
 
-                fileDir = !string.IsNullOrEmpty(data.DownloadPath) ? data.DownloadPath : !string.IsNullOrEmpty(options.DownloadDirPath) ? options.DownloadDirPath : CfgManager.PathVIDEOS_DIR;
+                string currentMediaId = (epMeta.MediaId.Contains(':') ? epMeta.MediaId.Split(':')[1] : epMeta.MediaId);
+
+                fileDir = CrunOptions.DownloadToTempFolder ? !string.IsNullOrEmpty(CrunOptions.DownloadTempDirPath)
+                        ? Path.Combine(CrunOptions.DownloadTempDirPath, Helpers.GetValidFolderName(currentMediaId))
+                        : Path.Combine(CfgManager.PathTEMP_DIR, Helpers.GetValidFolderName(currentMediaId)) :
+                    !string.IsNullOrEmpty(data.DownloadPath) ? data.DownloadPath :
+                    !string.IsNullOrEmpty(options.DownloadDirPath) ? options.DownloadDirPath : CfgManager.PathVIDEOS_DIR;
 
                 if (!Helpers.IsValidPath(fileDir)){
                     fileDir = CfgManager.PathVIDEOS_DIR;
                 }
 
-                string currentMediaId = (epMeta.MediaId.Contains(':') ? epMeta.MediaId.Split(':')[1] : epMeta.MediaId);
 
                 await CrAuth.RefreshToken(true);
 
@@ -607,7 +706,7 @@ public class CrunchyrollManager{
                 variables.Add(new Variable("episode",
                     (double.TryParse(data.EpisodeNumber, NumberStyles.Any, CultureInfo.InvariantCulture, out double episodeNum) ? (object)Math.Round(episodeNum, 1) : data.AbsolutEpisodeNumberE) ?? string.Empty, false));
                 variables.Add(new Variable("seriesTitle", data.SeriesTitle ?? string.Empty, true));
-                variables.Add(new Variable("showTitle", data.SeasonTitle ?? string.Empty, true));
+                variables.Add(new Variable("seasonTitle", data.SeasonTitle ?? string.Empty, true));
                 variables.Add(new Variable("season", !string.IsNullOrEmpty(data.Season) ? Math.Round(double.Parse(data.Season, CultureInfo.InvariantCulture), 1) : 0, false));
 
                 if (pbStreams?.Keys != null){
@@ -1275,18 +1374,34 @@ public class CrunchyrollManager{
                     Type = DownloadMediaType.Description,
                     Path = fullPath,
                 });
+            } else{
+                if (files.All(e => e.Type != DownloadMediaType.Description)){
+                    files.Add(new DownloadedMedia{
+                        Type = DownloadMediaType.Description,
+                        Path = fullPath,
+                    });
+                }
             }
 
-            Console.WriteLine($"{fileName} has been created with the description.");
+            Console.WriteLine($"{fileName}.xml has been created with the description.");
+        }
+
+        var tempFolderPath = "";
+        if (CrunOptions.DownloadToTempFolder){
+            tempFolderPath = fileDir;
+            fileDir = !string.IsNullOrEmpty(data.DownloadPath) ? data.DownloadPath :
+                !string.IsNullOrEmpty(options.DownloadDirPath) ? options.DownloadDirPath : CfgManager.PathVIDEOS_DIR;
         }
 
 
         return new DownloadResponse{
             Data = files,
             Error = dlFailed,
-            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
+            FileName = fileName.Length > 0 ? fileName : "unknown - " + Guid.NewGuid(),
             ErrorText = "",
-            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle ?? "", variables, options.Numbers, options.Override).Last()
+            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle ?? "", variables, options.Numbers, options.Override).Last(),
+            FolderPath = fileDir,
+            TempFolderPath = tempFolderPath
         };
     }
 

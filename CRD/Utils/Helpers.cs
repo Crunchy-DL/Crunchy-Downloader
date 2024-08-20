@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll.Music;
@@ -212,7 +213,7 @@ public class Helpers{
 
                 process.ErrorDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
-                        Console.WriteLine($"{e.Data}");
+                        Console.Error.WriteLine($"{e.Data}");
                     }
                 };
 
@@ -223,7 +224,6 @@ public class Helpers{
 
                 await process.WaitForExitAsync();
 
-                // Define success condition more appropriately based on the application
                 bool isSuccess = process.ExitCode == 0;
 
                 return (IsOk: isSuccess, ErrorCode: process.ExitCode);
@@ -245,7 +245,6 @@ public class Helpers{
             }
         } catch (Exception ex){
             Console.Error.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
-            // Handle exceptions if you need to log them or throw
         }
     }
 
@@ -268,7 +267,7 @@ public class Helpers{
 
                 process.ErrorDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
-                        Console.WriteLine($"{e.Data}");
+                        Console.Error.WriteLine($"{e.Data}");
                     }
                 };
 
@@ -279,7 +278,6 @@ public class Helpers{
 
                 await process.WaitForExitAsync();
 
-                // Define success condition more appropriately based on the application
                 bool isSuccess = process.ExitCode == 0;
 
                 return (IsOk: isSuccess, ErrorCode: process.ExitCode);
@@ -351,7 +349,7 @@ public class Helpers{
     }
 
     public static string? ExtractNumberAfterS(string input){
-        // Define the regular expression pattern to match |S followed by a number and optionally C followed by another number
+        // Regular expression pattern to match |S followed by a number and optionally C followed by another number
         string pattern = @"\|S(\d+)(?:C(\d+))?";
         Match match = Regex.Match(input, pattern);
 
@@ -380,7 +378,6 @@ public class Helpers{
                 }
             }
         } catch (Exception ex){
-            // Handle exceptions
             Console.Error.WriteLine("Failed to load image: " + ex.Message);
         }
 
@@ -388,7 +385,13 @@ public class Helpers{
     }
 
     public static Dictionary<string, List<DownloadedMedia>> GroupByLanguageWithSubtitles(List<DownloadedMedia> allMedia){
+        //Group by language
         var languageGroups = allMedia
+            .Where(media =>
+                !string.IsNullOrEmpty(media.Lang.CrLocale) ||
+                (media.Type == DownloadMediaType.Subtitle && media.RelatedVideoDownloadMedia != null &&
+                 !string.IsNullOrEmpty(media.RelatedVideoDownloadMedia.Lang.CrLocale))
+            )
             .GroupBy(media => {
                 if (media.Type == DownloadMediaType.Subtitle && media.RelatedVideoDownloadMedia != null){
                     return media.RelatedVideoDownloadMedia.Lang.CrLocale;
@@ -398,7 +401,34 @@ public class Helpers{
             })
             .ToDictionary(group => group.Key, group => group.ToList());
 
+        //Find and add Description media to each group
+        var descriptionMedia = allMedia.Where(media => media.Type == DownloadMediaType.Description).ToList();
+
+        foreach (var description in descriptionMedia){
+            foreach (var group in languageGroups.Values){
+                group.Add(description);
+            }
+        }
+
         return languageGroups;
     }
-    
+
+    public static string GetValidFolderName(string folderName){
+        // Get the invalid characters for a folder name
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+
+        // Check if the folder name contains any invalid characters
+        bool isValid = !folderName.Any(c => invalidChars.Contains(c));
+
+        // Check for reserved names on Windows
+        string[] reservedNames =["CON", "PRN", "AUX", "NUL", "COM1", "LPT1"];
+        bool isReservedName = reservedNames.Contains(folderName.ToUpperInvariant());
+
+        if (isValid && !isReservedName && folderName.Length <= 255){
+            return folderName; // Return the original folder name if it's valid
+        }
+
+        string uuid = Guid.NewGuid().ToString();
+        return uuid;
+    }
 }

@@ -30,7 +30,7 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="#2a2a2a"></StackPanel>
+        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Background="{DynamicResource ControlAltFillColorQuarternary}"></StackPanel>
 
         <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal">
 

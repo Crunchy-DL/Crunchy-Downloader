@@ -68,6 +68,9 @@ public struct DownloadResponse{
     public List<DownloadedMedia> Data{ get; set; }
     public string FileName{ get; set; }
 
+    public string FolderPath{ get; set; }
+    public string TempFolderPath{ get; set; }
+    
     public string VideoTitle{ get; set; }
     public bool Error{ get; set; }
     public string ErrorText{ get; set; }
@@ -101,12 +104,14 @@ public class StringItem{
     public string stringValue{ get; set; }
 }
 
-public class WindowSettings{
-    public double Width{ get; set; }
-    public double Height{ get; set; }
-    public int ScreenIndex{ get; set; }
-    public int PosX{ get; set; }
-    public int PosY{ get; set; }
+public class WindowSettings
+{
+    public double Width { get; set; }
+    public double Height { get; set; }
+    public int ScreenIndex { get; set; }
+    public int PosX { get; set; }
+    public int PosY { get; set; }
+    public bool IsMaximized { get; set; }
 }
 
 public class ToastMessage(string message, ToastType type, int i){

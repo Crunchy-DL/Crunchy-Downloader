@@ -14,7 +14,7 @@
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
-    <Grid Name="mainGrid"> 
+    <Grid Name="MainGrid"> 
         <ContentControl x:Name="MainContent">
             <Grid RowDefinitions="Auto, *">
 

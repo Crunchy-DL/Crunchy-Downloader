@@ -19,21 +19,22 @@ namespace CRD.Utils;
 public class CfgManager{
     private static string WorkingDirectory = Directory.GetCurrentDirectory();
 
-    public static readonly string PathCrToken = WorkingDirectory + "/config/cr_token.yml";
-    public static readonly string PathCrDownloadOptions = WorkingDirectory + "/config/settings.yml";
-    public static readonly string PathCrHistory = WorkingDirectory + "/config/history.json";
-    public static readonly string PathWindowSettings= WorkingDirectory + "/config/windowSettings.json";
+    public static readonly string PathCrToken = Path.Combine(WorkingDirectory, "config", "cr_token.yml");
+    public static readonly string PathCrDownloadOptions = Path.Combine(WorkingDirectory, "config", "settings.yml");
+    public static readonly string PathCrHistory = Path.Combine(WorkingDirectory, "config", "history.json");
+    public static readonly string PathWindowSettings = Path.Combine(WorkingDirectory, "config", "windowSettings.json");
 
-    public static readonly string PathFFMPEG = WorkingDirectory + "/lib/ffmpeg.exe";
-    public static readonly string PathMKVMERGE = WorkingDirectory + "/lib/mkvmerge.exe";
-    public static readonly string PathMP4Decrypt = WorkingDirectory + "/lib/mp4decrypt.exe";
+    public static readonly string PathFFMPEG = Path.Combine(WorkingDirectory, "lib", "ffmpeg.exe");
+    public static readonly string PathMKVMERGE = Path.Combine(WorkingDirectory, "lib", "mkvmerge.exe");
+    public static readonly string PathMP4Decrypt = Path.Combine(WorkingDirectory, "lib", "mp4decrypt.exe");
 
-    public static readonly string PathWIDEVINE_DIR = WorkingDirectory + "/widevine/";
+    public static readonly string PathWIDEVINE_DIR = Path.Combine(WorkingDirectory, "widevine");
 
-    public static readonly string PathVIDEOS_DIR = WorkingDirectory + "/video/";
-    public static readonly string PathFONTS_DIR = WorkingDirectory + "/video/";
+    public static readonly string PathVIDEOS_DIR = Path.Combine(WorkingDirectory, "video");
+    public static readonly string PathTEMP_DIR = Path.Combine(WorkingDirectory, "temp");
+    public static readonly string PathFONTS_DIR = Path.Combine(WorkingDirectory, "video");
 
-    public static readonly string PathLogFile = WorkingDirectory + "/logfile.txt";
+    public static readonly string PathLogFile = Path.Combine(WorkingDirectory, "logfile.txt");
 
     private static StreamWriter logFile;
     private static bool isLogModeEnabled = false;
@@ -210,6 +211,10 @@ public class CfgManager{
     }
 
     public static void UpdateHistoryFile(){
+        if (!CrunchyrollManager.Instance.CrunOptions.History){
+            return;
+        }
+
         WriteJsonToFile(PathCrHistory, CrunchyrollManager.Instance.HistoryList);
     }
 

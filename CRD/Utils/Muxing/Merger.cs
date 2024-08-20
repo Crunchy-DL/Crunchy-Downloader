@@ -36,6 +36,8 @@ public class Merger{
         var audioIndex = 0;
         var hasVideo = false;
 
+        args.Add("-loglevel warning");
+        
         if (!options.mp3){
             foreach (var vid in options.OnlyVid){
                 if (!hasVideo || options.KeepAllVideos == true){
@@ -325,7 +327,7 @@ public class Merger{
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path));
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".resume"));
 
-        options.Description?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
+        options.Description?.ForEach(description => Helpers.DeleteFile(description.Path));
 
         // Delete chapter files if any
         options.Chapters?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));

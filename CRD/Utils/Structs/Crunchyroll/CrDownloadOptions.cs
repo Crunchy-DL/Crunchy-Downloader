@@ -180,6 +180,12 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "download_dir_path", ApplyNamingConventions = false)]
     public string? DownloadDirPath{ get; set; }
     
+    [YamlMember(Alias = "download_temp_dir_path", ApplyNamingConventions = false)]
+    public string? DownloadTempDirPath{ get; set; }
+    
+    [YamlMember(Alias = "download_to_temp_folder", ApplyNamingConventions = false)]
+    public bool DownloadToTempFolder{ get; set; }
+    
     [YamlMember(Alias = "history_page_properties", ApplyNamingConventions = false)]
     public HistoryPageProperties? HistoryPageProperties{ get; set; }
     

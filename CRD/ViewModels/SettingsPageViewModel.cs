@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Reflection;
@@ -20,6 +21,7 @@ using CRD.Utils;
 using CRD.Utils.CustomList;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
 using FluentAvalonia.Styling;
 
 namespace CRD.ViewModels;
@@ -42,10 +44,12 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _includeSignSubs;
-    
+
     [ObservableProperty]
     private bool _includeCcSubs;
-    
+
+    [ObservableProperty]
+    private bool _downloadToTempFolder;
 
     [ObservableProperty]
     private ComboBoxItem _selectedScaledBorderAndShadow;
@@ -57,13 +61,13 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
-    
+
     [ObservableProperty]
     private bool _syncTimings;
 
     [ObservableProperty]
     private bool _defaultSubSigns;
-    
+
     [ObservableProperty]
     private bool _defaultSubForcedDisplay;
 
@@ -72,7 +76,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _downloadVideoForEveryDub;
-    
+
     [ObservableProperty]
     private bool _keepDubsSeparate;
 
@@ -81,7 +85,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _history;
-    
+
     [ObservableProperty]
     private bool _historyAddSpecials;
 
@@ -126,7 +130,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedDescriptionLang;
-    
+
     [ObservableProperty]
     private string _selectedDubs = "ja-JP";
 
@@ -326,6 +330,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
     [ObservableProperty]
     private string _downloadDirPath;
 
+    [ObservableProperty]
+    private string _tempDownloadDirPath;
+
     private readonly FluentAvaloniaTheme _faTheme;
 
     private bool settingsLoaded;
@@ -349,6 +356,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrDownloadOptions options = CrunchyrollManager.Instance.CrunOptions;
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
+        TempDownloadDirPath = string.IsNullOrEmpty(options.DownloadTempDirPath) ? CfgManager.PathTEMP_DIR : options.DownloadTempDirPath;
 
         ComboBoxItem? descriptionLang = DescriptionLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DescriptionLang) ?? null;
         SelectedDescriptionLang = descriptionLang ?? DescriptionLangList[0];
@@ -381,7 +389,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         foreach (var listBoxItem in dubLang){
             SelectedDubLang.Add(listBoxItem);
         }
-        
+
         var props = options.SonarrProperties;
 
         if (props != null){
@@ -407,6 +415,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
+        DownloadToTempFolder = options.DownloadToTempFolder;
         KeepDubsSeparate = options.KeepDubsSeperate;
         DownloadChapters = options.Chapters;
         MuxToMp4 = options.Mp4;
@@ -445,10 +454,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
                 FfmpegOptions.Add(new MuxingParam(){ ParamValue = ffmpegParam });
             }
         }
-        
+
         var dubs = SelectedDubLang.Select(item => item.Content?.ToString());
         SelectedDubs = string.Join(", ", dubs) ?? "";
-        
+
         var subs = SelectedSubLang.Select(item => item.Content?.ToString());
         SelectedSubs = string.Join(", ", subs) ?? "";
 
@@ -466,6 +475,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
             return;
         }
 
+        CrunchyrollManager.Instance.CrunOptions.DownloadToTempFolder = DownloadToTempFolder;
         CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns = DefaultSubSigns;
         CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay = DefaultSubForcedDisplay;
         CrunchyrollManager.Instance.CrunOptions.IncludeVideoDescription = IncludeEpisodeDescription;
@@ -480,12 +490,12 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
         CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
-        CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0),0,10);
+        CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0), 0, 10);
         CrunchyrollManager.Instance.CrunOptions.FileName = FileName;
-        CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs; 
-        CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs; 
-        CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0),0,1000000000);
-        CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads =  Math.Clamp((int)(SimultaneousDownloads ?? 0),1,10);
+        CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs;
+        CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs;
+        CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
+        CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
 
         CrunchyrollManager.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
@@ -520,7 +530,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         }
 
         CrunchyrollManager.Instance.CrunOptions.DubLang = dubLangs;
-        
+
         CrunchyrollManager.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         CrunchyrollManager.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
         CrunchyrollManager.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
@@ -592,7 +602,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
                 return ScaledBorderAndShadow[0];
         }
     }
-    
+
     [RelayCommand]
     public void AddMkvMergeParam(){
         MkvMergeOptions.Add(new MuxingParam(){ ParamValue = MkvMergeOption });
@@ -621,11 +631,27 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task OpenFolderDialogAsync(){
+        await OpenFolderDialogAsyncInternal(
+            pathSetter: (path) => CrunchyrollManager.Instance.CrunOptions.DownloadDirPath = path,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadDirPath,
+            defaultPath: CfgManager.PathVIDEOS_DIR
+        );
+    }
+
+    [RelayCommand]
+    public async Task OpenFolderDialogTempFolderAsync(){
+        await OpenFolderDialogAsyncInternal(
+            pathSetter: (path) => CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath = path,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath,
+            defaultPath: CfgManager.PathTEMP_DIR
+        );
+    }
+
+    private async Task OpenFolderDialogAsyncInternal(Action<string> pathSetter, Func<string> pathGetter, string defaultPath){
         if (_storageProvider == null){
             Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
             throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
         }
-
 
         var result = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{
             Title = "Select Folder"
@@ -633,10 +659,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         if (result.Count > 0){
             var selectedFolder = result[0];
-            // Do something with the selected folder path
             Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
-            CrunchyrollManager.Instance.CrunOptions.DownloadDirPath = selectedFolder.Path.LocalPath;
-            DownloadDirPath = string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : CrunchyrollManager.Instance.CrunOptions.DownloadDirPath;
+            pathSetter(selectedFolder.Path.LocalPath);
+            var finalPath = string.IsNullOrEmpty(pathGetter()) ? defaultPath : pathGetter();
+            pathSetter(finalPath);
             CfgManager.WriteSettingsToFile();
         }
     }
@@ -696,27 +722,50 @@ public partial class SettingsPageViewModel : ViewModelBase{
     }
 
     private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
-        
         UpdateSettings();
-        
+
         var dubs = SelectedDubLang.Select(item => item.Content?.ToString());
         SelectedDubs = string.Join(", ", dubs) ?? "";
-        
+
         var subs = SelectedSubLang.Select(item => item.Content?.ToString());
         SelectedSubs = string.Join(", ", subs) ?? "";
-        
     }
-    
+
     protected override void OnPropertyChanged(PropertyChangedEventArgs e){
         base.OnPropertyChanged(e);
 
-        if (e.PropertyName is  nameof(SelectedDubs) or nameof(SelectedSubs) or nameof(CustomAccentColor) or nameof(ListBoxColor) or nameof(CurrentAppTheme) or nameof(UseCustomAccent) or nameof(LogMode)){
+        if (e.PropertyName is nameof(SelectedDubs) or nameof(SelectedSubs) or nameof(CustomAccentColor) or nameof(ListBoxColor) or nameof(CurrentAppTheme) or nameof(UseCustomAccent) or nameof(LogMode)){
             return;
         }
-        
+
         UpdateSettings();
+
+        if (e.PropertyName is nameof(History)){
+            if (CrunchyrollManager.Instance.CrunOptions.History){
+                if (File.Exists(CfgManager.PathCrHistory)){
+                    var decompressedJson = CfgManager.DecompressJsonFile(CfgManager.PathCrHistory);
+                    if (!string.IsNullOrEmpty(decompressedJson)){
+                        CrunchyrollManager.Instance.HistoryList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(decompressedJson, CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ??
+                                                                  new ObservableCollection<HistorySeries>();
+
+                        foreach (var historySeries in CrunchyrollManager.Instance.HistoryList){
+                            historySeries.Init();
+                            foreach (var historySeriesSeason in historySeries.Seasons){
+                                historySeriesSeason.Init();
+                            }
+                        }
+                    } else{
+                        CrunchyrollManager.Instance.HistoryList =[];
+                    }
+                }
+
+                _ = SonarrClient.Instance.RefreshSonarrLite();
+            } else{
+                CrunchyrollManager.Instance.HistoryList =[];
+            }
+        }
     }
-    
+
     partial void OnLogModeChanged(bool value){
         UpdateSettings();
         if (value){
@@ -725,7 +774,6 @@ public partial class SettingsPageViewModel : ViewModelBase{
             CfgManager.DisableLogMode();
         }
     }
-    
 }
 
 public class MuxingParam{

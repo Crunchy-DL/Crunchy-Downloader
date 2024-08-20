@@ -49,6 +49,7 @@ public class FileNameManager{
         if (overrides == null){
             return variables;
         }
+
         foreach (var item in overrides){
             int index = item.IndexOf('=');
             if (index == -1){
@@ -106,5 +107,40 @@ public class FileNameManager{
         filename = windowsTrailingRe.Replace(filename, fixingChar);
 
         return filename;
+    }
+
+
+    public static void DeleteEmptyFolders(string rootFolderPath){
+        if (string.IsNullOrEmpty(rootFolderPath) || !Directory.Exists(rootFolderPath)){
+            Console.WriteLine("Invalid directory path.");
+            return;
+        }
+
+        DeleteEmptyFoldersRecursive(rootFolderPath, isRoot: true);
+    }
+
+    private static bool DeleteEmptyFoldersRecursive(string folderPath, bool isRoot = false){
+        bool isFolderEmpty = true;
+
+        try{
+            foreach (var directory in Directory.GetDirectories(folderPath)){
+                // Recursively delete empty subfolders
+                if (!DeleteEmptyFoldersRecursive(directory)){
+                    isFolderEmpty = false;
+                }
+            }
+
+            // Check if the current folder is empty (no files and no non-deleted subfolders)
+            if (!isRoot && isFolderEmpty && Directory.GetFiles(folderPath).Length == 0){
+                Directory.Delete(folderPath);
+                Console.WriteLine($"Deleted empty folder: {folderPath}");
+                return true;
+            }
+
+            return false;
+        } catch (Exception ex){
+            Console.WriteLine($"An error occurred while deleting folder {folderPath}: {ex.Message}");
+            return false;
+        }
     }
 }

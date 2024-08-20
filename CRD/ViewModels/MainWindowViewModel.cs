@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls.Chrome;
 using Avalonia.Media;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -56,7 +57,7 @@ public partial class MainWindowViewModel : ViewModelBase{
         if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null){
             _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
         }
-
+        
         if (CrunchyrollManager.Instance.CrunOptions.Theme == "System"){
             _faTheme.PreferSystemTheme = true;
         } else if (CrunchyrollManager.Instance.CrunOptions.Theme == "Dark"){
