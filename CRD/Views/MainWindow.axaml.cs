@@ -7,6 +7,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
@@ -64,7 +65,7 @@ public partial class MainWindow : AppWindow{
         TitleBar.Height = TitleBarHeightAdjustment;
         TitleBar.ExtendsContentIntoTitleBar = true;
         TitleBar.TitleBarHitTestType = TitleBarHitTestType.Complex;
-        
+
         Opened += OnOpened;
         Closing += OnClosing;
 
@@ -73,7 +74,7 @@ public partial class MainWindow : AppWindow{
         PositionChanged += OnPositionChanged;
         SizeChanged += OnSizeChanged;
 
-        
+
         //select first element as default
         var nv = this.FindControl<NavigationView>("NavView");
         nv.SelectedItem = nv.MenuItems.ElementAt(0);
@@ -195,7 +196,6 @@ public partial class MainWindow : AppWindow{
                 var screens = Screens.All;
                 if (settings.ScreenIndex >= 0 && settings.ScreenIndex < screens.Count){
                     var screen = screens[settings.ScreenIndex];
-                    var screenBounds = screen.Bounds;
 
                     // Restore the position first
                     Position = new PixelPoint(settings.PosX, settings.PosY + TitleBarHeightAdjustment);
@@ -209,7 +209,7 @@ public partial class MainWindow : AppWindow{
                     _restorePosition = new PixelPoint(settings.PosX, settings.PosY + TitleBarHeightAdjustment);
 
                     // Ensure the window is on the correct screen before maximizing
-                    Position = new PixelPoint(settings.PosX, settings.PosY+ TitleBarHeightAdjustment);
+                    Position = new PixelPoint(settings.PosX, settings.PosY + TitleBarHeightAdjustment);
                 }
 
                 if (settings.IsMaximized){
@@ -232,15 +232,17 @@ public partial class MainWindow : AppWindow{
         }
 
         var settings = new WindowSettings{
-            Width = this.WindowState == WindowState.Maximized ? _restoreSize.Width : Width,
-            Height = this.WindowState == WindowState.Maximized ? _restoreSize.Height : Height,
+            Width = WindowState == WindowState.Maximized ? _restoreSize.Width : Width,
+            Height = WindowState == WindowState.Maximized ? _restoreSize.Height : Height,
             ScreenIndex = screenIndex,
-            PosX = this.WindowState == WindowState.Maximized ? _restorePosition.X : Position.X,
-            PosY = this.WindowState == WindowState.Maximized ? _restorePosition.Y : Position.Y,
-            IsMaximized = this.WindowState == WindowState.Maximized
+            PosX = WindowState == WindowState.Maximized ? _restorePosition.X : Position.X,
+            PosY = WindowState == WindowState.Maximized ? _restorePosition.Y : Position.Y,
+            IsMaximized = WindowState == WindowState.Maximized
         };
 
         File.WriteAllText(CfgManager.PathWindowSettings, JsonConvert.SerializeObject(settings, Formatting.Indented));
+
+        FileNameManager.DeleteEmptyFolders(!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath) ? CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath : CfgManager.PathTEMP_DIR);
     }
 
     private void OnWindowStateChanged(object sender, AvaloniaPropertyChangedEventArgs e){

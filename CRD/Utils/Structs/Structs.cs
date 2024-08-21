@@ -66,10 +66,10 @@ public struct Episode{
 
 public struct DownloadResponse{
     public List<DownloadedMedia> Data{ get; set; }
-    public string FileName{ get; set; }
+    public string? FileName{ get; set; }
 
-    public string FolderPath{ get; set; }
-    public string TempFolderPath{ get; set; }
+    public string? FolderPath{ get; set; }
+    public string? TempFolderPath{ get; set; }
     
     public string VideoTitle{ get; set; }
     public bool Error{ get; set; }

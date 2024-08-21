@@ -223,7 +223,7 @@ public class CrunchyrollManager{
 
             QueueManager.Instance.Queue.Refresh();
 
-            var fileNameAndPath = CrunOptions.DownloadToTempFolder ? Path.Combine(res.TempFolderPath, res.FileName) : Path.Combine(res.FolderPath, res.FileName);
+            var fileNameAndPath = CrunOptions.DownloadToTempFolder ? Path.Combine(res.TempFolderPath ?? string.Empty, res.FileName ?? string.Empty) : Path.Combine(res.FolderPath ?? string.Empty, res.FileName ?? string.Empty);
             if (CrunOptions is{ DlVideoOnce: false, KeepDubsSeperate: true }){
                 var groupByDub = Helpers.GroupByLanguageWithSubtitles(res.Data);
                 var mergers = new List<Merger>();
@@ -255,7 +255,9 @@ public class CrunchyrollManager{
 
                 foreach (var merger in mergers){
                     merger.CleanUp();
-                    await MoveFromTempFolder(merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
+                    if (CrunOptions.DownloadToTempFolder){
+                        await MoveFromTempFolder(merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
+                    }
                 }
             } else{
                 var result = await MuxStreams(res.Data,
@@ -280,7 +282,9 @@ public class CrunchyrollManager{
 
                 if (result is{ merger: not null, isMuxed: true }){
                     result.merger.CleanUp();
+                }
 
+                if (CrunOptions.DownloadToTempFolder){
                     await MoveFromTempFolder(result.merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
                 }
             }
@@ -315,7 +319,7 @@ public class CrunchyrollManager{
 
     #region Temp Files Move
 
-    private async Task MoveFromTempFolder(Merger merger, CrunchyEpMeta data, string tempFolderPath, IEnumerable<DownloadedMedia> subtitles){
+    private async Task MoveFromTempFolder(Merger? merger, CrunchyEpMeta data, string tempFolderPath, IEnumerable<DownloadedMedia> subtitles){
         if (!CrunOptions.DownloadToTempFolder) return;
 
         data.DownloadProgress = new DownloadProgress{
@@ -335,19 +339,17 @@ public class CrunchyrollManager{
         }
 
         // Move the main output file
-        await MoveFile(merger.options.Output, tempFolderPath, data.DownloadPath);
+        await MoveFile(merger?.options.Output ?? string.Empty, tempFolderPath, data.DownloadPath ?? CfgManager.PathVIDEOS_DIR);
 
         // Move the subtitle files
-        if (CrunOptions.SkipSubsMux){
-            foreach (var downloadedMedia in subtitles){
-                await MoveFile(downloadedMedia.Path ?? string.Empty, tempFolderPath, data.DownloadPath);
-            }
+        foreach (var downloadedMedia in subtitles){
+            await MoveFile(downloadedMedia.Path ?? string.Empty, tempFolderPath, data.DownloadPath ?? CfgManager.PathVIDEOS_DIR);
         }
     }
 
     private async Task MoveFile(string sourcePath, string tempFolderPath, string downloadPath){
         if (string.IsNullOrEmpty(sourcePath) || !File.Exists(sourcePath)){
-            Console.Error.WriteLine("Source file does not exist or path is invalid.");
+            // Console.Error.WriteLine("Source file does not exist or path is invalid.");
             return;
         }
 
@@ -364,7 +366,7 @@ public class CrunchyrollManager{
                     ? CrunOptions.DownloadDirPath
                     : CfgManager.PathVIDEOS_DIR;
 
-            var destinationPath = Path.Combine(destinationFolder, fileName);
+            var destinationPath = Path.Combine(destinationFolder ?? string.Empty, fileName ?? string.Empty);
 
             string destinationDirectory = Path.GetDirectoryName(destinationPath);
             if (string.IsNullOrEmpty(destinationDirectory)){
@@ -1137,6 +1139,7 @@ public class CrunchyrollManager{
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
                                                 }
 
+                                                dlFailed = true;
                                                 return new DownloadResponse{
                                                     Data = files,
                                                     Error = dlFailed,
@@ -1202,6 +1205,7 @@ public class CrunchyrollManager{
                                                     Console.WriteLine($"An error occurred: {ex.Message}");
                                                 }
 
+                                                dlFailed = true;
                                                 return new DownloadResponse{
                                                     Data = files,
                                                     Error = dlFailed,
@@ -1393,6 +1397,9 @@ public class CrunchyrollManager{
                 !string.IsNullOrEmpty(options.DownloadDirPath) ? options.DownloadDirPath : CfgManager.PathVIDEOS_DIR;
         }
 
+        if (string.IsNullOrEmpty(data.DownloadPath)){
+            data.DownloadPath = fileDir;
+        }
 
         return new DownloadResponse{
             Data = files,

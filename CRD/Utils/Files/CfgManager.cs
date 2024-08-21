@@ -17,7 +17,7 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace CRD.Utils;
 
 public class CfgManager{
-    private static string WorkingDirectory = Directory.GetCurrentDirectory();
+    private static string WorkingDirectory = AppContext.BaseDirectory;
 
     public static readonly string PathCrToken = Path.Combine(WorkingDirectory, "config", "cr_token.yml");
     public static readonly string PathCrDownloadOptions = Path.Combine(WorkingDirectory, "config", "settings.yml");
