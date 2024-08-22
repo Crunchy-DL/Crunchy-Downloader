@@ -223,7 +223,9 @@ public class CrunchyrollManager{
 
             QueueManager.Instance.Queue.Refresh();
 
-            var fileNameAndPath = CrunOptions.DownloadToTempFolder ? Path.Combine(res.TempFolderPath ?? string.Empty, res.FileName ?? string.Empty) : Path.Combine(res.FolderPath ?? string.Empty, res.FileName ?? string.Empty);
+            var fileNameAndPath = CrunOptions.DownloadToTempFolder
+                ? Path.Combine(res.TempFolderPath ?? string.Empty, res.FileName ?? string.Empty)
+                : Path.Combine(res.FolderPath ?? string.Empty, res.FileName ?? string.Empty);
             if (CrunOptions is{ DlVideoOnce: false, KeepDubsSeperate: true }){
                 var groupByDub = Helpers.GroupByLanguageWithSubtitles(res.Data);
                 var mergers = new List<Merger>();
@@ -1349,6 +1351,7 @@ public class CrunchyrollManager{
         // variables.Add(new Variable("height", quality == 0 ? plQuality.Last().RESOLUTION.Height : plQuality[quality - 1].RESOLUTION.Height, false));
         // variables.Add(new Variable("width", quality == 0 ? plQuality.Last().RESOLUTION.Width : plQuality[quality - 1].RESOLUTION.Width, false));
 
+
         if (options.IncludeVideoDescription){
             string fullPath = (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) + ".xml";
 
@@ -1443,9 +1446,6 @@ public class CrunchyrollManager{
 
             var subsArr = Languages.SortSubtitles(subsDataMapped, "language");
 
-            int playResX = 1280;
-            int playResY = 720;
-
             foreach (var subsItem in subsArr){
                 var index = subsArr.IndexOf(subsItem);
                 var langItem = subsItem.locale;
@@ -1474,17 +1474,6 @@ public class CrunchyrollManager{
 
                     if (subsAssReqResponse.IsOk){
                         if (subsItem.format == "ass"){
-                            // Define regular expressions to match PlayResX and PlayResY
-                            Regex playResXPattern = new Regex(@"PlayResX:\s*(\d+)");
-                            Regex playResYPattern = new Regex(@"PlayResY:\s*(\d+)");
-
-                            // Find matches
-                            Match matchX = playResXPattern.Match(subsAssReqResponse.ResponseContent);
-                            Match matchY = playResYPattern.Match(subsAssReqResponse.ResponseContent);
-
-                            playResX = int.Parse(matchX.Groups[1].Value);
-                            playResY = int.Parse(matchY.Groups[1].Value);
-
                             subsAssReqResponse.ResponseContent = '\ufeff' + subsAssReqResponse.ResponseContent;
                             var sBodySplit = subsAssReqResponse.ResponseContent.Split(new[]{ "\r\n" }, StringSplitOptions.None).ToList();
 
@@ -1511,14 +1500,14 @@ public class CrunchyrollManager{
                             assBuilder.AppendLine("Title: CC Subtitle");
                             assBuilder.AppendLine("ScriptType: v4.00+");
                             assBuilder.AppendLine("WrapStyle: 0");
-                            assBuilder.AppendLine("PlayResX: " + playResX);
-                            assBuilder.AppendLine("PlayResY: " + playResY);
+                            assBuilder.AppendLine("PlayResX: 640");
+                            assBuilder.AppendLine("PlayResY: 360");
                             assBuilder.AppendLine("Timer: 0.0");
                             assBuilder.AppendLine();
                             assBuilder.AppendLine("[V4+ Styles]");
                             assBuilder.AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
                                                   + "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding");
-                            assBuilder.AppendLine("Style: Default,Arial,20,&H00FFFFFF,&H00FFFFFF,&H00000000,&H64000000,-1,0,0,0,100,100,0,0,1,2,0,2,0000,0000,0020,1");
+                            assBuilder.AppendLine("Style: Default,Trebuchet MS,24,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,1,2,0010,0010,0018,1");
                             assBuilder.AppendLine();
                             assBuilder.AppendLine("[Events]");
                             assBuilder.AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
