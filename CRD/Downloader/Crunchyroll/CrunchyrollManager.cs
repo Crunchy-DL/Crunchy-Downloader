@@ -1417,9 +1417,9 @@ public class CrunchyrollManager{
 
     private static async Task DownloadSubtitles(CrDownloadOptions options, PlaybackData pbData, string audDub, string fileName, List<DownloadedMedia> files, string fileDir, CrunchyEpMeta data, bool needsDelay,
         DownloadedMedia videoDownloadMedia){
-        if (pbData.Meta != null && pbData.Meta.Subtitles != null && pbData.Meta.Subtitles.Count > 0){
-            List<SubtitleInfo> subsData = pbData.Meta.Subtitles.Values.ToList();
-            List<Caption> capsData = pbData.Meta.Captions?.Values.ToList() ?? new List<Caption>();
+        if (pbData.Meta != null && (pbData.Meta.Subtitles is{ Count: > 0 } || pbData.Meta.Captions is{ Count: > 0 })){
+            List<SubtitleInfo> subsData = pbData.Meta.Subtitles?.Values.ToList() ?? [];
+            List<Caption> capsData = pbData.Meta.Captions?.Values.ToList() ?? [];
             var subsDataMapped = subsData.Select(s => {
                 var subLang = Languages.FixAndFindCrLc((s.Locale ?? Locale.DefaulT).GetEnumMemberValue());
                 return new{
