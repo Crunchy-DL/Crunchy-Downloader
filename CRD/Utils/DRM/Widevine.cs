@@ -45,7 +45,7 @@ public class Widevine{
                     var fileInfo = new FileInfo(file);
                     if (fileInfo.Length < 1024 * 8 && !fileInfo.Attributes.HasFlag(FileAttributes.Directory)){
                         string fileContents = File.ReadAllText(file, Encoding.UTF8);
-                        if (fileContents.Contains("-BEGIN RSA PRIVATE KEY-")){
+                        if (fileContents.Contains("-BEGIN RSA PRIVATE KEY-") || fileContents.Contains("-BEGIN PRIVATE KEY-")){
                             privateKey = File.ReadAllBytes(file);
                         }
 

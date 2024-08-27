@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Media;
 using Avalonia.Platform;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
@@ -13,7 +12,6 @@ using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Updater;
 using CRD.ViewModels;
-using CRD.Views;
 using CRD.Views.Utils;
 using FluentAvalonia.Core;
 using FluentAvalonia.UI.Controls;
@@ -77,7 +75,7 @@ public partial class MainWindow : AppWindow{
 
         //select first element as default
         var nv = this.FindControl<NavigationView>("NavView");
-        nv.SelectedItem = nv.MenuItems.ElementAt(0);
+        nv.SelectedItem = IEnumerableExtensions.ElementAt(nv.MenuItems, 0);
         selectedNavVieItem = nv.SelectedItem;
 
         MessageBus.Current.Listen<NavigationMessage>()
@@ -246,9 +244,8 @@ public partial class MainWindow : AppWindow{
     }
 
     private void OnWindowStateChanged(object sender, AvaloniaPropertyChangedEventArgs e){
-        if (e.Property == Window.WindowStateProperty){
+        if (e.Property == WindowStateProperty){
             if (WindowState == WindowState.Normal){
-                // When the window is restored to normal, use the stored restore size and position
                 Width = _restoreSize.Width;
                 Height = _restoreSize.Height;
                 Position = _restorePosition;
@@ -258,7 +255,17 @@ public partial class MainWindow : AppWindow{
 
     private void OnPositionChanged(object sender, PixelPointEventArgs e){
         if (WindowState == WindowState.Normal){
-            _restorePosition = e.Point;
+            var screens = Screens.All;
+            
+            bool isWithinAnyScreen = screens.Any(screen =>
+                e.Point.X >= screen.WorkingArea.X &&
+                e.Point.X <= screen.WorkingArea.X + screen.WorkingArea.Width &&
+                e.Point.Y >= screen.WorkingArea.Y &&
+                e.Point.Y <= screen.WorkingArea.Y + screen.WorkingArea.Height);
+
+            if (isWithinAnyScreen){
+                _restorePosition = e.Point;
+            }
         }
     }
 
