@@ -16,15 +16,6 @@ A simple crunchyroll downloader that allows you to download your favorite series
     <img src="https://img.shields.io/github/v/release/Crunchy-DL/Crunchy-Downloader?include_prereleases&style=flat-square" alt="Release">
   </a>
 </p>
-<p align="center">
-  <a href="https://discord.gg/zDKNU8UUqt">
-    <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
-  </a>
-</p>
-
-
-> I am in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
-> The official Crunchyroll website can be found at https://crunchyroll.com/.
 
 # 📜 Disclaimer
 
@@ -46,37 +37,6 @@ Windows 10 or Windows 11
 ## ✨ Features
 
 [Github Wiki](https://github.com/Crunchy-DL/Crunchy-Downloader/wiki)
-
-- **Account Management**: Sign in and download according to your Crunchyroll subscription status.
-- **Download Options**: Choose to download only the video, only the audio of episodes.
-- **Crunchyroll Chapters Support**: Download chapters for episodes from Crunchyroll.
-- **Select Multiple Dubs and Subtitles**: Choose multiple dubs or subtitles in the settings, or opt for a hardsub.
-- **Max Concurrent Downloads Selector**: Control the maximum number of concurrent downloads.
-- **Highly Customizable Filename Settings**: Customize the filename settings according to your preferences.
-- **Download Management**: Pause, resume, or cancel active downloads at any time.
-- **Complete Series Download**: Add an entire series (every season, every episode) to download with one click.
-- **Add Single Episodes with URL**: Download single episodes by entering their URL.
-- **Simulcast Calendar Integration**: Directly select episodes to download from the Crunchyroll simulcast calendar.
-- **History Overview**: View all the series you've downloaded in a comprehensive history overview.
-- **New Releases Check**: Automatically check for new releases in your download history.
-- **One-Click Add New Releases**: Easily add all new releases to your download queue with one click.
-- **Series Overview**: Get a detailed overview of downloaded series to easily download missing episodes and track what's been downloaded.
-- **Sonarr Integration**: Link your Sonarr server in the settings to see the episodes available on your Sonarr server in the history overview.
-
-# 🖥️ User Interface
-
-Downloads overview:
-![ui_downloads](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/Download_Queue.png)
-Add new downloads:
-![ui_adddownload](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/Add_Downloads.png)
-Calendar:
-![ui_calendar](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/Calendar.png)
-History Overview:
-![ui_history](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/History_Overview.png)
-History Series Overview:
-![ui_history_series](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/History_Series_Overview.png)
-Settings:
-![ui_settings](https://github.com/Crunchy-DL/Crunchy-Downloader/blob/master/images/Settings.png)
 
 
 # 🛠️ DRM Decryption Guide
