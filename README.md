@@ -16,6 +16,13 @@ A simple crunchyroll downloader that allows you to download your favorite series
     <img src="https://img.shields.io/github/v/release/Crunchy-DL/Crunchy-Downloader?include_prereleases&style=flat-square" alt="Release">
   </a>
 </p>
+<p align="center">
+  <a href="https://discord.gg/QmGhqkAQBT">
+    <img src="https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord">
+  </a>
+</p>
+
+
 
 # 📜 Disclaimer
 
