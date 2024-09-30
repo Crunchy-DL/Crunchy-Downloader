@@ -123,7 +123,7 @@ public class CrEpisode(){
 
 
         if (!serieshasversions){
-            Console.WriteLine("Couldn\'t find versions on episode, fell back to old method.");
+            Console.WriteLine("Couldn\'t find versions on episode, added languages with language array.");
         }
         
         return episode;

@@ -116,12 +116,12 @@ public class CrSeries(){
     }
 
 
-    public async Task<CrunchySeriesList?> ListSeriesId(string id, string crLocale, CrunchyMultiDownload? data){
+    public async Task<CrunchySeriesList?> ListSeriesId(string id, string crLocale, CrunchyMultiDownload? data, bool forcedLocale = false){
         await crunInstance.CrAuth.RefreshToken(true);
 
         bool serieshasversions = true;
 
-        CrSeriesSearch? parsedSeries = await ParseSeriesById(id, crLocale); // one piece - GRMG8ZQZR
+        CrSeriesSearch? parsedSeries = await ParseSeriesById(id, crLocale,forcedLocale);
 
         if (parsedSeries == null || parsedSeries.Data == null){
             Console.Error.WriteLine("Parse Data Invalid");
@@ -142,7 +142,7 @@ public class CrSeries(){
                 if (data?.S != null && s.Id != data.Value.S) continue;
                 int fallbackIndex = 0;
                 if (cachedSeasonID != s.Id){
-                    seasonData = await GetSeasonDataById(s.Id, "");
+                    seasonData = await GetSeasonDataById(s.Id, forcedLocale ? crLocale : "");
                     cachedSeasonID = s.Id;
                 }
                 
@@ -261,7 +261,7 @@ public class CrSeries(){
         }
 
         if (!serieshasversions){
-            Console.WriteLine("Couldn\'t find versions on some episodes, fell back to old method.");
+            Console.WriteLine("Couldn\'t find versions on some episodes, added languages with language array.");
         }
 
         CrunchySeriesList crunchySeriesList = new CrunchySeriesList();
@@ -272,9 +272,12 @@ public class CrSeries(){
             var value = kvp.Value;
             var images = (value.Items[0].Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
             var seconds = (int)Math.Floor(value.Items[0].DurationMs / 1000.0);
+            var langList = value.Langs.Select(a => a.CrLocale).ToList();
+            Languages.SortListByLangList(langList);
+            
             return new Episode{
                 E = key.StartsWith("E") ? key.Substring(1) : key,
-                Lang = value.Langs.Select(a => a.Code).ToList(),
+                Lang = langList,
                 Name = value.Items[0].Title,
                 Season = Helpers.ExtractNumberAfterS(value.Items[0].Identifier) ?? value.Items[0].SeasonNumber.ToString(),
                 SeriesTitle = Regex.Replace(value.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd(),
@@ -439,12 +442,15 @@ public class CrSeries(){
     }
 
 
-    public async Task<CrSearchSeriesBase?> Search(string searchString, string? crLocale){
+    public async Task<CrSearchSeriesBase?> Search(string searchString, string? crLocale, bool forced = false){
         await crunInstance.CrAuth.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         if (!string.IsNullOrEmpty(crLocale)){
             query["locale"] = crLocale;
+            if (forced){
+                query["force_locale"] = crLocale;
+            }
         }
 
         query["q"] = searchString;

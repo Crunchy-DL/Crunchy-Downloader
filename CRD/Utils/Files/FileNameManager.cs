@@ -23,6 +23,7 @@ public class FileNameManager{
 
             if (variable == null){
                 Console.Error.WriteLine($"[ERROR] Found variable '{match}' in fileName but no values was internally found!");
+                input = input.Replace(match, "");
                 continue;
             }
 
@@ -110,16 +111,16 @@ public class FileNameManager{
     }
 
 
-    public static void DeleteEmptyFolders(string rootFolderPath){
+    public static void DeleteEmptyFolders(string rootFolderPath, bool deleteRootIfEmpty = true){
         if (string.IsNullOrEmpty(rootFolderPath) || !Directory.Exists(rootFolderPath)){
             Console.WriteLine("Invalid directory path.");
             return;
         }
 
-        DeleteEmptyFoldersRecursive(rootFolderPath, isRoot: true);
+        DeleteEmptyFoldersRecursive(rootFolderPath, isRoot: true, deleteRootIfEmpty);
     }
 
-    private static bool DeleteEmptyFoldersRecursive(string folderPath, bool isRoot = false){
+    private static bool DeleteEmptyFoldersRecursive(string folderPath, bool isRoot = false, bool deleteRootIfEmpty = true){
         bool isFolderEmpty = true;
 
         try{
@@ -134,6 +135,12 @@ public class FileNameManager{
             if (!isRoot && isFolderEmpty && Directory.GetFiles(folderPath).Length == 0){
                 Directory.Delete(folderPath);
                 Console.WriteLine($"Deleted empty folder: {folderPath}");
+                return true;
+            }
+
+            if (isRoot && deleteRootIfEmpty && isFolderEmpty && Directory.GetFiles(folderPath).Length == 0){
+                Directory.Delete(folderPath);
+                Console.WriteLine($"Deleted empty root folder: {folderPath}");
                 return true;
             }
 

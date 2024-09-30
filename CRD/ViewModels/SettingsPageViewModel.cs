@@ -5,7 +5,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
-using System.Net.Mime;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia;
@@ -15,14 +15,18 @@ using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
-using CRD.Utils.CustomList;
+using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
+using CRD.ViewModels.Utils;
+using CRD.Views.Utils;
 using FluentAvalonia.Styling;
+using FluentAvalonia.UI.Controls;
+
+// ReSharper disable InconsistentNaming
 
 namespace CRD.ViewModels;
 
@@ -40,7 +44,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private bool _downloadChapters = true;
 
     [ObservableProperty]
-    private bool _addScaledBorderAndShadow = false;
+    private bool _addScaledBorderAndShadow;
 
     [ObservableProperty]
     private bool _includeSignSubs;
@@ -58,6 +62,9 @@ public partial class SettingsPageViewModel : ViewModelBase{
         new ComboBoxItem(){ Content = "ScaledBorderAndShadow: yes" },
         new ComboBoxItem(){ Content = "ScaledBorderAndShadow: no" },
     };
+
+    [ObservableProperty]
+    private bool _skipMuxing;
 
     [ObservableProperty]
     private bool _muxToMp4;
@@ -108,7 +115,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private string _fileTitle = "";
 
     [ObservableProperty]
-    private ObservableCollection<MuxingParam> _mkvMergeOptions = new();
+    private ObservableCollection<StringItem> _mkvMergeOptions = new();
 
     [ObservableProperty]
     private string _mkvMergeOption = "";
@@ -117,7 +124,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
     private string _ffmpegOption = "";
 
     [ObservableProperty]
-    private ObservableCollection<MuxingParam> _ffmpegOptions = new();
+    private ObservableCollection<StringItem> _ffmpegOptions = new();
 
     [ObservableProperty]
     private string _selectedSubs = "all";
@@ -328,10 +335,42 @@ public partial class SettingsPageViewModel : ViewModelBase{
     };
 
     [ObservableProperty]
+    private bool _isEncodeEnabled;
+
+    [ObservableProperty]
+    private StringItem _selectedEncodingPreset;
+
+    public ObservableCollection<StringItem> EncodingPresetsList{ get; } = new();
+
+
+    [ObservableProperty]
     private string _downloadDirPath;
 
     [ObservableProperty]
+    private bool _proxyEnabled;
+
+    [ObservableProperty]
+    private string _proxyHost;
+
+    [ObservableProperty]
+    private double? _proxyPort;
+
+
+    [ObservableProperty]
     private string _tempDownloadDirPath;
+
+    [ObservableProperty]
+    private string _currentIp = "";
+
+    [ObservableProperty]
+    private bool _cCSubsMuxingFlag;
+
+    [ObservableProperty]
+    private string _cCSubsFont;
+
+    [ObservableProperty]
+    private bool _signsSubsAsForced;
+
 
     private readonly FluentAvaloniaTheme _faTheme;
 
@@ -345,6 +384,12 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
 
+        if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
+            CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
+        } else{
+            CustomAccentColor = Application.Current?.PlatformSettings?.GetColorValues().AccentColor1 ?? Colors.SlateBlue;
+        }
+
         foreach (var languageItem in Languages.languages){
             HardSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
             SubLangList.Add(new ListBoxItem{ Content = languageItem.CrLocale });
@@ -353,10 +398,18 @@ public partial class SettingsPageViewModel : ViewModelBase{
             DefaultSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
         }
 
+        foreach (var encodingPreset in FfmpegEncoding.presets){
+            EncodingPresetsList.Add(new StringItem{ stringValue = encodingPreset.PresetName ?? "Unknown Preset Name" });
+        }
+
+
         CrDownloadOptions options = CrunchyrollManager.Instance.CrunOptions;
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
         TempDownloadDirPath = string.IsNullOrEmpty(options.DownloadTempDirPath) ? CfgManager.PathTEMP_DIR : options.DownloadTempDirPath;
+
+        StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => a.stringValue != null && a.stringValue == options.EncodingPresetName) ?? null;
+        SelectedEncodingPreset = encodingPresetSelected ?? EncodingPresetsList[0];
 
         ComboBoxItem? descriptionLang = DescriptionLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DescriptionLang) ?? null;
         SelectedDescriptionLang = descriptionLang ?? DescriptionLangList[0];
@@ -403,6 +456,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        CCSubsFont = options.CcSubsFont ?? "";
+        CCSubsMuxingFlag = options.CcSubsMuxingFlag;
+        SignsSubsAsForced = options.SignsSubsAsForced;
+        ProxyEnabled = options.ProxyEnabled;
+        ProxyHost = options.ProxyHost ?? "";
+        ProxyPort = options.ProxyPort;
+        SkipMuxing = options.SkipMuxing;
+        IsEncodeEnabled = options.IsEncodeEnabled;
         DefaultSubForcedDisplay = options.DefaultSubForcedDisplay;
         DefaultSubSigns = options.DefaultSubSigns;
         HistoryAddSpecials = options.HistoryAddSpecials;
@@ -435,7 +496,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         ComboBoxItem? theme = AppThemes.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Theme) ?? null;
         CurrentAppTheme = theme ?? AppThemes[0];
 
-        if (options.AccentColor != CustomAccentColor.ToString()){
+        if (!string.IsNullOrEmpty(options.AccentColor) && options.AccentColor != Application.Current?.PlatformSettings?.GetColorValues().AccentColor1.ToString()){
             UseCustomAccent = true;
         }
 
@@ -444,14 +505,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
         MkvMergeOptions.Clear();
         if (options.MkvmergeOptions != null){
             foreach (var mkvmergeParam in options.MkvmergeOptions){
-                MkvMergeOptions.Add(new MuxingParam(){ ParamValue = mkvmergeParam });
+                MkvMergeOptions.Add(new StringItem(){ stringValue = mkvmergeParam });
             }
         }
 
         FfmpegOptions.Clear();
         if (options.FfmpegOptions != null){
             foreach (var ffmpegParam in options.FfmpegOptions){
-                FfmpegOptions.Add(new MuxingParam(){ ParamValue = ffmpegParam });
+                FfmpegOptions.Add(new StringItem(){ stringValue = ffmpegParam });
             }
         }
 
@@ -475,6 +536,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
             return;
         }
 
+        CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced = SignsSubsAsForced;
+        CrunchyrollManager.Instance.CrunOptions.CcSubsMuxingFlag = CCSubsMuxingFlag;
+        CrunchyrollManager.Instance.CrunOptions.CcSubsFont = CCSubsFont;
+        CrunchyrollManager.Instance.CrunOptions.EncodingPresetName = SelectedEncodingPreset.stringValue;
+        CrunchyrollManager.Instance.CrunOptions.IsEncodeEnabled = IsEncodeEnabled;
         CrunchyrollManager.Instance.CrunOptions.DownloadToTempFolder = DownloadToTempFolder;
         CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns = DefaultSubSigns;
         CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay = DefaultSubForcedDisplay;
@@ -487,6 +553,7 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
         CrunchyrollManager.Instance.CrunOptions.KeepDubsSeperate = KeepDubsSeparate;
         CrunchyrollManager.Instance.CrunOptions.Chapters = DownloadChapters;
+        CrunchyrollManager.Instance.CrunOptions.SkipMuxing = SkipMuxing;
         CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
         CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
@@ -496,6 +563,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs;
         CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
         CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
+
+        CrunchyrollManager.Instance.CrunOptions.ProxyEnabled = ProxyEnabled;
+        CrunchyrollManager.Instance.CrunOptions.ProxyHost = ProxyHost;
+        CrunchyrollManager.Instance.CrunOptions.ProxyPort = Math.Clamp((int)(ProxyPort ?? 0), 0, 65535);
 
         CrunchyrollManager.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
@@ -535,7 +606,11 @@ public partial class SettingsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
         CrunchyrollManager.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
 
-        CrunchyrollManager.Instance.CrunOptions.AccentColor = _faTheme.CustomAccentColor.ToString();
+        if (_faTheme.CustomAccentColor != (Application.Current?.PlatformSettings?.GetColorValues().AccentColor1)){
+            CrunchyrollManager.Instance.CrunOptions.AccentColor = _faTheme.CustomAccentColor.ToString();
+        } else{
+            CrunchyrollManager.Instance.CrunOptions.AccentColor = string.Empty;
+        }
 
         CrunchyrollManager.Instance.CrunOptions.History = History;
 
@@ -560,14 +635,14 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
         List<string> mkvmergeParams = new List<string>();
         foreach (var mkvmergeParam in MkvMergeOptions){
-            mkvmergeParams.Add(mkvmergeParam.ParamValue);
+            mkvmergeParams.Add(mkvmergeParam.stringValue);
         }
 
         CrunchyrollManager.Instance.CrunOptions.MkvmergeOptions = mkvmergeParams;
 
         List<string> ffmpegParams = new List<string>();
         foreach (var ffmpegParam in FfmpegOptions){
-            ffmpegParams.Add(ffmpegParam.ParamValue);
+            ffmpegParams.Add(ffmpegParam.stringValue);
         }
 
         CrunchyrollManager.Instance.CrunOptions.FfmpegOptions = ffmpegParams;
@@ -605,26 +680,26 @@ public partial class SettingsPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public void AddMkvMergeParam(){
-        MkvMergeOptions.Add(new MuxingParam(){ ParamValue = MkvMergeOption });
+        MkvMergeOptions.Add(new StringItem(){ stringValue = MkvMergeOption });
         MkvMergeOption = "";
         RaisePropertyChanged(nameof(MkvMergeOptions));
     }
 
     [RelayCommand]
-    public void RemoveMkvMergeParam(MuxingParam param){
+    public void RemoveMkvMergeParam(StringItem param){
         MkvMergeOptions.Remove(param);
         RaisePropertyChanged(nameof(MkvMergeOptions));
     }
 
     [RelayCommand]
     public void AddFfmpegParam(){
-        FfmpegOptions.Add(new MuxingParam(){ ParamValue = FfmpegOption });
+        FfmpegOptions.Add(new StringItem(){ stringValue = FfmpegOption });
         FfmpegOption = "";
         RaisePropertyChanged(nameof(FfmpegOptions));
     }
 
     [RelayCommand]
-    public void RemoveFfmpegParam(MuxingParam param){
+    public void RemoveFfmpegParam(StringItem param){
         FfmpegOptions.Remove(param);
         RaisePropertyChanged(nameof(FfmpegOptions));
     }
@@ -632,7 +707,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
     [RelayCommand]
     public async Task OpenFolderDialogAsync(){
         await OpenFolderDialogAsyncInternal(
-            pathSetter: (path) => CrunchyrollManager.Instance.CrunOptions.DownloadDirPath = path,
+            pathSetter: (path) => {
+                CrunchyrollManager.Instance.CrunOptions.DownloadDirPath = path;
+                DownloadDirPath = string.IsNullOrEmpty(path) ? CfgManager.PathVIDEOS_DIR : path;
+            },
             pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadDirPath,
             defaultPath: CfgManager.PathVIDEOS_DIR
         );
@@ -641,7 +719,10 @@ public partial class SettingsPageViewModel : ViewModelBase{
     [RelayCommand]
     public async Task OpenFolderDialogTempFolderAsync(){
         await OpenFolderDialogAsyncInternal(
-            pathSetter: (path) => CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath = path,
+            pathSetter: (path) => {
+                CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath = path;
+                TempDownloadDirPath = string.IsNullOrEmpty(path) ? CfgManager.PathTEMP_DIR : path;
+            },
             pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath,
             defaultPath: CfgManager.PathTEMP_DIR
         );
@@ -697,7 +778,8 @@ public partial class SettingsPageViewModel : ViewModelBase{
         } else{
             CustomAccentColor = default;
             ListBoxColor = default;
-            UpdateAppAccentColor(Colors.SlateBlue);
+            var color = Application.Current?.PlatformSettings?.GetColorValues().AccentColor1 ?? Colors.SlateBlue;
+            UpdateAppAccentColor(color);
         }
     }
 
@@ -734,7 +816,13 @@ public partial class SettingsPageViewModel : ViewModelBase{
     protected override void OnPropertyChanged(PropertyChangedEventArgs e){
         base.OnPropertyChanged(e);
 
-        if (e.PropertyName is nameof(SelectedDubs) or nameof(SelectedSubs) or nameof(CustomAccentColor) or nameof(ListBoxColor) or nameof(CurrentAppTheme) or nameof(UseCustomAccent) or nameof(LogMode)){
+        if (e.PropertyName is nameof(SelectedDubs)
+            or nameof(SelectedSubs)
+            or nameof(CustomAccentColor)
+            or nameof(ListBoxColor)
+            or nameof(CurrentAppTheme)
+            or nameof(UseCustomAccent)
+            or nameof(LogMode)){
             return;
         }
 
@@ -766,6 +854,45 @@ public partial class SettingsPageViewModel : ViewModelBase{
         }
     }
 
+    [RelayCommand]
+    public async Task CreateEncodingPresetButtonPress(bool editMode){
+        var dialog = new ContentDialog(){
+            Title = "New Encoding Preset",
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Close",
+            FullSizeDesired = true
+        };
+
+        var viewModel = new ContentDialogEncodingPresetViewModel(dialog, editMode);
+        dialog.Content = new ContentDialogEncodingPresetView(){
+            DataContext = viewModel
+        };
+
+        var dialogResult = await dialog.ShowAsync();
+
+        if (dialogResult == ContentDialogResult.Primary){
+            settingsLoaded = false;
+            EncodingPresetsList.Clear();
+            foreach (var encodingPreset in FfmpegEncoding.presets){
+                EncodingPresetsList.Add(new StringItem{ stringValue = encodingPreset.PresetName ?? "Unknown Preset Name" });
+            }
+
+            settingsLoaded = true;
+            StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => a.stringValue != null && a.stringValue == CrunchyrollManager.Instance.CrunOptions.EncodingPresetName) ?? null;
+            SelectedEncodingPreset = encodingPresetSelected ?? EncodingPresetsList[0];
+        }
+    }
+
+    [RelayCommand]
+    public async void CheckIp(){
+        var result = await HttpClientReq.Instance.SendHttpRequest(HttpClientReq.CreateRequestMessage("https://icanhazip.com", HttpMethod.Get, false, false, null));
+        Console.Error.WriteLine("Your IP: " + result.ResponseContent);
+        if (result.IsOk){
+            CurrentIp = result.ResponseContent;
+        }
+    }
+
+
     partial void OnLogModeChanged(bool value){
         UpdateSettings();
         if (value){
@@ -774,8 +901,4 @@ public partial class SettingsPageViewModel : ViewModelBase{
             CfgManager.DisableLogMode();
         }
     }
-}
-
-public class MuxingParam{
-    public string ParamValue{ get; set; }
 }

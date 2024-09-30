@@ -75,7 +75,7 @@ public partial class MainWindow : AppWindow{
 
         //select first element as default
         var nv = this.FindControl<NavigationView>("NavView");
-        nv.SelectedItem = IEnumerableExtensions.ElementAt(nv.MenuItems, 0);
+        nv.SelectedItem =  nv.MenuItems.ElementAt(0);
         selectedNavVieItem = nv.SelectedItem;
 
         MessageBus.Current.Listen<NavigationMessage>()

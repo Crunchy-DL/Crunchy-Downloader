@@ -73,7 +73,10 @@ public class Widevine{
     }
 
     public async Task<List<ContentKey>> getKeys(string? pssh, string licenseServer, Dictionary<string, string> authData){
-        if (pssh == null || !canDecrypt) return new List<ContentKey>();
+        if (pssh == null || !canDecrypt){
+            Console.Error.WriteLine("Missing pssh or cdm files");
+            return new List<ContentKey>();
+        }
 
         try{
             byte[] psshBuffer = Convert.FromBase64String(pssh);

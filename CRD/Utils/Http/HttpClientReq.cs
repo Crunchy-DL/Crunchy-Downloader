@@ -38,10 +38,42 @@ public class HttpClientReq{
     private HttpClient client;
     private Dictionary<string, CookieCollection> cookieStore;
 
+    private HttpClientHandler handler;
+
+
     public HttpClientReq(){
         cookieStore = new Dictionary<string, CookieCollection>();
 
-        client = new HttpClient(CreateHttpClientHandler());
+        IWebProxy systemProxy = WebRequest.DefaultWebProxy;
+
+        HttpClientHandler handler = new HttpClientHandler();
+
+        if (CrunchyrollManager.Instance.CrunOptions.ProxyEnabled && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.ProxyHost)){
+            handler = CreateHandler(true, CrunchyrollManager.Instance.CrunOptions.ProxyHost, CrunchyrollManager.Instance.CrunOptions.ProxyPort);
+            Console.Error.WriteLine($"Proxy is set: http://{CrunchyrollManager.Instance.CrunOptions.ProxyHost}:{CrunchyrollManager.Instance.CrunOptions.ProxyPort}");
+            client = new HttpClient(handler);
+        } else if (systemProxy != null){
+            Uri testUri = new Uri("https://icanhazip.com");
+            Uri? proxyUri = systemProxy.GetProxy(testUri);
+
+            if (proxyUri != null && proxyUri != testUri){
+                if (proxyUri is{ Host: "127.0.0.1", Port: 7890 }){
+                    Console.Error.WriteLine($"Proxy is set: {proxyUri}");
+                    handler = CreateHandler(true);
+                } else{
+                    Console.Error.WriteLine("No proxy will be used.");
+                    handler = CreateHandler(false);
+                }
+                
+                client = new HttpClient(handler);
+            } else{
+                Console.Error.WriteLine("No proxy is being used.");
+                client = new HttpClient(CreateHttpClientHandler());
+            }
+        } else{
+            Console.Error.WriteLine("No proxy is being used.");
+            client = new HttpClient(CreateHttpClientHandler());
+        }
 
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.9.0 Nintendo Switch/18.1.0.0 UE4/4.27");
@@ -70,9 +102,24 @@ public class HttpClientReq{
         };
     }
 
+    private HttpClientHandler CreateHandler(bool useProxy, string? proxyHost = null, int proxyPort = 0){
+        var handler = new HttpClientHandler{
+            CookieContainer = new CookieContainer(),
+            UseCookies = true,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
+            UseProxy = useProxy
+        };
 
-    public void SetETPCookie(string refresh_token){
-        // var cookie = new Cookie("etp_rt", refresh_token){
+        if (useProxy && proxyHost != null){
+            handler.Proxy = new WebProxy($"http://{proxyHost}:{proxyPort}");
+        }
+
+        return handler;
+    }
+
+
+    public void SetETPCookie(string refreshToken){
+        // var cookie = new Cookie("etp_rt", refreshToken){
         //     Domain = "crunchyroll.com",
         //     Path = "/",
         // };
@@ -81,8 +128,11 @@ public class HttpClientReq{
         //     Domain = "crunchyroll.com",
         //     Path = "/",
         // };
+        //
+        // handler.CookieContainer.Add(cookie);
+        // handler.CookieContainer.Add(cookie2);
 
-        AddCookie("crunchyroll.com", new Cookie("etp_rt", refresh_token));
+        AddCookie("crunchyroll.com", new Cookie("etp_rt", refreshToken));
         AddCookie("crunchyroll.com", new Cookie("c_locale", "en-US"));
     }
 

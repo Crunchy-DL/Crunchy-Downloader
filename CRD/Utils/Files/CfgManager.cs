@@ -31,6 +31,7 @@ public class CfgManager{
     public static readonly string PathWIDEVINE_DIR = Path.Combine(WorkingDirectory, "widevine");
 
     public static readonly string PathVIDEOS_DIR = Path.Combine(WorkingDirectory, "video");
+    public static readonly string PathENCODING_PRESETS_DIR = Path.Combine(WorkingDirectory, "presets");
     public static readonly string PathTEMP_DIR = Path.Combine(WorkingDirectory, "temp");
     public static readonly string PathFONTS_DIR = Path.Combine(WorkingDirectory, "video");
 
@@ -215,12 +216,12 @@ public class CfgManager{
             return;
         }
 
-        WriteJsonToFile(PathCrHistory, CrunchyrollManager.Instance.HistoryList);
+        WriteJsonToFileCompressed(PathCrHistory, CrunchyrollManager.Instance.HistoryList);
     }
 
     private static object fileLock = new object();
 
-    public static void WriteJsonToFile(string pathToFile, object obj){
+    public static void WriteJsonToFileCompressed(string pathToFile, object obj){
         try{
             // Check if the directory exists; if not, create it.
             string directoryPath = Path.GetDirectoryName(pathToFile);
@@ -232,6 +233,27 @@ public class CfgManager{
                 using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write))
                 using (var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal))
                 using (var streamWriter = new StreamWriter(gzipStream))
+                using (var jsonWriter = new JsonTextWriter(streamWriter){ Formatting = Formatting.Indented }){
+                    var serializer = new JsonSerializer();
+                    serializer.Serialize(jsonWriter, obj);
+                }
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred: {ex.Message}");
+        }
+    }
+    
+    public static void WriteJsonToFile(string pathToFile, object obj){
+        try{
+            // Check if the directory exists; if not, create it.
+            string directoryPath = Path.GetDirectoryName(pathToFile);
+            if (!Directory.Exists(directoryPath)){
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            lock (fileLock){
+                using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write))
+                using (var streamWriter = new StreamWriter(fileStream))
                 using (var jsonWriter = new JsonTextWriter(streamWriter){ Formatting = Formatting.Indented }){
                     var serializer = new JsonSerializer();
                     serializer.Serialize(jsonWriter, obj);

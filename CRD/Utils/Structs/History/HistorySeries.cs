@@ -317,6 +317,7 @@ public class HistorySeries : INotifyPropertyChanged{
     }
 
     public async Task FetchData(string? seasonId){
+        Console.WriteLine($"Fetching Data for: {SeriesTitle}");
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
         await CrunchyrollManager.Instance.History.CRUpdateSeries(SeriesId, seasonId);

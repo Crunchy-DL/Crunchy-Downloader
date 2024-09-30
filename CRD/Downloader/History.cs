@@ -22,10 +22,10 @@ public class History(){
     public async Task CRUpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
 
-        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "en-US", true);
+        CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja-JP", true);
 
         if (parsedSeries == null){
-            Console.Error.WriteLine("Parse Data Invalid");
+            Console.Error.WriteLine("Parse Data Invalid - series is maybe only available with VPN or got deleted");
             return;
         }
 
@@ -242,17 +242,37 @@ public class History(){
                         var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == crunchyEpisode.Id);
 
                         if (historyEpisode == null){
+                            
+                            var langList = new List<string>();
+            
+                            if (crunchyEpisode.Versions != null){
+                                langList.AddRange(crunchyEpisode.Versions.Select(version => version.AudioLocale));
+                            } else{
+                                langList.Add(crunchyEpisode.AudioLocale);
+                            }
+                            
                             var newHistoryEpisode = new HistoryEpisode{
                                 EpisodeTitle = GetEpisodeTitle(crunchyEpisode),
                                 EpisodeDescription = crunchyEpisode.Description,
                                 EpisodeId = crunchyEpisode.Id,
                                 Episode = crunchyEpisode.Episode,
-                                EpisodeSeasonNum = Helpers.ExtractNumberAfterS(crunchyEpisode.Identifier) ?? crunchyEpisode.SeasonNumber + "",
+                                EpisodeSeasonNum = Helpers.ExtractNumberAfterS(firstEpisode.Identifier) ?? firstEpisode.SeasonNumber + "",
                                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
+                                HistoryEpisodeAvailableDubLang = Languages.SortListByLangList(langList),
+                                HistoryEpisodeAvailableSoftSubs = Languages.SortListByLangList(crunchyEpisode.SubtitleLocales),
                             };
 
                             historySeason.EpisodesList.Add(newHistoryEpisode);
                         } else{
+                            
+                            var langList = new List<string>();
+            
+                            if (crunchyEpisode.Versions != null){
+                                langList.AddRange(crunchyEpisode.Versions.Select(version => version.AudioLocale));
+                            } else{
+                                langList.Add(crunchyEpisode.AudioLocale);
+                            }
+                            
                             //Update existing episode
                             historyEpisode.EpisodeTitle = GetEpisodeTitle(crunchyEpisode);
                             historyEpisode.SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _);
@@ -260,6 +280,9 @@ public class History(){
                             historyEpisode.EpisodeId = crunchyEpisode.Id;
                             historyEpisode.Episode = crunchyEpisode.Episode;
                             historyEpisode.EpisodeSeasonNum = Helpers.ExtractNumberAfterS(crunchyEpisode.Identifier) ?? crunchyEpisode.SeasonNumber + "";
+
+                            historyEpisode.HistoryEpisodeAvailableDubLang = Languages.SortListByLangList(langList);
+                            historyEpisode.HistoryEpisodeAvailableSoftSubs = Languages.SortListByLangList(crunchyEpisode.SubtitleLocales);
                         }
                     }
 
@@ -335,6 +358,14 @@ public class History(){
         if (cachedSeries == null || (cachedSeries.Data != null && cachedSeries.Data.First().Id != seriesId)){
             cachedSeries = await crunInstance.CrSeries.SeriesById(seriesId, string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang, true);
         } else{
+            if (cachedSeries?.Data != null){
+                var series = cachedSeries.Data.First();
+                historySeries.SeriesDescription = series.Description;
+                historySeries.ThumbnailImageUrl = GetSeriesThumbnail(cachedSeries);
+                historySeries.SeriesTitle = series.Title;
+                historySeries.HistorySeriesAvailableDubLang = Languages.SortListByLangList(series.AudioLocales);
+                historySeries.HistorySeriesAvailableSoftSubs = Languages.SortListByLangList(series.SubtitleLocales);
+            }
             return;
         }
 
@@ -343,8 +374,8 @@ public class History(){
             historySeries.SeriesDescription = series.Description;
             historySeries.ThumbnailImageUrl = GetSeriesThumbnail(cachedSeries);
             historySeries.SeriesTitle = series.Title;
-            historySeries.HistorySeriesAvailableDubLang = series.AudioLocales;
-            historySeries.HistorySeriesAvailableSoftSubs = series.SubtitleLocales;
+            historySeries.HistorySeriesAvailableDubLang = Languages.SortListByLangList(series.AudioLocales);
+            historySeries.HistorySeriesAvailableSoftSubs = Languages.SortListByLangList(series.SubtitleLocales);
         }
     }
 
@@ -474,6 +505,16 @@ public class History(){
         };
 
         foreach (var crunchyEpisode in seasonData){
+
+            var langList = new List<string>();
+            
+            if (crunchyEpisode.Versions != null){
+                langList.AddRange(crunchyEpisode.Versions.Select(version => version.AudioLocale));
+            } else{
+                langList.Add(crunchyEpisode.AudioLocale);
+            }
+            Languages.SortListByLangList(langList);
+            
             var newHistoryEpisode = new HistoryEpisode{
                 EpisodeTitle = GetEpisodeTitle(crunchyEpisode),
                 EpisodeDescription = crunchyEpisode.Description,
@@ -481,6 +522,8 @@ public class History(){
                 Episode = crunchyEpisode.Episode,
                 EpisodeSeasonNum = Helpers.ExtractNumberAfterS(firstEpisode.Identifier) ?? firstEpisode.SeasonNumber + "",
                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
+                HistoryEpisodeAvailableDubLang = langList,
+                HistoryEpisodeAvailableSoftSubs = crunchyEpisode.SubtitleLocales,
             };
 
             newSeason.EpisodesList.Add(newHistoryEpisode);

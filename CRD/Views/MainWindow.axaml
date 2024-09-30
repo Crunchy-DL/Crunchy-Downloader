@@ -60,12 +60,12 @@
                                                IconSource="Add" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Calendar" Tag="Calendar"
                                                IconSource="Calendar" />
-                        <ui:NavigationViewItem IsEnabled="{Binding FinishedLoading}" Classes="SampleAppNav" Content="History" Tag="History"
+                        <ui:NavigationViewItem IsEnabled="{Binding ProgramManager.FinishedLoading}" Classes="SampleAppNav" Content="History" Tag="History"
                                                IconSource="Library" />
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.FooterMenuItems>
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Update Available" Tag="UpdateAvailable"
-                                               IconSource="CloudDownload" Focusable="False" IsEnabled="{Binding UpdateAvailable}" />
+                                               IconSource="CloudDownload" Focusable="False" IsEnabled="{Binding ProgramManager.UpdateAvailable}" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Account" Tag="Account"
                                                IconSource="Contact" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Settings" Tag="Settings"

@@ -8,8 +8,10 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Media.Imaging;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll.Music;
@@ -288,6 +290,74 @@ public class Helpers{
         }
     }
 
+    public static async Task<(bool IsOk, int ErrorCode)> RunFFmpegWithPresetAsync(string inputFilePath, VideoPreset preset){
+        try{
+            string outputExtension = Path.GetExtension(inputFilePath);
+            string directory = Path.GetDirectoryName(inputFilePath);
+            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(inputFilePath);
+            string tempOutputFilePath = Path.Combine(directory, $"{fileNameWithoutExtension}_output{outputExtension}");
+
+            string additionalParams = string.Join(" ", preset.AdditionalParameters);
+            string qualityOption;
+            if (preset.Codec == "h264_nvenc" || preset.Codec == "hevc_nvenc"){
+                qualityOption = $"-cq {preset.Crf}"; // For NVENC
+            } else if (preset.Codec == "h264_qsv" || preset.Codec == "hevc_qsv"){
+                qualityOption = $"-global_quality {preset.Crf}"; // For Intel QSV
+            } else if (preset.Codec == "h264_amf" || preset.Codec == "hevc_amf"){
+                qualityOption = $"-qp {preset.Crf}"; // For AMD VCE
+            } else{
+                qualityOption = $"-crf {preset.Crf}"; // For software codecs like libx264/libx265
+            }
+
+            string ffmpegCommand = $"-loglevel warning -i \"{inputFilePath}\" -c:v {preset.Codec} {qualityOption} -vf \"scale={preset.Resolution},fps={preset.FrameRate}\" {additionalParams} \"{tempOutputFilePath}\"";
+            using (var process = new Process()){
+                process.StartInfo.FileName = CfgManager.PathFFMPEG;
+                process.StartInfo.Arguments = ffmpegCommand;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
+
+                process.OutputDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.WriteLine(e.Data);
+                    }
+                };
+
+                process.ErrorDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.Error.WriteLine($"{e.Data}");
+                    }
+                };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                bool isSuccess = process.ExitCode == 0;
+
+                if (isSuccess){
+                    // Delete the original input file
+                    File.Delete(inputFilePath);
+
+                    // Rename the output file to the original name
+                    File.Move(tempOutputFilePath, inputFilePath);
+                } else{
+                    // If something went wrong, delete the temporary output file
+                    File.Delete(tempOutputFilePath);
+                    Console.Error.WriteLine("FFmpeg processing failed.");
+                }
+
+                return (IsOk: isSuccess, ErrorCode: process.ExitCode);
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred: {ex.Message}");
+            return (IsOk: false, ErrorCode: -1);
+        }
+    }
+
     public static double CalculateCosineSimilarity(string text1, string text2){
         var vector1 = ComputeWordFrequency(text1);
         var vector2 = ComputeWordFrequency(text2);
@@ -368,13 +438,25 @@ public class Helpers{
     }
 
 
-    public static async Task<Bitmap?> LoadImage(string imageUrl){
+    public static async Task<Bitmap?> LoadImage(string imageUrl,int desiredWidth = 0,int desiredHeight = 0){
         try{
             using (var client = new HttpClient()){
                 var response = await client.GetAsync(imageUrl);
                 response.EnsureSuccessStatusCode();
                 using (var stream = await response.Content.ReadAsStreamAsync()){
-                    return new Bitmap(stream);
+                    
+                    var bitmap = new Bitmap(stream);
+
+                    if (desiredWidth != 0 && desiredHeight != 0){
+                        var scaledBitmap = bitmap.CreateScaledBitmap(new PixelSize(desiredWidth, desiredHeight));
+
+                        bitmap.Dispose();
+                        
+                        return scaledBitmap;
+                    }
+                    
+                    
+                    return bitmap;
                 }
             }
         } catch (Exception ex){

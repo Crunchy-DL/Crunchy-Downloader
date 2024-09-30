@@ -11,6 +11,9 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.SeriesPageView">
 
+    <UserControl.Resources>
+        <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
+    </UserControl.Resources>
 
     <Grid>
         <Grid Margin="10">
@@ -31,11 +34,11 @@
 
                 <StackPanel Orientation="Vertical">
 
-                    <Grid Margin="10" VerticalAlignment="Top" >
+                    <Grid Margin="10" VerticalAlignment="Top">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions> 
+                        </Grid.ColumnDefinitions>
                         <Image Grid.Column="0" Margin="10" Source="{Binding SelectedSeries.ThumbnailImage}" Width="240"
                                Height="360">
                         </Image>
@@ -63,6 +66,9 @@
                                     <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
                                             BorderThickness="0" CornerRadius="50"
                                             Command="{Binding SelectedSeries.OpenCrPage}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Open Crunchyroll Webpage" FontSize="15" />
+                                        </ToolTip.Tip>
                                         <Grid>
                                             <controls:ImageIcon Source="../Assets/crunchy_icon_round.png" Width="30" Height="30" />
                                         </Grid>
@@ -72,8 +78,24 @@
                                             BorderThickness="0" CornerRadius="50"
                                             IsVisible="{Binding SonarrAvailable}"
                                             Command="{Binding SelectedSeries.OpenSonarrPage}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Open Sonarr Webpage" FontSize="15" />
+                                        </ToolTip.Tip>
                                         <Grid>
                                             <controls:ImageIcon Source="../Assets/sonarr.png" Width="30" Height="30" />
+                                        </Grid>
+                                    </Button>
+
+                                    <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                            BorderThickness="0" CornerRadius="50"
+                                            IsVisible="{Binding SeriesFolderPathExists}"
+                                            Command="{Binding OpenFolderPath}">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Open Series Folder" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <Grid>
+                                            <!-- <controls:ImageIcon Source="../Assets/sonarr.png" Width="30" Height="30" /> -->
+                                            <controls:SymbolIcon Symbol="Folder" FontSize="20" Width="30" Height="30" />
                                         </Grid>
                                     </Button>
 
@@ -202,10 +224,10 @@
                                             </Border>
                                         </Popup>
                                     </StackPanel>
-                                    
+
                                     <StackPanel IsVisible="{Binding EditMode}">
-                                        <Button Width="30" Height="30" Margin="0 0 10 0" 
-                                                BorderThickness="0" 
+                                        <Button Width="30" Height="30" Margin="0 0 10 0"
+                                                BorderThickness="0"
                                                 IsVisible="{Binding SonarrConnected}"
                                                 Command="{Binding MatchSonarrSeries_Button}">
                                             <Grid>
@@ -213,7 +235,6 @@
                                             </Grid>
                                         </Button>
                                     </StackPanel>
-                                    
 
 
                                 </StackPanel>
@@ -247,15 +268,35 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <TextBlock Text="E"></TextBlock>
-                                                    <TextBlock Text="{Binding Episode}"></TextBlock>
-                                                    <TextBlock Text=" - "></TextBlock>
-                                                    <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
+                                                <StackPanel>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="E"></TextBlock>
+                                                        <TextBlock Text="{Binding Episode}"></TextBlock>
+                                                        <TextBlock Text=" - "></TextBlock>
+                                                        <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
+                                                    </StackPanel>
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock FontStyle="Italic"
+                                                                   FontSize="12"
+                                                                   Opacity="0.8" Text="Dubs: ">
+                                                        </TextBlock>
+                                                        <TextBlock FontStyle="Italic"
+                                                                   FontSize="12"
+                                                                   Opacity="0.8" Text="{Binding HistoryEpisodeAvailableDubLang, Converter={StaticResource UiListToStringConverter}}" />
+                                                    </StackPanel>
+                                                    <!-- <StackPanel Orientation="Horizontal" VerticalAlignment="Center"> -->
+                                                    <!--     <TextBlock FontStyle="Italic" -->
+                                                    <!--                FontSize="12" -->
+                                                    <!--                Opacity="0.8" Text="Subs: "> -->
+                                                    <!--     </TextBlock> -->
+                                                    <!--     <TextBlock FontStyle="Italic" -->
+                                                    <!--                FontSize="12" -->
+                                                    <!--                Opacity="0.8" Text="{Binding HistoryEpisodeAvailableSoftSubs, Converter={StaticResource UiListToStringConverter}}" /> -->
+                                                    <!-- </StackPanel> -->
                                                 </StackPanel>
 
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                     <StackPanel VerticalAlignment="Center" Margin="0 0 5 0"
                                                                 IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
 

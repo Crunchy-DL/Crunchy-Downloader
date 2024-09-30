@@ -13,6 +13,7 @@ using System.Xml;
 using Avalonia.Media;
 using CRD.Utils;
 using CRD.Utils.DRM;
+using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.Files;
 using CRD.Utils.HLS;
 using CRD.Utils.Muxing;
@@ -99,18 +100,19 @@ public class CrunchyrollManager{
         options.FileName = "${seriesTitle} - S${season}E${episode} [${height}p]";
         options.Partsize = 10;
         options.DlSubs = new List<string>{ "en-US" };
-        options.Skipmux = false;
+        options.SkipMuxing = false;
         options.MkvmergeOptions = new List<string>{ "--no-date", "--disable-track-statistics-tags", "--engage no_variable_data" };
         options.FfmpegOptions = new();
         options.DefaultAudio = "ja-JP";
         options.DefaultSub = "en-US";
         options.CcTag = "CC";
+        options.CcSubsFont = "Trebuchet MS";
         options.FsRetryTime = 5;
         options.Numbers = 2;
         options.Timeout = 15000;
         options.DubLang = new List<string>(){ "ja-JP" };
         options.SimultaneousDownloads = 2;
-        options.AccentColor = Colors.SlateBlue.ToString();
+        // options.AccentColor = Colors.SlateBlue.ToString();
         options.Theme = "System";
         options.SelectedCalendarLanguage = "en-us";
         options.CalendarDubFilter = "none";
@@ -145,7 +147,7 @@ public class CrunchyrollManager{
             HasPremium = false,
         };
 
-        Console.WriteLine($"Can Decrypt: {_widevine.canDecrypt}");
+        Console.WriteLine($"CDM available: {_widevine.canDecrypt}");
     }
 
     public async Task Init(){
@@ -157,7 +159,7 @@ public class CrunchyrollManager{
 
         if (CfgManager.CheckIfFileExists(CfgManager.PathCrToken)){
             Token = CfgManager.DeserializeFromFile<CrToken>(CfgManager.PathCrToken);
-            CrAuth.LoginWithToken();
+            await CrAuth.LoginWithToken();
         } else{
             await CrAuth.AuthAnonymous();
         }
@@ -180,6 +182,26 @@ public class CrunchyrollManager{
             }
 
             await SonarrClient.Instance.RefreshSonarr();
+        }
+
+        var jsonFiles = Directory.Exists(CfgManager.PathENCODING_PRESETS_DIR) ? Directory.GetFiles(CfgManager.PathENCODING_PRESETS_DIR, "*.json") :[];
+
+        foreach (var file in jsonFiles){
+            try{
+                // Read the content of the JSON file
+                var jsonContent = File.ReadAllText(file);
+
+                // Deserialize the JSON content into a MyClass object
+                var obj = Helpers.Deserialize<VideoPreset>(jsonContent, null);
+
+                if (obj != null){
+                    FfmpegEncoding.AddPreset(obj);
+                } else{
+                    Console.Error.WriteLine("Failed to add Preset to Available Presets List");
+                }
+            } catch (Exception ex){
+                Console.Error.WriteLine($"Failed to deserialize file {file}: {ex.Message}");
+            }
         }
     }
 
@@ -212,7 +234,7 @@ public class CrunchyrollManager{
             return false;
         }
 
-        if (options.Skipmux == false){
+        if (options.SkipMuxing == false){
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = true,
                 Percent = 100,
@@ -257,6 +279,21 @@ public class CrunchyrollManager{
 
                 foreach (var merger in mergers){
                     merger.CleanUp();
+
+                    if (CrunOptions.IsEncodeEnabled){
+                        data.DownloadProgress = new DownloadProgress(){
+                            IsDownloading = true,
+                            Percent = 100,
+                            Time = 0,
+                            DownloadSpeed = 0,
+                            Doing = "Encoding"
+                        };
+
+                        QueueManager.Instance.Queue.Refresh();
+
+                        await Helpers.RunFFmpegWithPresetAsync(merger?.options.Output, FfmpegEncoding.GetPreset(CrunOptions.EncodingPresetName));
+                    }
+
                     if (CrunOptions.DownloadToTempFolder){
                         await MoveFromTempFolder(merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
                     }
@@ -286,6 +323,20 @@ public class CrunchyrollManager{
                     result.merger.CleanUp();
                 }
 
+                if (CrunOptions.IsEncodeEnabled){
+                    data.DownloadProgress = new DownloadProgress(){
+                        IsDownloading = true,
+                        Percent = 100,
+                        Time = 0,
+                        DownloadSpeed = 0,
+                        Doing = "Encoding"
+                    };
+
+                    QueueManager.Instance.Queue.Refresh();
+
+                    await Helpers.RunFFmpegWithPresetAsync(result.merger?.options.Output, FfmpegEncoding.GetPreset(CrunOptions.EncodingPresetName));
+                }
+
                 if (CrunOptions.DownloadToTempFolder){
                     await MoveFromTempFolder(result.merger, data, res.TempFolderPath, res.Data.Where(e => e.Type == DownloadMediaType.Subtitle));
                 }
@@ -306,7 +357,32 @@ public class CrunchyrollManager{
             }
         } else{
             Console.WriteLine("Skipping mux");
+            res.Data.ForEach(file => Helpers.DeleteFile(file.Path + ".resume"));
+            if (CrunOptions.DownloadToTempFolder){
+                if (string.IsNullOrEmpty(res.TempFolderPath) || !Directory.Exists(res.TempFolderPath)){
+                    Console.WriteLine("Invalid or non-existent temp folder path.");
+                } else{
+                    // Move files
+                    foreach (var downloadedMedia in res.Data){
+                        await MoveFile(downloadedMedia.Path ?? string.Empty, res.TempFolderPath, data.DownloadPath ?? CfgManager.PathVIDEOS_DIR);
+                    }
+                }
+            }
+
+            data.DownloadProgress = new DownloadProgress(){
+                IsDownloading = true,
+                Done = true,
+                Percent = 100,
+                Time = 0,
+                DownloadSpeed = 0,
+                Doing = "Done - Skipped muxing"
+            };
+
+            if (CrunOptions.RemoveFinishedDownload){
+                QueueManager.Instance.Queue.Remove(data);
+            }
         }
+
 
         QueueManager.Instance.ActiveDownloads--;
         QueueManager.Instance.Queue.Refresh();
@@ -668,7 +744,12 @@ public class CrunchyrollManager{
                 List<string> compiledChapters = new List<string>();
 
                 if (options.Chapters){
-                    await ParseChapters(primaryVersion.Guid ?? mediaGuid, compiledChapters);
+                    await ParseChapters(mediaGuid, compiledChapters);
+
+                    if (compiledChapters.Count == 0 && primaryVersion.MediaGuid != null && mediaGuid != primaryVersion.MediaGuid){
+                        Console.Error.WriteLine("Chapters empty trying to get original version chapters - might not match with video");
+                        await ParseChapters(primaryVersion.MediaGuid, compiledChapters);
+                    }
                 }
 
                 #endregion
@@ -703,7 +784,7 @@ public class CrunchyrollManager{
                 var pbData = fetchPlaybackData.pbData;
 
                 List<string> hsLangs = new List<string>();
-                var pbStreams = pbData.Data?[0];
+                var pbStreams = pbData.Data;
                 var streams = new List<StreamDetailsPop>();
 
                 variables.Add(new Variable("title", data.EpisodeTitle ?? string.Empty, true));
@@ -712,34 +793,30 @@ public class CrunchyrollManager{
                 variables.Add(new Variable("seriesTitle", data.SeriesTitle ?? string.Empty, true));
                 variables.Add(new Variable("seasonTitle", data.SeasonTitle ?? string.Empty, true));
                 variables.Add(new Variable("season", !string.IsNullOrEmpty(data.Season) ? Math.Round(double.Parse(data.Season, CultureInfo.InvariantCulture), 1) : 0, false));
+                variables.Add(new Variable("dubs", string.Join(", ", data.SelectedDubs ??[]), true));
+
 
                 if (pbStreams?.Keys != null){
-                    foreach (var key in pbStreams.Keys){
-                        if ((key.Contains("hls") || key.Contains("dash")) &&
-                            !(key.Contains("hls") && key.Contains("drm")) &&
-                            !((!_widevine.canDecrypt || !File.Exists(CfgManager.PathMP4Decrypt)) && key.Contains("drm")) &&
-                            !key.Contains("trailer")){
-                            var pb = pbStreams[key].Select(v => {
-                                v.Value.HardsubLang = v.Value.HardsubLocale != null
-                                    ? Languages.FixAndFindCrLc(v.Value.HardsubLocale.GetEnumMemberValue()).Locale
-                                    : null;
-                                if (v.Value.HardsubLocale != null && v.Value.HardsubLang != null && !hsLangs.Contains(v.Value.HardsubLocale.GetEnumMemberValue())){
-                                    hsLangs.Add(v.Value.HardsubLang);
-                                }
-
-                                return new StreamDetailsPop{
-                                    Url = v.Value.Url,
-                                    HardsubLocale = v.Value.HardsubLocale,
-                                    HardsubLang = v.Value.HardsubLang,
-                                    AudioLang = v.Value.AudioLang,
-                                    Type = v.Value.Type,
-                                    Format = key,
-                                };
-                            }).ToList();
-
-                            streams.AddRange(pb);
+                    var pb = pbStreams.Select(v => {
+                        v.Value.HardsubLang = v.Value.HardsubLocale != null
+                            ? Languages.FixAndFindCrLc(v.Value.HardsubLocale.GetEnumMemberValue()).Locale
+                            : null;
+                        if (v.Value.HardsubLocale != null && v.Value.HardsubLang != null && !hsLangs.Contains(v.Value.HardsubLocale.GetEnumMemberValue())){
+                            hsLangs.Add(v.Value.HardsubLang);
                         }
-                    }
+
+                        return new StreamDetailsPop{
+                            Url = v.Value.Url,
+                            HardsubLocale = v.Value.HardsubLocale,
+                            HardsubLang = v.Value.HardsubLang,
+                            AudioLang = v.Value.AudioLang,
+                            Type = v.Value.Type,
+                            Format = "drm_adaptive_dash",
+                        };
+                    }).ToList();
+
+                    streams.AddRange(pb);
+
 
                     if (streams.Count < 1){
                         Console.WriteLine("No full streams found!");
@@ -773,19 +850,29 @@ public class CrunchyrollManager{
                             Console.WriteLine($"Selecting stream with {Languages.Locale2language(options.Hslang).Language} hardsubs");
                             streams = streams.Where((s) => s.HardsubLang != "-" && s.HardsubLang == options.Hslang).ToList();
                         } else{
-                            Console.Error.WriteLine($"Selected stream with {Languages.Locale2language(options.Hslang).Language} hardsubs not available");
+                            Console.Error.WriteLine($"Selected stream with {Languages.Locale2language(options.Hslang).CrLocale} hardsubs not available");
                             if (hsLangs.Count > 0){
                                 Console.Error.WriteLine("Try hardsubs stream: " + string.Join(", ", hsLangs));
                             }
 
-                            dlFailed = true;
+                            if (dlVideoOnce && CrunOptions.DlVideoOnce){
+                                streams = streams.Where((s) => {
+                                    if (s.HardsubLang != "-"){
+                                        return false;
+                                    }
 
-                            return new DownloadResponse{
-                                Data = new List<DownloadedMedia>(),
-                                Error = dlFailed,
-                                FileName = "./unknown",
-                                ErrorText = "Hardsubs not available"
-                            };
+                                    return true;
+                                }).ToList();
+                            } else{
+                                dlFailed = true;
+
+                                return new DownloadResponse{
+                                    Data = new List<DownloadedMedia>(),
+                                    Error = dlFailed,
+                                    FileName = "./unknown",
+                                    ErrorText = "Hardsubs not available"
+                                };
+                            }
                         }
                     } else{
                         streams = streams.Where((s) => {
@@ -805,7 +892,7 @@ public class CrunchyrollManager{
                             dlFailed = true;
                         }
 
-                        Console.WriteLine("Selecting raw stream");
+                        Console.WriteLine("Selecting stream");
                     }
 
                     StreamDetailsPop? curStream = null;
@@ -816,7 +903,7 @@ public class CrunchyrollManager{
 
                         for (int i = 0; i < streams.Count; i++){
                             string isSelected = options.Kstream == i + 1 ? "+" : " ";
-                            Console.WriteLine($"Full stream found! ({isSelected}{i + 1}: {streams[i].Type})");
+                            Console.WriteLine($"Full stream: ({isSelected}{i + 1}: {streams[i].Type})");
                         }
 
                         Console.WriteLine("Downloading video...");
@@ -983,7 +1070,7 @@ public class CrunchyrollManager{
 
 
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
-                                string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.Name ?? lang.Value.Name), variables, options.Numbers, options.Override).ToArray());
+                                string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale ?? lang.Value.Name), variables, options.Numbers, options.Override).ToArray());
 
                                 string tempFile = Path.Combine(FileNameManager.ParseFileName($"temp-{(currentVersion.Guid != null ? currentVersion.Guid : currentMediaId)}", variables, options.Numbers, options.Override)
                                     .ToArray());
@@ -1288,7 +1375,7 @@ public class CrunchyrollManager{
                         try{
                             // Parsing and constructing the file names
                             fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
-                            string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.Name), variables, options.Numbers, options.Override).ToArray());
+                            string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale), variables, options.Numbers, options.Override).ToArray());
                             if (Path.IsPathRooted(outFile)){
                                 tsFile = outFile;
                             } else{
@@ -1418,8 +1505,8 @@ public class CrunchyrollManager{
     private static async Task DownloadSubtitles(CrDownloadOptions options, PlaybackData pbData, string audDub, string fileName, List<DownloadedMedia> files, string fileDir, CrunchyEpMeta data, bool needsDelay,
         DownloadedMedia videoDownloadMedia){
         if (pbData.Meta != null && (pbData.Meta.Subtitles is{ Count: > 0 } || pbData.Meta.Captions is{ Count: > 0 })){
-            List<SubtitleInfo> subsData = pbData.Meta.Subtitles?.Values.ToList() ?? [];
-            List<Caption> capsData = pbData.Meta.Captions?.Values.ToList() ?? [];
+            List<SubtitleInfo> subsData = pbData.Meta.Subtitles?.Values.ToList() ??[];
+            List<Caption> capsData = pbData.Meta.Captions?.Values.ToList() ??[];
             var subsDataMapped = subsData.Select(s => {
                 var subLang = Languages.FixAndFindCrLc((s.Locale ?? Locale.DefaulT).GetEnumMemberValue());
                 return new{
@@ -1507,7 +1594,7 @@ public class CrunchyrollManager{
                             assBuilder.AppendLine("[V4+ Styles]");
                             assBuilder.AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
                                                   + "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding");
-                            assBuilder.AppendLine("Style: Default,Trebuchet MS,24,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,1,2,0010,0010,0018,1");
+                            assBuilder.AppendLine($"Style: Default,{options.CcSubsFont ?? "Trebuchet MS"},24,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,1,2,0010,0010,0018,1");
                             assBuilder.AppendLine();
                             assBuilder.AppendLine("[Events]");
                             assBuilder.AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
@@ -1665,7 +1752,7 @@ public class CrunchyrollManager{
     private async Task<(bool IsOk, PlaybackData pbData, string error)> FetchPlaybackData(string mediaId, string mediaGuidId, bool music){
         var temppbData = new PlaybackData{
             Total = 0,
-            Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>()
+            Data = new Dictionary<string, StreamDetails>()
         };
 
         var playbackEndpoint = $"https://cr-play-service.prd.crunchyrollsvc.com/v1/{(music ? "music/" : "")}{mediaGuidId}/{CrunOptions.StreamEndpoint}/play";
@@ -1719,7 +1806,7 @@ public class CrunchyrollManager{
     private async Task<PlaybackData> ProcessPlaybackResponseAsync(string responseContent, string mediaId, string mediaGuidId){
         var temppbData = new PlaybackData{
             Total = 0,
-            Data = new List<Dictionary<string, Dictionary<string, StreamDetails>>>()
+            Data = new Dictionary<string, StreamDetails>()
         };
 
         var playStream = Helpers.Deserialize<CrunchyStreamData>(responseContent, SettingsJsonSerializerSettings);
@@ -1745,9 +1832,7 @@ public class CrunchyrollManager{
             HardsubLocale = Locale.DefaulT
         };
 
-        temppbData.Data.Add(new Dictionary<string, Dictionary<string, StreamDetails>>{
-            { "drm_adaptive_dash", derivedPlayCrunchyStreams }
-        });
+        temppbData.Data = derivedPlayCrunchyStreams;
         temppbData.Total = 1;
 
         temppbData.Meta = new PlaybackMeta{
@@ -1903,7 +1988,7 @@ public class CrunchyrollManager{
                 return true;
             }
 
-            Console.WriteLine("Old Chapter API request failed");
+            Console.Error.WriteLine("Old Chapter API request failed");
             return false;
         }
 

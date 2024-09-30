@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Generic;
+using System.ComponentModel;
 using System.Threading.Tasks;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
@@ -43,6 +44,12 @@ public class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("sonarr_absolut_number")]
     public string? SonarrAbsolutNumber{ get; set; }
+    
+    [JsonProperty("history_episode_available_soft_subs")]
+    public List<string> HistoryEpisodeAvailableSoftSubs{ get; set; } =[];
+
+    [JsonProperty("history_episode_available_dub_lang")]
+    public List<string> HistoryEpisodeAvailableDubLang{ get; set; } =[];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

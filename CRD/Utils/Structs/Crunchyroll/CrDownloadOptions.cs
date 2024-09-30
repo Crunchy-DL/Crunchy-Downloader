@@ -69,8 +69,17 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "include_signs_subs", ApplyNamingConventions = false)]
     public bool IncludeSignsSubs{ get; set; }
     
+    [YamlMember(Alias = "mux_signs_subs_flag", ApplyNamingConventions = false)]
+    public bool SignsSubsAsForced{ get; set; }
+    
     [YamlMember(Alias = "include_cc_subs", ApplyNamingConventions = false)]
     public bool IncludeCcSubs{ get; set; }
+    
+    [YamlMember(Alias = "cc_subs_font", ApplyNamingConventions = false)]
+    public string? CcSubsFont{ get; set; }
+    
+    [YamlMember(Alias = "mux_cc_subs_flag", ApplyNamingConventions = false)]
+    public bool CcSubsMuxingFlag{ get; set; }
     
     [YamlMember(Alias = "mux_mp4", ApplyNamingConventions = false)]
     public bool Mp4{ get; set; }
@@ -117,11 +126,17 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "keep_dubs_seperate", ApplyNamingConventions = false)]
     public bool KeepDubsSeperate{ get; set; }
 
-    [YamlIgnore]
-    public bool? Skipmux{ get; set; }
+    [YamlMember(Alias = "mux_skip_muxing", ApplyNamingConventions = false)]
+    public bool SkipMuxing{ get; set; }
 
     [YamlMember(Alias = "mux_sync_dubs", ApplyNamingConventions = false)]
     public bool SyncTiming{ get; set; }
+    
+    [YamlMember(Alias = "encode_enabled", ApplyNamingConventions = false)]
+    public bool IsEncodeEnabled{ get; set; }
+    
+    [YamlMember(Alias = "encode_preset", ApplyNamingConventions = false)]
+    public string? EncodingPresetName{ get; set; }
 
     [YamlIgnore]
     public bool Nocleanup{ get; set; }
@@ -192,4 +207,12 @@ public class CrDownloadOptions{
     [YamlMember(Alias = "download_speed_limit", ApplyNamingConventions = false)]
     public int DownloadSpeedLimit{ get; set; }
     
+    [YamlMember(Alias = "proxy_enabled", ApplyNamingConventions = false)]
+    public bool ProxyEnabled{ get; set; }
+    
+    [YamlMember(Alias = "proxy_host", ApplyNamingConventions = false)]
+    public string? ProxyHost{ get; set; }
+    
+    [YamlMember(Alias = "proxy_port", ApplyNamingConventions = false)]
+    public int ProxyPort{ get; set; }
 }

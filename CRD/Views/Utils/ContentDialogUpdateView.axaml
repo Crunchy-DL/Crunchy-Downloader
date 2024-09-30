@@ -9,8 +9,7 @@
              x:Class="CRD.Views.Utils.ContentDialogUpdateView">
     
     <StackPanel Spacing="10" MinWidth="400">
-        
+        <TextBlock Text="Please wait while the update is being downloaded..." HorizontalAlignment="Center" Margin="0,10,0,20"/>
         <ProgressBar Minimum="0" Maximum="100" Value="{Binding Progress}" HorizontalAlignment="Center" VerticalAlignment="Center" Width="350"/>
-        
     </StackPanel>
 </UserControl>

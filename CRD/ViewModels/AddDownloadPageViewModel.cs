@@ -4,9 +4,8 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Net.Http;
+using System.Runtime;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
@@ -17,11 +16,7 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll.Music;
-using CRD.Views;
-using DynamicData;
-using FluentAvalonia.Core;
-using ReactiveUI;
-
+// ReSharper disable InconsistentNaming
 
 namespace CRD.ViewModels;
 
@@ -59,9 +54,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     [ObservableProperty]
     private bool _searchPopupVisible = false;
 
-    public ObservableCollection<ItemModel> Items{ get; } = new();
+    public ObservableCollection<ItemModel> Items{ get; set; } = new();
     public ObservableCollection<CrBrowseSeries> SearchItems{ get; set; } = new();
-    public ObservableCollection<ItemModel> SelectedItems{ get; } = new();
+    public ObservableCollection<ItemModel> SelectedItems{ get; set;} = new();
 
     [ObservableProperty]
     public CrBrowseSeries _selectedSearchItem;
@@ -69,7 +64,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     [ObservableProperty]
     public ComboBoxItem _currentSelectedSeason;
 
-    public ObservableCollection<ComboBoxItem> SeasonList{ get; } = new();
+    public ObservableCollection<ComboBoxItem> SeasonList{ get;set; } = new();
 
     private Dictionary<string, List<ItemModel>> episodesBySeason = new();
 
@@ -80,9 +75,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     private CrunchyMusicVideoList? currentMusicVideoList;
 
     private bool CurrentSeasonFullySelected = false;
-
-    private readonly SemaphoreSlim _updateSearchSemaphore = new SemaphoreSlim(1, 1);
-
+    
     public AddDownloadPageViewModel(){
         SelectedItems.CollectionChanged += OnSelectedItemsChanged;
     }
@@ -95,7 +88,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             return;
         }
 
-        var searchResults = await CrunchyrollManager.Instance.CrSeries.Search(value, CrunchyrollManager.Instance.CrunOptions.HistoryLang);
+        var searchResults = await CrunchyrollManager.Instance.CrSeries.Search(value, CrunchyrollManager.Instance.CrunOptions.HistoryLang, true);
 
         var searchItems = searchResults?.Data?.First().Items;
         SearchItems.Clear();
@@ -250,6 +243,11 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         ButtonEnabled = false;
         SearchVisible = true;
         SlectSeasonVisible = false;
+        
+        //TODO - find a better way to reduce ram usage
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect();
+        
     }
 
     private async Task HandleUrlInputAsync(){
@@ -335,7 +333,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
         var list = await CrunchyrollManager.Instance.CrSeries.ListSeriesId(
             id, DetermineLocale(locale),
-            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
+            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true), true);
 
         SetLoadingState(false);
 
@@ -428,6 +426,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     partial void OnCurrentSelectedSeasonChanging(ComboBoxItem? oldValue, ComboBoxItem newValue){
+        if(SelectedItems == null) return;
         foreach (var selectedItem in SelectedItems){
             if (!selectedEpisodes.Contains(selectedItem.AbsolutNum)){
                 selectedEpisodes.Add(selectedItem.AbsolutNum);
@@ -444,6 +443,8 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void OnSelectedItemsChanged(object? sender, NotifyCollectionChangedEventArgs e){
+        if(Items == null) return;
+        
         CurrentSeasonFullySelected = Items.All(item => SelectedItems.Contains(item));
 
         if (CurrentSeasonFullySelected){
@@ -510,13 +511,23 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         return await CrunchyrollManager.Instance.CrSeries.ListSeriesId(
             seriesId,
             locale,
-            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true));
+            new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true), true);
     }
 
     private void SearchPopulateEpisodesBySeason(){
         if (currentSeriesList?.List == null){
             return;
         }
+
+        Items.Clear();
+        SelectedItems.Clear();
+        episodesBySeason.Clear();
+        SeasonList.Clear();
+        
+        //TODO - find a better way to reduce ram usage
+        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+        GC.Collect();
+
 
         foreach (var episode in currentSeriesList.Value.List){
             var seasonKey = "S" + episode.Season;
@@ -584,6 +595,30 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             ButtonTextSelectSeason = "Select Season";
         }
     }
+
+    public void Dispose(){
+
+            foreach (var itemModel in Items){
+                itemModel.ImageBitmap?.Dispose(); // Dispose the bitmap if it exists
+                itemModel.ImageBitmap = null; // Nullify the reference to avoid lingering references
+            }
+
+            // Clear collections and other managed resources
+            Items.Clear();
+            Items = null;
+            SearchItems.Clear();
+            SearchItems = null;
+            SelectedItems.Clear();
+            SelectedItems = null;
+            SeasonList.Clear();
+            SeasonList = null;
+            episodesBySeason.Clear();
+            episodesBySeason = null;
+            selectedEpisodes.Clear();
+            selectedEpisodes = null;
+     
+    }
+
 }
 
 public class ItemModel(string id, string imageUrl, string description, string time, string title, string season, string episode, string absolutNum, List<string> availableAudios) : INotifyPropertyChanged{
@@ -605,7 +640,7 @@ public class ItemModel(string id, string imageUrl, string description, string ti
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public async void LoadImage(string url){
-        ImageBitmap = await Helpers.LoadImage(url);
+        ImageBitmap = await Helpers.LoadImage(url,208,117);
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageBitmap)));
     }
 }

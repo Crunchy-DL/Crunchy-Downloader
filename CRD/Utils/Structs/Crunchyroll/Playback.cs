@@ -5,7 +5,7 @@ namespace CRD.Utils.Structs.Crunchyroll;
 
 public class PlaybackData{
     public int Total{ get; set; }
-    public List<Dictionary<string, Dictionary<string, StreamDetails>>>? Data{ get; set; }
+    public  Dictionary<string, StreamDetails>? Data{ get; set; }
     public PlaybackMeta? Meta{ get; set; }
 }
 

@@ -10,7 +10,7 @@ public class StreamError{
     public string Error{ get; set; }
 
     [JsonPropertyName("activeStreams")]
-    public List<ActiveStream> ActiveStreams{ get; set; }
+    public List<ActiveStream> ActiveStreams{ get; set; } = new ();
 
     public static StreamError? FromJson(string json){
         try{

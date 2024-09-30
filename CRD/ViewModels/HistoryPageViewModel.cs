@@ -29,10 +29,10 @@ namespace CRD.ViewModels;
 public partial class HistoryPageViewModel : ViewModelBase{
     public ObservableCollection<HistorySeries> Items{ get; }
     public ObservableCollection<HistorySeries> FilteredItems{ get; }
-
+    
     [ObservableProperty]
-    private static bool _fetchingData;
-
+    private ProgramManager _programManager;
+    
     [ObservableProperty]
     private HistorySeries _selectedSeries;
 
@@ -112,6 +112,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
     private static string _progressText;
 
     public HistoryPageViewModel(){
+        
+        ProgramManager = ProgramManager.Instance;
+        
         if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
             SonarrAvailable = CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
         } else{
@@ -317,7 +320,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public void NavToSeries(){
-        if (FetchingData){
+        if (ProgramManager.FetchingData){
             return;
         }
 
@@ -326,21 +329,21 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task RefreshAll(){
-        FetchingData = true;
-        RaisePropertyChanged(nameof(FetchingData));
+        ProgramManager.FetchingData = true;
+        RaisePropertyChanged(nameof(ProgramManager.FetchingData));
         foreach (var item in FilteredItems){
             item.SetFetchingData();
         }
 
         for (int i = 0; i < FilteredItems.Count; i++){
-            FetchingData = true;
-            RaisePropertyChanged(nameof(FetchingData));
+            ProgramManager.FetchingData = true;
+            RaisePropertyChanged(nameof(ProgramManager.FetchingData));
             await FilteredItems[i].FetchData("");
             FilteredItems[i].UpdateNewEpisodes();
         }
 
-        FetchingData = false;
-        RaisePropertyChanged(nameof(FetchingData));
+        ProgramManager.FetchingData = false;
+        RaisePropertyChanged(nameof(ProgramManager.FetchingData));
         CrunchyrollManager.Instance.History.SortItems();
     }
 
@@ -367,7 +370,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
     public async Task AddMissingSonarrSeriesToHistory(){
         SonarrOptionsOpen = false;
         AddingMissingSonarrSeries = true;
-        FetchingData = true;
+        ProgramManager.FetchingData = true;
 
         var crInstance = CrunchyrollManager.Instance;
 
@@ -413,7 +416,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         ProgressText = "";
         AddingMissingSonarrSeries = false;
-        FetchingData = false;
+        ProgramManager.FetchingData = false;
         if (SelectedFilter != null){
             OnSelectedFilterChanged(SelectedFilter);
         }

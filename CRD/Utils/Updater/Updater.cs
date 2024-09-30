@@ -11,13 +11,14 @@ using Newtonsoft.Json;
 namespace CRD.Utils.Updater;
 
 public class Updater : INotifyPropertyChanged{
+    
+    public double progress = 0;
+    
     #region Singelton
-
+    
     private static Updater? _instance;
     private static readonly object Padlock = new();
-
-    public double progress = 0;
-
+    
     public static Updater Instance{
         get{
             if (_instance == null){
@@ -48,7 +49,9 @@ public class Updater : INotifyPropertyChanged{
 
     public async Task<bool> CheckForUpdatesAsync(){
         try{
-            using (var client = new HttpClient()){
+            HttpClientHandler handler = new HttpClientHandler();
+            handler.UseProxy = false;
+            using (var client = new HttpClient(handler)){
                 client.DefaultRequestHeaders.Add("User-Agent", "C# App");
                 var response = await client.GetStringAsync(apiEndpoint);
                 var releaseInfo = Helpers.Deserialize<dynamic>(response,null);

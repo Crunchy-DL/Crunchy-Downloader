@@ -89,7 +89,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         if (epMeta.SelectedDubs == null || epMeta.SelectedDubs.Count < 1){
             return "";
         }
-        
+
         return epMeta.SelectedDubs.Aggregate("Dub: ", (current, crunOptionsDlDub) => current + (crunOptionsDlDub + " "));
     }
 
@@ -196,18 +196,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     public async Task LoadImage(){
-        try{
-            using (var client = new HttpClient()){
-                var response = await client.GetAsync(ImageUrl);
-                response.EnsureSuccessStatusCode();
-                using (var stream = await response.Content.ReadAsStreamAsync()){
-                    ImageBitmap = new Bitmap(stream);
-                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageBitmap)));
-                }
-            }
-        } catch (Exception ex){
-            // Handle exceptions
-            Console.Error.WriteLine("Failed to load image: " + ex.Message);
-        }
+        ImageBitmap = await Helpers.LoadImage(ImageUrl, 208, 117);
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ImageBitmap)));
     }
 }

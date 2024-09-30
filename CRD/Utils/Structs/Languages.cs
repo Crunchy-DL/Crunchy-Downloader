@@ -12,7 +12,7 @@ public class Languages{
         new(){ CrLocale = "en-US", Locale = "en", Code = "eng", Name = "English" },
         new(){ CrLocale = "de-DE", Locale = "de", Code = "deu", Name = "German" },
         new(){ CrLocale = "en-IN", Locale = "en-IN", Code = "eng", Name = "English (India)" },
-        new(){ CrLocale = "es-LA", Locale = "es-419", Code = "spa", Name = "Spanish", Language = "Latin American Spanish" },
+        new(){ CrLocale = "es-LA", Locale = "es-LA", Code = "spa", Name = "Spanish", Language = "Latin American Spanish" },
         new(){ CrLocale = "es-419", Locale = "es-419", Code = "spa-419", Name = "Spanish", Language = "Latin American Spanish" },
         new(){ CrLocale = "es-ES", Locale = "es-ES", Code = "spa-ES", Name = "Castilian", Language = "European Spanish" },
         new(){ CrLocale = "pt-BR", Locale = "pt-BR", Code = "por", Name = "Portuguese", Language = "Brazilian Portuguese" },
@@ -27,6 +27,7 @@ public class Languages{
         // new(){ locale = "zh", code = "cmn", name = "Chinese (Mandarin, PRC)" },
         new(){ CrLocale = "zh-CN", Locale = "zh-CN", Code = "zho", Name = "Chinese (Mainland China)" },
         new(){ CrLocale = "zh-TW", Locale = "zh-TW", Code = "chi", Name = "Chinese (Taiwan)" },
+        new(){ CrLocale = "zh-HK", Locale = "zh-HK", Code = "zho-HK", Name = "Chinese (Hong Kong)" },
         new(){ CrLocale = "ko-KR", Locale = "ko", Code = "kor", Name = "Korean" },
         new(){ CrLocale = "ca-ES", Locale = "ca-ES", Code = "cat", Name = "Catalan" },
         new(){ CrLocale = "pl-PL", Locale = "pl-PL", Code = "pol", Name = "Polish" },
@@ -36,9 +37,28 @@ public class Languages{
         new(){ CrLocale = "vi-VN", Locale = "vi-VN", Code = "vie", Name = "Vietnamese", Language = "Tiếng Việt" },
         new(){ CrLocale = "id-ID", Locale = "id-ID", Code = "ind", Name = "Indonesian", Language = "Bahasa Indonesia" },
         new(){ CrLocale = "te-IN", Locale = "te-IN", Code = "tel", Name = "Telugu (India)", Language = "తెలుగు" },
-        new(){ CrLocale = "id-ID", Locale = "id", Code = "in", Name = "Indonesian " }
     };
-    
+
+    public static List<string> SortListByLangList(List<string> langList){
+        var orderMap = languages.Select((value, index) => new { Value = value.CrLocale, Index = index })
+            .ToDictionary(x => x.Value, x => x.Index);
+        langList.Sort((x, y) =>
+        {
+            bool xExists = orderMap.ContainsKey(x);
+            bool yExists = orderMap.ContainsKey(y);
+
+            if (xExists && yExists)
+                return orderMap[x].CompareTo(orderMap[y]);  // Sort by main list order
+            else if (xExists)
+                return -1;  // x comes before any missing value
+            else if (yExists)
+                return 1;  // y comes before any missing value
+            else
+                return string.Compare(x, y);  // Sort alphabetically or by another logic for missing values
+        });
+
+        return langList;
+    }
 
     public static LanguageItem FixAndFindCrLc(string cr_locale){
         if (string.IsNullOrEmpty(cr_locale)){
@@ -54,7 +74,7 @@ public class Languages{
         string fileName = $"{fnOutput}";
 
         if (addIndexAndLangCode){
-            fileName += $".{subsIndex}.{langItem.Code}";
+            fileName += $".{subsIndex}.{langItem.CrLocale}";
         }
         
         //removed .{langItem.language} from file name at end

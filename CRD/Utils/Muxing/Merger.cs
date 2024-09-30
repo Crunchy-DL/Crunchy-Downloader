@@ -135,8 +135,7 @@ public class Merger{
             audioIndex++;
         }
 
-        args.Add("-acodec libmp3lame");
-        args.Add("-ab 192k");
+        args.Add("-c:a copy");
         args.Add($"\"{options.Output}\"");
         return string.Join(" ", args);
     }
@@ -190,6 +189,7 @@ public class Merger{
 
         if (options.Subtitles.Count > 0){
             foreach (var subObj in options.Subtitles){
+                bool isForced = false;
                 if (subObj.Delay.HasValue){
                     double delay = subObj.Delay ?? 0;
                     args.Add($"--sync 0:{delay}");
@@ -206,9 +206,18 @@ public class Merger{
                     args.Add("--default-track 0");
                     if (CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay){
                         args.Add("--forced-track 0:yes");
+                        isForced = true;
                     }
                 } else{
                     args.Add("--default-track 0:0");
+                }
+                
+                if (subObj.ClosedCaption == true && CrunchyrollManager.Instance.CrunOptions.CcSubsMuxingFlag){
+                    args.Add("--hearing-impaired-flag 0:yes");
+                }
+
+                if (subObj.Signs == true && CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced && !isForced){
+                    args.Add("--forced-track 0:yes");
                 }
 
                 args.Add($"\"{subObj.File}\"");
@@ -245,13 +254,21 @@ public class Merger{
 
 
     public async Task<double> ProcessVideo(string baseVideoPath, string compareVideoPath){
-        var tempDir = Path.GetTempPath(); //TODO - maybe move this out of temp
-        var baseFramesDir = Path.Combine(tempDir, "base_frames");
-        var compareFramesDir = Path.Combine(tempDir, "compare_frames");
-
-        Directory.CreateDirectory(baseFramesDir);
-        Directory.CreateDirectory(compareFramesDir);
-
+        string baseFramesDir;
+        string compareFramesDir;
+        try{
+            var tempDir = CfgManager.PathTEMP_DIR;
+            baseFramesDir = Path.Combine(tempDir, "base_frames");
+            compareFramesDir = Path.Combine(tempDir, "compare_frames");
+            
+            Directory.CreateDirectory(baseFramesDir);
+            Directory.CreateDirectory(compareFramesDir);
+            
+        } catch (Exception e){
+            Console.Error.WriteLine(e);
+            return 0;
+        }
+        
         var extractFramesBase = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDir, 0, 60);
         var extractFramesCompare = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDir, 0, 60);
 

@@ -39,8 +39,15 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
                                 <!-- Image -->
-                                <Image Grid.Column="0" Width="208" Height="117" Source="{Binding ImageBitmap}"
-                                       Stretch="Fill" />
+                                <!-- <Image Grid.Column="0" Width="208" Height="117" Source="{Binding ImageBitmap}" -->
+                                <!--        Stretch="Fill" /> -->
+                                
+                                <Grid>
+                                    <Image HorizontalAlignment="Center" Width="208" Height="117" Source="../Assets/coming_soon_ep.jpg" />
+                                    <Image Grid.Column="0" Width="208" Height="117" Source="{Binding ImageBitmap}"
+                                           Stretch="Fill" />
+                                </Grid>
+                                
 
                                 <!-- Text Content -->
                                 <Grid Grid.Column="1" Margin="10" >

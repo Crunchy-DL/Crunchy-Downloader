@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:CRD.ViewModels"
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:structs="clr-namespace:CRD.Utils.Structs"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="vm:SettingsPageViewModel"
              x:Class="CRD.Views.SettingsPageView"
@@ -51,7 +52,8 @@
                                 <ListBox x:Name="ListBoxDubsSelection" SelectionMode="Multiple,Toggle" Width="210"
                                          MaxHeight="400"
                                          ItemsSource="{Binding DubLangList}"
-                                         SelectedItems="{Binding SelectedDubLang}">
+                                         SelectedItems="{Binding SelectedDubLang}"
+                                         PointerWheelChanged="ListBox_PointerWheelChanged">
                                 </ListBox>
                             </Border>
                         </Popup>
@@ -101,7 +103,8 @@
                             <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
                                 <ListBox x:Name="listBoxSubsSelection" SelectionMode="Multiple,Toggle" Width="210"
                                          MaxHeight="400"
-                                         ItemsSource="{Binding SubLangList}" SelectedItems="{Binding SelectedSubLang}">
+                                         ItemsSource="{Binding SubLangList}" SelectedItems="{Binding SelectedSubLang}"
+                                         PointerWheelChanged="ListBox_PointerWheelChanged">
                                 </ListBox>
                             </Border>
                         </Popup>
@@ -120,17 +123,77 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Include Signs Subtitles ">
+                <controls:SettingsExpanderItem Content="Signs Subtitles " Description="Download Signs (Forced) Subtitles">
                     <controls:SettingsExpanderItem.Footer>
-                        <CheckBox IsChecked="{Binding IncludeSignSubs}"> </CheckBox>
-                    </controls:SettingsExpanderItem.Footer>
-                </controls:SettingsExpanderItem>
+                        
+                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding IncludeSignSubs}"> </CheckBox>
 
-                <controls:SettingsExpanderItem Content="Include CC Subtitles ">
+                        <!-- <StackPanel> -->
+                        <!-- -->
+                        <!--     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"> -->
+                        <!--         <TextBlock VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 5 0" Text="Enabled"></TextBlock> -->
+                        <!--         <CheckBox HorizontalAlignment="Right" IsChecked="{Binding IncludeSignSubs}"> </CheckBox> -->
+                        <!--     </StackPanel> -->
+                        <!-- -->
+                        <!--     <StackPanel Orientation="Horizontal" IsVisible="{Binding IncludeSignSubs}"> -->
+                        <!--         <TextBlock VerticalAlignment="Center" Margin="0 0 5 0" Text="Mark as forced in mkv muxing"></TextBlock> -->
+                        <!--         <CheckBox IsChecked="{Binding SignsSubsAsForced}"> </CheckBox> -->
+                        <!--     </StackPanel> -->
+                        <!-- -->
+                        <!-- </StackPanel> -->
+
+
+                    </controls:SettingsExpanderItem.Footer>
+                    
+                    
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding IncludeSignSubs}" Content="Signs Subtitles" Description="Mark as forced in mkv muxing">
                     <controls:SettingsExpanderItem.Footer>
-                        <CheckBox IsChecked="{Binding IncludeCcSubs}"> </CheckBox>
+                        <CheckBox IsChecked="{Binding SignsSubsAsForced}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+
+                <controls:SettingsExpanderItem Content="CC Subtitles " Description="Download CC Subtitles">
+                    <controls:SettingsExpanderItem.Footer>
+                        
+                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding IncludeCcSubs}"> </CheckBox>
+                        
+                        <!-- <StackPanel> -->
+                        <!--     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"> -->
+                        <!--         <TextBlock VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 5 0" Text="Enabled"></TextBlock> -->
+                        <!--         <CheckBox HorizontalAlignment="Right" IsChecked="{Binding IncludeCcSubs}"> </CheckBox> -->
+                        <!--     </StackPanel> -->
+                            <!-- <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" IsVisible="{Binding IncludeCcSubs}"> -->
+                            <!--     <TextBlock VerticalAlignment="Center" Margin="0 0 5 0" Text="Mark as hearing impaired sub in mkv muxing"></TextBlock> -->
+                            <!--     <CheckBox IsChecked="{Binding CCSubsMuxingFlag}"> </CheckBox> -->
+                            <!-- </StackPanel> -->
+                            <!-- -->
+                            <!-- <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" IsVisible="{Binding IncludeCcSubs}"> -->
+                            <!--     <TextBlock VerticalAlignment="Center" Margin="0 0 5 0" Text="Font"></TextBlock> -->
+                            <!--     <TextBox HorizontalAlignment="Left" MinWidth="250" -->
+                            <!--              Text="{Binding CCSubsFont}" /> -->
+                            <!-- </StackPanel> -->
+                        <!-- </StackPanel> -->
+                    </controls:SettingsExpanderItem.Footer>
+                    
+                    
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding IncludeCcSubs}" Content="CC Subtitles" Description="Mark as hearing impaired sub in mkv muxing">
+                    <controls:SettingsExpanderItem.Footer>
+                                <CheckBox IsChecked="{Binding CCSubsMuxingFlag}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding IncludeCcSubs}" Content="CC Subtitles" Description="Font">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding CCSubsFont}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
 
             </controls:SettingsExpander>
 
@@ -302,7 +365,7 @@
                 </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Filename"
-                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width}">
+                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs} - Folder with \\">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox Name="FileNameTextBox" HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding FileName}" />
@@ -320,19 +383,25 @@
                                        Description="MKVMerge and FFMpeg Settings"
                                        IsExpanded="False">
 
-                <controls:SettingsExpanderItem Content="MP4" Description="Outputs a mp4 instead of an mkv - not recommended to use this option">
+                <controls:SettingsExpanderItem Content="Skip Muxing">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SkipMuxing}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="MP4" Description="Outputs a mp4 instead of a mkv - not recommended to use this option">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Keep Subtitles separate">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Keep Subtitles separate">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SkipSubMux}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Default Audio ">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Default Audio ">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                                   ItemsSource="{Binding DefaultDubLangList}"
@@ -342,7 +411,7 @@
                 </controls:SettingsExpanderItem>
 
 
-                <controls:SettingsExpanderItem Content="Default Subtitle ">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Default Subtitle ">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel Orientation="Vertical">
                             <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
@@ -355,27 +424,27 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Default Subtitle Signs" Description="Will set the signs subtitle as default instead">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Default Subtitle Signs" Description="Will set the signs subtitle as default instead">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DefaultSubSigns}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="File title"
-                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width}">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="File title"
+                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs}">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding FileTitle}" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Include Episode description">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Include Episode description">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding IncludeEpisodeDescription}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Episode description Language">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Episode description Language">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                                   ItemsSource="{Binding DescriptionLangList}"
@@ -384,13 +453,13 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Sync Timings" Description="Does not work for all episodes but for the ones that only have a different intro">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Sync Timings" Description="Does not work for all episodes but for the ones that only have a different intro">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SyncTimings}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Additional MKVMerge Options">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Additional MKVMerge Options">
                     <controls:SettingsExpanderItem.Footer>
 
                         <StackPanel>
@@ -412,10 +481,10 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1"
+                                        <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
                                                 CornerRadius="10" Margin="2">
                                             <StackPanel Orientation="Horizontal" Margin="5">
-                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0" />
+                                                <TextBlock Text="{Binding stringValue}" Margin="5,0" />
                                                 <Button Content="X" FontSize="10" VerticalAlignment="Center"
                                                         HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
                                                         Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveMkvMergeParam}"
@@ -426,12 +495,10 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-
-
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Additional FFMpeg Options">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Additional FFMpeg Options">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
@@ -452,10 +519,10 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Border BorderBrush="#4a4a4a" Background="#4a4a4a" BorderThickness="1"
+                                        <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
                                                 CornerRadius="10" Margin="2">
                                             <StackPanel Orientation="Horizontal" Margin="5">
-                                                <TextBlock Text="{Binding ParamValue}" Margin="5,0" />
+                                                <TextBlock Text="{Binding stringValue}" Margin="5,0" />
                                                 <Button Content="X" FontSize="10" VerticalAlignment="Center"
                                                         HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
                                                         Command="{Binding  $parent[ItemsControl].((vm:SettingsPageViewModel)DataContext).RemoveFfmpegParam}"
@@ -468,6 +535,71 @@
                         </StackPanel>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+
+
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Encoding">
+                    <controls:SettingsExpanderItem.Footer>
+
+                        <StackPanel>
+
+                            <CheckBox HorizontalAlignment="Right" Content="Enable Encoding?" IsChecked="{Binding IsEncodeEnabled}"> </CheckBox>
+
+                            <ToggleButton x:Name="DropdownButtonEncodingPresets" IsVisible="{Binding IsEncodeEnabled}" Width="210" HorizontalContentAlignment="Stretch">
+                                <ToggleButton.Content>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedEncodingPreset.stringValue}"
+                                                   VerticalAlignment="Center" />
+                                        <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                              VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                    </Grid>
+                                </ToggleButton.Content>
+                            </ToggleButton>
+                            <Popup IsLightDismissEnabled="True"
+                                   IsOpen="{Binding IsChecked, ElementName=DropdownButtonEncodingPresets, Mode=TwoWay}"
+                                   Placement="Bottom"
+                                   PlacementTarget="{Binding ElementName=DropdownButtonEncodingPresets}">
+                                <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                    <ListBox x:Name="ListBoxEncodingPresetSelection" SelectionMode="AlwaysSelected,Single" Width="210"
+                                             MaxHeight="400"
+                                             ItemsSource="{Binding EncodingPresetsList}"
+                                             SelectedItem="{Binding SelectedEncodingPreset}"
+                                             PointerWheelChanged="ListBox_PointerWheelChanged">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Border>
+                            </Popup>
+
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button HorizontalAlignment="Center" Margin="5 10" IsVisible="{Binding IsEncodeEnabled}" Command="{Binding  CreateEncodingPresetButtonPress}" CommandParameter="false">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:SymbolIcon Symbol="Add" FontSize="18" Margin=" 0 0 5 0" />
+                                        <TextBlock VerticalAlignment="Center" Text="Create Preset"></TextBlock>
+                                    </StackPanel>
+                                </Button>
+
+                                <Button HorizontalAlignment="Center" Margin="5 10" IsVisible="{Binding IsEncodeEnabled}" Command="{Binding  CreateEncodingPresetButtonPress}" CommandParameter="true">
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:SymbolIcon Symbol="Edit" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+
+
+                        </StackPanel>
+
+
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
 
                 <controls:SettingsExpander.Footer>
 
@@ -511,6 +643,36 @@
                                                Description="Potentially wrong if it couldn't be matched">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding SonarrUseSonarrNumbering}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="Proxy Settings"
+                                       IconSource="Wifi3"
+                                       Description="Adjust proxy settings – requires a restart to take effect"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Use Proxy">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding ProxyEnabled}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Host">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding ProxyHost}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Port">
+                    <controls:SettingsExpanderItem.Footer>
+                        <controls:NumberBox Minimum="0" Maximum="65535"
+                                            Value="{Binding ProxyPort}"
+                                            SpinButtonPlacementMode="Inline"
+                                            HorizontalAlignment="Stretch" />
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -688,6 +850,27 @@
                                        Description="Should only be enabled if something isn't working">
                 <controls:SettingsExpander.Footer>
                     <CheckBox IsChecked="{Binding LogMode}"> </CheckBox>
+                </controls:SettingsExpander.Footer>
+
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="IP"
+                                       IconSource="Wifi4"
+                                       Description="Check the current IP address to verify if traffic is being routed through a VPN">
+                <controls:SettingsExpander.Footer>
+                    <Grid VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border VerticalAlignment="Center" Height="30"> <!-- Match this to the Button's height -->
+                            <TextBlock Text="{Binding CurrentIp}" VerticalAlignment="Center" FontSize="14" />
+                        </Border>
+
+                        <Button Grid.Column="1" Content="Check" Margin="10 0 0 0" Command="{Binding CheckIp}" />
+                    </Grid>
+
                 </controls:SettingsExpander.Footer>
 
             </controls:SettingsExpander>
