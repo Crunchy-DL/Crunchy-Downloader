@@ -41,6 +41,8 @@ Windows 10 or Windows 11
 
 .NET Desktop Runtime
 
+Visual c++ redist 2015-22 https://github.com/Crunchy-DL/Crunchy-Downloader/issues/144
+
 ## ✨ Features
 
 [Github Wiki](https://github.com/Crunchy-DL/Crunchy-Downloader/wiki)
