@@ -13,7 +13,7 @@ A simple crunchyroll downloader that allows you to download your favorite series
     <img src="https://img.shields.io/github/license/Crunchy-DL/Crunchy-Downloader?style=flat-square" alt="License">
   </a>
   <a href="https://github.com/Crunchy-DL/Crunchy-Downloader/releases">
-    <img src="https://img.shields.io/github/v/release/Crunchy-DL/Crunchy-Downloader?include_prereleases&style=flat-square" alt="Release">
+    <img src="https://img.shields.io/github/v/release/Crunchy-DL/Crunchy-Downloader?style=flat-square" alt="Release">
   </a>
 </p>
 <p align="center">
