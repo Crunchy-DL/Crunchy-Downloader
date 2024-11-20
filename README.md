@@ -39,7 +39,7 @@ This application enables you to download videos for offline viewing which may be
 
 Windows 10 or Windows 11
 
-.NET Desktop Runtime
+.NET Desktop Runtime 8.0
 
 Visual c++ redist 2015-22 https://github.com/Crunchy-DL/Crunchy-Downloader/issues/144
 
