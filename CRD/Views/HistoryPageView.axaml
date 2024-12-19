@@ -38,9 +38,9 @@
                     VerticalAlignment="Center"
                     Command="{Binding RefreshAll}"
                     IsEnabled="{Binding !ProgramManager.FetchingData}">
-                <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                     <controls:SymbolIcon Symbol="Sync" FontSize="32" />
-                    <TextBlock Text="Refresh Filtered" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                    <TextBlock Text="Refresh Filtered" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12"></TextBlock>
                 </StackPanel>
             </Button>
 
@@ -50,7 +50,7 @@
                     IsEnabled="{Binding !ProgramManager.FetchingData}">
                 <StackPanel Orientation="Vertical">
                     <controls:SymbolIcon Symbol="Import" FontSize="32" />
-                    <TextBlock Text="Add To Queue" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                    <TextBlock Text="Add To Queue" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="12"></TextBlock>
                 </StackPanel>
             </Button>
 
@@ -60,7 +60,7 @@
                           IsEnabled="{Binding !ProgramManager.FetchingData}">
                 <StackPanel Orientation="Vertical">
                     <controls:SymbolIcon Symbol="Edit" FontSize="32" />
-                    <TextBlock Text="Edit" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                    <TextBlock Text="Edit" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="12"></TextBlock>
                 </StackPanel>
             </ToggleButton>
 
@@ -74,7 +74,7 @@
                               IsEnabled="{Binding !ProgramManager.FetchingData}">
                     <StackPanel Orientation="Vertical">
                         <controls:ImageIcon VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 1 0 0" Source="../Assets/sonarr.png" Width="30" Height="30" />
-                        <TextBlock Text="Sonarr" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                        <TextBlock Text="Sonarr" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="12"></TextBlock>
                     </StackPanel>
                 </ToggleButton>
                 <Popup IsLightDismissEnabled="True"
@@ -123,7 +123,7 @@
                               IsChecked="{Binding ViewSelectionOpen}">
                     <StackPanel Orientation="Vertical">
                         <controls:SymbolIcon Symbol="View" FontSize="32" />
-                        <TextBlock Text="View" FontSize="12"></TextBlock>
+                        <TextBlock Text="View" HorizontalAlignment="Center" FontSize="12"></TextBlock>
                     </StackPanel>
                 </ToggleButton>
                 <Popup IsLightDismissEnabled="True"
@@ -147,7 +147,7 @@
                               IsChecked="{Binding SortingSelectionOpen}">
                     <StackPanel Orientation="Vertical">
                         <controls:SymbolIcon Symbol="Sort" FontSize="32" />
-                        <TextBlock Text="Sort" FontSize="12"></TextBlock>
+                        <TextBlock Text="Sort" HorizontalAlignment="Center" FontSize="12"></TextBlock>
                     </StackPanel>
                 </ToggleButton>
                 <Popup IsLightDismissEnabled="True"
@@ -178,7 +178,7 @@
                               IsEnabled="{Binding !ProgramManager.FetchingData}">
                     <StackPanel Orientation="Vertical">
                         <controls:SymbolIcon Symbol="Filter" FontSize="32" />
-                        <TextBlock Text="Filter" FontSize="12"></TextBlock>
+                        <TextBlock Text="Filter" HorizontalAlignment="Center" FontSize="12"></TextBlock>
                     </StackPanel>
                 </ToggleButton>
                 <Popup IsLightDismissEnabled="True"
@@ -214,80 +214,82 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
+                    <Border>
+                        <Grid>
+                            <StackPanel Orientation="Vertical" HorizontalAlignment="Center"
+                                        Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterWidth}"
+                                        Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterHeight}"
+                                        Margin="5">
+                                <Grid>
+                                    <Image Source="{Binding ThumbnailImage}"
+                                           Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
+                                           Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageHeight}">
+                                    </Image>
 
-                    <Grid>
-                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center"
-                                    Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterWidth}"
-                                    Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterHeight}"
-                                    Margin="5">
-                            <Grid>
-                                <Image Source="{Binding ThumbnailImage}"
-                                       Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
-                                       Height="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageHeight}">
-                                </Image>
+                                    <Border VerticalAlignment="Top" HorizontalAlignment="Right" CornerRadius="0 0 0 10"
+                                            Background="#f78c25" Opacity="1"
+                                            Margin="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).CornerMargin} "
+                                            IsVisible="{Binding NewEpisodes, Converter={StaticResource UiIntToVisibilityConverter}}">
+                                        <TextBlock VerticalAlignment="Center" TextAlignment="Center" Width="30"
+                                                   Height="30"
+                                                   Text="{Binding NewEpisodes}"
+                                                   Padding="0,5,0,0" />
+                                    </Border>
 
-                                <Border VerticalAlignment="Top" HorizontalAlignment="Right" CornerRadius="0 0 0 10"
-                                        Background="#f78c25" Opacity="1"
-                                        Margin="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).CornerMargin} "
-                                        IsVisible="{Binding NewEpisodes, Converter={StaticResource UiIntToVisibilityConverter}}">
-                                    <TextBlock VerticalAlignment="Center" TextAlignment="Center" Width="30"
-                                               Height="30"
-                                               Text="{Binding NewEpisodes}"
-                                               Padding="0,5,0,0" />
-                                </Border>
+                                </Grid>
 
+                                <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
+                                           Text="{Binding SeriesTitle}"
+                                           TextWrapping="Wrap"
+                                           Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
+                                           FontSize="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterTextSize}"
+                                           Height="35"
+                                           Margin="4,0,4,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding SeriesTitle}" FontSize="15" />
+                                    </ToolTip.Tip>
+                                </TextBlock>
+
+                                <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
+                                           Text="{Binding SonarrNextAirDate}"
+                                           TextWrapping="Wrap"
+                                           Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
+                                           FontSize="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterTextSize}"
+                                           MaxHeight="20"
+                                           Margin="4,0,4,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding SonarrNextAirDate}" FontSize="15" />
+                                    </ToolTip.Tip>
+                                </TextBlock>
+                            </StackPanel>
+
+
+                            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#90000000" IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).EditMode}">
+
+                                <Button
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                    FontStyle="Italic"
+                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
+                                    CommandParameter="{Binding SeriesId}"
+                                    IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).ProgramManager.FetchingData}">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Remove Series" FontSize="15" />
+                                    </ToolTip.Tip>
+                                    <StackPanel Orientation="Horizontal">
+                                        <controls:SymbolIcon Symbol="Delete" FontSize="32" />
+                                    </StackPanel>
+                                </Button>
                             </Grid>
 
-                            <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
-                                       Text="{Binding SeriesTitle}"
-                                       TextWrapping="Wrap"
-                                       Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
-                                       FontSize="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterTextSize}"
-                                       Height="35"
-                                       Margin="4,0,4,0">
-                                <ToolTip.Tip>
-                                    <TextBlock Text="{Binding SeriesTitle}" FontSize="15" />
-                                </ToolTip.Tip>
-                            </TextBlock>
+                            <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#90000000" IsVisible="{Binding FetchingData}">
+                                <controls:ProgressRing Width="100" Height="100"></controls:ProgressRing>
+                            </Grid>
 
-                            <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
-                                       Text="{Binding SonarrNextAirDate}"
-                                       TextWrapping="Wrap"
-                                       Width="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterImageWidth}"
-                                       FontSize="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).PosterTextSize}"
-                                       MaxHeight="20"
-                                       Margin="4,0,4,0">
-                                <ToolTip.Tip>
-                                    <TextBlock Text="{Binding SonarrNextAirDate}" FontSize="15" />
-                                </ToolTip.Tip>
-                            </TextBlock>
-                        </StackPanel>
-
-
-                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#90000000" IsVisible="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).EditMode}">
-
-                            <Button
-                                Background="Transparent"
-                                BorderThickness="0"
-                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                                FontStyle="Italic"
-                                Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).RemoveSeries}"
-                                CommandParameter="{Binding SeriesId}"
-                                IsEnabled="{Binding !$parent[UserControl].((vm:HistoryPageViewModel)DataContext).ProgramManager.FetchingData}">
-                                <ToolTip.Tip>
-                                    <TextBlock Text="Remove Series" FontSize="15" />
-                                </ToolTip.Tip>
-                                <StackPanel Orientation="Horizontal">
-                                    <controls:SymbolIcon Symbol="Delete" FontSize="32" />
-                                </StackPanel>
-                            </Button>
                         </Grid>
+                    </Border>
 
-                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#90000000" IsVisible="{Binding FetchingData}">
-                            <controls:ProgressRing Width="100" Height="100"></controls:ProgressRing>
-                        </Grid>
-
-                    </Grid>
 
                 </DataTemplate>
             </ListBox.ItemTemplate>
@@ -422,7 +424,7 @@
                                                                               VerticalAlignment="Center"
                                                                               IsVisible="{Binding EditModeEnabled}">
                                                                     <StackPanel Orientation="Horizontal">
-                                                                        <controls:SymbolIcon Symbol="Speaker2" FontSize="18" />
+                                                                        <controls:SymbolIcon Symbol="Settings" FontSize="18" />
                                                                     </StackPanel>
                                                                 </ToggleButton>
 
@@ -435,11 +437,51 @@
                                                                     <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
 
                                                                         <StackPanel>
-                                                                            <controls:SettingsExpander Header="Language Override">
+                                                                            <controls:SettingsExpander Header="Settings Override">
 
                                                                                 <controls:SettingsExpander.Footer>
                                                                                     <StackPanel>
-                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 0 0 10">
+                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
+                                                                                            <TextBlock Text="Video Quality" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
+
+                                                                                            <StackPanel>
+                                                                                                <ToggleButton x:Name="OverrideDropdownButtonQuality" Width="210" HorizontalContentAlignment="Stretch">
+                                                                                                    <ToggleButton.Content>
+                                                                                                        <Grid>
+                                                                                                            <Grid.ColumnDefinitions>
+                                                                                                                <ColumnDefinition Width="*" />
+                                                                                                                <ColumnDefinition Width="Auto" />
+                                                                                                            </Grid.ColumnDefinitions>
+                                                                                                            <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedVideoQualityItem.stringValue, FallbackValue=''}"
+                                                                                                                       VerticalAlignment="Center" />
+                                                                                                            <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                                                  VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                                        </Grid>
+                                                                                                    </ToggleButton.Content>
+                                                                                                </ToggleButton>
+                                                                                                <Popup IsLightDismissEnabled="True"
+                                                                                                       IsOpen="{Binding IsChecked, ElementName=OverrideDropdownButtonQuality, Mode=TwoWay}"
+                                                                                                       Placement="Bottom"
+                                                                                                       PlacementTarget="{Binding ElementName=OverrideDropdownButtonQuality}">
+                                                                                                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                                        <ListBox x:Name="ListBoxQulitiesSelection" SelectionMode="Single,Toggle" Width="210"
+                                                                                                                 MaxHeight="400"
+                                                                                                                 ItemsSource="{Binding VideoQualityList , Mode=OneWay}"
+                                                                                                                 SelectedItem="{Binding SelectedVideoQualityItem}">
+                                                                                                            <ListBox.ItemTemplate>
+                                                                                                                <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                                                    <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                                                </DataTemplate>
+                                                                                                            </ListBox.ItemTemplate>
+                                                                                                        </ListBox>
+                                                                                                    </Border>
+                                                                                                </Popup>
+                                                                                            </StackPanel>
+
+
+                                                                                        </StackPanel>
+
+                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                                             <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                                             <StackPanel>
                                                                                                 <ToggleButton x:Name="DropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
@@ -476,7 +518,7 @@
                                                                                             </StackPanel>
                                                                                         </StackPanel>
 
-                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                                                                                             <TextBlock Text="Sub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                                             <StackPanel>
                                                                                                 <ToggleButton x:Name="DropdownButtonSub" Width="210" HorizontalContentAlignment="Stretch">
@@ -724,7 +766,7 @@
                                                                                       VerticalAlignment="Center"
                                                                                       IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).EditModeEnabled}">
                                                                             <StackPanel Orientation="Horizontal">
-                                                                                <controls:SymbolIcon Symbol="Speaker2" FontSize="18" />
+                                                                                <controls:SymbolIcon Symbol="Settings" FontSize="18" />
                                                                             </StackPanel>
                                                                         </ToggleButton>
 
@@ -737,11 +779,52 @@
                                                                             <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
 
                                                                                 <StackPanel>
-                                                                                    <controls:SettingsExpander Header="Language Override">
+                                                                                    <controls:SettingsExpander Header="Settings Override">
 
                                                                                         <controls:SettingsExpander.Footer>
                                                                                             <StackPanel>
-                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0 0 0 10">
+
+                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
+                                                                                                    <TextBlock Text="Video Quality" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
+
+                                                                                                    <StackPanel>
+                                                                                                        <ToggleButton x:Name="SeasonOverrideDropdownButtonQuality" Width="210" HorizontalContentAlignment="Stretch">
+                                                                                                            <ToggleButton.Content>
+                                                                                                                <Grid>
+                                                                                                                    <Grid.ColumnDefinitions>
+                                                                                                                        <ColumnDefinition Width="*" />
+                                                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                                                    </Grid.ColumnDefinitions>
+                                                                                                                    <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedVideoQualityItem.stringValue, FallbackValue=''}"
+                                                                                                                               VerticalAlignment="Center" />
+                                                                                                                    <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                                                          VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                                                </Grid>
+                                                                                                            </ToggleButton.Content>
+                                                                                                        </ToggleButton>
+                                                                                                        <Popup IsLightDismissEnabled="True"
+                                                                                                               IsOpen="{Binding IsChecked, ElementName=SeasonOverrideDropdownButtonQuality, Mode=TwoWay}"
+                                                                                                               Placement="Bottom"
+                                                                                                               PlacementTarget="{Binding ElementName=SeasonOverrideDropdownButtonQuality}">
+                                                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                                                <ListBox x:Name="ListBoxQulitiesSelection" SelectionMode="Single,Toggle" Width="210"
+                                                                                                                         MaxHeight="400"
+                                                                                                                         ItemsSource="{Binding VideoQualityList , Mode=OneWay}"
+                                                                                                                         SelectedItem="{Binding SelectedVideoQualityItem}">
+                                                                                                                    <ListBox.ItemTemplate>
+                                                                                                                        <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                                                            <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                                                        </DataTemplate>
+                                                                                                                    </ListBox.ItemTemplate>
+                                                                                                                </ListBox>
+                                                                                                            </Border>
+                                                                                                        </Popup>
+                                                                                                    </StackPanel>
+
+
+                                                                                                </StackPanel>
+
+                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                                                     <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                                                     <StackPanel>
                                                                                                         <ToggleButton x:Name="SeasonOverrideDropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
@@ -778,7 +861,7 @@
                                                                                                     </StackPanel>
                                                                                                 </StackPanel>
 
-                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                                                                                                     <TextBlock Text="Sub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                                                     <StackPanel>
                                                                                                         <ToggleButton x:Name="SeasonOverrideDropdownButtonSub" Width="210" HorizontalContentAlignment="Stretch">

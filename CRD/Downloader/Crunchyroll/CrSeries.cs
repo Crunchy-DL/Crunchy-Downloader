@@ -77,6 +77,7 @@ public class CrSeries(){
                     Time = 0,
                     DownloadSpeed = 0
                 };
+                epMeta.Hslang = CrunchyrollManager.Instance.CrunOptions.Hslang;
                 epMeta.Description = item.Description;
                 epMeta.AvailableSubs = item.SubtitleLocales;
                 if (episode.Langs.Count > 0){
@@ -308,7 +309,7 @@ public class CrSeries(){
                 }
             }
 
-            var showRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}", HttpMethod.Get, true, true, query);
+            var showRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonID}", HttpMethod.Get, true, true, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
@@ -329,7 +330,7 @@ public class CrSeries(){
             }
         }
 
-        var episodeRequest = HttpClientReq.CreateRequestMessage($"{Api.Cms}/seasons/{seasonID}/episodes", HttpMethod.Get, true, true, query);
+        var episodeRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonID}/episodes", HttpMethod.Get, true, true, query);
 
         var episodeRequestResponse = await HttpClientReq.Instance.SendHttpRequest(episodeRequest);
 
@@ -391,7 +392,7 @@ public class CrSeries(){
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/series/{id}/seasons", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/series/{id}/seasons", HttpMethod.Get, true, true, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -422,7 +423,7 @@ public class CrSeries(){
             }
         }
 
-        var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/series/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/series/{id}", HttpMethod.Get, true, true, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -457,7 +458,7 @@ public class CrSeries(){
         query["n"] = "6";
         query["type"] = "top_results";
 
-        var request = HttpClientReq.CreateRequestMessage($"{Api.Search}", HttpMethod.Get, true, false, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Search}", HttpMethod.Get, true, false, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -468,6 +469,20 @@ public class CrSeries(){
 
         CrSearchSeriesBase? series = Helpers.Deserialize<CrSearchSeriesBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
 
+        if (crunInstance.CrunOptions.History){
+            var historyIDs = new HashSet<string>(crunInstance.HistoryList.Select(item => item.SeriesId ?? ""));
+
+            if (series?.Data != null){
+                foreach (var crSearchSeries in series.Data){
+                    if (crSearchSeries.Items != null){
+                        foreach (var crBrowseSeries in crSearchSeries.Items.Where(crBrowseSeries => historyIDs.Contains(crBrowseSeries.Id ?? "unknownID"))){
+                            crBrowseSeries.IsInHistory = true;
+                        }
+                    }
+                }
+            }
+        }
+        
         return series;
     }
 
@@ -488,7 +503,7 @@ public class CrSeries(){
             query["n"] = "50";
             query["sort_by"] = "alphabetical";
 
-            var request = HttpClientReq.CreateRequestMessage($"{Api.Browse}", HttpMethod.Get, true, false, query);
+            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, false, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

@@ -3,11 +3,11 @@ using System.Net;
 using System.Net.Http;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 
 namespace CRD.Utils;
@@ -40,7 +40,6 @@ public class HttpClientReq{
 
     private HttpClientHandler handler;
 
-
     public HttpClientReq(){
         cookieStore = new Dictionary<string, CookieCollection>();
 
@@ -64,7 +63,7 @@ public class HttpClientReq{
                     Console.Error.WriteLine("No proxy will be used.");
                     handler = CreateHandler(false);
                 }
-                
+
                 client = new HttpClient(handler);
             } else{
                 Console.Error.WriteLine("No proxy is being used.");
@@ -74,10 +73,19 @@ public class HttpClientReq{
             Console.Error.WriteLine("No proxy is being used.");
             client = new HttpClient(CreateHttpClientHandler());
         }
+        
+        client.Timeout = TimeSpan.FromSeconds(100);
 
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.9.0 Nintendo Switch/18.1.0.0 UE4/4.27");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36");
+        // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.9.0 Nintendo Switch/18.1.0.0 UE4/4.27");
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/3.60.0 Android/9 okhttp/4.12.0");
+
+        client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br");
+        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.5");
+        client.DefaultRequestHeaders.Connection.ParseAdd("keep-alive");
+        
     }
 
     private HttpMessageHandler CreateHttpClientHandler(){
@@ -132,8 +140,8 @@ public class HttpClientReq{
         // handler.CookieContainer.Add(cookie);
         // handler.CookieContainer.Add(cookie2);
 
-        AddCookie("crunchyroll.com", new Cookie("etp_rt", refreshToken));
-        AddCookie("crunchyroll.com", new Cookie("c_locale", "en-US"));
+        AddCookie(".crunchyroll.com", new Cookie("etp_rt", refreshToken));
+        AddCookie(".crunchyroll.com", new Cookie("c_locale", "en-US"));
     }
 
     private void AddCookie(string domain, Cookie cookie){
@@ -141,15 +149,25 @@ public class HttpClientReq{
             cookieStore[domain] = new CookieCollection();
         }
 
+        var existingCookie = cookieStore[domain].FirstOrDefault(c => c.Name == cookie.Name);
+
+        if (existingCookie != null){
+            cookieStore[domain].Remove(existingCookie);
+        }
+
         cookieStore[domain].Add(cookie);
     }
 
-    public async Task<(bool IsOk, string ResponseContent)> SendHttpRequest(HttpRequestMessage request){
+    public async Task<(bool IsOk, string ResponseContent)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false){
         string content = string.Empty;
         try{
             AttachCookies(request);
 
             HttpResponseMessage response = await client.SendAsync(request);
+
+            if (ChallengeDetector.IsClearanceRequired(response)){
+                Console.Error.WriteLine($" Cloudflare Challenge detected");
+            }
 
             content = await response.Content.ReadAsStringAsync();
 
@@ -158,27 +176,39 @@ public class HttpClientReq{
             return (IsOk: true, ResponseContent: content);
         } catch (Exception e){
             // Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
-            Console.Error.WriteLine($"Error: {e} \n Response: {content}");
+            if (!suppressError){
+                Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
+            }
+
             return (IsOk: false, ResponseContent: content);
         }
     }
 
     private void AttachCookies(HttpRequestMessage request){
-        if (cookieStore.TryGetValue(request.RequestUri.Host, out CookieCollection cookies)){
-            var cookieHeader = new StringBuilder();
-            foreach (Cookie cookie in cookies){
+        var cookieHeader = new StringBuilder();
+
+        if (request.Headers.TryGetValues("Cookie", out var existingCookies)){
+            cookieHeader.Append(string.Join("; ", existingCookies));
+        }
+
+        foreach (var cookie in cookieStore.SelectMany(keyValuePair => keyValuePair.Value)){
+            string cookieString = $"{cookie.Name}={cookie.Value}";
+
+            if (!cookieHeader.ToString().Contains(cookieString)){
                 if (cookieHeader.Length > 0){
                     cookieHeader.Append("; ");
                 }
 
-                cookieHeader.Append($"{cookie.Name}={cookie.Value}");
-            }
-
-            if (cookieHeader.Length > 0){
-                request.Headers.Add("Cookie", cookieHeader.ToString());
+                cookieHeader.Append(cookieString);
             }
         }
+
+        if (cookieHeader.Length > 0){
+            request.Headers.Remove("Cookie");
+            request.Headers.Add("Cookie", cookieHeader.ToString());
+        }
     }
+
 
     public static HttpRequestMessage CreateRequestMessage(string uri, HttpMethod requestMethod, bool authHeader, bool disableDrmHeader, NameValueCollection? query){
         UriBuilder uriBuilder = new UriBuilder(uri);
@@ -210,10 +240,12 @@ public class HttpClientReq{
     }
 }
 
-public static class Api{
+public static class ApiUrls{
     public static readonly string ApiBeta = "https://beta-api.crunchyroll.com";
     public static readonly string ApiN = "https://www.crunchyroll.com";
+    public static readonly string Anilist = "https://graphql.anilist.co";
 
+    public static readonly string Auth = ApiN + "/auth/v1/token";
     public static readonly string BetaAuth = ApiBeta + "/auth/v1/token";
     public static readonly string BetaProfile = ApiBeta + "/accounts/v1/me/profile";
     public static readonly string BetaCmsToken = ApiBeta + "/index/v2";
@@ -228,8 +260,10 @@ public static class Api{
     public static readonly string Subscription = ApiBeta + "/subs/v3/subscriptions/";
     public static readonly string CmsN = ApiN + "/content/v2/cms";
 
+    public static readonly string authBasic = "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6";
 
-    public static readonly string authBasic = "bm9haWhkZXZtXzZpeWcwYThsMHE6";
-    public static readonly string authBasicMob = "bm12anNoZmtueW14eGtnN2ZiaDk6WllJVnJCV1VQYmNYRHRiRDIyVlNMYTZiNFdRb3Mzelg=";
-    public static readonly string authBasicSwitch = "dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=";
+    public static readonly string authBasicMob = "Basic dXU4aG0wb2g4dHFpOWV0eXl2aGo6SDA2VnVjRnZUaDJ1dEYxM0FBS3lLNE85UTRhX3BlX1o=";
+    public static readonly string authBasicSwitch = "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=";
+
+    public static readonly string ChromeUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
 }

@@ -6,7 +6,7 @@ namespace CRD.Utils.Structs;
 
 public struct CrunchyChapters{
     public List<CrunchyChapter> Chapters  { get; set; }
-    public DateTime? lastUpdate { get; set; }
+    public DateTime lastUpdate { get; set; }
     public string? mediaId { get; set; }
 }
 

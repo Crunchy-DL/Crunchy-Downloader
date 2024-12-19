@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace CRD.Utils.Parser.Utils;
+﻿namespace CRD.Utils.Parser.Utils;
 
 public class ManifestInfo{
     public dynamic locations{ get; set; }

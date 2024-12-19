@@ -27,16 +27,16 @@ public class CrunchyMovie{
     public bool IsMature{ get; set; }
 
     [JsonProperty("free_available_date")]
-    public DateTime? FreeAvailableDate{ get; set; }
+    public DateTime FreeAvailableDate{ get; set; }
 
     [JsonProperty("premium_available_date")]
-    public DateTime? PremiumAvailableDate{ get; set; }
+    public DateTime PremiumAvailableDate{ get; set; }
 
     [JsonProperty("availability_starts")]
-    public DateTime? AvailabilityStarts{ get; set; }
+    public DateTime AvailabilityStarts{ get; set; }
 
     [JsonProperty("availability_ends")]
-    public DateTime? AvailabilityEnds{ get; set; }
+    public DateTime AvailabilityEnds{ get; set; }
 
     [JsonProperty("maturity_ratings")]
     public List<string> MaturityRatings{ get; set; }
@@ -55,7 +55,7 @@ public class CrunchyMovie{
     public string ListingId{ get; set; }
 
     [JsonProperty("available_date")]
-    public DateTime? AvailableDate{ get; set; }
+    public DateTime AvailableDate{ get; set; }
 
     [JsonProperty("is_subbed")]
     public bool IsSubbed{ get; set; }
@@ -94,5 +94,5 @@ public class CrunchyMovie{
     public Dictionary<string, object> ExtendedMaturityRating{ get; set; }
 
     [JsonProperty("premium_date")]
-    public DateTime? PremiumDate{ get; set; }
+    public DateTime PremiumDate{ get; set; }
 }

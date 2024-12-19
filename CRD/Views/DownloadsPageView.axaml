@@ -7,7 +7,6 @@
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              x:DataType="vm:DownloadsPageViewModel"
              x:Class="CRD.Views.DownloadsPageView"
-             xmlns:local="clr-namespace:CRD.Utils"
              xmlns:ui="clr-namespace:CRD.Utils.UI">
 
     <UserControl.Resources>
@@ -17,12 +16,11 @@
     
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /> <!-- For the TextBox  -->
-            <RowDefinition Height="*" />    <!-- For the ListBox to take remaining space -->
+            <RowDefinition Height="Auto" /> 
+            <RowDefinition Height="*" /> 
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-            <!-- <Button Click="Button_OnClick">Test Download</Button> -->
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding RemoveFinished}" OffContent="Remove Finished" OnContent="Remove Finished"></ToggleSwitch>
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding AutoDownload}" OffContent="Auto Download" OnContent="Auto Download"></ToggleSwitch>
         </StackPanel>
@@ -38,9 +36,6 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <!-- Image -->
-                                <!-- <Image Grid.Column="0" Width="208" Height="117" Source="{Binding ImageBitmap}" -->
-                                <!--        Stretch="Fill" /> -->
                                 
                                 <Grid>
                                     <Image HorizontalAlignment="Center" Width="208" Height="117" Source="../Assets/coming_soon_ep.jpg" />
@@ -97,7 +92,7 @@
                                     
                                     <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom"  >
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" /> <!-- Takes up most space for the title -->
+                                            <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>

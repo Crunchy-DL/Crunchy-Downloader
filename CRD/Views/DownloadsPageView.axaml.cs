@@ -1,8 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Interactivity;
-using CRD.Downloader;
-using CRD.ViewModels;
+﻿using Avalonia.Controls;
 
 namespace CRD.Views;
 

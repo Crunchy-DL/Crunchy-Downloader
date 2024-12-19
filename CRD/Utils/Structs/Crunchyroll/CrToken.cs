@@ -11,5 +11,6 @@ public class CrToken{
     public string? country { get; set; }
     public string? account_id { get; set; }
     public string? profile_id { get; set; }
-    public DateTime? expires { get; set; }
+    public string? device_id { get; set; }
+    public DateTime expires { get; set; }
 }

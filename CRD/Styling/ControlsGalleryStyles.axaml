@@ -2,9 +2,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:uip="using:FluentAvalonia.UI.Controls.Primitives">
-
-   
- 
     <!-- 
          NavView style in MainView for main app navigation
          While you are free to copy this into your own apps

@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Reflection;
-using CRD.Downloader;
+using System.Runtime.InteropServices;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using Newtonsoft.Json;
-using YamlDotNet.Core;
-using YamlDotNet.Core.Events;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
@@ -24,16 +22,22 @@ public class CfgManager{
     public static readonly string PathCrHistory = Path.Combine(WorkingDirectory, "config", "history.json");
     public static readonly string PathWindowSettings = Path.Combine(WorkingDirectory, "config", "windowSettings.json");
 
-    public static readonly string PathFFMPEG = Path.Combine(WorkingDirectory, "lib", "ffmpeg.exe");
-    public static readonly string PathMKVMERGE = Path.Combine(WorkingDirectory, "lib", "mkvmerge.exe");
-    public static readonly string PathMP4Decrypt = Path.Combine(WorkingDirectory, "lib", "mp4decrypt.exe");
+    private static readonly string ExecutableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
+
+    public static readonly string PathFFMPEG = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(WorkingDirectory, "lib", "ffmpeg.exe") :
+        File.Exists(Path.Combine(WorkingDirectory, "lib", "ffmpeg")) ? Path.Combine(WorkingDirectory, "lib", "ffmpeg") : "ffmpeg";
+
+    public static readonly string PathMKVMERGE = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(WorkingDirectory, "lib", "mkvmerge.exe") :
+        File.Exists(Path.Combine(WorkingDirectory, "lib", "mkvmerge")) ? Path.Combine(WorkingDirectory, "lib", "mkvmerge") : "mkvmerge";
+
+    public static readonly string PathMP4Decrypt = Path.Combine(WorkingDirectory, "lib", "mp4decrypt" + ExecutableExtension);
 
     public static readonly string PathWIDEVINE_DIR = Path.Combine(WorkingDirectory, "widevine");
 
     public static readonly string PathVIDEOS_DIR = Path.Combine(WorkingDirectory, "video");
     public static readonly string PathENCODING_PRESETS_DIR = Path.Combine(WorkingDirectory, "presets");
     public static readonly string PathTEMP_DIR = Path.Combine(WorkingDirectory, "temp");
-    public static readonly string PathFONTS_DIR = Path.Combine(WorkingDirectory, "video");
+    public static readonly string PathFONTS_DIR = Path.Combine(WorkingDirectory, "fonts");
 
     public static readonly string PathLogFile = Path.Combine(WorkingDirectory, "logfile.txt");
 
@@ -242,7 +246,7 @@ public class CfgManager{
             Console.Error.WriteLine($"An error occurred: {ex.Message}");
         }
     }
-    
+
     public static void WriteJsonToFile(string pathToFile, object obj){
         try{
             // Check if the directory exists; if not, create it.

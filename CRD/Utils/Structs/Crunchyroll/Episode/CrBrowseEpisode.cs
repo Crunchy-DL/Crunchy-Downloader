@@ -121,25 +121,25 @@ public class CrBrowseEpisodeMetaData{
     public double SequenceNumber{ get; set; }
     
     [JsonProperty("upload_date")]
-    public DateTime? UploadDate{ get; set; }
+    public DateTime UploadDate{ get; set; }
 
     [JsonProperty("subtitle_locales")]
     public List<Locale>? SubtitleLocales{ get; set; }
 
     [JsonProperty("premium_available_date")]
-    public DateTime? PremiumAvailableDate{ get; set; }
+    public DateTime PremiumAvailableDate{ get; set; }
 
 
     [JsonProperty("availability_ends")]
-    public DateTime? AvailabilityEnds{ get; set; }
+    public DateTime AvailabilityEnds{ get; set; }
     
     
     [JsonProperty("availability_starts")]
-    public DateTime? AvailabilityStarts{ get; set; }
+    public DateTime AvailabilityStarts{ get; set; }
     
     
     [JsonProperty("free_available_date")]
-    public DateTime? FreeAvailableDate{ get; set; }
+    public DateTime FreeAvailableDate{ get; set; }
 
     [JsonProperty("identifier")]
     public string? Identifier{ get; set; }
@@ -157,10 +157,10 @@ public class CrBrowseEpisodeMetaData{
     public string? EligibleRegion{ get; set; }
     
     [JsonProperty("available_date")]
-    public DateTime? AvailableDate{ get; set; }
+    public DateTime AvailableDate{ get; set; }
     
     [JsonProperty("premium_date")]
-    public DateTime? PremiumDate{ get; set; }
+    public DateTime PremiumDate{ get; set; }
     
     [JsonProperty("available_offline")]
     public bool AvailableOffline{ get; set; }

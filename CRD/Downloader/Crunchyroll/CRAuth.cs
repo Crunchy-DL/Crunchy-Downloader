@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using CRD.Utils;
 using CRD.Utils.Structs;
@@ -17,40 +16,51 @@ public class CrAuth{
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task AuthAnonymous(){
+        string uuid = Guid.NewGuid().ToString();
+
         var formData = new Dictionary<string, string>{
             { "grant_type", "client_id" },
-            { "scope", "offline_access" }
+            { "scope", "offline_access" },
+            { "device_id", uuid },
+            { "device_type", "Chrome on Windows" }
         };
-        var requestContent = new FormUrlEncodedContent(formData);
-        requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, Api.BetaAuth){
+        var requestContent = new FormUrlEncodedContent(formData);
+
+        var crunchyAuthHeaders = new Dictionary<string, string>{
+            { "Authorization", ApiUrls.authBasicSwitch },
+            { "User-Agent", ApiUrls.ChromeUserAgent }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
             Content = requestContent
         };
 
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Api.authBasicSwitch);
+        foreach (var header in crunchyAuthHeaders){
+            request.Headers.Add(header.Key, header.Value);
+        }
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (response.IsOk){
-            JsonTokenToFileAndVariable(response.ResponseContent);
+            JsonTokenToFileAndVariable(response.ResponseContent, uuid);
         } else{
             Console.Error.WriteLine("Anonymous login failed");
         }
 
         crunInstance.Profile = new CrProfile{
             Username = "???",
-            Avatar = "003-cr-hime-excited.png",
+            Avatar = "crbrand_avatars_logo_marks_mangagirl_taupe.png",
             PreferredContentAudioLanguage = "ja-JP",
             PreferredContentSubtitleLanguage = "de-DE"
         };
     }
 
-    private void JsonTokenToFileAndVariable(string content){
+    private void JsonTokenToFileAndVariable(string content, string deviceId){
         crunInstance.Token = Helpers.Deserialize<CrToken>(content, crunInstance.SettingsJsonSerializerSettings);
 
-
-        if (crunInstance.Token != null && crunInstance.Token.expires_in != null){
+        if (crunInstance.Token is{ expires_in: not null }){
+            crunInstance.Token.device_id = deviceId;
             crunInstance.Token.expires = DateTime.Now.AddSeconds((double)crunInstance.Token.expires_in);
 
             CfgManager.WriteTokenToYamlFile(crunInstance.Token, CfgManager.PathCrToken);
@@ -58,25 +68,36 @@ public class CrAuth{
     }
 
     public async Task Auth(AuthData data){
-        var formData = new Dictionary<string, string>{
-            { "username", data.Username },
-            { "password", data.Password },
-            { "grant_type", "password" },
-            { "scope", "offline_access" }
-        };
-        var requestContent = new FormUrlEncodedContent(formData);
-        requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+        string uuid = Guid.NewGuid().ToString();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, Api.BetaAuth){
+        var formData = new Dictionary<string, string>{
+            { "username", data.Username }, // Replace with actual data
+            { "password", data.Password }, // Replace with actual data
+            { "grant_type", "password" },
+            { "scope", "offline_access" },
+            { "device_id", uuid },
+            { "device_type", "Chrome on Windows" }
+        };
+
+        var requestContent = new FormUrlEncodedContent(formData);
+
+        var crunchyAuthHeaders = new Dictionary<string, string>{
+            { "Authorization", ApiUrls.authBasicSwitch },
+            { "User-Agent", ApiUrls.ChromeUserAgent }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
             Content = requestContent
         };
 
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Api.authBasicSwitch);
+        foreach (var header in crunchyAuthHeaders){
+            request.Headers.Add(header.Key, header.Value);
+        }
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (response.IsOk){
-            JsonTokenToFileAndVariable(response.ResponseContent);
+            JsonTokenToFileAndVariable(response.ResponseContent, uuid);
         } else{
             if (response.ResponseContent.Contains("invalid_credentials")){
                 MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 10));
@@ -99,7 +120,7 @@ public class CrAuth{
             return;
         }
 
-        var request = HttpClientReq.CreateRequestMessage(Api.BetaProfile, HttpMethod.Get, true, true, null);
+        var request = HttpClientReq.CreateRequestMessage(ApiUrls.BetaProfile, HttpMethod.Get, true, true, null);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -109,7 +130,7 @@ public class CrAuth{
             if (profileTemp != null){
                 crunInstance.Profile = profileTemp;
 
-                var requestSubs = HttpClientReq.CreateRequestMessage(Api.Subscription + crunInstance.Token.account_id, HttpMethod.Get, true, false, null);
+                var requestSubs = HttpClientReq.CreateRequestMessage(ApiUrls.Subscription + crunInstance.Token.account_id, HttpMethod.Get, true, false, null);
 
                 var responseSubs = await HttpClientReq.Instance.SendHttpRequest(requestSubs);
 
@@ -152,35 +173,50 @@ public class CrAuth{
     public async Task LoginWithToken(){
         if (crunInstance.Token?.refresh_token == null){
             Console.Error.WriteLine("Missing Refresh Token");
+            await AuthAnonymous();
             return;
         }
 
+        string uuid = Guid.NewGuid().ToString();
+
         var formData = new Dictionary<string, string>{
             { "refresh_token", crunInstance.Token.refresh_token },
-            { "grant_type", "refresh_token" },
-            { "scope", "offline_access" }
+            { "scope", "offline_access" },
+            { "device_id", uuid },
+            { "device_type", "Chrome on Windows" },
+            { "grant_type", "refresh_token" }
         };
-        var requestContent = new FormUrlEncodedContent(formData);
-        requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, Api.BetaAuth){
+        var requestContent = new FormUrlEncodedContent(formData);
+
+        var crunchyAuthHeaders = new Dictionary<string, string>{
+            { "Authorization", ApiUrls.authBasicSwitch },
+            { "User-Agent", ApiUrls.ChromeUserAgent }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
             Content = requestContent
         };
 
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Api.authBasicSwitch);
+        foreach (var header in crunchyAuthHeaders){
+            request.Headers.Add(header.Key, header.Value);
+        }
+
+        HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (response.IsOk){
-            JsonTokenToFileAndVariable(response.ResponseContent);
+            JsonTokenToFileAndVariable(response.ResponseContent, uuid);
+
+            if (crunInstance.Token?.refresh_token != null){
+                HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
+
+                await GetProfile();
+            }
         } else{
             Console.Error.WriteLine("Token Auth Failed");
-        }
-
-        if (crunInstance.Token?.refresh_token != null){
-            HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
-
-            await GetProfile();
+            await AuthAnonymous();
         }
     }
 
@@ -198,24 +234,37 @@ public class CrAuth{
             return;
         }
 
-        var formData = new Dictionary<string, string>{
-            { "refresh_token", crunInstance.Token?.refresh_token ?? string.Empty },
-            { "grant_type", "refresh_token" },
-            { "scope", "offline_access" }
-        };
-        var requestContent = new FormUrlEncodedContent(formData);
-        requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+        string uuid = Guid.NewGuid().ToString();
 
-        var request = new HttpRequestMessage(HttpMethod.Post, Api.BetaAuth){
+        var formData = new Dictionary<string, string>{
+            { "refresh_token", crunInstance.Token.refresh_token },
+            { "grant_type", "refresh_token" },
+            { "scope", "offline_access" },
+            { "device_id", uuid },
+            { "device_type", "Chrome on Windows" }
+        };
+
+        var requestContent = new FormUrlEncodedContent(formData);
+
+        var crunchyAuthHeaders = new Dictionary<string, string>{
+            { "Authorization", ApiUrls.authBasicSwitch },
+            { "User-Agent", ApiUrls.ChromeUserAgent }
+        };
+
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
             Content = requestContent
         };
 
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", Api.authBasicSwitch);
+        foreach (var header in crunchyAuthHeaders){
+            request.Headers.Add(header.Key, header.Value);
+        }
+
+        HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (response.IsOk){
-            JsonTokenToFileAndVariable(response.ResponseContent);
+            JsonTokenToFileAndVariable(response.ResponseContent, uuid);
         } else{
             Console.Error.WriteLine("Refresh Token Auth Failed");
         }

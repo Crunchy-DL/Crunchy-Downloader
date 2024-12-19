@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils;
 using CRD.Utils.CustomList;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
@@ -102,7 +100,7 @@ public class QueueManager{
 
             var sList = await CrunchyrollManager.Instance.CrEpisode.EpisodeData((CrunchyEpisode)episodeL, updateHistory);
 
-            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath) historyEpisode = (null, [], [], "");
+            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath,string videoQuality) historyEpisode = (null, [], [], "","");
 
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 var episode = sList.EpisodeAndLanguages.Items.First();
@@ -143,6 +141,8 @@ public class QueueManager{
                     }
                 }
 
+                selected.VideoQuality = !string.IsNullOrEmpty(historyEpisode.videoQuality) ? historyEpisode.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
+                
                 selected.DownloadSubs = historyEpisode.sublist.Count > 0 ? historyEpisode.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;
 
                 Queue.Add(selected);
@@ -162,6 +162,12 @@ public class QueueManager{
                 }
             } else{
                 Console.WriteLine("Episode couldn't be added to Queue");
+                Console.Error.WriteLine("Episode couldn't be added to Queue - Available dubs/subs: ");
+
+                var languages = sList.EpisodeAndLanguages.Items.Select((a, index) =>
+                    $"{(a.IsPremiumOnly ? "+ " : "")}{sList.EpisodeAndLanguages.Langs.ElementAtOrDefault(index).CrLocale ?? "Unknown"}").ToArray();
+
+                Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ?? [])}]");
                 MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
             }
         } else{
@@ -184,7 +190,7 @@ public class QueueManager{
     }
 
 
-    public void CrAddEpMetaToQueue(CrunchyEpMeta epMeta){
+    public void CrAddMusicMetaToQueue(CrunchyEpMeta epMeta){
         Queue.Add(epMeta);
         MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
     }
@@ -249,7 +255,9 @@ public class QueueManager{
                 }
 
                 var subLangList = CrunchyrollManager.Instance.History.GetSubList(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId);
-                crunchyEpMeta.DownloadSubs = subLangList.Count > 0 ? subLangList : CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                
+                crunchyEpMeta.VideoQuality = !string.IsNullOrEmpty(subLangList.videoQuality) ? subLangList.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
+                crunchyEpMeta.DownloadSubs = subLangList.sublist.Count > 0 ? subLangList.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;
 
 
                 Queue.Add(crunchyEpMeta);

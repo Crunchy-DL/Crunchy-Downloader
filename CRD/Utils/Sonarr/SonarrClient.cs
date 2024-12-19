@@ -2,17 +2,14 @@
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Sonarr.Models;
 using CRD.Views;
-using Newtonsoft.Json;
 
 namespace CRD.Utils.Sonarr;
 

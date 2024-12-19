@@ -48,7 +48,7 @@ public struct CrunchyEpisode{
     public string EligibleRegion{ get; set; }
 
     [JsonProperty("availability_starts")]
-    public DateTime? AvailabilityStarts{ get; set; }
+    public DateTime AvailabilityStarts{ get; set; }
 
     public Images? Images{ get; set; }
 
@@ -70,7 +70,7 @@ public struct CrunchyEpisode{
     public string ProductionEpisodeId{ get; set; }
 
     [JsonProperty("premium_available_date")]
-    public DateTime? PremiumAvailableDate{ get; set; }
+    public DateTime PremiumAvailableDate{ get; set; }
 
     [JsonProperty("season_title")]
     public string SeasonTitle{ get; set; }
@@ -87,10 +87,10 @@ public struct CrunchyEpisode{
     public string? MediaType{ get; set; }
 
     [JsonProperty("availability_ends")]
-    public DateTime? AvailabilityEnds{ get; set; }
+    public DateTime AvailabilityEnds{ get; set; }
 
     [JsonProperty("free_available_date")]
-    public DateTime? FreeAvailableDate{ get; set; }
+    public DateTime FreeAvailableDate{ get; set; }
 
     public string Playback{ get; set; }
 
@@ -106,12 +106,12 @@ public struct CrunchyEpisode{
     public string ListingId{ get; set; }
 
     [JsonProperty("episode_air_date")]
-    public DateTime? EpisodeAirDate{ get; set; }
+    public DateTime EpisodeAirDate{ get; set; }
 
     public string Slug{ get; set; }
 
     [JsonProperty("available_date")]
-    public DateTime? AvailableDate{ get; set; }
+    public DateTime AvailableDate{ get; set; }
 
     [JsonProperty("subtitle_locales")]
     public List<string> SubtitleLocales{ get; set; }
@@ -128,10 +128,10 @@ public struct CrunchyEpisode{
     public bool IsSubbed{ get; set; }
 
     [JsonProperty("premium_date")]
-    public DateTime? PremiumDate{ get; set; }
+    public DateTime PremiumDate{ get; set; }
 
     [JsonProperty("upload_date")]
-    public DateTime? UploadDate{ get; set; }
+    public DateTime UploadDate{ get; set; }
 
     [JsonProperty("season_slug_title")]
     public string SeasonSlugTitle{ get; set; }
@@ -247,13 +247,18 @@ public class CrunchyEpMeta{
 
     public List<string>? SelectedDubs{ get; set; }
 
+    public string Hslang{ get; set; } = "none";
+
     public List<string>? AvailableSubs{ get; set; }
-    
+
     public string? DownloadPath{ get; set; }
+    public string? VideoQuality{ get; set; }
     public List<string> DownloadSubs{ get; set; } =[];
-    
     public bool Music{ get; set; }
 
+    public string Resolution{ get; set; }
+
+    public List<string> downloadedFiles{ get; set; } =[];
 }
 
 public class DownloadProgress{
@@ -274,7 +279,6 @@ public struct CrunchyEpMetaData{
     public List<EpisodeVersion>? Versions{ get; set; }
     public bool IsSubbed{ get; set; }
     public bool IsDubbed{ get; set; }
-    
 }
 
 public struct CrunchyRollEpisodeData{

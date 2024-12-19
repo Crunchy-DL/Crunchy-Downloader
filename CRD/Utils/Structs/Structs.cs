@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Views;
 using Newtonsoft.Json;
 
@@ -130,4 +131,14 @@ public class NavigationMessage{
         Back = back;
         Refresh = refresh;
     }
+}
+
+public partial class SeasonViewModel : ObservableObject{
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public string Season{ get; set; }
+    public int Year{ get; set; }
+
+    public string Display => $"{Season}\n{Year}";
 }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using CRD.Utils;
@@ -26,7 +25,7 @@ public class CrMovies{
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/movies/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/movies/{id}", HttpMethod.Get, true, true, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -81,6 +80,7 @@ public class CrMovies{
         };
         epMeta.AvailableSubs = new List<string>();
         epMeta.Description = episodeP.Description;
+        epMeta.Hslang = CrunchyrollManager.Instance.CrunOptions.Hslang;
 
         return epMeta;
     }

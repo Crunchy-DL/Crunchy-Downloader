@@ -73,6 +73,9 @@ public enum Locale{
 
     [EnumMember(Value = "zh-TW")]
     ZhTw,
+    
+    [EnumMember(Value = "zh-HK")]
+    ZhHk,
 
     [EnumMember(Value = "ca-ES")]
     CaEs,
@@ -94,9 +97,6 @@ public enum Locale{
 
     [EnumMember(Value = "te-IN")]
     TeIn,
-
-    [EnumMember(Value = "id-ID")]
-    idID,
 }
 
 public static class EnumExtensions{

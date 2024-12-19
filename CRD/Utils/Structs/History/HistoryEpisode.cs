@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using CRD.Downloader;
@@ -23,6 +24,9 @@ public class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("episode_cr_season_number")]
     public string? EpisodeSeasonNum{ get; set; }
+    
+    [JsonProperty("episode_cr_premium_air_date")]
+    public DateTime? EpisodeCrPremiumAirDate{ get; set; }
 
     [JsonProperty("episode_was_downloaded")]
     public bool WasDownloaded{ get; set; }

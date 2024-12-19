@@ -2,10 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -19,9 +16,7 @@ using CRD.Utils;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
-using CRD.Views;
 using DynamicData;
-using HarfBuzzSharp;
 using ReactiveUI;
 
 namespace CRD.ViewModels;
@@ -29,10 +24,10 @@ namespace CRD.ViewModels;
 public partial class HistoryPageViewModel : ViewModelBase{
     public ObservableCollection<HistorySeries> Items{ get; }
     public ObservableCollection<HistorySeries> FilteredItems{ get; }
-    
+
     [ObservableProperty]
     private ProgramManager _programManager;
-    
+
     [ObservableProperty]
     private HistorySeries _selectedSeries;
 
@@ -107,14 +102,15 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private static bool _sonarrAvailable;
-    
+
     [ObservableProperty]
     private static string _progressText;
 
     public HistoryPageViewModel(){
-        
         ProgramManager = ProgramManager.Instance;
         
+        _storageProvider = ProgramManager.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.StorageProvider));
+
         if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
             SonarrAvailable = CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled;
         } else{
@@ -149,11 +145,10 @@ public partial class HistoryPageViewModel : ViewModelBase{
         }
 
         foreach (FilterType filterType in Enum.GetValues(typeof(FilterType))){
-
             if (!SonarrAvailable && (filterType == FilterType.MissingEpisodesSonarr || filterType == FilterType.ContinuingOnly)){
                 continue;
             }
-            
+
             var item = new FilterListElement(){ FilterTitle = filterType.GetEnumMemberValue(), SelectedType = filterType };
             FilterList.Add(item);
             if (filterType == currentFilterType){
@@ -224,7 +219,6 @@ public partial class HistoryPageViewModel : ViewModelBase{
             if (SelectedFilter != null){
                 OnSelectedFilterChanged(SelectedFilter);
             }
-            
         } else{
             Console.Error.WriteLine("Invalid viewtype selected");
         }
@@ -235,11 +229,10 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
 
     partial void OnSelectedFilterChanged(FilterListElement? value){
-
         if (value == null){
             return;
         }
-        
+
         currentFilterType = value.SelectedType;
         if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null) CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedFilter = currentFilterType;
 
@@ -293,7 +286,11 @@ public partial class HistoryPageViewModel : ViewModelBase{
     }
 
 
-    partial void OnSelectedSeriesChanged(HistorySeries value){
+    partial void OnSelectedSeriesChanged(HistorySeries? value){
+        if (value == null){
+            return;
+        }
+
         CrunchyrollManager.Instance.SelectedSeries = value;
 
         NavToSeries();
@@ -399,17 +396,17 @@ public partial class HistoryPageViewModel : ViewModelBase{
                     Console.Error.WriteLine($"[Sonarr Match] {series.Title} already matched");
                 }
             });
-            
+
             var seriesIds = concurrentSeriesIds.ToList();
             var totalSeries = seriesIds.Count;
-            
+
             for (int count = 0; count < totalSeries; count++){
                 ProgressText = $"{count + 1}/{totalSeries}";
-                
+
                 // Await the CRUpdateSeries task for each seriesId
                 await crInstance.History.CRUpdateSeries(seriesIds[count], "");
             }
-            
+
             // var updateTasks = seriesIds.Select(seriesId => crInstance.History.CRUpdateSeries(seriesId, ""));
             // await Task.WhenAll(updateTasks);
         }
@@ -494,11 +491,6 @@ public partial class HistoryPageViewModel : ViewModelBase{
             .Select(episode => episode.DownloadEpisode());
 
         await Task.WhenAll(downloadTasks);
-    }
-
-
-    public void SetStorageProvider(IStorageProvider storageProvider){
-        _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
     }
 }
 

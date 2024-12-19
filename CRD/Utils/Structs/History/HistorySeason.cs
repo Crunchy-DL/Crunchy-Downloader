@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using Avalonia.Controls;
-using CRD.Downloader;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs.History;
@@ -31,6 +29,9 @@ public class HistorySeason : INotifyPropertyChanged{
     [JsonProperty("series_download_path")]
     public string? SeasonDownloadPath{ get; set; }
 
+    [JsonProperty("history_season_video_quality_override")]
+    public string HistorySeasonVideoQualityOverride{ get; set; } = "";
+
     [JsonProperty("history_season_soft_subs_override")]
     public List<string> HistorySeasonSoftSubsOverride{ get; set; } =[];
 
@@ -45,7 +46,22 @@ public class HistorySeason : INotifyPropertyChanged{
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    #region Language Override
+    #region Settings Override
+
+    [JsonIgnore]
+    public StringItem? _selectedVideoQualityItem;
+
+    [JsonIgnore]
+    public StringItem? SelectedVideoQualityItem{
+        get => _selectedVideoQualityItem;
+        set{
+            _selectedVideoQualityItem = value;
+
+            HistorySeasonVideoQualityOverride = value?.stringValue ?? "";
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedVideoQualityItem)));
+            CfgManager.UpdateHistoryFile();
+        }
+    }
 
     [JsonIgnore]
     public string SelectedSubs{ get; set; } = "";
@@ -68,7 +84,18 @@ public class HistorySeason : INotifyPropertyChanged{
         new StringItem(){ stringValue = "all" },
         new StringItem(){ stringValue = "none" },
     };
-    
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> VideoQualityList{ get; } = new(){
+        new StringItem(){ stringValue = "best" },
+        new StringItem(){ stringValue = "1080p" },
+        new StringItem(){ stringValue = "720p" },
+        new StringItem(){ stringValue = "480p" },
+        new StringItem(){ stringValue = "360p" },
+        new StringItem(){ stringValue = "240p" },
+        new StringItem(){ stringValue = "worst" },
+    };
+
     private void UpdateSubAndDubString(){
         HistorySeasonSoftSubsOverride.Clear();
         HistorySeasonDubLangOverride.Clear();
@@ -88,6 +115,7 @@ public class HistorySeason : INotifyPropertyChanged{
         SelectedDubs = string.Join(", ", HistorySeasonDubLangOverride) ?? "";
         SelectedSubs = string.Join(", ", HistorySeasonSoftSubsOverride) ?? "";
 
+
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedSubs)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedDubs)));
 
@@ -99,35 +127,35 @@ public class HistorySeason : INotifyPropertyChanged{
     }
 
     public void Init(){
-
         if (!(SubLangList.Count > 2 || DubLangList.Count > 0)){
             foreach (var languageItem in Languages.languages){
                 SubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
                 DubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
             }
         }
-        
-        
+
+        SelectedVideoQualityItem = VideoQualityList.FirstOrDefault(a => HistorySeasonVideoQualityOverride.Equals(a.stringValue)) ?? new StringItem(){ stringValue = "" };
+
         var softSubLang = SubLangList.Where(a => HistorySeasonSoftSubsOverride.Contains(a.stringValue)).ToList();
         var dubLang = DubLangList.Where(a => HistorySeasonDubLangOverride.Contains(a.stringValue)).ToList();
-        
+
         SelectedSubLang.Clear();
         foreach (var listBoxItem in softSubLang){
             SelectedSubLang.Add(listBoxItem);
         }
-        
+
         SelectedDubLang.Clear();
         foreach (var listBoxItem in dubLang){
             SelectedDubLang.Add(listBoxItem);
         }
-        
+
         SelectedDubs = string.Join(", ", HistorySeasonDubLangOverride) ?? "";
         SelectedSubs = string.Join(", ", HistorySeasonSoftSubsOverride) ?? "";
-        
+
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
     }
-    
+
     #endregion
 
     public void UpdateDownloaded(string? EpisodeId){
@@ -152,4 +180,3 @@ public class HistorySeason : INotifyPropertyChanged{
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadedEpisodes)));
     }
 }
-

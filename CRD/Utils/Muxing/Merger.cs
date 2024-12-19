@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using System.Threading.Tasks;
 using System.Xml;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
-using DynamicData;
 
 namespace CRD.Utils.Muxing;
 
@@ -37,7 +35,7 @@ public class Merger{
         var hasVideo = false;
 
         args.Add("-loglevel warning");
-        
+
         if (!options.mp3){
             foreach (var vid in options.OnlyVid){
                 if (!hasVideo || options.KeepAllVideos == true){
@@ -76,6 +74,8 @@ public class Merger{
                 index++;
             }
 
+            bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
+
             foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
                 if (sub.value.Delay != null && sub.value.Delay != 0){
                     double delay = sub.value.Delay / 1000.0 ?? 0;
@@ -84,7 +84,9 @@ public class Merger{
 
                 args.Add($"-i \"{sub.value.File}\"");
                 metaData.Add($"-map {index}:s");
-                if (options.Defaults.Sub.Code == sub.value.Language.Code && CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == sub.value.Signs && sub.value.ClosedCaption == false){
+                if (options.Defaults.Sub.Code == sub.value.Language.Code &&
+                    (CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == sub.value.Signs || CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns && !hasSignsSub)
+                    && sub.value.ClosedCaption == false){
                     metaData.Add($"-disposition:s:{sub.i} default");
                 } else{
                     metaData.Add($"-disposition:s:{sub.i} 0");
@@ -146,7 +148,7 @@ public class Merger{
 
         bool hasVideo = false;
 
-        args.Add($"-o \"{options.Output}\"");
+        args.Add($"-o \"{Helpers.AddUncPrefixIfNeeded(options.Output)}\"");
         if (options.Options.mkvmerge != null){
             args.AddRange(options.Options.mkvmerge);
         }
@@ -162,11 +164,15 @@ public class Merger{
                 args.Add($"--language 0:{vid.Language.Code}");
 
                 hasVideo = true;
-                args.Add($"\"{vid.Path}\"");
+                args.Add($"\"{Helpers.AddUncPrefixIfNeeded(vid.Path)}\"");
             }
         }
+        
+        var sortedAudio = options.OnlyAudio
+            .OrderBy(sub => CrunchyrollManager.Instance.CrunOptions.DubLang.IndexOf(sub.Language.CrLocale) != -1 ? CrunchyrollManager.Instance.CrunOptions.DubLang.IndexOf(sub.Language.CrLocale) : int.MaxValue)
+            .ToList();
 
-        foreach (var aud in options.OnlyAudio){
+        foreach (var aud in sortedAudio){
             string trackName = aud.Language.Name;
             args.Add("--audio-tracks 0");
             args.Add("--no-video");
@@ -184,11 +190,19 @@ public class Merger{
                 args.Add($"--sync 0:{aud.Delay}");
             }
 
-            args.Add($"\"{aud.Path}\"");
+            args.Add($"\"{Helpers.AddUncPrefixIfNeeded(aud.Path)}\"");
         }
 
         if (options.Subtitles.Count > 0){
-            foreach (var subObj in options.Subtitles){
+            bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
+
+            var sortedSubtitles = options.Subtitles
+                .OrderBy(sub => CrunchyrollManager.Instance.CrunOptions.DlSubs.IndexOf(sub.Language.CrLocale) != -1 ? CrunchyrollManager.Instance.CrunOptions.DlSubs.IndexOf(sub.Language.CrLocale) : int.MaxValue)
+                .ThenBy(sub => sub.Signs ? 0 : 1)  
+                .ThenBy(sub => sub.ClosedCaption ? 0 : 1)
+                .ToList();
+            
+            foreach (var subObj in sortedSubtitles){
                 bool isForced = false;
                 if (subObj.Delay.HasValue){
                     double delay = subObj.Delay ?? 0;
@@ -202,7 +216,8 @@ public class Merger{
                 args.Add($"--track-name {trackName}");
                 args.Add($"--language 0:\"{subObj.Language.Code}\"");
 
-                if (options.Defaults.Sub.Code == subObj.Language.Code && CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == subObj.Signs && subObj.ClosedCaption == false){
+                if (options.Defaults.Sub.Code == subObj.Language.Code &&
+                    (CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == subObj.Signs || CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns && !hasSignsSub) && subObj.ClosedCaption == false){
                     args.Add("--default-track 0");
                     if (CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay){
                         args.Add("--forced-track 0:yes");
@@ -211,16 +226,16 @@ public class Merger{
                 } else{
                     args.Add("--default-track 0:0");
                 }
-                
+
                 if (subObj.ClosedCaption == true && CrunchyrollManager.Instance.CrunOptions.CcSubsMuxingFlag){
                     args.Add("--hearing-impaired-flag 0:yes");
                 }
 
-                if (subObj.Signs == true && CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced && !isForced){
+                if (subObj.Signs && CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced && !isForced){
                     args.Add("--forced-track 0:yes");
                 }
 
-                args.Add($"\"{subObj.File}\"");
+                args.Add($"\"{Helpers.AddUncPrefixIfNeeded(subObj.File)}\"");
             }
         } else{
             args.Add("--no-subtitles");
@@ -230,14 +245,14 @@ public class Merger{
             foreach (var font in options.Fonts){
                 args.Add($"--attachment-name \"{font.Name}\"");
                 args.Add($"--attachment-mime-type \"{font.Mime}\"");
-                args.Add($"--attach-file \"{font.Path}\"");
+                args.Add($"--attach-file \"{Helpers.AddUncPrefixIfNeeded(font.Path)}\"");
             }
         } else{
             args.Add("--no-attachments");
         }
 
         if (options.Chapters is{ Count: > 0 }){
-            args.Add($"--chapters \"{options.Chapters[0].Path}\"");
+            args.Add($"--chapters \"{Helpers.AddUncPrefixIfNeeded(options.Chapters[0].Path)}\"");
         }
 
         if (!string.IsNullOrEmpty(options.VideoTitle)){
@@ -245,55 +260,105 @@ public class Merger{
         }
 
         if (options.Description is{ Count: > 0 }){
-            args.Add($"--global-tags \"{options.Description[0].Path}\"");
+            args.Add($"--global-tags \"{Helpers.AddUncPrefixIfNeeded(options.Description[0].Path)}\"");
         }
 
 
         return string.Join(" ", args);
     }
 
-
     public async Task<double> ProcessVideo(string baseVideoPath, string compareVideoPath){
-        string baseFramesDir;
-        string compareFramesDir;
+        string baseFramesDir, baseFramesDirEnd;
+        string compareFramesDir, compareFramesDirEnd;
+        string cleanupDir;
         try{
             var tempDir = CfgManager.PathTEMP_DIR;
-            baseFramesDir = Path.Combine(tempDir, "base_frames");
-            compareFramesDir = Path.Combine(tempDir, "compare_frames");
-            
+            string uuid = Guid.NewGuid().ToString();
+
+            cleanupDir = Path.Combine(tempDir, uuid);
+            baseFramesDir = Path.Combine(tempDir, uuid, "base_frames_start");
+            baseFramesDirEnd = Path.Combine(tempDir, uuid, "base_frames_end");
+            compareFramesDir = Path.Combine(tempDir, uuid, "compare_frames_start");
+            compareFramesDirEnd = Path.Combine(tempDir, uuid, "compare_frames_end");
+
             Directory.CreateDirectory(baseFramesDir);
+            Directory.CreateDirectory(baseFramesDirEnd);
             Directory.CreateDirectory(compareFramesDir);
-            
+            Directory.CreateDirectory(compareFramesDirEnd);
         } catch (Exception e){
             Console.Error.WriteLine(e);
-            return 0;
-        }
-        
-        var extractFramesBase = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDir, 0, 60);
-        var extractFramesCompare = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDir, 0, 60);
-
-        if (!extractFramesBase.IsOk || !extractFramesCompare.IsOk){
-            Console.Error.WriteLine("Failed to extract Frames to Compare");
-            return 0;
+            return -100;
         }
 
-        var baseFrames = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData{
-            FilePath = fp,
-            Time = GetTimeFromFileName(fp, extractFramesBase.frameRate)
-        }).ToList();
+        try{
+            var extractFramesBaseStart = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDir, 0, 120);
+            var extractFramesCompareStart = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDir, 0, 120);
 
-        var compareFrames = Directory.GetFiles(compareFramesDir).Select(fp => new FrameData{
-            FilePath = fp,
-            Time = GetTimeFromFileName(fp, extractFramesBase.frameRate)
-        }).ToList();
+            TimeSpan? baseVideoDurationTimeSpan = await Helpers.GetMediaDurationAsync(CfgManager.PathFFMPEG, baseVideoPath);
+            TimeSpan? compareVideoDurationTimeSpan = await Helpers.GetMediaDurationAsync(CfgManager.PathFFMPEG, compareVideoPath);
 
-        var offset = SyncingHelper.CalculateOffset(baseFrames, compareFrames);
-        Console.WriteLine($"Calculated offset: {offset} seconds");
+            if (baseVideoDurationTimeSpan == null || compareVideoDurationTimeSpan == null){
+                Console.Error.WriteLine("Failed to retrieve video durations");
+                return -100;
+            }
+            
+            var extractFramesBaseEnd = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDirEnd, baseVideoDurationTimeSpan.Value.TotalSeconds - 360, 360);
+            var extractFramesCompareEnd = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDirEnd, compareVideoDurationTimeSpan.Value.TotalSeconds - 360, 360);
 
-        CleanupDirectory(baseFramesDir);
-        CleanupDirectory(compareFramesDir);
+            if (!extractFramesBaseStart.IsOk || !extractFramesCompareStart.IsOk || !extractFramesBaseEnd.IsOk || !extractFramesCompareEnd.IsOk){
+                Console.Error.WriteLine("Failed to extract Frames to Compare");
+                return -100;
+            }
 
-        return offset;
+            // Load frames from start of the videos
+            var baseFramesStart = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData{
+                FilePath = fp,
+                Time = GetTimeFromFileName(fp, extractFramesBaseStart.frameRate)
+            }).ToList();
+
+            var compareFramesStart = Directory.GetFiles(compareFramesDir).Select(fp => new FrameData{
+                FilePath = fp,
+                Time = GetTimeFromFileName(fp, extractFramesCompareStart.frameRate)
+            }).ToList();
+
+            // Load frames from end of the videos
+            var baseFramesEnd = Directory.GetFiles(baseFramesDirEnd).Select(fp => new FrameData{
+                FilePath = fp,
+                Time = GetTimeFromFileName(fp, extractFramesBaseEnd.frameRate)
+            }).ToList();
+
+            var compareFramesEnd = Directory.GetFiles(compareFramesDirEnd).Select(fp => new FrameData{
+                FilePath = fp,
+                Time = GetTimeFromFileName(fp, extractFramesCompareEnd.frameRate)
+            }).ToList();
+
+            // Calculate offsets
+            var startOffset = SyncingHelper.CalculateOffset(baseFramesStart, compareFramesStart);
+            var endOffset = SyncingHelper.CalculateOffset(baseFramesEnd, compareFramesEnd,true);
+
+            var lengthDiff = Math.Abs(baseVideoDurationTimeSpan.Value.TotalMicroseconds - compareVideoDurationTimeSpan.Value.TotalMicroseconds) / 1000000;
+
+            endOffset += lengthDiff;
+            
+            Console.WriteLine($"Start offset: {startOffset} seconds");
+            Console.WriteLine($"End offset: {endOffset} seconds");
+
+            CleanupDirectory(cleanupDir);
+
+            var difference = Math.Abs(startOffset - endOffset);
+
+            switch (difference){
+                case < 0.1:
+                    return startOffset;
+                case > 1:
+                    return -100;
+                default:
+                    return endOffset;
+            }
+        } catch (Exception e){
+            Console.Error.WriteLine(e);
+            return -100;
+        }
     }
 
     private static void CleanupDirectory(string dirPath){
@@ -365,8 +430,8 @@ public class MergerInput{
 public class SubtitleInput{
     public LanguageItem Language{ get; set; }
     public string File{ get; set; }
-    public bool? ClosedCaption{ get; set; }
-    public bool? Signs{ get; set; }
+    public bool ClosedCaption{ get; set; }
+    public bool Signs{ get; set; }
     public int? Delay{ get; set; }
 
     public DownloadedMedia? RelatedVideoDownloadMedia;

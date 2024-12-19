@@ -1,12 +1,7 @@
 ﻿using System.Linq;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
-using CRD.Downloader;
-using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Sonarr;
 using CRD.ViewModels;
 

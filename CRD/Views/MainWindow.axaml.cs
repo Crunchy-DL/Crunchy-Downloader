@@ -5,7 +5,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform;
+using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
@@ -13,7 +13,6 @@ using CRD.Utils.Structs;
 using CRD.Utils.Updater;
 using CRD.ViewModels;
 using CRD.Views.Utils;
-using FluentAvalonia.Core;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
 using Newtonsoft.Json;
@@ -56,14 +55,15 @@ public partial class MainWindow : AppWindow{
     private Size _restoreSize;
 
     public MainWindow(){
+        ProgramManager.Instance.StorageProvider = StorageProvider;
         AvaloniaXamlLoader.Load(this);
         InitializeComponent();
-
+        
         ExtendClientAreaTitleBarHeightHint = TitleBarHeightAdjustment;
         TitleBar.Height = TitleBarHeightAdjustment;
         TitleBar.ExtendsContentIntoTitleBar = true;
         TitleBar.TitleBarHitTestType = TitleBarHitTestType.Complex;
-
+        
         Opened += OnOpened;
         Closing += OnClosing;
 
@@ -83,17 +83,13 @@ public partial class MainWindow : AppWindow{
                 if (message.Refresh){
                     navigationStack.Pop();
                     var viewModel = Activator.CreateInstance(message.ViewModelType);
-                    if (viewModel is SeriesPageViewModel){
-                        ((SeriesPageViewModel)viewModel).SetStorageProvider(StorageProvider);
-                    }
+                    
 
                     navigationStack.Push(viewModel);
                     nv.Content = viewModel;
                 } else if (!message.Back && message.ViewModelType != null){
                     var viewModel = Activator.CreateInstance(message.ViewModelType);
-                    if (viewModel is SeriesPageViewModel){
-                        ((SeriesPageViewModel)viewModel).SetStorageProvider(StorageProvider);
-                    }
+                    
 
                     navigationStack.Push(viewModel);
                     nv.Content = viewModel;
@@ -143,12 +139,12 @@ public partial class MainWindow : AppWindow{
                         break;
                     case "History":
                         navView.Content = Activator.CreateInstance(typeof(HistoryPageViewModel));
-                        if (navView.Content is HistoryPageViewModel){
-                            ((HistoryPageViewModel)navView.Content).SetStorageProvider(StorageProvider);
-                        }
-
                         navigationStack.Clear();
                         navigationStack.Push(navView.Content);
+                        selectedNavVieItem = selectedItem;
+                        break;
+                    case "Seasons":
+                        navView.Content = Activator.CreateInstance(typeof(UpcomingPageViewModel));
                         selectedNavVieItem = selectedItem;
                         break;
                     case "Account":
@@ -157,7 +153,6 @@ public partial class MainWindow : AppWindow{
                         break;
                     case "Settings":
                         var viewModel = (SettingsPageViewModel)Activator.CreateInstance(typeof(SettingsPageViewModel));
-                        viewModel.SetStorageProvider(StorageProvider);
                         navView.Content = viewModel;
                         selectedNavVieItem = selectedItem;
                         break;

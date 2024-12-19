@@ -1,27 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
-using System.Reflection;
+using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
 using DynamicData;
+using DynamicData.Kernel;
+using Newtonsoft.Json;
 
 namespace CRD.ViewModels;
 
 public partial class CalendarPageViewModel : ViewModelBase{
     public ObservableCollection<CalendarDay> CalendarDays{ get; set; }
 
+    [ObservableProperty]
+    private bool _prevButtonEnabled = true;
+    
+    [ObservableProperty]
+    private bool _nextButtonEnabled = true;
 
     [ObservableProperty]
     private bool _showLoading;
@@ -62,9 +68,8 @@ public partial class CalendarPageViewModel : ViewModelBase{
     private CalendarWeek? currentWeek;
 
     private bool loading = true;
-    
-    public CalendarPageViewModel(){
 
+    public CalendarPageViewModel(){
         CalendarDays = new ObservableCollection<CalendarDay>();
 
         foreach (var languageItem in Languages.languages){
@@ -80,39 +85,46 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         CurrentCalendarLanguage = CalendarLanguage.FirstOrDefault(a => a.Content != null && (string)a.Content == CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage) ?? CalendarLanguage[0];
         loading = false;
-        LoadCalendar(GetThisWeeksMondayDate(), false);
+        LoadCalendar(GetThisWeeksMondayDate(), DateTime.Now, false);
     }
-    
+
+
+
     private string GetThisWeeksMondayDate(){
-        // Get today's date
         DateTime today = DateTime.Today;
 
-        // Calculate the number of days to subtract to get to Monday
-        // DayOfWeek.Monday is 1, so if today is Monday, subtract 0 days, if it's Tuesday subtract 1 day, etc.
         int daysToSubtract = (int)today.DayOfWeek - (int)DayOfWeek.Monday;
 
-        // If today is Sunday (0), it will subtract -1, which we need to adjust to 6 to go back to the previous Monday
         if (daysToSubtract < 0){
             daysToSubtract += 7;
         }
 
-        // Get the date of the most recent Monday
         DateTime monday = today.AddDays(-daysToSubtract);
 
-        // Format and print the date
         string formattedDate = monday.ToString("yyyy-MM-dd");
 
         return formattedDate;
     }
 
-    public async void LoadCalendar(string mondayDate, bool forceUpdate){
+    public async void LoadCalendar(string mondayDate,DateTime customCalDate, bool forceUpdate){
         ShowLoading = true;
-
+        
         CalendarWeek week;
 
         if (CustomCalendar){
-            week = await CalendarManager.Instance.BuildCustomCalendar(forceUpdate);
+
+            if (customCalDate.Date == DateTime.Now.Date){
+                PrevButtonEnabled = false;
+                NextButtonEnabled = true;
+            } else{
+                PrevButtonEnabled = true;
+                NextButtonEnabled = false;
+            }
+            
+            week = await CalendarManager.Instance.BuildCustomCalendar(customCalDate, forceUpdate);
         } else{
+            PrevButtonEnabled = true;
+            NextButtonEnabled = true;
             week = await CalendarManager.Instance.GetCalendarForDate(mondayDate, forceUpdate);
             if (currentWeek != null && currentWeek == week){
                 ShowLoading = false;
@@ -129,7 +141,12 @@ public partial class CalendarPageViewModel : ViewModelBase{
             foreach (var calendarDay in CalendarDays){
                 foreach (var calendarDayCalendarEpisode in calendarDay.CalendarEpisodes){
                     if (calendarDayCalendarEpisode.ImageBitmap == null){
-                        calendarDayCalendarEpisode.LoadImage();
+                        if (calendarDayCalendarEpisode.AnilistEpisode){
+                            calendarDayCalendarEpisode.LoadImage(100,150);
+                        } else{
+                            calendarDayCalendarEpisode.LoadImage();
+                        }
+                        
                     }
                 }
             }
@@ -143,7 +160,11 @@ public partial class CalendarPageViewModel : ViewModelBase{
                     }
 
                     if (calendarDayCalendarEpisode.ImageBitmap == null){
-                        calendarDayCalendarEpisode.LoadImage();
+                        if (calendarDayCalendarEpisode.AnilistEpisode){
+                            calendarDayCalendarEpisode.LoadImage(100,150);
+                        } else{
+                            calendarDayCalendarEpisode.LoadImage();
+                        }
                     }
                 }
             }
@@ -175,7 +196,12 @@ public partial class CalendarPageViewModel : ViewModelBase{
             mondayDate = GetThisWeeksMondayDate();
         }
 
-        LoadCalendar(mondayDate, true);
+        var refreshDate = DateTime.Now;
+        if (currentWeek?.FirstDayOfWeek != null){
+            refreshDate = currentWeek.FirstDayOfWeek.AddDays(6);
+        }
+
+        LoadCalendar(mondayDate,refreshDate, true);
     }
 
     [RelayCommand]
@@ -186,13 +212,18 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         string mondayDate;
 
-        if (currentWeek is{ FirstDayOfWeek: not null }){
-            mondayDate = PreviousMonday((DateTime)currentWeek.FirstDayOfWeek);
+        if (currentWeek is{ FirstDayOfWeek: var firstDay } && firstDay != DateTime.MinValue){
+            mondayDate = PreviousMonday(currentWeek.FirstDayOfWeek);
         } else{
             mondayDate = GetThisWeeksMondayDate();
         }
+        
+        var refreshDate = DateTime.Now;
+        if (currentWeek?.FirstDayOfWeek != null){
+            refreshDate = currentWeek.FirstDayOfWeek.AddDays(-1);
+        }
 
-        LoadCalendar(mondayDate, false);
+        LoadCalendar(mondayDate,refreshDate, false);
     }
 
     [RelayCommand]
@@ -203,13 +234,20 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         string mondayDate;
 
-        if (currentWeek is{ FirstDayOfWeek: not null }){
-            mondayDate = NextMonday((DateTime)currentWeek.FirstDayOfWeek);
+        if (currentWeek is{ FirstDayOfWeek: var firstDay } && firstDay != DateTime.MinValue){
+            mondayDate = NextMonday(currentWeek.FirstDayOfWeek);
         } else{
             mondayDate = GetThisWeeksMondayDate();
         }
+        
+        var refreshDate = DateTime.Now;
+        if (currentWeek?.FirstDayOfWeek != null){
+            refreshDate = currentWeek.FirstDayOfWeek.AddDays(13);
+        }
 
-        LoadCalendar(mondayDate, false);
+        LoadCalendar(mondayDate,refreshDate, false);
+            
+        
     }
 
 
@@ -232,7 +270,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.CustomCalendar = value;
 
-        LoadCalendar(GetThisWeeksMondayDate(), true);
+        LoadCalendar(GetThisWeeksMondayDate(),DateTime.Now, true);
 
         CfgManager.WriteSettingsToFile();
     }
@@ -265,4 +303,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
             CfgManager.WriteSettingsToFile();
         }
     }
+
+
+
 }

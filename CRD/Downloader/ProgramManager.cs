@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils;
+using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
 using CRD.Utils.Updater;
 using FluentAvalonia.Styling;
 
@@ -50,11 +55,17 @@ public partial class ProgramManager : ObservableObject{
 
     #endregion
 
+
+    public Dictionary<string, List<AnilistSeries>> AnilistSeasons = new();
+    public Dictionary<string, List<CalendarEpisode>> AnilistUpcoming = new();
+
     private readonly FluentAvaloniaTheme? _faTheme;
 
     private Queue<Func<Task>> taskQueue = new Queue<Func<Task>>();
 
     private bool exitOnTaskFinish = false;
+
+    public IStorageProvider StorageProvider;
 
     public ProgramManager(){
         _faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme;
@@ -106,7 +117,7 @@ public partial class ProgramManager : ObservableObject{
 
     private async void Init(){
         CrunchyrollManager.Instance.InitOptions();
-        
+
         UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
 
         if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
@@ -125,6 +136,10 @@ public partial class ProgramManager : ObservableObject{
             }
         }
 
+        if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath)){
+            Helpers.SetBackgroundImage(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath, CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity,
+                CrunchyrollManager.Instance.CrunOptions.BackgroundImageBlurRadius);
+        }
 
         await CrunchyrollManager.Instance.Init();
 
@@ -132,6 +147,7 @@ public partial class ProgramManager : ObservableObject{
 
         await WorkOffArgsTasks();
     }
+
 
     private async Task WorkOffArgsTasks(){
         if (taskQueue.Count == 0){
@@ -149,13 +165,11 @@ public partial class ProgramManager : ObservableObject{
             Console.WriteLine("Exiting...");
             IClassicDesktopStyleApplicationLifetime? lifetime = (IClassicDesktopStyleApplicationLifetime)Application.Current?.ApplicationLifetime;
             if (lifetime != null){
-                lifetime.Shutdown(); 
+                lifetime.Shutdown();
             } else{
                 Environment.Exit(0);
             }
-           
         }
-        
     }
 
 

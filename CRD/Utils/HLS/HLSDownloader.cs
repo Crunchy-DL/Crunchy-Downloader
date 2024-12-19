@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Downloader;
-using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Parser.Utils;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
@@ -118,11 +116,9 @@ public class HlsDownloader{
         }
 
 
-
-
         if (_data.M3U8Json != null){
             List<dynamic> segments = _data.M3U8Json.Segments;
-            
+
             // map has init uri outside is none init uri
             // Download init part
             if (segments[0].map != null && _data.Offset == 0 && !_data.SkipInit){
@@ -249,7 +245,7 @@ public class HlsDownloader{
                 int downloadedSeg = Math.Min(dlOffset, totalSeg);
                 _data.Parts.Completed = downloadedSeg + _data.Offset; // 
 
-                var dataLog = GetDownloadInfo(_data.DateStart, _data.Parts.Completed, totalSeg, _data.BytesDownloaded,_data.TotalBytes);
+                var dataLog = GetDownloadInfo(_data.DateStart, _data.Parts.Completed, totalSeg, _data.BytesDownloaded, _data.TotalBytes);
                 _data.BytesDownloaded = 0;
 
                 // Save resume data to file
@@ -268,6 +264,17 @@ public class HlsDownloader{
                 };
 
                 if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    if (!_currentEpMeta.DownloadProgress.Done){
+                        foreach (var downloadItemDownloadedFile in _currentEpMeta.downloadedFiles){
+                            try{
+                                if (File.Exists(downloadItemDownloadedFile)){
+                                    File.Delete(downloadItemDownloadedFile);
+                                }
+                            } catch (Exception e){
+                            }
+                        }
+                    }
+
                     return (Ok: false, _data.Parts);
                 }
 
@@ -285,7 +292,7 @@ public class HlsDownloader{
         return (Ok: true, _data.Parts);
     }
 
-    public static Info GetDownloadInfo(long dateStartUnix, int partsDownloaded, int partsTotal, long downloadedBytes,long totalDownloadedBytes){
+    public static Info GetDownloadInfo(long dateStartUnix, int partsDownloaded, int partsTotal, long downloadedBytes, long totalDownloadedBytes){
         // Convert Unix timestamp to DateTime
         DateTime dateStart = DateTimeOffset.FromUnixTimeMilliseconds(dateStartUnix).UtcDateTime;
         double dateElapsed = (DateTime.UtcNow - dateStart).TotalMilliseconds;
@@ -293,15 +300,12 @@ public class HlsDownloader{
         // Calculate percentage
         int percentFixed = (int)((double)partsDownloaded / partsTotal * 100);
         int percent = percentFixed < 100 ? percentFixed : (partsTotal == partsDownloaded ? 100 : 99);
-        
-        // Calculate download speed (bytes per second)
+
         double downloadSpeed = downloadedBytes / (dateElapsed / 1000);
 
-        // Calculate remaining time estimate
-        // double remainingTime = dateElapsed * (partsTotal / (double)partsDownloaded - 1);
         int partsLeft = partsTotal - partsDownloaded;
         double remainingTime = (partsLeft * (totalDownloadedBytes / partsDownloaded)) / downloadSpeed;
-        
+
         return new Info{
             Percent = percent,
             Time = remainingTime,
@@ -584,32 +588,6 @@ public class Data{
     public string? Override{ get; set; }
     public long DateStart{ get; set; }
     public long TotalBytes{ get; set; }
-}
-
-public class ProgressData{
-    public int Total{ get; set; }
-
-    public int Cur{ get; set; }
-
-    // Considering the dual type in TypeScript (number|string), you might opt for string in C# to accommodate both numeric and text representations.
-    // Alternatively, you could use a custom setter to handle numeric inputs as strings, or define two separate properties if the usage context is clear.
-    public string? Percent{ get; set; }
-    public double Time{ get; set; } // Assuming this represents a duration or timestamp, you might consider TimeSpan or DateTime based on context.
-    public double DownloadSpeed{ get; set; }
-    public long Bytes{ get; set; }
-}
-
-public class DownloadInfo{
-    public string? Image{ get; set; }
-
-    public Parent? Parent{ get; set; }
-    public string? Title{ get; set; }
-    public LanguageItem? Language{ get; set; }
-    public string? FileName{ get; set; }
-}
-
-public class Parent{
-    public string? Title{ get; set; }
 }
 
 public class PartsData{

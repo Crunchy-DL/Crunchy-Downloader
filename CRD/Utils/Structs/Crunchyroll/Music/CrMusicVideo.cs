@@ -43,7 +43,7 @@ public class CrunchyMusicVideo{
     public bool MatureBlocked{ get; set; }
     
     [JsonProperty("originalRelease")]
-    public DateTime? OriginalRelease{ get; set; }
+    public DateTime OriginalRelease{ get; set; }
     
     [JsonProperty("sequenceNumber")]
     public int SequenceNumber{ get; set; }
@@ -76,7 +76,7 @@ public class CrunchyMusicVideo{
     public bool IsPublic{ get; set; }
     
     [JsonProperty("publishDate")]
-    public DateTime? PublishDate{ get; set; }
+    public DateTime PublishDate{ get; set; }
     
     [JsonProperty("displayArtistName")]
     public string? DisplayArtistName{ get; set; }
@@ -91,12 +91,12 @@ public class CrunchyMusicVideo{
     public string? Id{ get; set; }
     
     [JsonProperty("createdAt")]
-    public DateTime? CreatedAt{ get; set; }
+    public DateTime CreatedAt{ get; set; }
 
     public MusicImages? Images{ get; set; }
     
     [JsonProperty("updatedAt")]
-    public DateTime? UpdatedAt{ get; set; }
+    public DateTime UpdatedAt{ get; set; }
     
 }
 
@@ -125,8 +125,8 @@ public struct MusicVideoArtist{
 
 public struct MusicVideoAvailability{
     [JsonProperty("endDate")]
-    public DateTime? EndDate{ get; set; }
+    public DateTime EndDate{ get; set; }
     [JsonProperty("startDate")]
-    public DateTime? StartDate{ get; set; }
+    public DateTime StartDate{ get; set; }
     
 }

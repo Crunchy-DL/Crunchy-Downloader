@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Dynamic;
 using System.Linq;
 using System.Xml.Linq;
-using CRD.Downloader;
 using CRD.Utils.HLS;
 using CRD.Utils.Parser;
 using CRD.Utils.Parser.Utils;

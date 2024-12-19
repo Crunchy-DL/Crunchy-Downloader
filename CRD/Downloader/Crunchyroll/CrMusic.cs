@@ -23,8 +23,8 @@ public class CrMusic{
     }
 
     public async Task<CrunchyMusicVideoList?> ParseArtistMusicVideosByIdAsync(string id, string crLocale, bool forcedLang = false){
-        var musicVideosTask = FetchMediaListAsync($"{Api.Content}/music/artists/{id}/music_videos", crLocale, forcedLang);
-        var concertsTask = FetchMediaListAsync($"{Api.Content}/music/artists/{id}/concerts", crLocale, forcedLang);
+        var musicVideosTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{id}/music_videos", crLocale, forcedLang);
+        var concertsTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{id}/concerts", crLocale, forcedLang);
 
         await Task.WhenAll(musicVideosTask, concertsTask);
 
@@ -42,7 +42,7 @@ public class CrMusic{
     }
 
     private async Task<CrunchyMusicVideo?> ParseMediaByIdAsync(string id, string crLocale, bool forcedLang, string endpoint){
-        var mediaList = await FetchMediaListAsync($"{Api.Content}/{endpoint}/{id}", crLocale, forcedLang);
+        var mediaList = await FetchMediaListAsync($"{ApiUrls.Content}/{endpoint}/{id}", crLocale, forcedLang);
 
         switch (mediaList.Total){
             case < 1:
@@ -110,6 +110,7 @@ public class CrMusic{
         epMeta.AvailableSubs = new List<string>();
         epMeta.Description = episodeP.Description;
         epMeta.Music = true;
+        epMeta.Hslang = CrunchyrollManager.Instance.CrunOptions.Hslang;
 
         return epMeta;
     }

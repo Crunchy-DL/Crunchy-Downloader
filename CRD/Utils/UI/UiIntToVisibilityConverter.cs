@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
-using FluentAvalonia.UI.Controls;
 
 namespace CRD.Utils.UI;
 

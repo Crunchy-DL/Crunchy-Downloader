@@ -16,7 +16,7 @@ namespace CRD.Utils.Muxing;
 public class SyncingHelper{
     public static async Task<(bool IsOk, int ErrorCode, double frameRate)> ExtractFrames(string videoPath, string outputDir, double offset, double duration){
         var ffmpegPath = CfgManager.PathFFMPEG;
-        var arguments = $"-i \"{videoPath}\" -vf \"select='gt(scene,0.1)',showinfo\" -vsync vfr -frame_pts true -t {duration} -ss {offset} \"{outputDir}\\frame%03d.png\"";
+        var arguments = $"-i \"{videoPath}\" -vf \"select='gt(scene,0.1)',showinfo\" -fps_mode vfr -frame_pts true -t {duration} -ss {offset} \"{outputDir}\\frame%03d.png\"";
 
         var output = "";
 
@@ -37,7 +37,7 @@ public class SyncingHelper{
 
                 process.ErrorDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
-                        Console.WriteLine($"{e.Data}");
+                        // Console.WriteLine($"{e.Data}");
                         output += e.Data;
                     }
                 };
@@ -128,18 +128,35 @@ public class SyncingHelper{
             float[] pixels1 = ExtractPixels(image1, targetWidth, targetHeight);
             float[] pixels2 = ExtractPixels(image2, targetWidth, targetHeight);
 
+            // Check if any frame is completely black, if so, skip SSIM calculation
+            if (IsBlackFrame(pixels1) || IsBlackFrame(pixels2)){
+                // Return a negative value or zero to indicate no SSIM comparison for black frames.
+                return -1.0;
+            }
+            
             // Compute SSIM
             return CalculateSSIM(pixels1, pixels2, targetWidth, targetHeight);
         }
     }
 
+    private static bool IsBlackFrame(float[] pixels, float threshold = 1.0f){
+        // Check if all pixel values are below the threshold, indicating a black frame.
+        return pixels.All(p => p <= threshold);
+    }
+    
     public static bool AreFramesSimilar(string imagePath1, string imagePath2, double ssimThreshold){
         double ssim = ComputeSSIM(imagePath1, imagePath2, 256, 256);
         // Console.WriteLine($"SSIM: {ssim}");
         return ssim > ssimThreshold;
     }
 
-    public static double CalculateOffset(List<FrameData> baseFrames, List<FrameData> compareFrames, double ssimThreshold = 0.9){
+    public static double CalculateOffset(List<FrameData> baseFrames, List<FrameData> compareFrames,bool reverseCompare = false, double ssimThreshold = 0.9){
+
+        if (reverseCompare){
+            baseFrames.Reverse();
+            compareFrames.Reverse();
+        }
+        
         foreach (var baseFrame in baseFrames){
             var matchingFrame = compareFrames.FirstOrDefault(f => AreFramesSimilar(baseFrame.FilePath, f.FilePath, ssimThreshold));
             if (matchingFrame != null){

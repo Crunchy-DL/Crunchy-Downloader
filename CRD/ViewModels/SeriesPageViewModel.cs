@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.Controls.Shapes;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,7 +10,6 @@ using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
-using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.ViewModels.Utils;
@@ -21,7 +17,6 @@ using CRD.Views;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
 using ReactiveUI;
-using Path = Avalonia.Controls.Shapes.Path;
 
 namespace CRD.ViewModels;
 
@@ -53,6 +48,9 @@ public partial class SeriesPageViewModel : ViewModelBase{
     public bool _seriesFolderPathExists;
 
     public SeriesPageViewModel(){
+        
+        _storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
+        
         _selectedSeries = CrunchyrollManager.Instance.SelectedSeries;
 
         if (_selectedSeries.ThumbnailImage == null){
@@ -155,11 +153,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         UpdateSeriesFolderPath();
     }
-
-    public void SetStorageProvider(IStorageProvider storageProvider){
-        _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
-    }
-
+    
     [RelayCommand]
     public async Task MatchSonarrSeries_Button(){
         var dialog = new ContentDialog(){

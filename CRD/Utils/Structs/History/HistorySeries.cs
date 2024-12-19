@@ -1,14 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using Avalonia.Media.Imaging;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.CustomList;
 using Newtonsoft.Json;
@@ -52,12 +49,15 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonProperty("history_series_add_date")]
     public DateTime? HistorySeriesAddDate{ get; set; }
 
+    [JsonProperty("history_series_video_quality_override")]
+    public string HistorySeriesVideoQualityOverride{ get; set; } = "";
+
     [JsonProperty("history_series_available_soft_subs")]
     public List<string> HistorySeriesAvailableSoftSubs{ get; set; } =[];
 
     [JsonProperty("history_series_available_dub_lang")]
     public List<string> HistorySeriesAvailableDubLang{ get; set; } =[];
-    
+
     [JsonProperty("history_series_soft_subs_override")]
     public List<string> HistorySeriesSoftSubsOverride{ get; set; } =[];
 
@@ -92,7 +92,22 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonIgnore]
     private bool _editModeEnabled;
 
-    #region Language Override
+    #region Settings Override
+
+    [JsonIgnore]
+    public StringItem? _selectedVideoQualityItem;
+
+    [JsonIgnore]
+    public StringItem? SelectedVideoQualityItem{
+        get => _selectedVideoQualityItem;
+        set{
+            _selectedVideoQualityItem = value;
+
+            HistorySeriesVideoQualityOverride = value?.stringValue ?? "";
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedVideoQualityItem)));
+            CfgManager.UpdateHistoryFile();
+        }
+    }
 
     [JsonIgnore]
     public string SelectedSubs{ get; set; } = "";
@@ -106,6 +121,27 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonIgnore]
     public ObservableCollection<StringItem> SelectedDubLang{ get; set; } = new();
 
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> DubLangList{ get; } = new(){
+    };
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> SubLangList{ get; } = new(){
+        new StringItem(){ stringValue = "all" },
+        new StringItem(){ stringValue = "none" },
+    };
+
+    [JsonIgnore]
+    public ObservableCollection<StringItem> VideoQualityList{ get; } = new(){
+        new StringItem(){ stringValue = "best" },
+        new StringItem(){ stringValue = "1080p" },
+        new StringItem(){ stringValue = "720p" },
+        new StringItem(){ stringValue = "480p" },
+        new StringItem(){ stringValue = "360p" },
+        new StringItem(){ stringValue = "240p" },
+        new StringItem(){ stringValue = "worst" },
+    };
 
     private void UpdateSubAndDubString(){
         HistorySeriesSoftSubsOverride.Clear();
@@ -136,16 +172,6 @@ public class HistorySeries : INotifyPropertyChanged{
         UpdateSubAndDubString();
     }
 
-    [JsonIgnore]
-    public ObservableCollection<StringItem> DubLangList{ get; } = new(){
-    };
-
-    [JsonIgnore]
-    public ObservableCollection<StringItem> SubLangList{ get; } = new(){
-        new StringItem(){ stringValue = "all" },
-        new StringItem(){ stringValue = "none" },
-    };
-
     public void Init(){
         if (!(SubLangList.Count > 2 || DubLangList.Count > 0)){
             foreach (var languageItem in Languages.languages){
@@ -153,6 +179,8 @@ public class HistorySeries : INotifyPropertyChanged{
                 DubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
             }
         }
+
+        SelectedVideoQualityItem = VideoQualityList.FirstOrDefault(a => HistorySeriesVideoQualityOverride.Equals(a.stringValue)) ?? new StringItem(){ stringValue = "" };
 
         var softSubLang = SubLangList.Where(a => HistorySeriesSoftSubsOverride.Contains(a.stringValue)).ToList();
         var dubLang = DubLangList.Where(a => HistorySeriesDubLangOverride.Contains(a.stringValue)).ToList();
@@ -181,11 +209,7 @@ public class HistorySeries : INotifyPropertyChanged{
             return;
 
         try{
-            using var client = new HttpClient();
-            var response = await client.GetAsync(ThumbnailImageUrl);
-            response.EnsureSuccessStatusCode();
-            using var stream = await response.Content.ReadAsStreamAsync();
-            ThumbnailImage = new Bitmap(stream);
+            ThumbnailImage = await Helpers.LoadImage(ThumbnailImageUrl);
             IsImageLoaded = true;
 
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ThumbnailImage)));
@@ -320,10 +344,15 @@ public class HistorySeries : INotifyPropertyChanged{
         Console.WriteLine($"Fetching Data for: {SeriesTitle}");
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-        await CrunchyrollManager.Instance.History.CRUpdateSeries(SeriesId, seasonId);
+        try{
+            await CrunchyrollManager.Instance.History.CRUpdateSeries(SeriesId, seasonId);
+        } catch (Exception e){
+            Console.Error.WriteLine("Failed to update History series");
+            Console.Error.WriteLine(e);
+        }
+
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesTitle)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesDescription)));
-        // CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, this);
         UpdateNewEpisodes();
         FetchingData = false;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));

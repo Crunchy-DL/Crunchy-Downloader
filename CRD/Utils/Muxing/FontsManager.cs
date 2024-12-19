@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using CRD.Utils.Structs;
 
 namespace CRD.Utils.Muxing;
@@ -54,6 +55,53 @@ public class FontsManager{
 
     public string root = "https://static.crunchyroll.com/vilos-v2/web/vilos/assets/libass-fonts/";
 
+
+    public async Task GetFontsAsync(){
+        Console.WriteLine("Downloading fonts...");
+        var fonts = Fonts.Values.SelectMany(f => f).ToList();
+
+        foreach (var font in fonts){
+            var fontLoc = Path.Combine(CfgManager.PathFONTS_DIR, font);
+
+            if (File.Exists(fontLoc) && new FileInfo(fontLoc).Length != 0){
+                Console.WriteLine($"{font} already downloaded!");
+            } else{
+                var fontFolder = Path.GetDirectoryName(fontLoc);
+                if (File.Exists(fontLoc) && new FileInfo(fontLoc).Length == 0){
+                    File.Delete(fontLoc);
+                }
+
+                try{
+                    if (!Directory.Exists(fontFolder)){
+                        Directory.CreateDirectory(fontFolder);
+                    }
+                } catch (Exception e){
+                    Console.WriteLine($"Failed to create directory: {e.Message}");
+                }
+
+                var fontUrl = root + font;
+
+                using (var httpClient = HttpClientReq.Instance.GetHttpClient()){
+                    try{
+                        var response = await httpClient.GetAsync(fontUrl);
+                        if (response.IsSuccessStatusCode){
+                            var fontData = await response.Content.ReadAsByteArrayAsync();
+                            await File.WriteAllBytesAsync(fontLoc, fontData);
+                            Console.WriteLine($"Downloaded: {font}");
+                        } else{
+                            Console.Error.WriteLine($"Failed to download: {font}");
+                        }
+                    } catch (Exception e){
+                        Console.Error.WriteLine($"Error downloading {font}: {e.Message}");
+                    }
+                }
+            }
+        }
+
+        Console.WriteLine("All required fonts downloaded!");
+    }
+
+
     public static List<string> ExtractFontsFromAss(string ass){
         var lines = ass.Replace("\r", "").Split('\n');
         var styles = new List<string>();
@@ -76,7 +124,6 @@ public class FontsManager{
     }
 
     public Dictionary<string, List<string>> GetDictFromKeyList(List<string> keysList){
-        
         Dictionary<string, List<string>> filteredDictionary = new Dictionary<string, List<string>>();
 
         foreach (string key in keysList){
@@ -86,9 +133,8 @@ public class FontsManager{
         }
 
         return filteredDictionary;
-
     }
-    
+
 
     public static string GetFontMimeType(string fontFile){
         if (Regex.IsMatch(fontFile, @"\.otf$"))
@@ -99,7 +145,7 @@ public class FontsManager{
             return "application/octet-stream";
     }
 
-    public  List<ParsedFont> MakeFontsList(string fontsDir, List<SubtitleFonts> subs){
+    public List<ParsedFont> MakeFontsList(string fontsDir, List<SubtitleFonts> subs){
         Dictionary<string, List<string>> fontsNameList = new Dictionary<string, List<string>>();
         List<string> subsList = new List<string>();
         List<ParsedFont> fontsList = new List<ParsedFont>();
@@ -108,12 +154,13 @@ public class FontsManager{
         foreach (var s in subs){
             foreach (var keyValuePair in s.Fonts){
                 if (!fontsNameList.ContainsKey(keyValuePair.Key)){
-                    fontsNameList.Add(keyValuePair.Key,keyValuePair.Value);
+                    fontsNameList.Add(keyValuePair.Key, keyValuePair.Value);
                 }
             }
+
             subsList.Add(s.Language.Locale);
         }
-        
+
         if (subsList.Count > 0){
             Console.WriteLine("\nSubtitles: {0} (Total: {1})", string.Join(", ", subsList), subsList.Count);
             isNstr = false;

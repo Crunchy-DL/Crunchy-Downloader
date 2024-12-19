@@ -1,0 +1,41 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             xmlns:utils="clr-namespace:CRD.ViewModels.Utils"
+             xmlns:structs="clr-namespace:CRD.Utils.Structs"
+             x:DataType="utils:ContentDialogDropdownSelectViewModel"
+             x:Class="CRD.Views.Utils.ContentDialogDropdownSelectView">
+
+
+    <StackPanel Spacing="10" MinWidth="400">
+        <TextBlock Text="{Binding EpisodeInfo}"></TextBlock>
+
+        <ComboBox HorizontalAlignment="Center" HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                  ItemsSource="{Binding DropDownItemList}"
+                  SelectedItem="{Binding SelectedDropdownItem}">
+
+            <ComboBox.ItemTemplate>
+                <DataTemplate DataType="{x:Type structs:StringItem}">
+                    <TextBlock Text="{Binding stringValue}"></TextBlock>
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+
+        </ComboBox>
+
+
+        <!-- <ListBox SelectionMode="Single" Width="210" -->
+        <!--          MaxHeight="400" -->
+        <!--          ItemsSource="{Binding DropDownItemList , Mode=OneWay}" -->
+        <!--          SelectedItems="{Binding SelectedDropdownItem}"> -->
+        <!--     <ListBox.ItemTemplate> -->
+        <!--         <DataTemplate DataType="{x:Type structs:StringItem}"> -->
+        <!--             <TextBlock Text="{Binding stringValue}"></TextBlock> -->
+        <!--         </DataTemplate> -->
+        <!--     </ListBox.ItemTemplate> -->
+        <!-- </ListBox> -->
+
+    </StackPanel>
+
+</UserControl>

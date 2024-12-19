@@ -19,20 +19,18 @@ namespace CRD.Downloader;
 public class History(){
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
-    public async Task CRUpdateSeries(string seriesId, string? seasonId){
+    public async Task<bool> CRUpdateSeries(string seriesId, string? seasonId){
         await crunInstance.CrAuth.RefreshToken(true);
 
         CrSeriesSearch? parsedSeries = await crunInstance.CrSeries.ParseSeriesById(seriesId, "ja-JP", true);
 
         if (parsedSeries == null){
             Console.Error.WriteLine("Parse Data Invalid - series is maybe only available with VPN or got deleted");
-            return;
+            return false;
         }
 
         if (parsedSeries.Data != null){
             foreach (var s in parsedSeries.Data){
-                if (!string.IsNullOrEmpty(seasonId) && s.Id != seasonId) continue;
-
                 var sId = s.Id;
                 if (s.Versions is{ Count: > 0 }){
                     foreach (var sVersion in s.Versions.Where(sVersion => sVersion.Original == true)){
@@ -44,8 +42,11 @@ public class History(){
                     }
                 }
 
+                if (!string.IsNullOrEmpty(seasonId) && sId != seasonId) continue;
+
+
                 var seasonData = await crunInstance.CrSeries.GetSeasonDataById(sId, string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang, true);
-                if (seasonData.Data != null) await UpdateWithSeasonData(seasonData.Data);
+                if (seasonData.Data is{ Count: > 0 }) await UpdateWithSeasonData(seasonData.Data);
             }
 
 
@@ -55,8 +56,11 @@ public class History(){
                 MatchHistorySeriesWithSonarr(false);
                 await MatchHistoryEpisodesWithSonarr(false, historySeries);
                 CfgManager.UpdateHistoryFile();
+                return true;
             }
         }
+
+        return false;
     }
 
 
@@ -124,10 +128,12 @@ public class History(){
         return (null, downloadDirPath);
     }
 
-    public (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath) GetHistoryEpisodeWithDubListAndDownloadDir(string? seriesId, string? seasonId, string episodeId){
+    public (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath, string videoQuality) GetHistoryEpisodeWithDubListAndDownloadDir(string? seriesId, string? seasonId,
+        string episodeId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
         var downloadDirPath = "";
+        var videoQuality = "";
         List<string> dublist =[];
         List<string> sublist =[];
 
@@ -145,6 +151,10 @@ public class History(){
                 downloadDirPath = historySeries.SeriesDownloadPath;
             }
 
+            if (!string.IsNullOrEmpty(historySeries.HistorySeriesVideoQualityOverride)){
+                videoQuality = historySeries.HistorySeriesVideoQualityOverride;
+            }
+
             if (historySeason != null){
                 var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == episodeId);
                 if (historySeason.HistorySeasonDubLangOverride.Count > 0){
@@ -159,13 +169,17 @@ public class History(){
                     downloadDirPath = historySeason.SeasonDownloadPath;
                 }
 
+                if (!string.IsNullOrEmpty(historySeason.HistorySeasonVideoQualityOverride)){
+                    videoQuality = historySeason.HistorySeasonVideoQualityOverride;
+                }
+
                 if (historyEpisode != null){
-                    return (historyEpisode, dublist, sublist, downloadDirPath);
+                    return (historyEpisode, dublist, sublist, downloadDirPath, videoQuality);
                 }
             }
         }
 
-        return (null, dublist, sublist, downloadDirPath);
+        return (null, dublist, sublist, downloadDirPath, videoQuality);
     }
 
     public List<string> GetDubList(string? seriesId, string? seasonId){
@@ -187,10 +201,11 @@ public class History(){
         return dublist;
     }
 
-    public List<string> GetSubList(string? seriesId, string? seasonId){
+    public (List<string> sublist, string videoQuality) GetSubList(string? seriesId, string? seasonId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
         List<string> sublist =[];
+        var videoQuality = "";
 
         if (historySeries != null){
             var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
@@ -198,12 +213,20 @@ public class History(){
                 sublist = historySeries.HistorySeriesSoftSubsOverride;
             }
 
+            if (!string.IsNullOrEmpty(historySeries.HistorySeriesVideoQualityOverride)){
+                videoQuality = historySeries.HistorySeriesVideoQualityOverride;
+            }
+
             if (historySeason is{ HistorySeasonSoftSubsOverride.Count: > 0 }){
                 sublist = historySeason.HistorySeasonSoftSubsOverride;
             }
+
+            if (historySeason != null && !string.IsNullOrEmpty(historySeason.HistorySeasonVideoQualityOverride)){
+                videoQuality = historySeason.HistorySeasonVideoQualityOverride;
+            }
         }
 
-        return sublist;
+        return (sublist, videoQuality);
     }
 
 
@@ -242,15 +265,14 @@ public class History(){
                         var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == crunchyEpisode.Id);
 
                         if (historyEpisode == null){
-                            
                             var langList = new List<string>();
-            
+
                             if (crunchyEpisode.Versions != null){
                                 langList.AddRange(crunchyEpisode.Versions.Select(version => version.AudioLocale));
                             } else{
                                 langList.Add(crunchyEpisode.AudioLocale);
                             }
-                            
+
                             var newHistoryEpisode = new HistoryEpisode{
                                 EpisodeTitle = GetEpisodeTitle(crunchyEpisode),
                                 EpisodeDescription = crunchyEpisode.Description,
@@ -260,19 +282,19 @@ public class History(){
                                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
                                 HistoryEpisodeAvailableDubLang = Languages.SortListByLangList(langList),
                                 HistoryEpisodeAvailableSoftSubs = Languages.SortListByLangList(crunchyEpisode.SubtitleLocales),
+                                EpisodeCrPremiumAirDate = crunchyEpisode.PremiumAvailableDate
                             };
 
                             historySeason.EpisodesList.Add(newHistoryEpisode);
                         } else{
-                            
                             var langList = new List<string>();
-            
+
                             if (crunchyEpisode.Versions != null){
                                 langList.AddRange(crunchyEpisode.Versions.Select(version => version.AudioLocale));
                             } else{
                                 langList.Add(crunchyEpisode.AudioLocale);
                             }
-                            
+
                             //Update existing episode
                             historyEpisode.EpisodeTitle = GetEpisodeTitle(crunchyEpisode);
                             historyEpisode.SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _);
@@ -366,6 +388,7 @@ public class History(){
                 historySeries.HistorySeriesAvailableDubLang = Languages.SortListByLangList(series.AudioLocales);
                 historySeries.HistorySeriesAvailableSoftSubs = Languages.SortListByLangList(series.SubtitleLocales);
             }
+
             return;
         }
 
@@ -505,16 +528,16 @@ public class History(){
         };
 
         foreach (var crunchyEpisode in seasonData){
-
             var langList = new List<string>();
-            
+
             if (crunchyEpisode.Versions != null){
                 langList.AddRange(crunchyEpisode.Versions.Select(version => version.AudioLocale));
             } else{
                 langList.Add(crunchyEpisode.AudioLocale);
             }
+
             Languages.SortListByLangList(langList);
-            
+
             var newHistoryEpisode = new HistoryEpisode{
                 EpisodeTitle = GetEpisodeTitle(crunchyEpisode),
                 EpisodeDescription = crunchyEpisode.Description,
@@ -524,6 +547,7 @@ public class History(){
                 SpecialEpisode = !int.TryParse(crunchyEpisode.Episode, out _),
                 HistoryEpisodeAvailableDubLang = langList,
                 HistoryEpisodeAvailableSoftSubs = crunchyEpisode.SubtitleLocales,
+                EpisodeCrPremiumAirDate = crunchyEpisode.PremiumAvailableDate
             };
 
             newSeason.EpisodesList.Add(newHistoryEpisode);
@@ -531,7 +555,7 @@ public class History(){
 
         return newSeason;
     }
-    
+
     public void MatchHistorySeriesWithSonarr(bool updateAll){
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;

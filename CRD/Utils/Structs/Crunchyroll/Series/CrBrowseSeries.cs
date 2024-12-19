@@ -53,6 +53,9 @@ public class CrBrowseSeries : INotifyPropertyChanged{
     
     [JsonIgnore]
     public Bitmap? ImageBitmap{ get; set; }
+    
+    [JsonIgnore]
+    public bool IsInHistory{ get; set; }
 
     public event PropertyChangedEventHandler? PropertyChanged;
     public async void LoadImage(string url){

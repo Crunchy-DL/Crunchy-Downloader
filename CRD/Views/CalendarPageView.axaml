@@ -27,7 +27,7 @@
         </Grid.ColumnDefinitions>
 
         <Button Grid.Row="0" Grid.Column="0" Margin="10 10 0 0" HorizontalAlignment="Center"
-                IsEnabled="{Binding !CustomCalendar}"
+                IsEnabled="{Binding PrevButtonEnabled}"
                 Command="{Binding  PrevWeek}">
             <StackPanel Orientation="Horizontal">
                 <controls:SymbolIcon Symbol="ChevronLeft" FontSize="18" />
@@ -65,19 +65,19 @@
 
                         <StackPanel>
                             <controls:SettingsExpander IsVisible="{Binding !CustomCalendar}" Header="Simulcast Calendar Language">
-                                
-                                
+
+
                                 <controls:SettingsExpander.Footer>
-                                    
+
                                     <ComboBox HorizontalAlignment="Center" Margin="10 0 0 0" MinWidth="200"
                                               SelectedItem="{Binding CurrentCalendarLanguage}"
                                               ItemsSource="{Binding CalendarLanguage}">
                                     </ComboBox>
-                                    
+
                                 </controls:SettingsExpander.Footer>
-                                
+
                             </controls:SettingsExpander>
-                            
+
                             <controls:SettingsExpander Header="Custom Calendar">
                                 <controls:SettingsExpander.Footer>
                                     <CheckBox IsChecked="{Binding CustomCalendar}"
@@ -85,10 +85,10 @@
                                     </CheckBox>
                                 </controls:SettingsExpander.Footer>
                             </controls:SettingsExpander>
-                            
-                            
+
+
                             <controls:SettingsExpander IsVisible="{Binding CustomCalendar}" Header="Custom Calendar Dub Filter">
-                                
+
                                 <controls:SettingsExpander.Footer>
                                     <StackPanel Orientation="Vertical">
                                         <ComboBox HorizontalAlignment="Center" Margin="5 0 0 5" MinWidth="200"
@@ -99,12 +99,12 @@
                                                   Content="Filter by episode air date" Margin="5 5 0 0">
                                         </CheckBox>
                                     </StackPanel>
-                                   
+
                                 </controls:SettingsExpander.Footer>
-                                
+
                             </controls:SettingsExpander>
-                            
-                            
+
+
                             <controls:SettingsExpander Header="Calendar ">
                                 <controls:SettingsExpander.Footer>
                                     <CheckBox IsChecked="{Binding HideDubs}"
@@ -112,9 +112,9 @@
                                     </CheckBox>
                                 </controls:SettingsExpander.Footer>
                             </controls:SettingsExpander>
-                            
+
                         </StackPanel>
-                        
+
                     </Border>
                 </Popup>
 
@@ -125,7 +125,7 @@
 
 
         <Button Grid.Row="0" Grid.Column="2" Margin="0 0 10 0" HorizontalAlignment="Center"
-                IsEnabled="{Binding !CustomCalendar}"
+                IsEnabled="{Binding NextButtonEnabled}"
                 Command="{Binding  NextWeek}">
             <StackPanel Orientation="Horizontal">
                 <controls:SymbolIcon Symbol="ChevronRight" FontSize="18" />
@@ -178,17 +178,27 @@
                                                            Margin="0,0,0,0" />
                                                 <Grid HorizontalAlignment="Center">
                                                     <Grid>
-                                                        <Image HorizontalAlignment="Center" Source="../Assets/coming_soon_ep.jpg" />
-                                                        <Image HorizontalAlignment="Center" Source="{Binding ImageBitmap}" />
+                                                        <Image HorizontalAlignment="Center" IsVisible="{Binding !AnilistEpisode}" Source="../Assets/coming_soon_ep.jpg" />
+                                                        <Image HorizontalAlignment="Center" MaxHeight="150" Source="{Binding ImageBitmap}" />
                                                     </Grid>
-                                                    
-                                                    
+
+
                                                     <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
-                                                        <TextBlock VerticalAlignment="Center" TextAlignment="Center"
-                                                                   Margin="0 0 5 0" Width="30" Height="30"
-                                                                   Background="Black" Opacity="0.8"
-                                                                   Text="{Binding EpisodeNumber}"
-                                                                   Padding="0,5,0,0" />
+
+                                                        <Border VerticalAlignment="Top" HorizontalAlignment="Right" CornerRadius="0 0 10 0"
+                                                                Background="#f78c25" Opacity="1"
+                                                                Margin="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).CornerMargin} ">
+                                                            <TextBlock VerticalAlignment="Center" TextAlignment="Center"
+                                                                       Width="30" Height="30"
+                                                                       Text="{Binding EpisodeNumber}"
+                                                                       Padding="0,5,0,0" />
+                                                        </Border>
+
+                                                        <!-- <TextBlock VerticalAlignment="Center" TextAlignment="Center" -->
+                                                        <!--            Margin="0 0 5 0" Width="30" Height="30" -->
+                                                        <!--            Background="Black" Opacity="0.8" -->
+                                                        <!--            Text="{Binding EpisodeNumber}" -->
+                                                        <!--            Padding="0,5,0,0"  /> -->
                                                     </StackPanel>
                                                     <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Right"
                                                                 IsVisible="{Binding IsPremiumOnly}" Margin="0,0,5,5">
@@ -217,8 +227,9 @@
                                                 </TextBlock>
                                                 <Button HorizontalAlignment="Center" Content="Download"
                                                         IsEnabled="{Binding HasPassed}"
+                                                        IsVisible="{Binding HasPassed}"
                                                         Command="{Binding AddEpisodeToQue}"
-                                                        CommandParameter="{Binding EpisodeUrl}" />
+                                                         />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

@@ -1,20 +1,23 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
-using CRD.Downloader.Crunchyroll;
+using CRD.Downloader;
 using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
-using CRD.Utils.Structs.Crunchyroll.Music;
+using Microsoft.Win32;
 using Newtonsoft.Json;
 
 namespace CRD.Utils;
@@ -28,8 +31,9 @@ public class Helpers{
             return JsonConvert.DeserializeObject<T>(json, serializerSettings);
         } catch (JsonException ex){
             Console.Error.WriteLine($"Error deserializing JSON: {ex.Message}");
-            throw;
         }
+
+        return default;
     }
 
     public static string ConvertTimeFormat(string time){
@@ -67,6 +71,8 @@ public class Helpers{
     }
 
     public static void EnsureDirectoriesExist(string path){
+        Console.WriteLine($"Check if path exists: {path}");
+
         // Check if the path is absolute
         bool isAbsolute = Path.IsPathRooted(path);
 
@@ -82,13 +88,17 @@ public class Helpers{
         string cumulativePath = isAbsolute ? Path.GetPathRoot(directoryPath) : Environment.CurrentDirectory;
 
         // Get all directory parts
-        string[] directories = directoryPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string[] directories = directoryPath.Split(Path.DirectorySeparatorChar);
 
         // Start the loop from the correct initial index
-        int startIndex = isAbsolute && directories.Length > 0 && string.IsNullOrEmpty(directories[0]) ? 2 : 0;
+        int startIndex = isAbsolute && directories.Length > 0 && string.IsNullOrEmpty(directories[0]) ? 1 : 0;
+
+        if (isAbsolute && cumulativePath == "/"){
+            cumulativePath = "/";
+        }
 
         for (int i = startIndex; i < directories.Length; i++){
-            // Skip empty parts (which can occur with UNC paths)
+            // Skip empty parts
             if (string.IsNullOrEmpty(directories[i])){
                 continue;
             }
@@ -103,6 +113,7 @@ public class Helpers{
             }
         }
     }
+
 
     public static bool IsValidPath(string path){
         char[] invalidChars = Path.GetInvalidPathChars();
@@ -290,7 +301,16 @@ public class Helpers{
         }
     }
 
-    public static async Task<(bool IsOk, int ErrorCode)> RunFFmpegWithPresetAsync(string inputFilePath, VideoPreset preset){
+    private static string GetQualityOption(VideoPreset preset){
+        return preset.Codec switch{
+            "h264_nvenc" or "hevc_nvenc" => $"-cq {preset.Crf}", // For NVENC
+            "h264_qsv" or "hevc_qsv" => $"-global_quality {preset.Crf}", // For Intel QSV
+            "h264_amf" or "hevc_amf" => $"-qp {preset.Crf}", // For AMD VCE
+            _ => $"-crf {preset.Crf}", // For software codecs like libx264/libx265
+        };
+    }
+
+    public static async Task<(bool IsOk, int ErrorCode)> RunFFmpegWithPresetAsync(string inputFilePath, VideoPreset preset, CrunchyEpMeta? data = null){
         try{
             string outputExtension = Path.GetExtension(inputFilePath);
             string directory = Path.GetDirectoryName(inputFilePath);
@@ -298,18 +318,17 @@ public class Helpers{
             string tempOutputFilePath = Path.Combine(directory, $"{fileNameWithoutExtension}_output{outputExtension}");
 
             string additionalParams = string.Join(" ", preset.AdditionalParameters);
-            string qualityOption;
-            if (preset.Codec == "h264_nvenc" || preset.Codec == "hevc_nvenc"){
-                qualityOption = $"-cq {preset.Crf}"; // For NVENC
-            } else if (preset.Codec == "h264_qsv" || preset.Codec == "hevc_qsv"){
-                qualityOption = $"-global_quality {preset.Crf}"; // For Intel QSV
-            } else if (preset.Codec == "h264_amf" || preset.Codec == "hevc_amf"){
-                qualityOption = $"-qp {preset.Crf}"; // For AMD VCE
+            string qualityOption = GetQualityOption(preset);
+
+            TimeSpan? totalDuration = await GetMediaDurationAsync(CfgManager.PathFFMPEG, inputFilePath);
+            if (totalDuration == null){
+                Console.Error.WriteLine("Unable to retrieve input file duration.");
             } else{
-                qualityOption = $"-crf {preset.Crf}"; // For software codecs like libx264/libx265
+                Console.WriteLine($"Total Duration: {totalDuration}");
             }
 
-            string ffmpegCommand = $"-loglevel warning -i \"{inputFilePath}\" -c:v {preset.Codec} {qualityOption} -vf \"scale={preset.Resolution},fps={preset.FrameRate}\" {additionalParams} \"{tempOutputFilePath}\"";
+
+            string ffmpegCommand = $"-loglevel info -i \"{inputFilePath}\" -c:v {preset.Codec} {qualityOption} -vf \"scale={preset.Resolution},fps={preset.FrameRate}\" {additionalParams} \"{tempOutputFilePath}\"";
             using (var process = new Process()){
                 process.StartInfo.FileName = CfgManager.PathFFMPEG;
                 process.StartInfo.Arguments = ffmpegCommand;
@@ -327,6 +346,9 @@ public class Helpers{
                 process.ErrorDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
                         Console.Error.WriteLine($"{e.Data}");
+                        if (data != null && totalDuration != null){
+                            ParseProgress(e.Data, totalDuration.Value, data);
+                        }
                     }
                 };
 
@@ -356,6 +378,72 @@ public class Helpers{
             Console.Error.WriteLine($"An error occurred: {ex.Message}");
             return (IsOk: false, ErrorCode: -1);
         }
+    }
+
+    private static void ParseProgress(string progressString, TimeSpan totalDuration, CrunchyEpMeta data){
+        try{
+            if (progressString.Contains("time=")){
+                var timeIndex = progressString.IndexOf("time=") + 5;
+                var timeString = progressString.Substring(timeIndex, 11);
+
+
+                if (TimeSpan.TryParse(timeString, out var currentTime)){
+                    int progress = (int)(currentTime.TotalSeconds / totalDuration.TotalSeconds * 100);
+                    Console.WriteLine($"Progress: {progress:F2}%");
+
+                    data.DownloadProgress = new DownloadProgress(){
+                        IsDownloading = true,
+                        Percent = progress,
+                        Time = 0,
+                        DownloadSpeed = 0,
+                        Doing = "Encoding"
+                    };
+
+                    QueueManager.Instance.Queue.Refresh();
+                }
+            }
+        } catch (Exception e){
+            Console.Error.WriteLine("Failed to calculate encoding progess");
+            Console.Error.WriteLine(e.Message);
+        }
+    }
+
+    public static async Task<TimeSpan?> GetMediaDurationAsync(string ffmpegPath, string inputFilePath){
+        try{
+            using (var process = new Process()){
+                process.StartInfo.FileName = ffmpegPath;
+                process.StartInfo.Arguments = $"-i \"{inputFilePath}\"";
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.CreateNoWindow = true;
+
+                string output = string.Empty;
+                process.ErrorDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        output += e.Data + Environment.NewLine;
+                    }
+                };
+
+                process.Start();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                Regex regex = new Regex(@"Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})");
+                Match match = regex.Match(output);
+                if (match.Success){
+                    int hours = int.Parse(match.Groups[1].Value);
+                    int minutes = int.Parse(match.Groups[2].Value);
+                    double seconds = double.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture);
+
+                    return new TimeSpan(hours, minutes, (int)seconds);
+                }
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred while retrieving media duration: {ex.Message}");
+        }
+
+        return null;
     }
 
     public static double CalculateCosineSimilarity(string text1, string text2){
@@ -438,26 +526,28 @@ public class Helpers{
     }
 
 
-    public static async Task<Bitmap?> LoadImage(string imageUrl,int desiredWidth = 0,int desiredHeight = 0){
+    public static async Task<Bitmap?> LoadImage(string imageUrl, int desiredWidth = 0, int desiredHeight = 0){
         try{
-            using (var client = new HttpClient()){
-                var response = await client.GetAsync(imageUrl);
-                response.EnsureSuccessStatusCode();
-                using (var stream = await response.Content.ReadAsStreamAsync()){
-                    
-                    var bitmap = new Bitmap(stream);
+            var response = await HttpClientReq.Instance.GetHttpClient().GetAsync(imageUrl);
 
-                    if (desiredWidth != 0 && desiredHeight != 0){
-                        var scaledBitmap = bitmap.CreateScaledBitmap(new PixelSize(desiredWidth, desiredHeight));
+            if (ChallengeDetector.IsClearanceRequired(response)){
+                Console.Error.WriteLine($"Cloudflare Challenge detected ");
+            }
 
-                        bitmap.Dispose();
-                        
-                        return scaledBitmap;
-                    }
-                    
-                    
-                    return bitmap;
+            response.EnsureSuccessStatusCode();
+            using (var stream = await response.Content.ReadAsStreamAsync()){
+                var bitmap = new Bitmap(stream);
+
+                if (desiredWidth != 0 && desiredHeight != 0){
+                    var scaledBitmap = bitmap.CreateScaledBitmap(new PixelSize(desiredWidth, desiredHeight));
+
+                    bitmap.Dispose();
+
+                    return scaledBitmap;
                 }
+
+
+                return bitmap;
             }
         } catch (Exception ex){
             Console.Error.WriteLine("Failed to load image: " + ex.Message);
@@ -512,5 +602,121 @@ public class Helpers{
 
         string uuid = Guid.NewGuid().ToString();
         return uuid;
+    }
+
+    public static string LimitFileNameLength(string fileName, int maxFileNameLength){
+        string directory = Path.GetDirectoryName(fileName) ?? string.Empty;
+        string name = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+
+        if (name.Length > maxFileNameLength - extension.Length){
+            name = name.Substring(0, maxFileNameLength - extension.Length);
+        }
+
+        return Path.Combine(directory, name + extension);
+    }
+
+    public static string AddUncPrefixIfNeeded(string path){
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !IsLongPathEnabled()){
+            if (!string.IsNullOrEmpty(path) && !path.StartsWith(@"\\?\")){
+                return $@"\\?\{Path.GetFullPath(path)}";
+            }
+        }
+
+        return path;
+    }
+
+
+    private static bool IsLongPathEnabled(){
+        try{
+            using (var key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\FileSystem")){
+                if (key != null){
+                    var value = key.GetValue("LongPathsEnabled", 0);
+                    return value is int intValue && intValue == 1;
+                }
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Failed to check if long paths are enabled: {ex.Message}");
+        }
+
+        return false; // Default to false if unable to read the registry
+    }
+
+
+    private static Avalonia.Controls.Image? _backgroundImageLayer;
+
+    public static void SetBackgroundImage(string backgroundImagePath, double? imageOpacity = 0.5, double? blurRadius = 10){
+        try{
+            var activeWindow = GetActiveWindow();
+            if (activeWindow == null)
+                return;
+
+
+            if (activeWindow.Content is not Panel rootPanel){
+                rootPanel = new Grid();
+                activeWindow.Content = rootPanel;
+            }
+
+
+            if (string.IsNullOrEmpty(backgroundImagePath)){
+                if (_backgroundImageLayer != null){
+                    rootPanel.Children.Remove(_backgroundImageLayer);
+                    _backgroundImageLayer = null;
+                }
+
+                return;
+            }
+
+            if (_backgroundImageLayer == null){
+                _backgroundImageLayer = new Avalonia.Controls.Image{
+                    Stretch = Stretch.UniformToFill,
+                    ZIndex = -1,
+                };
+                rootPanel.Children.Add(_backgroundImageLayer);
+            }
+
+            _backgroundImageLayer.Source = new Bitmap(backgroundImagePath);
+            _backgroundImageLayer.Opacity = imageOpacity ?? 0.5;
+
+            _backgroundImageLayer.Effect = new BlurEffect{
+                Radius = blurRadius ?? 10
+            };
+        } catch (Exception ex){
+            Console.WriteLine($"Failed to set background image: {ex.Message}");
+        }
+    }
+
+    private static Window? GetActiveWindow(){
+        // Ensure the application is running with a Classic Desktop Lifetime
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime){
+            // Return the first active window found in the desktop application's window list
+            return desktopLifetime.Windows.FirstOrDefault(window => window.IsActive);
+        }
+
+        return null;
+    }
+
+
+    public static bool IsInstalled(string checkFor, string versionString){
+        try{
+            // Create a new process for mkvmerge
+            Process process = new Process();
+            process.StartInfo.FileName = checkFor;
+            process.StartInfo.Arguments = versionString; // A harmless command to check if mkvmerge is available
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.CreateNoWindow = true;
+
+            // Start the process and wait for it to exit
+            process.Start();
+            process.WaitForExit();
+
+            // If the exit code is 0, mkvmerge was found and executed successfully
+            return process.ExitCode == 0;
+        } catch (Exception){
+            // If an exception is caught, mkvmerge is not installed or accessible
+            return false;
+        }
     }
 }

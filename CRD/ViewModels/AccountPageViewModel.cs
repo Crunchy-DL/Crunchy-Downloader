@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils.Structs;
+using CRD.Utils;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
 using Newtonsoft.Json;
@@ -61,9 +59,10 @@ public partial class AccountPageViewModel : ViewModelBase{
     }
 
     public void UpdatetProfile(){
-        ProfileName = CrunchyrollManager.Instance.Profile.Username ?? "???"; // Default or fetched user name
+        ProfileName = CrunchyrollManager.Instance.Profile.Username ?? CrunchyrollManager.Instance.Profile.ProfileName ?? "???"; // Default or fetched user name
         LoginLogoutText = CrunchyrollManager.Instance.Profile.Username == "???" ? "Login" : "Logout"; // Default state
-        LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" + CrunchyrollManager.Instance.Profile.Avatar);
+        LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" +
+                         (string.IsNullOrEmpty(CrunchyrollManager.Instance.Profile.Avatar) ? "crbrand_avatars_logo_marks_mangagirl_taupe.png" : CrunchyrollManager.Instance.Profile.Avatar));
 
 
         var subscriptions = CrunchyrollManager.Instance.Profile.Subscription;
@@ -139,13 +138,7 @@ public partial class AccountPageViewModel : ViewModelBase{
 
     public async void LoadProfileImage(string imageUrl){
         try{
-            using (var client = new HttpClient()){
-                var response = await client.GetAsync(imageUrl);
-                response.EnsureSuccessStatusCode();
-                using (var stream = await response.Content.ReadAsStreamAsync()){
-                    ProfileImage = new Bitmap(stream);
-                }
-            }
+            ProfileImage = await Helpers.LoadImage(imageUrl);
         } catch (Exception ex){
             // Handle exceptions
             Console.Error.WriteLine("Failed to load image: " + ex.Message);

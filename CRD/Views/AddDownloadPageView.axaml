@@ -75,6 +75,10 @@
                                                Width="120"
                                                Height="180" />
 
+                                     
+
+
+
                                     </Grid>
 
 
@@ -91,6 +95,14 @@
                                         <TextBlock Grid.Row="1" FontSize="15" TextWrapping="Wrap"
                                                    Text="{Binding Description}">
                                         </TextBlock>
+                                        
+                                        <StackPanel Grid.Row="3" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                                                                IsVisible="{Binding IsInHistory}" Margin="0 10 10 10" >
+                                            <controls:SymbolIcon Symbol="Library" FontSize="32"  />
+                                            <ToolTip.Tip>
+                                                <TextBlock Text="Series is in History" FontSize="15" />
+                                            </ToolTip.Tip>
+                                        </StackPanel>
 
                                     </Grid>
 

@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using FluentAvalonia.UI.Controls;
 
 namespace CRD.Utils.UI;
 

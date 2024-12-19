@@ -4,11 +4,16 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
+using DynamicData;
 using HtmlAgilityPack;
+using Newtonsoft.Json;
 
 namespace CRD.Downloader;
 
@@ -87,7 +92,7 @@ public class CalendarManager{
                 var date = day.SelectSingleNode(".//time[@datetime]")?.GetAttributeValue("datetime", "No date");
                 DateTime dayDateTime = DateTime.Parse(date, null, DateTimeStyles.RoundtripKind);
 
-                if (week.FirstDayOfWeek == null){
+                if (week.FirstDayOfWeek == DateTime.MinValue){
                     week.FirstDayOfWeek = dayDateTime;
                     week.FirstDayOfWeekString = dayDateTime.ToString("yyyy-MM-dd");
                 }
@@ -147,8 +152,10 @@ public class CalendarManager{
     }
 
 
-    public async Task<CalendarWeek> BuildCustomCalendar(bool forceUpdate){
-        if (!forceUpdate && calendar.TryGetValue("C" + DateTime.Now.ToString("yyyy-MM-dd"), out var forDate)){
+    public async Task<CalendarWeek> BuildCustomCalendar(DateTime calTargetDate, bool forceUpdate){
+        await LoadAnilistUpcoming();
+
+        if (!forceUpdate && calendar.TryGetValue("C" + calTargetDate.ToString("yyyy-MM-dd"), out var forDate)){
             return forDate;
         }
 
@@ -156,14 +163,14 @@ public class CalendarManager{
         CalendarWeek week = new CalendarWeek();
         week.CalendarDays = new List<CalendarDay>();
 
-        DateTime today = DateTime.Now;
+        DateTime targetDay = calTargetDate;
 
         for (int i = 0; i < 7; i++){
             CalendarDay calDay = new CalendarDay();
 
             calDay.CalendarEpisodes = new List<CalendarEpisode>();
-            calDay.DateTime = today.AddDays(-i);
-            calDay.DayName = calDay.DateTime.Value.DayOfWeek.ToString();
+            calDay.DateTime = targetDay.AddDays(-i);
+            calDay.DayName = calDay.DateTime.DayOfWeek.ToString();
 
             week.CalendarDays.Add(calDay);
         }
@@ -171,21 +178,68 @@ public class CalendarManager{
         week.CalendarDays.Reverse();
 
         var firstDayOfWeek = week.CalendarDays.First().DateTime;
+        week.FirstDayOfWeek = firstDayOfWeek;
 
-        var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes(CrunchyrollManager.Instance.CrunOptions.HistoryLang, 200, firstDayOfWeek, true);
+        var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes("", 200, firstDayOfWeek, true);
 
         if (newEpisodesBase is{ Data.Count: > 0 }){
             var newEpisodes = newEpisodesBase.Data;
 
+            //EpisodeAirDate
             foreach (var crBrowseEpisode in newEpisodes){
-                var targetDate = CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate ? crBrowseEpisode.EpisodeMetadata.EpisodeAirDate : crBrowseEpisode.LastPublic;
+                DateTime episodeAirDate = crBrowseEpisode.EpisodeMetadata.EpisodeAirDate.Kind == DateTimeKind.Utc
+                    ? crBrowseEpisode.EpisodeMetadata.EpisodeAirDate.ToLocalTime()
+                    : crBrowseEpisode.EpisodeMetadata.EpisodeAirDate;
 
-                if (CrunchyrollManager.Instance.CrunOptions.CalendarHideDubs && crBrowseEpisode.EpisodeMetadata.SeasonTitle != null &&
-                    (crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)") || crBrowseEpisode.EpisodeMetadata.AudioLocale != Locale.JaJp)){
-                    continue;
+                DateTime premiumAvailableStart = crBrowseEpisode.EpisodeMetadata.PremiumAvailableDate.Kind == DateTimeKind.Utc
+                    ? crBrowseEpisode.EpisodeMetadata.PremiumAvailableDate.ToLocalTime()
+                    : crBrowseEpisode.EpisodeMetadata.PremiumAvailableDate;
+
+                DateTime now = DateTime.Now;
+                DateTime oneYearFromNow = now.AddYears(1);
+
+                DateTime targetDate;
+
+                if (CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate){
+                    targetDate = episodeAirDate;
+
+                    if (targetDate >= oneYearFromNow){
+                        DateTime freeAvailableStart = crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.Kind == DateTimeKind.Utc
+                            ? crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.ToLocalTime()
+                            : crBrowseEpisode.EpisodeMetadata.FreeAvailableDate;
+
+                        if (freeAvailableStart <= oneYearFromNow){
+                            targetDate = freeAvailableStart;
+                        } else{
+                            targetDate = premiumAvailableStart;
+                        }
+                    }
+                } else{
+                    targetDate = premiumAvailableStart;
+
+                    if (targetDate >= oneYearFromNow){
+                        DateTime freeAvailableStart = crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.Kind == DateTimeKind.Utc
+                            ? crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.ToLocalTime()
+                            : crBrowseEpisode.EpisodeMetadata.FreeAvailableDate;
+
+                        if (freeAvailableStart <= oneYearFromNow){
+                            targetDate = freeAvailableStart;
+                        } else{
+                            targetDate = episodeAirDate;
+                        }
+                    }
                 }
 
                 var dubFilter = CrunchyrollManager.Instance.CrunOptions.CalendarDubFilter;
+
+                if (CrunchyrollManager.Instance.CrunOptions.CalendarHideDubs && crBrowseEpisode.EpisodeMetadata.SeasonTitle != null &&
+                    (crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)") || crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Audio)")) &&
+                    (string.IsNullOrEmpty(dubFilter) || dubFilter == "none" || (crBrowseEpisode.EpisodeMetadata.AudioLocale != null && crBrowseEpisode.EpisodeMetadata.AudioLocale.GetEnumMemberValue() != dubFilter))){
+                    //|| crBrowseEpisode.EpisodeMetadata.AudioLocale != Locale.JaJp
+                    continue;
+                }
+
+
                 if (!string.IsNullOrEmpty(dubFilter) && dubFilter != "none"){
                     if (crBrowseEpisode.EpisodeMetadata.AudioLocale != null && crBrowseEpisode.EpisodeMetadata.AudioLocale.GetEnumMemberValue() != dubFilter){
                         continue;
@@ -193,7 +247,7 @@ public class CalendarManager{
                 }
 
                 var calendarDay = (from day in week.CalendarDays
-                    where day.DateTime.HasValue && day.DateTime.Value.Date == targetDate.Date
+                    where day.DateTime != DateTime.MinValue && day.DateTime.Date == targetDate.Date
                     select day).FirstOrDefault();
 
                 if (calendarDay != null){
@@ -209,13 +263,62 @@ public class CalendarManager{
                     calEpisode.IsPremiere = crBrowseEpisode.EpisodeMetadata.Episode == "1";
                     calEpisode.SeasonName = crBrowseEpisode.EpisodeMetadata.SeasonTitle;
                     calEpisode.EpisodeNumber = crBrowseEpisode.EpisodeMetadata.Episode;
+                    calEpisode.CrSeriesID = crBrowseEpisode.EpisodeMetadata.SeriesId;
 
-                    calendarDay.CalendarEpisodes?.Add(calEpisode);
+                    var existingEpisode = calendarDay.CalendarEpisodes
+                        ?.FirstOrDefault(e => e.SeasonName == calEpisode.SeasonName);
+
+                    if (existingEpisode != null){
+                        if (!int.TryParse(existingEpisode.EpisodeNumber, out var num)){
+                            existingEpisode.EpisodeNumber = "...";
+                        } else{
+                            var existingNumbers = existingEpisode.EpisodeNumber
+                                .Split('-')
+                                .Select(n => int.TryParse(n, out var num) ? num : 0)
+                                .Where(n => n > 0)
+                                .ToList();
+
+                            if (int.TryParse(calEpisode.EpisodeNumber, out var newEpisodeNumber)){
+                                existingNumbers.Add(newEpisodeNumber);
+                            }
+
+                            existingNumbers.Sort();
+                            var lowest = existingNumbers.First();
+                            var highest = existingNumbers.Last();
+
+                            // Update the existing episode's number to the new range
+                            existingEpisode.EpisodeNumber = lowest == highest
+                                ? lowest.ToString()
+                                : $"{lowest}-{highest}";
+
+                            if (lowest == 1){
+                                existingEpisode.IsPremiere = true;
+                            }
+                        }
+
+                        existingEpisode.CalendarEpisodes.Add(calEpisode);
+                    } else{
+                        calendarDay.CalendarEpisodes?.Add(calEpisode);
+                    }
+                }
+            }
+
+
+            foreach (var calendarDay in week.CalendarDays){
+                if (calendarDay.DateTime.Date >= DateTime.Now.Date){
+                    if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(calendarDay.DateTime.ToString("yyyy-MM-dd"))){
+                        var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
+
+                        foreach (var calendarEpisode in list.Where(calendarEpisode => calendarDay.DateTime.Date == calendarEpisode.DateTime.Date)
+                                     .Where(calendarEpisode => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisode.CrSeriesID))){
+                            calendarDay.CalendarEpisodes.Add(calendarEpisode);
+                        }
+                    }
                 }
             }
 
             foreach (var weekCalendarDay in week.CalendarDays){
-                if (weekCalendarDay.CalendarEpisodes != null)
+                if (weekCalendarDay.CalendarEpisodes.Count > 0)
                     weekCalendarDay.CalendarEpisodes = weekCalendarDay.CalendarEpisodes
                         .OrderBy(e => e.DateTime)
                         .ThenBy(e => e.SeasonName)
@@ -232,9 +335,232 @@ public class CalendarManager{
             if (day.CalendarEpisodes != null) day.CalendarEpisodes = day.CalendarEpisodes.OrderBy(e => e.DateTime).ToList();
         }
 
-        calendar["C" + DateTime.Now.ToString("yyyy-MM-dd")] = week;
+        calendar["C" + calTargetDate.ToString("yyyy-MM-dd")] = week;
 
 
         return week;
     }
+
+
+    private async Task LoadAnilistUpcoming(){
+        DateTime today = DateTime.Today;
+
+        string formattedDate = today.ToString("yyyy-MM-dd");
+
+        if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(formattedDate)){
+            return;
+        }
+
+        DateTimeOffset todayMidnight = DateTimeOffset.Now.Date;
+
+        long todayMidnightUnix = todayMidnight.ToUnixTimeSeconds();
+        long sevenDaysLaterUnix = todayMidnight.AddDays(8).ToUnixTimeSeconds();
+
+        AniListResponseCalendar? aniListResponse = null;
+
+        int currentPage = 1; // Start from page 1
+        bool hasNextPage;
+
+        do{
+            var variables = new{
+                weekStart = todayMidnightUnix,
+                weekEnd = sevenDaysLaterUnix,
+                page = currentPage
+            };
+
+            var payload = new{
+                query,
+                variables
+            };
+
+            string jsonPayload = JsonConvert.SerializeObject(payload, Formatting.Indented);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Anilist){
+                Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json")
+            };
+
+            var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+            if (!response.IsOk){
+                Console.Error.WriteLine("Anilist Request Failed for upcoming calendar episodes");
+                return;
+            }
+
+            AniListResponseCalendar currentResponse = Helpers.Deserialize<AniListResponseCalendar>(
+                response.ResponseContent, CrunchyrollManager.Instance.SettingsJsonSerializerSettings
+            ) ?? new AniListResponseCalendar();
+
+
+            aniListResponse ??= currentResponse;
+
+            if (aniListResponse != currentResponse){
+                aniListResponse.Data?.Page?.AiringSchedules?.AddRange(currentResponse.Data?.Page?.AiringSchedules ??[]);
+            }
+
+            hasNextPage = currentResponse.Data?.Page?.PageInfo?.HasNextPage ?? false;
+
+            currentPage++;
+        } while (hasNextPage && currentPage < 20);
+
+
+        var list = aniListResponse.Data?.Page?.AiringSchedules ??[];
+
+        list = list.Where(ele => ele.Media?.ExternalLinks != null && ele.Media.ExternalLinks.Any(external =>
+            string.Equals(external.Site, "Crunchyroll", StringComparison.OrdinalIgnoreCase))).ToList();
+
+        List<CalendarEpisode> calendarEpisodes =[];
+
+        foreach (var anilistEle in list){
+            var calEp = new CalendarEpisode();
+
+            calEp.DateTime = DateTimeOffset.FromUnixTimeSeconds(anilistEle.AiringAt).UtcDateTime.ToLocalTime();
+            calEp.HasPassed = false;
+            calEp.EpisodeName = anilistEle.Media?.Title.English;
+            calEp.SeriesUrl = $"https://www.crunchyroll.com/{CrunchyrollManager.Instance.CrunOptions.HistoryLang}/series/";
+            calEp.EpisodeUrl = $"https://www.crunchyroll.com/{CrunchyrollManager.Instance.CrunOptions.HistoryLang}/watch/";
+            calEp.ThumbnailUrl = anilistEle.Media?.CoverImage.ExtraLarge ?? ""; //https://www.crunchyroll.com/i/coming_soon_beta_thumb.jpg
+            calEp.IsPremiumOnly = true;
+            calEp.IsPremiere = anilistEle.Episode == 1;
+            calEp.SeasonName = anilistEle.Media?.Title.English;
+            calEp.EpisodeNumber = anilistEle.Episode.ToString();
+            calEp.AnilistEpisode = true;
+
+            var crunchyrollID = "";
+
+            if (anilistEle.Media?.ExternalLinks != null){
+                var url = anilistEle.Media.ExternalLinks.First(external =>
+                    string.Equals(external.Site, "Crunchyroll", StringComparison.OrdinalIgnoreCase)).Url;
+
+                string pattern = @"series\/([^\/]+)";
+
+                Match match = Regex.Match(url, pattern);
+                if (match.Success){
+                    crunchyrollID = match.Groups[1].Value;
+
+                    calEp.CrSeriesID = crunchyrollID;
+
+                    if (CrunchyrollManager.Instance.CrunOptions.History){
+                        var historySeries = CrunchyrollManager.Instance.HistoryList.FirstOrDefault(item => item.SeriesId == crunchyrollID);
+
+                        if (historySeries != null){
+                            var oldestRelease = DateTime.MinValue;
+                            foreach (var historySeriesSeason in historySeries.Seasons){
+                                if (historySeriesSeason.EpisodesList.Any()){
+                                    var releaseDate = historySeriesSeason.EpisodesList.Last().EpisodeCrPremiumAirDate;
+
+                                    if (releaseDate.HasValue && oldestRelease < releaseDate.Value){
+                                        oldestRelease = releaseDate.Value;
+                                    }
+                                }
+                            }
+
+                            if (oldestRelease != DateTime.MinValue){
+                                calEp.DateTime = new DateTime(
+                                    calEp.DateTime.Year,
+                                    calEp.DateTime.Month,
+                                    calEp.DateTime.Day,
+                                    oldestRelease.Hour,
+                                    oldestRelease.Minute,
+                                    oldestRelease.Second,
+                                    calEp.DateTime.Kind
+                                );
+                            }
+                        }
+                    }
+                } else{
+                    crunchyrollID = "";
+                }
+            }
+
+            calendarEpisodes.Add(calEp);
+        }
+
+        foreach (var calendarEpisode in calendarEpisodes){
+            var airDate = calendarEpisode.DateTime.ToString("yyyy-MM-dd");
+
+            if (!ProgramManager.Instance.AnilistUpcoming.TryGetValue(airDate, out var value)){
+                value = new List<CalendarEpisode>();
+                ProgramManager.Instance.AnilistUpcoming[airDate] = value;
+            }
+
+            value.Add(calendarEpisode);
+        }
+    }
+
+    #region Query
+
+    private string query = @"query ($weekStart: Int, $weekEnd: Int, $page: Int) {
+  Page(page: $page) {
+    pageInfo {
+      hasNextPage
+      total
+    }
+    airingSchedules(
+      airingAt_greater: $weekStart
+      airingAt_lesser: $weekEnd
+    ) {
+      id
+      episode
+      airingAt
+      media {
+        id
+        idMal
+        title {
+          romaji
+          native
+          english
+        }
+        startDate {
+          year
+          month
+          day
+        }
+        endDate {
+          year
+          month
+          day
+        }
+        status
+        season
+        format
+        synonyms
+        episodes
+        description
+        bannerImage
+        isAdult
+        coverImage {
+          extraLarge
+          color
+        }
+        trailer {
+          id
+          site
+          thumbnail
+        }
+        externalLinks {
+          site
+          icon
+          color
+          url
+        }
+        relations {
+          edges {
+            relationType(version: 2)
+            node {
+              id
+              title {
+                romaji
+                native
+                english
+              }
+              siteUrl
+            }
+          }
+        }
+      }
+    }
+  }
+}";
+
+    #endregion
 }

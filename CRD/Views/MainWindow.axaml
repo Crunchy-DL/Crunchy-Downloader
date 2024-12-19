@@ -10,10 +10,11 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/app_icon.ico"
         Title="Crunchy-Downloader">
-
+    
     <Design.DataContext>
         <vm:MainWindowViewModel />
     </Design.DataContext>
+    
     <Grid Name="MainGrid"> 
         <ContentControl x:Name="MainContent">
             <Grid RowDefinitions="Auto, *">
@@ -60,6 +61,8 @@
                                                IconSource="Add" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Calendar" Tag="Calendar"
                                                IconSource="Calendar" />
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Seasons" Tag="Seasons"
+                                               IconSource="Clock" />
                         <ui:NavigationViewItem IsEnabled="{Binding ProgramManager.FinishedLoading}" Classes="SampleAppNav" Content="History" Tag="History"
                                                IconSource="Library" />
                     </ui:NavigationView.MenuItems>

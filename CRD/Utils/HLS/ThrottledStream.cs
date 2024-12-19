@@ -1,5 +1,4 @@
-﻿using CRD.Downloader;
-using CRD.Downloader.Crunchyroll;
+﻿using CRD.Downloader.Crunchyroll;
 
 namespace CRD.Utils.HLS;
 

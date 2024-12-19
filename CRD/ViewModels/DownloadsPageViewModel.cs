@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -59,7 +59,6 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     public string DoingWhat{ get; set; }
     public string DownloadSpeed{ get; set; }
     public string InfoText{ get; set; }
-
     public CrunchyEpMeta epMeta{ get; set; }
 
 
@@ -78,9 +77,11 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
         DownloadSpeed = $"{epMeta.DownloadProgress.DownloadSpeed / 1000000.0:F2}Mb/s";
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-        DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
+        DoingWhat = epMeta.Paused ? "Paused" :
+            Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
+            epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
-        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString();
+        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString() + (!string.IsNullOrEmpty(epMeta.Resolution) ? "- " + epMeta.Resolution : "");
 
         Error = epMeta.DownloadProgress.Error;
     }
@@ -94,9 +95,9 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     private string GetSubtitleString(){
-        var hardSubs = CrunchyrollManager.Instance.CrunOptions.Hslang != "none" ? "Hardsub: " : "";
+        var hardSubs = epMeta.Hslang != "none" ? "Hardsub: " : "";
         if (hardSubs != string.Empty){
-            var locale = Languages.Locale2language(CrunchyrollManager.Instance.CrunOptions.Hslang).CrLocale;
+            var locale = Languages.Locale2language(epMeta.Hslang).CrLocale;
             if (epMeta.AvailableSubs != null && epMeta.AvailableSubs.Contains(locale)){
                 hardSubs += locale + " ";
             }
@@ -133,9 +134,11 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         DownloadSpeed = $"{epMeta.DownloadProgress.DownloadSpeed / 1000000.0:F2}Mb/s";
 
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-        DoingWhat = epMeta.Paused ? "Paused" : Done ? "Done" : epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
+        DoingWhat = epMeta.Paused ? "Paused" :
+            Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
+            epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
-        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString();
+        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString() + (!string.IsNullOrEmpty(epMeta.Resolution) ? "- " + epMeta.Resolution : "");
 
         Error = epMeta.DownloadProgress.Error;
 
@@ -192,6 +195,16 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         CrunchyEpMeta? downloadItem = QueueManager.Instance.Queue.FirstOrDefault(e => e.Equals(epMeta)) ?? null;
         if (downloadItem != null){
             QueueManager.Instance.Queue.Remove(downloadItem);
+            if (!Done){
+                foreach (var downloadItemDownloadedFile in downloadItem.downloadedFiles){
+                    try{
+                        if (File.Exists(downloadItemDownloadedFile)){
+                            File.Delete(downloadItemDownloadedFile);
+                        }
+                    } catch (Exception e){
+                    }
+                }
+            }
         }
     }
 

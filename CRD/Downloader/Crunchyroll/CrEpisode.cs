@@ -26,7 +26,7 @@ public class CrEpisode(){
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{Api.Cms}/episodes/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{id}", HttpMethod.Get, true, true, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -181,6 +181,7 @@ public class CrEpisode(){
             };
             epMeta.AvailableSubs = item.SubtitleLocales;
             epMeta.Description = item.Description;
+            epMeta.Hslang = CrunchyrollManager.Instance.CrunOptions.Hslang;
 
             if (episodeP.EpisodeAndLanguages.Langs.Count > 0){
                 epMeta.SelectedDubs = dubLang
@@ -236,7 +237,7 @@ public class CrEpisode(){
             query["sort_by"] = "newly_added";
             query["type"] = "episode";
 
-            var request = HttpClientReq.CreateRequestMessage($"{Api.Browse}", HttpMethod.Get, true, false, query);
+            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, false, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

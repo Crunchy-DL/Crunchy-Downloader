@@ -8,6 +8,8 @@ public class CrProfile{
     public string? Avatar{ get; set; }
     public string? Email{ get; set; }
     public string? Username{ get; set; }
+    [JsonProperty("profile_name")]
+    public string? ProfileName{ get; set; }
     
     [JsonProperty("preferred_content_audio_language")]
     public string? PreferredContentAudioLanguage{ get; set; }
