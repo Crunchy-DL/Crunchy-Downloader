@@ -80,6 +80,9 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "history_page_properties", ApplyNamingConventions = false)]
     public HistoryPageProperties? HistoryPageProperties{ get; set; }
+    
+    [YamlMember(Alias = "seasons_page_properties", ApplyNamingConventions = false)]
+    public SeasonsPageProperties? SeasonsPageProperties{ get; set; }
 
     [YamlMember(Alias = "download_speed_limit", ApplyNamingConventions = false)]
     public int DownloadSpeedLimit{ get; set; }
@@ -225,7 +228,10 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "calendar_filter_by_air_date", ApplyNamingConventions = false)]
     public bool CalendarFilterByAirDate{ get; set; }
-
+    
+    [YamlMember(Alias = "calendar_show_upcoming_episodes", ApplyNamingConventions = false)]
+    public bool CalendarShowUpcomingEpisodes{ get; set; }
+    
     [YamlMember(Alias = "stream_endpoint", ApplyNamingConventions = false)]
     public string? StreamEndpoint{ get; set; }
 

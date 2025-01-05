@@ -9,7 +9,6 @@ using Newtonsoft.Json;
 namespace CRD.Utils.Structs.History;
 
 public class HistoryEpisode : INotifyPropertyChanged{
-    
     [JsonProperty("episode_title")]
     public string? EpisodeTitle{ get; set; }
 
@@ -24,7 +23,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("episode_cr_season_number")]
     public string? EpisodeSeasonNum{ get; set; }
-    
+
     [JsonProperty("episode_cr_premium_air_date")]
     public DateTime? EpisodeCrPremiumAirDate{ get; set; }
 
@@ -48,7 +47,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("sonarr_absolut_number")]
     public string? SonarrAbsolutNumber{ get; set; }
-    
+
     [JsonProperty("history_episode_available_soft_subs")]
     public List<string> HistoryEpisodeAvailableSoftSubs{ get; set; } =[];
 
@@ -77,8 +76,9 @@ public class HistoryEpisode : INotifyPropertyChanged{
         CfgManager.UpdateHistoryFile();
     }
 
-    public async Task DownloadEpisode(){
-        await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId, string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
-            CrunchyrollManager.Instance.CrunOptions.DubLang);
+    public async Task DownloadEpisode(bool onlySubs = false){
+        await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId,
+            string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
+            CrunchyrollManager.Instance.CrunOptions.DubLang, false, onlySubs);
     }
 }

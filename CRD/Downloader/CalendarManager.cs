@@ -153,7 +153,9 @@ public class CalendarManager{
 
 
     public async Task<CalendarWeek> BuildCustomCalendar(DateTime calTargetDate, bool forceUpdate){
-        await LoadAnilistUpcoming();
+        if (CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes){
+            await LoadAnilistUpcoming();
+        }
 
         if (!forceUpdate && calendar.TryGetValue("C" + calTargetDate.ToString("yyyy-MM-dd"), out var forDate)){
             return forDate;
@@ -303,15 +305,16 @@ public class CalendarManager{
                 }
             }
 
+            if (CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes){
+                foreach (var calendarDay in week.CalendarDays){
+                    if (calendarDay.DateTime.Date >= DateTime.Now.Date){
+                        if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(calendarDay.DateTime.ToString("yyyy-MM-dd"))){
+                            var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
 
-            foreach (var calendarDay in week.CalendarDays){
-                if (calendarDay.DateTime.Date >= DateTime.Now.Date){
-                    if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(calendarDay.DateTime.ToString("yyyy-MM-dd"))){
-                        var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
-
-                        foreach (var calendarEpisode in list.Where(calendarEpisode => calendarDay.DateTime.Date == calendarEpisode.DateTime.Date)
-                                     .Where(calendarEpisode => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisode.CrSeriesID))){
-                            calendarDay.CalendarEpisodes.Add(calendarEpisode);
+                            foreach (var calendarEpisode in list.Where(calendarEpisode => calendarDay.DateTime.Date == calendarEpisode.DateTime.Date)
+                                         .Where(calendarEpisode => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisode.CrSeriesID))){
+                                calendarDay.CalendarEpisodes.Add(calendarEpisode);
+                            }
                         }
                     }
                 }
@@ -320,7 +323,8 @@ public class CalendarManager{
             foreach (var weekCalendarDay in week.CalendarDays){
                 if (weekCalendarDay.CalendarEpisodes.Count > 0)
                     weekCalendarDay.CalendarEpisodes = weekCalendarDay.CalendarEpisodes
-                        .OrderBy(e => e.DateTime)
+                        .OrderBy(e => e.AnilistEpisode) // False first, then true
+                        .ThenBy(e => e.DateTime)
                         .ThenBy(e => e.SeasonName)
                         .ThenBy(e => {
                             double parsedNumber;
@@ -331,9 +335,9 @@ public class CalendarManager{
         }
 
 
-        foreach (var day in week.CalendarDays){
-            if (day.CalendarEpisodes != null) day.CalendarEpisodes = day.CalendarEpisodes.OrderBy(e => e.DateTime).ToList();
-        }
+        // foreach (var day in week.CalendarDays){
+        //     if (day.CalendarEpisodes != null) day.CalendarEpisodes = day.CalendarEpisodes.OrderBy(e => e.DateTime).ToList();
+        // }
 
         calendar["C" + calTargetDate.ToString("yyyy-MM-dd")] = week;
 
@@ -437,38 +441,32 @@ public class CalendarManager{
                 if (match.Success){
                     crunchyrollID = match.Groups[1].Value;
 
-                    calEp.CrSeriesID = crunchyrollID;
+                    AdjustReleaseTimeToHistory(calEp, crunchyrollID);
+                } else{
+                    Uri uri = new Uri(url);
 
-                    if (CrunchyrollManager.Instance.CrunOptions.History){
-                        var historySeries = CrunchyrollManager.Instance.HistoryList.FirstOrDefault(item => item.SeriesId == crunchyrollID);
+                    if (uri.Host == "www.crunchyroll.com"
+                        && uri.AbsolutePath != "/"
+                        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)){
+                        HttpRequestMessage getUrlRequest = new HttpRequestMessage(HttpMethod.Head, url);
 
-                        if (historySeries != null){
-                            var oldestRelease = DateTime.MinValue;
-                            foreach (var historySeriesSeason in historySeries.Seasons){
-                                if (historySeriesSeason.EpisodesList.Any()){
-                                    var releaseDate = historySeriesSeason.EpisodesList.Last().EpisodeCrPremiumAirDate;
+                        string? finalUrl = "";
 
-                                    if (releaseDate.HasValue && oldestRelease < releaseDate.Value){
-                                        oldestRelease = releaseDate.Value;
-                                    }
-                                }
-                            }
+                        try{
+                            HttpResponseMessage getUrlResponse = await HttpClientReq.Instance.GetHttpClient().SendAsync(getUrlRequest);
 
-                            if (oldestRelease != DateTime.MinValue){
-                                calEp.DateTime = new DateTime(
-                                    calEp.DateTime.Year,
-                                    calEp.DateTime.Month,
-                                    calEp.DateTime.Day,
-                                    oldestRelease.Hour,
-                                    oldestRelease.Minute,
-                                    oldestRelease.Second,
-                                    calEp.DateTime.Kind
-                                );
-                            }
+                            finalUrl = getUrlResponse.RequestMessage?.RequestUri?.ToString();
+                        } catch (Exception ex){
+                            Console.WriteLine($"Error: {ex.Message}");
+                        }
+
+                        Match match2 = Regex.Match(finalUrl ?? string.Empty, pattern);
+                        if (match2.Success){
+                            crunchyrollID = match2.Groups[1].Value;
+
+                            AdjustReleaseTimeToHistory(calEp, crunchyrollID);
                         }
                     }
-                } else{
-                    crunchyrollID = "";
                 }
             }
 
@@ -484,6 +482,45 @@ public class CalendarManager{
             }
 
             value.Add(calendarEpisode);
+        }
+    }
+
+    private static void AdjustReleaseTimeToHistory(CalendarEpisode calEp, string crunchyrollId){
+        calEp.CrSeriesID = crunchyrollId;
+
+        if (CrunchyrollManager.Instance.CrunOptions.History){
+            var historySeries = CrunchyrollManager.Instance.HistoryList.FirstOrDefault(item => item.SeriesId == crunchyrollId);
+
+            if (historySeries != null){
+                var oldestRelease = DateTime.MinValue;
+                foreach (var historySeriesSeason in historySeries.Seasons){
+                    if (historySeriesSeason.EpisodesList.Any()){
+                        var releaseDate = historySeriesSeason.EpisodesList.Last().EpisodeCrPremiumAirDate;
+
+                        if (releaseDate.HasValue && oldestRelease < releaseDate.Value){
+                            oldestRelease = releaseDate.Value;
+                        }
+                    }
+                }
+
+                if (oldestRelease != DateTime.MinValue){
+                    var adjustedDate = new DateTime(
+                        calEp.DateTime.Year,
+                        calEp.DateTime.Month,
+                        calEp.DateTime.Day,
+                        oldestRelease.Hour,
+                        oldestRelease.Minute,
+                        oldestRelease.Second,
+                        calEp.DateTime.Kind
+                    );
+                    
+                    if ((adjustedDate - oldestRelease).TotalDays is < 6 and > 1){
+                        adjustedDate = oldestRelease.AddDays(7);
+                    }
+
+                    calEp.DateTime = adjustedDate;
+                }
+            }
         }
     }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using Avalonia.Layout;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CRD.Downloader.Crunchyroll.ViewModels;
 using CRD.Downloader.Crunchyroll.Views;

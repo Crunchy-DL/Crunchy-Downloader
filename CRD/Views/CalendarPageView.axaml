@@ -87,16 +87,20 @@
                             </controls:SettingsExpander>
 
 
-                            <controls:SettingsExpander IsVisible="{Binding CustomCalendar}" Header="Custom Calendar Dub Filter">
+                            <controls:SettingsExpander IsVisible="{Binding CustomCalendar}" Header="Custom Calendar">
 
                                 <controls:SettingsExpander.Footer>
                                     <StackPanel Orientation="Vertical">
+                                        <TextBlock Text="Dub Filter"></TextBlock>
                                         <ComboBox HorizontalAlignment="Center" Margin="5 0 0 5" MinWidth="200"
                                                   SelectedItem="{Binding CurrentCalendarDubFilter}"
                                                   ItemsSource="{Binding CalendarDubFilter}">
                                         </ComboBox>
                                         <CheckBox IsChecked="{Binding FilterByAirDate}"
                                                   Content="Filter by episode air date" Margin="5 5 0 0">
+                                        </CheckBox>
+                                        <CheckBox IsChecked="{Binding ShowUpcomingEpisodes}"
+                                                  Content="Show Upcoming episodes" Margin="5 5 0 0">
                                         </CheckBox>
                                     </StackPanel>
 

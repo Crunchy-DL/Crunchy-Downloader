@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Newtonsoft.Json;
@@ -9,7 +10,7 @@ public partial class AnilistSeries : ObservableObject{
     public int Id{ get; set; }
     public int? IdMal{ get; set; }
     public Title Title{ get; set; }
-    public Date StartDate{ get; set; }
+    public Date? StartDate{ get; set; }
     public Date EndDate{ get; set; }
     public string Status{ get; set; }
     public string Season{ get; set; }
@@ -37,13 +38,25 @@ public partial class AnilistSeries : ObservableObject{
 
     [JsonIgnore]
     public Bitmap? ThumbnailImage{ get; set; }
-    
+
     [JsonIgnore]
-    public string StartDateForm => $"{StartDate.Day}.{StartDate.Month}.{StartDate.Year}";
-    
+    public string StartDateForm{
+        get{
+            if (StartDate == null)
+                return string.Empty;
+
+
+            var cultureInfo = System.Globalization.CultureInfo.InvariantCulture;
+            string monthAbbreviation = cultureInfo.DateTimeFormat.GetAbbreviatedMonthName(StartDate.Month);
+
+            return string.Format("{0:00}.{1}.{2}", StartDate.Day, monthAbbreviation, StartDate.Year);
+        }
+    }
+
+
     [JsonIgnore]
     public string? CrunchyrollID;
-    
+
     [JsonIgnore]
     [ObservableProperty]
     public bool _hasCrID;
@@ -51,7 +64,6 @@ public partial class AnilistSeries : ObservableObject{
     [JsonIgnore]
     [ObservableProperty]
     public bool _isInHistory;
-
 }
 
 public class Title{
@@ -61,9 +73,20 @@ public class Title{
 }
 
 public class Date{
-    public int? Year{ get; set; }
-    public int? Month{ get; set; }
-    public int? Day{ get; set; }
+    public int Year{ get; set; }
+    public int Month{ get; set; }
+    public int Day{ get; set; }
+
+    public DateTime? ToDateTime(){
+        if (Year == 0 || Month == 0 || Day == 0)
+            return DateTime.MinValue; 
+
+        try{
+            return new DateTime(Year, Month, Day);
+        } catch{
+            return DateTime.MinValue;; 
+        }
+    }
 }
 
 public class CoverImage{

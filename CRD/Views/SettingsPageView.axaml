@@ -12,11 +12,26 @@
     <Design.DataContext>
         <vm:SettingsPageViewModel />
     </Design.DataContext>
-
+    
     <controls:TabView TabItems="{Binding Tabs}"
                       AllowDropTabs="False" IsAddTabButtonVisible="False"
-                      Background="Transparent" CanDragTabs="False" CanReorderTabs="False"
+                      CanDragTabs="False" CanReorderTabs="False"
                       VerticalAlignment="Stretch">
+        <controls:TabView.Styles>
+            <Style Selector="controls|TabViewItem:selected /template/ Border#TabContainerBorder">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+            <Style Selector="controls|TabViewItem:selected /template/ Path#SelectedBackgroundPath">
+                <Setter Property="Fill" Value="#10FFFFFF" />
+            </Style>
+            <Style Selector="controls|TabView:not(:selected) /template/ ContentPresenter">
+                <Setter Property="Background" Value="Transparent" />
+            </Style>
+        </controls:TabView.Styles>
+  
+
     </controls:TabView>
+    
+    
 
 </UserControl>

@@ -14,7 +14,7 @@
     </Design.DataContext>
 
 
-    <ScrollViewer Padding="20 20 20 0">
+    <ScrollViewer Padding="20 20 20 0" >
         <StackPanel Spacing="8">
 
             <controls:SettingsExpander Header="History"

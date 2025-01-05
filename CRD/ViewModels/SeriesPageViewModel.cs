@@ -221,7 +221,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         await Task.WhenAll(downloadTasks);
     }
-
+    
     [RelayCommand]
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);

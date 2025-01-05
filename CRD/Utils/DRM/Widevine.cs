@@ -69,6 +69,8 @@ public class Widevine{
             Console.Error.WriteLine("Widevine: " + e);
             canDecrypt = false;
         }
+
+        Console.WriteLine($"CDM available: {canDecrypt}");
     }
 
     public async Task<List<ContentKey>> getKeys(string? pssh, string licenseServer, Dictionary<string, string> authData){

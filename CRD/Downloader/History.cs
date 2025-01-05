@@ -302,6 +302,7 @@ public class History(){
                             historyEpisode.EpisodeId = crunchyEpisode.Id;
                             historyEpisode.Episode = crunchyEpisode.Episode;
                             historyEpisode.EpisodeSeasonNum = Helpers.ExtractNumberAfterS(crunchyEpisode.Identifier) ?? crunchyEpisode.SeasonNumber + "";
+                            historyEpisode.EpisodeCrPremiumAirDate = crunchyEpisode.PremiumAvailableDate;
 
                             historyEpisode.HistoryEpisodeAvailableDubLang = Languages.SortListByLangList(langList);
                             historyEpisode.HistoryEpisodeAvailableSoftSubs = Languages.SortListByLangList(crunchyEpisode.SubtitleLocales);
@@ -333,8 +334,7 @@ public class History(){
                 newSeason.EpisodesList.Sort(new NumericStringPropertyComparer());
 
                 await RefreshSeriesData(seriesId, historySeries);
-
-
+                
                 historySeries.Seasons.Add(newSeason);
                 historySeries.UpdateNewEpisodes();
                 historySeries.Init();

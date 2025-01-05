@@ -138,51 +138,51 @@
 
                                                         <controls:SettingsExpander.Footer>
                                                             <StackPanel>
-                                                                
+
                                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                     <TextBlock Text="Video Quality" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                     <!-- <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400" -->
                                                                     <!--           ItemsSource="{Binding CrunchyrollManager.VideoQualityList}" -->
                                                                     <!--           SelectedItem="{Binding SelectedSeries.SelectedVideoQuality}"> -->
                                                                     <!-- </ComboBox> -->
-                                                                    
+
                                                                     <StackPanel>
-                                                                                <ToggleButton x:Name="OverrideDropdownButtonQuality" Width="210" HorizontalContentAlignment="Stretch">
-                                                                                    <ToggleButton.Content>
-                                                                                        <Grid>
-                                                                                            <Grid.ColumnDefinitions>
-                                                                                                <ColumnDefinition Width="*" />
-                                                                                                <ColumnDefinition Width="Auto" />
-                                                                                            </Grid.ColumnDefinitions>
-                                                                                            <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedSeries.SelectedVideoQualityItem.stringValue, FallbackValue=''}"
-                                                                                                       VerticalAlignment="Center" />
-                                                                                            <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
-                                                                                                  VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
-                                                                                        </Grid>
-                                                                                    </ToggleButton.Content>
-                                                                                </ToggleButton>
-                                                                                <Popup IsLightDismissEnabled="True"
-                                                                                       IsOpen="{Binding IsChecked, ElementName=OverrideDropdownButtonQuality, Mode=TwoWay}"
-                                                                                       Placement="Bottom"
-                                                                                       PlacementTarget="{Binding ElementName=OverrideDropdownButtonQuality}">
-                                                                                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
-                                                                                        <ListBox x:Name="ListBoxQulitiesSelection" SelectionMode="Single,Toggle" Width="210"
-                                                                                                 MaxHeight="400"
-                                                                                                 ItemsSource="{Binding SelectedSeries.VideoQualityList , Mode=OneWay}"
-                                                                                                 SelectedItem="{Binding SelectedSeries.SelectedVideoQualityItem}">
-                                                                                            <ListBox.ItemTemplate>
-                                                                                                <DataTemplate DataType="{x:Type structs:StringItem}">
-                                                                                                    <TextBlock Text="{Binding stringValue}"></TextBlock>
-                                                                                                </DataTemplate>
-                                                                                            </ListBox.ItemTemplate>
-                                                                                        </ListBox>
-                                                                                    </Border>
-                                                                                </Popup>
-                                                                            </StackPanel>
-                                                                    
-                                                                    
+                                                                        <ToggleButton x:Name="OverrideDropdownButtonQuality" Width="210" HorizontalContentAlignment="Stretch">
+                                                                            <ToggleButton.Content>
+                                                                                <Grid>
+                                                                                    <Grid.ColumnDefinitions>
+                                                                                        <ColumnDefinition Width="*" />
+                                                                                        <ColumnDefinition Width="Auto" />
+                                                                                    </Grid.ColumnDefinitions>
+                                                                                    <TextBlock HorizontalAlignment="Center" Text="{Binding SelectedSeries.SelectedVideoQualityItem.stringValue, FallbackValue=''}"
+                                                                                               VerticalAlignment="Center" />
+                                                                                    <Path Grid.Column="1" Data="M 0,1 L 4,4 L 8,1" Stroke="White" StrokeThickness="1"
+                                                                                          VerticalAlignment="Center" Margin="5,0,5,0" Stretch="Uniform" Width="8" />
+                                                                                </Grid>
+                                                                            </ToggleButton.Content>
+                                                                        </ToggleButton>
+                                                                        <Popup IsLightDismissEnabled="True"
+                                                                               IsOpen="{Binding IsChecked, ElementName=OverrideDropdownButtonQuality, Mode=TwoWay}"
+                                                                               Placement="Bottom"
+                                                                               PlacementTarget="{Binding ElementName=OverrideDropdownButtonQuality}">
+                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                <ListBox x:Name="ListBoxQulitiesSelection" SelectionMode="Single,Toggle" Width="210"
+                                                                                         MaxHeight="400"
+                                                                                         ItemsSource="{Binding SelectedSeries.VideoQualityList , Mode=OneWay}"
+                                                                                         SelectedItem="{Binding SelectedSeries.SelectedVideoQualityItem}">
+                                                                                    <ListBox.ItemTemplate>
+                                                                                        <DataTemplate DataType="{x:Type structs:StringItem}">
+                                                                                            <TextBlock Text="{Binding stringValue}"></TextBlock>
+                                                                                        </DataTemplate>
+                                                                                    </ListBox.ItemTemplate>
+                                                                                </ListBox>
+                                                                            </Border>
+                                                                        </Popup>
+                                                                    </StackPanel>
+
+
                                                                 </StackPanel>
-                                                                
+
                                                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                     <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                     <StackPanel>
@@ -342,6 +342,7 @@
 
 
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+
                                                     <StackPanel VerticalAlignment="Center" Margin="0 0 5 0"
                                                                 IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
 
@@ -385,7 +386,25 @@
                                                         <StackPanel Orientation="Horizontal">
                                                             <controls:SymbolIcon Symbol="Download" FontSize="18" />
                                                         </StackPanel>
+                                                        <ToolTip.Tip>
+                                                            <TextBlock Text="Download Episode" FontSize="15" />
+                                                        </ToolTip.Tip>
                                                     </Button>
+                                                    
+                                                    <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
+                                                            VerticalAlignment="Center" 
+                                                            Command="{Binding DownloadEpisode}"
+                                                            CommandParameter="true">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <controls:SymbolIcon Symbol="ClosedCaption" FontSize="18" />
+                                                        </StackPanel>
+                                                        <ToolTip.Tip>
+                                                            <TextBlock Text="Download Subs" FontSize="15" />
+                                                        </ToolTip.Tip>
+                                                    </Button>
+                                                    
+                                                    
+
 
                                                 </StackPanel>
                                             </Grid>
@@ -488,10 +507,10 @@
 
                                                                 <controls:SettingsExpander.Footer>
                                                                     <StackPanel>
-                                                                        
+
                                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                             <TextBlock Text="Video Quality" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
-                                                                            
+
                                                                             <StackPanel>
                                                                                 <ToggleButton x:Name="SeasonOverrideDropdownButtonQuality" Width="210" HorizontalContentAlignment="Stretch">
                                                                                     <ToggleButton.Content>
@@ -525,10 +544,10 @@
                                                                                     </Border>
                                                                                 </Popup>
                                                                             </StackPanel>
-                                                                            
-                                                                            
+
+
                                                                         </StackPanel>
-                                                                        
+
                                                                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                             <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                             <StackPanel>

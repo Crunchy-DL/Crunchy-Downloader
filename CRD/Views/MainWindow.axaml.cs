@@ -104,14 +104,22 @@ public partial class MainWindow : AppWindow{
             .Subscribe(message => ShowToast(message.Message, message.Type, message.Seconds));
     }
 
-    public async void ShowError(string message){
+    public async void ShowError(string message,bool githubWikiButton = false){
         var dialog = new ContentDialog(){
             Title = "Error",
             Content = message,
             CloseButtonText = "Close"
         };
 
-        _ = await dialog.ShowAsync();
+        if (githubWikiButton){
+            dialog.PrimaryButtonText = "Github Wiki"; 
+        }
+        
+        var result = await dialog.ShowAsync();
+
+        if (result == ContentDialogResult.Primary){
+            Helpers.OpenUrl($"https://github.com/Crunchy-DL/Crunchy-Downloader/wiki");
+        }
     }
 
 
@@ -191,7 +199,7 @@ public partial class MainWindow : AppWindow{
                     var screen = screens[settings.ScreenIndex];
 
                     // Restore the position first
-                    Position = new PixelPoint(settings.PosX, settings.PosY + TitleBarHeightAdjustment);
+                    Position = new PixelPoint(settings.PosX, settings.PosY);
 
                     // Restore the size
                     Width = settings.Width;
@@ -199,10 +207,10 @@ public partial class MainWindow : AppWindow{
 
                     // Set restore size and position for non-maximized state
                     _restoreSize = new Size(settings.Width, settings.Height);
-                    _restorePosition = new PixelPoint(settings.PosX, settings.PosY + TitleBarHeightAdjustment);
+                    _restorePosition = new PixelPoint(settings.PosX, settings.PosY);
 
                     // Ensure the window is on the correct screen before maximizing
-                    Position = new PixelPoint(settings.PosX, settings.PosY + TitleBarHeightAdjustment);
+                    Position = new PixelPoint(settings.PosX, settings.PosY );
                 }
 
                 if (settings.IsMaximized){

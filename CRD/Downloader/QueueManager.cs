@@ -86,7 +86,7 @@ public class QueueManager{
     }
 
 
-    public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false){
+    public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false, bool onlySubs = false){
         await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
 
         var episodeL = await CrunchyrollManager.Instance.CrEpisode.ParseEpisodeById(epId, crLocale);
@@ -100,7 +100,7 @@ public class QueueManager{
 
             var sList = await CrunchyrollManager.Instance.CrEpisode.EpisodeData((CrunchyEpisode)episodeL, updateHistory);
 
-            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath,string videoQuality) historyEpisode = (null, [], [], "","");
+            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath, string videoQuality) historyEpisode = (null, [], [], "", "");
 
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 var episode = sList.EpisodeAndLanguages.Items.First();
@@ -142,8 +142,10 @@ public class QueueManager{
                 }
 
                 selected.VideoQuality = !string.IsNullOrEmpty(historyEpisode.videoQuality) ? historyEpisode.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
-                
+
                 selected.DownloadSubs = historyEpisode.sublist.Count > 0 ? historyEpisode.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;
+
+                selected.OnlySubs = onlySubs;
 
                 Queue.Add(selected);
 
@@ -154,7 +156,8 @@ public class QueueManager{
                     var languages = sList.EpisodeAndLanguages.Items.Select((a, index) =>
                         $"{(a.IsPremiumOnly ? "+ " : "")}{sList.EpisodeAndLanguages.Langs.ElementAtOrDefault(index).CrLocale ?? "Unknown"}").ToArray();
 
-                    Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ?? [])}]");
+                    Console.Error.WriteLine(
+                        $"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
                     MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
                 } else{
                     Console.WriteLine("Added Episode to Queue");
@@ -167,7 +170,7 @@ public class QueueManager{
                 var languages = sList.EpisodeAndLanguages.Items.Select((a, index) =>
                     $"{(a.IsPremiumOnly ? "+ " : "")}{sList.EpisodeAndLanguages.Langs.ElementAtOrDefault(index).CrLocale ?? "Unknown"}").ToArray();
 
-                Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ?? [])}]");
+                Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
                 MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
             }
         } else{
@@ -180,6 +183,7 @@ public class QueueManager{
 
                 if (movieMeta != null){
                     movieMeta.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                    movieMeta.OnlySubs = onlySubs;
                     Queue.Add(movieMeta);
 
                     Console.WriteLine("Added Movie to Queue");
@@ -255,7 +259,7 @@ public class QueueManager{
                 }
 
                 var subLangList = CrunchyrollManager.Instance.History.GetSubList(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId);
-                
+
                 crunchyEpMeta.VideoQuality = !string.IsNullOrEmpty(subLangList.videoQuality) ? subLangList.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
                 crunchyEpMeta.DownloadSubs = subLangList.sublist.Count > 0 ? subLangList.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;
 

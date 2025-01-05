@@ -13,6 +13,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
@@ -154,6 +155,19 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     [ObservableProperty]
     private bool _isLoading;
 
+    [ObservableProperty]
+    private SortingListElement? _selectedSorting;
+
+    [ObservableProperty]
+    private static bool _sortingSelectionOpen;
+
+    private SortingType currentSortingType;
+
+    [ObservableProperty]
+    private static bool _sortDir = false;
+
+    public ObservableCollection<SortingListElement> SortingList{ get; } =[];
+
     public ObservableCollection<SeasonViewModel> Seasons{ get; set; } =[];
 
     public ObservableCollection<AnilistSeries> SelectedSeason{ get; set; } =[];
@@ -165,6 +179,23 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     }
 
     private async void LoadSeasons(){
+        SeasonsPageProperties? properties = CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties;
+
+        currentSortingType = properties?.SelectedSorting ?? SortingType.SeriesTitle;
+        SortDir = properties?.Ascending ?? false;
+
+        foreach (SortingType sortingType in Enum.GetValues(typeof(SortingType))){
+            if (sortingType == SortingType.HistorySeriesAddDate){
+                continue;
+            }
+
+            var combobox = new SortingListElement(){ SortingTitle = sortingType.GetEnumMemberValue(), SelectedSorting = sortingType };
+            SortingList.Add(combobox);
+            if (sortingType == currentSortingType){
+                SelectedSorting = combobox;
+            }
+        }
+
         Seasons = GetTargetSeasonsAndYears();
 
         currentSelection = Seasons.Last();
@@ -175,6 +206,8 @@ public partial class UpcomingPageViewModel : ViewModelBase{
         foreach (var anilistSeries in list){
             SelectedSeason.Add(anilistSeries);
         }
+
+        SortItems();
     }
 
     [RelayCommand]
@@ -188,6 +221,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
         foreach (var anilistSeries in list){
             SelectedSeason.Add(anilistSeries);
         }
+        SortItems();
     }
 
     [RelayCommand]
@@ -304,7 +338,6 @@ public partial class UpcomingPageViewModel : ViewModelBase{
                             HttpResponseMessage getUrlResponse = await HttpClientReq.Instance.GetHttpClient().SendAsync(getUrlRequest);
 
                             finalUrl = getUrlResponse.RequestMessage?.RequestUri?.ToString();
-                            
                         } catch (Exception ex){
                             Console.WriteLine($"Error: {ex.Message}");
                         }
@@ -391,4 +424,73 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     partial void OnSelectedSeriesChanged(AnilistSeries? value){
         SelectionChangedOfSeries(value);
     }
+
+    #region Sorting
+
+    private void UpdateSettings(){
+        if (CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties != null){
+            CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.SelectedSorting = currentSortingType;
+            CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.Ascending = SortDir;
+        } else{
+            CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties = new SeasonsPageProperties(){ SelectedSorting = currentSortingType, Ascending = SortDir };
+        }
+
+        CfgManager.WriteSettingsToFile();
+    }
+
+    partial void OnSelectedSortingChanged(SortingListElement? oldValue, SortingListElement? newValue){
+        if (newValue == null){
+            if (CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties != null){
+                CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.Ascending = !CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.Ascending;
+                SortDir = CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.Ascending;
+            }
+
+            Dispatcher.UIThread.InvokeAsync(() => {
+                SelectedSorting = oldValue ?? SortingList.First();
+                RaisePropertyChanged(nameof(SelectedSorting));
+            });
+            return;
+        }
+
+        if (newValue.SelectedSorting != null){
+            currentSortingType = newValue.SelectedSorting;
+            if (CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties != null) CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.SelectedSorting = currentSortingType;
+            SortItems();
+        }
+
+        SortingSelectionOpen = false;
+        UpdateSettings();
+    }
+
+    private void SortItems(){
+        var sortingDir = CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties != null && CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.Ascending;
+
+        var sortedList = currentSortingType switch{
+            SortingType.SeriesTitle => sortingDir
+                ? SelectedSeason
+                    .OrderByDescending(item => item.Title.English)
+                    .ToList()
+                : SelectedSeason
+                    .OrderBy(item => item.Title.English)
+                    .ToList(),
+            SortingType.NextAirDate => sortingDir
+                ? SelectedSeason
+                    .OrderByDescending(item => item.StartDate?.ToDateTime() ?? DateTime.MinValue)
+                    .ThenByDescending(item => item.Title.English)
+                    .ToList()
+                : SelectedSeason
+                    .OrderBy(item => item.StartDate?.ToDateTime() ?? DateTime.MinValue)
+                    .ThenBy(item => item.Title.English)
+                    .ToList(),
+            _ => SelectedSeason.ToList()
+        };
+
+
+        SelectedSeason.Clear();
+        foreach (var item in sortedList){
+            SelectedSeason.Add(item);
+        }
+    }
+
+    #endregion
 }

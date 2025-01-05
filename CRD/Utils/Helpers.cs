@@ -36,6 +36,11 @@ public class Helpers{
         return default;
     }
 
+    public static T DeepCopy<T>(T obj){
+        var json = JsonConvert.SerializeObject(obj);
+        return JsonConvert.DeserializeObject<T>(json);
+    }
+
     public static string ConvertTimeFormat(string time){
         var timeParts = time.Split(':', '.');
         int hours = int.Parse(timeParts[0]);
@@ -71,7 +76,7 @@ public class Helpers{
     }
 
     public static void EnsureDirectoriesExist(string path){
-        Console.WriteLine($"Check if path exists: {path}");
+        // Console.WriteLine($"Check if path exists: {path}");
 
         // Check if the path is absolute
         bool isAbsolute = Path.IsPathRooted(path);
@@ -507,22 +512,30 @@ public class Helpers{
     }
 
     public static string? ExtractNumberAfterS(string input){
-        // Regular expression pattern to match |S followed by a number and optionally C followed by another number
-        string pattern = @"\|S(\d+)(?:C(\d+))?";
+        // Regular expression pattern to match |S followed by a number and optionally C or P followed by another number
+        string pattern = @"\|S(\d+)(?:C(\d+)|P(\d+))?";
         Match match = Regex.Match(input, pattern);
 
         if (match.Success){
-            string sNumber = match.Groups[1].Value;
-            string cNumber = match.Groups[2].Value;
+            string sNumber = match.Groups[1].Value; // Extract the S number
+            string cNumber = match.Groups[2].Value; // Extract the C number if present
+            string pNumber = match.Groups[3].Value; // Extract the P number if present
 
             if (!string.IsNullOrEmpty(cNumber)){
+                // Case for C: Return S + . + C
                 return $"{sNumber}.{cNumber}";
+            } else if (!string.IsNullOrEmpty(pNumber)){
+                // Case for P: Increment S by P - 1
+                if (int.TryParse(sNumber, out int sNumeric) && int.TryParse(pNumber, out int pNumeric)){
+                    return (sNumeric + (pNumeric - 1)).ToString();
+                }
             } else{
+                // Return only S if no C or P is present
                 return sNumber;
             }
-        } else{
-            return null;
         }
+
+        return null;
     }
 
 

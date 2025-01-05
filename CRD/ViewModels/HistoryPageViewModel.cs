@@ -108,7 +108,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     public HistoryPageViewModel(){
         ProgramManager = ProgramManager.Instance;
-        
+
         _storageProvider = ProgramManager.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.StorageProvider));
 
         if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
@@ -177,8 +177,10 @@ public partial class HistoryPageViewModel : ViewModelBase{
             CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.ScaleValue = ScaleValue;
             CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedView = currentViewType;
             CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.SelectedSorting = currentSortingType;
+            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.Ascending = SortDir;
         } else{
-            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties = new HistoryPageProperties(){ ScaleValue = ScaleValue, SelectedView = currentViewType, SelectedSorting = currentSortingType };
+            CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties = new HistoryPageProperties()
+                { ScaleValue = ScaleValue, SelectedView = currentViewType, SelectedSorting = currentSortingType, Ascending = SortDir };
         }
 
         CfgManager.WriteSettingsToFile();
@@ -499,6 +501,12 @@ public class HistoryPageProperties(){
     public HistoryViewType SelectedView{ get; set; }
     public FilterType SelectedFilter{ get; set; }
     public double? ScaleValue{ get; set; }
+
+    public bool Ascending{ get; set; }
+}
+
+public class SeasonsPageProperties(){
+    public SortingType? SelectedSorting{ get; set; }
 
     public bool Ascending{ get; set; }
 }

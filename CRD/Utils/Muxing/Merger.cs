@@ -459,6 +459,7 @@ public class CrunchyMuxOptions{
     public LanguageItem DefaultAudio{ get; set; }
     public string CcTag{ get; set; }
     public bool SyncTiming{ get; set; }
+    public bool DlVideoOnce{ get; set; }
 }
 
 public class MergerOptions{

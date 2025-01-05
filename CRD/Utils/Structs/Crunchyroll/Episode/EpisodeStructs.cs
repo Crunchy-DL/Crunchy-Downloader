@@ -259,6 +259,8 @@ public class CrunchyEpMeta{
     public string Resolution{ get; set; }
 
     public List<string> downloadedFiles{ get; set; } =[];
+    
+    public bool OnlySubs{ get; set; }
 }
 
 public class DownloadProgress{

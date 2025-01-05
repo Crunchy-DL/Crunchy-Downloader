@@ -2,12 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:uip="using:FluentAvalonia.UI.Controls.Primitives">
-    <!-- 
-         NavView style in MainView for main app navigation
-         While you are free to copy this into your own apps
-         if you want an MS store like NavView, this will NOT
-         be an officially supported thing in the main library
-    -->
+    
     <Style Selector="ui|NavigationView.SampleAppNav">
         <Setter Property="IsPaneToggleButtonVisible" Value="False" />
         <Setter Property="OpenPaneLength" Value="72" />
