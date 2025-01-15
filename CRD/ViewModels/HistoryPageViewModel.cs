@@ -299,6 +299,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         if (!string.IsNullOrEmpty(value.SonarrSeriesId) && CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
             CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
+            CfgManager.UpdateHistoryFile();
         }
 
 
@@ -370,6 +371,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         SonarrOptionsOpen = false;
         AddingMissingSonarrSeries = true;
         ProgramManager.FetchingData = true;
+        ProgramManager.NavigationLock = true;
 
         var crInstance = CrunchyrollManager.Instance;
 
@@ -407,6 +409,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
                 // Await the CRUpdateSeries task for each seriesId
                 await crInstance.History.CRUpdateSeries(seriesIds[count], "");
+                RaisePropertyChanged(nameof(ProgressText));
             }
 
             // var updateTasks = seriesIds.Select(seriesId => crInstance.History.CRUpdateSeries(seriesId, ""));
@@ -416,6 +419,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         ProgressText = "";
         AddingMissingSonarrSeries = false;
         ProgramManager.FetchingData = false;
+        ProgramManager.NavigationLock = false;
         if (SelectedFilter != null){
             OnSelectedFilterChanged(SelectedFilter);
         }

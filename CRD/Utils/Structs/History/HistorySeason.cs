@@ -52,6 +52,9 @@ public class HistorySeason : INotifyPropertyChanged{
     public StringItem? _selectedVideoQualityItem;
 
     [JsonIgnore]
+    private bool Loading = false;
+
+    [JsonIgnore]
     public StringItem? SelectedVideoQualityItem{
         get => _selectedVideoQualityItem;
         set{
@@ -59,7 +62,9 @@ public class HistorySeason : INotifyPropertyChanged{
 
             HistorySeasonVideoQualityOverride = value?.stringValue ?? "";
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedVideoQualityItem)));
-            CfgManager.UpdateHistoryFile();
+            if (!Loading){
+                CfgManager.UpdateHistoryFile();
+            }
         }
     }
 
@@ -127,6 +132,7 @@ public class HistorySeason : INotifyPropertyChanged{
     }
 
     public void Init(){
+        Loading = true;
         if (!(SubLangList.Count > 2 || DubLangList.Count > 0)){
             foreach (var languageItem in Languages.languages){
                 SubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
@@ -154,6 +160,7 @@ public class HistorySeason : INotifyPropertyChanged{
 
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
+        Loading = false;
     }
 
     #endregion

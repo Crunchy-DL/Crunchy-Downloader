@@ -417,7 +417,7 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Additional FFMpeg Options">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Additional FFMpeg Options" Description="Only used for MP4">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">

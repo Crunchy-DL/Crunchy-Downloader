@@ -169,11 +169,19 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     private bool _proxyEnabled;
 
     [ObservableProperty]
+    private bool _proxySocks;
+
+    [ObservableProperty]
     private string _proxyHost;
 
     [ObservableProperty]
     private double? _proxyPort;
 
+    [ObservableProperty]
+    private string _proxyUsername;
+
+    [ObservableProperty]
+    private string _proxyPassword;
 
     [ObservableProperty]
     private string _tempDownloadDirPath;
@@ -223,7 +231,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         }
 
         ProxyEnabled = options.ProxyEnabled;
+        ProxySocks = options.ProxySocks;
         ProxyHost = options.ProxyHost ?? "";
+        ProxyUsername = options.ProxyUsername ?? "";
+        ProxyPassword = options.ProxyPassword ?? "";
         ProxyPort = options.ProxyPort;
         HistoryAddSpecials = options.HistoryAddSpecials;
         HistoryCountSonarr = options.HistoryCountSonarr;
@@ -259,8 +270,11 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
 
         CrunchyrollManager.Instance.CrunOptions.ProxyEnabled = ProxyEnabled;
+        CrunchyrollManager.Instance.CrunOptions.ProxySocks = ProxySocks;
         CrunchyrollManager.Instance.CrunOptions.ProxyHost = ProxyHost;
         CrunchyrollManager.Instance.CrunOptions.ProxyPort = Math.Clamp((int)(ProxyPort ?? 0), 0, 65535);
+        CrunchyrollManager.Instance.CrunOptions.ProxyUsername = ProxyUsername;
+        CrunchyrollManager.Instance.CrunOptions.ProxyPassword = ProxyPassword;
 
         string historyLang = SelectedHistoryLang.Content + "";
 
@@ -470,24 +484,33 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 if (File.Exists(CfgManager.PathCrHistory)){
                     var decompressedJson = CfgManager.DecompressJsonFile(CfgManager.PathCrHistory);
-                    if (!string.IsNullOrEmpty(decompressedJson)){
-                        CrunchyrollManager.Instance.HistoryList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(decompressedJson, CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ??
-                                                                  new ObservableCollection<HistorySeries>();
 
-                        foreach (var historySeries in CrunchyrollManager.Instance.HistoryList){
+                    if (!string.IsNullOrEmpty(decompressedJson)){
+                        var historyList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(
+                            decompressedJson,
+                            CrunchyrollManager.Instance.SettingsJsonSerializerSettings
+                        ) ?? new ObservableCollection<HistorySeries>();
+                        
+                        CrunchyrollManager.Instance.HistoryList = historyList;
+                        
+                        Parallel.ForEach(historyList, historySeries => {
                             historySeries.Init();
+
                             foreach (var historySeriesSeason in historySeries.Seasons){
                                 historySeriesSeason.Init();
                             }
-                        }
+                        });
+                        
                     } else{
-                        CrunchyrollManager.Instance.HistoryList =[];
+                        CrunchyrollManager.Instance.HistoryList = new ObservableCollection<HistorySeries>();
                     }
+                } else{
+                    CrunchyrollManager.Instance.HistoryList = new ObservableCollection<HistorySeries>();
                 }
-
-                _ = SonarrClient.Instance.RefreshSonarrLite();
+                
+                _ = Task.Run(() => SonarrClient.Instance.RefreshSonarrLite());
             } else{
-                CrunchyrollManager.Instance.HistoryList =[];
+                CrunchyrollManager.Instance.HistoryList = new ObservableCollection<HistorySeries>();
             }
         }
 

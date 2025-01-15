@@ -45,8 +45,7 @@ public partial class MainWindow : AppWindow{
     }
 
     #endregion
-
-
+    
     private object selectedNavVieItem;
 
     private const int TitleBarHeightAdjustment = 31;

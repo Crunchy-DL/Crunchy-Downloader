@@ -34,7 +34,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
     private double? _crf = 23;
 
     [ObservableProperty]
-    private double? _frameRate = 30;
+    private string _frameRate = "";
 
     [ObservableProperty]
     private string _additionalParametersString = "";
@@ -82,6 +82,8 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
         if (dialog is null){
             throw new ArgumentNullException(nameof(dialog));
         }
+        
+        AdditionalParameters.Add(new StringItem(){ stringValue = "-map 0" });
 
         if (editMode){
             EditMode = true;
@@ -106,7 +108,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
         PresetName = value.PresetName ?? "";
         Codec = value.Codec ?? "";
         Crf = value.Crf;
-        FrameRate = double.Parse(value.FrameRate ?? "0");
+        FrameRate = value.FrameRate ?? "24";
 
         SelectedResolution = ResolutionList.FirstOrDefault(e => e.Content?.ToString() == value.Resolution) ?? ResolutionList.First();
         AdditionalParameters.Clear();
@@ -149,7 +151,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
 
                 SelectedCustomPreset.PresetName = PresetName;
                 SelectedCustomPreset.Codec = Codec;
-                SelectedCustomPreset.FrameRate = Math.Clamp((int)(FrameRate ?? 1), 1, 999).ToString();
+                SelectedCustomPreset.FrameRate = FrameRate;
                 SelectedCustomPreset.Crf = Math.Clamp((int)(Crf ?? 0), 0, 51);
                 SelectedCustomPreset.Resolution = SelectedResolution.Content?.ToString() ?? "1920:1080";
                 SelectedCustomPreset.AdditionalParameters = AdditionalParameters.Select(additionalParameter => additionalParameter.stringValue).ToList();
@@ -171,7 +173,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
             VideoPreset newPreset = new VideoPreset(){
                 PresetName = PresetName,
                 Codec = Codec,
-                FrameRate = Math.Clamp((int)(FrameRate ?? 1), 1, 999).ToString(),
+                FrameRate = FrameRate,
                 Crf = Math.Clamp((int)(Crf ?? 0), 0, 51),
                 Resolution = SelectedResolution.Content?.ToString() ?? "1920:1080",
                 AdditionalParameters = AdditionalParameters.Select(additionalParameter => additionalParameter.stringValue).ToList()

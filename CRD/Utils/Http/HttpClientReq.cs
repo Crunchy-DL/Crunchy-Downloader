@@ -48,8 +48,10 @@ public class HttpClientReq{
         HttpClientHandler handler = new HttpClientHandler();
 
         if (CrunchyrollManager.Instance.CrunOptions.ProxyEnabled && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.ProxyHost)){
-            handler = CreateHandler(true, CrunchyrollManager.Instance.CrunOptions.ProxyHost, CrunchyrollManager.Instance.CrunOptions.ProxyPort);
-            Console.Error.WriteLine($"Proxy is set: http://{CrunchyrollManager.Instance.CrunOptions.ProxyHost}:{CrunchyrollManager.Instance.CrunOptions.ProxyPort}");
+            handler = CreateHandler(true, CrunchyrollManager.Instance.CrunOptions.ProxySocks, CrunchyrollManager.Instance.CrunOptions.ProxyHost, CrunchyrollManager.Instance.CrunOptions.ProxyPort,
+                CrunchyrollManager.Instance.CrunOptions.ProxyUsername, CrunchyrollManager.Instance.CrunOptions.ProxyPassword);
+            string scheme = CrunchyrollManager.Instance.CrunOptions.ProxySocks ? "socks5" : "http";
+            Console.Error.WriteLine($"Proxy is set: {scheme}://{CrunchyrollManager.Instance.CrunOptions.ProxyHost}:{CrunchyrollManager.Instance.CrunOptions.ProxyPort}");
             client = new HttpClient(handler);
         } else if (systemProxy != null){
             Uri testUri = new Uri("https://icanhazip.com");
@@ -73,7 +75,7 @@ public class HttpClientReq{
             Console.Error.WriteLine("No proxy is being used.");
             client = new HttpClient(CreateHttpClientHandler());
         }
-        
+
         client.Timeout = TimeSpan.FromSeconds(100);
 
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
@@ -85,7 +87,6 @@ public class HttpClientReq{
         client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br");
         client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.5");
         client.DefaultRequestHeaders.Connection.ParseAdd("keep-alive");
-        
     }
 
     private HttpMessageHandler CreateHttpClientHandler(){
@@ -110,7 +111,7 @@ public class HttpClientReq{
         };
     }
 
-    private HttpClientHandler CreateHandler(bool useProxy, string? proxyHost = null, int proxyPort = 0){
+    private HttpClientHandler CreateHandler(bool useProxy, bool useSocks = false, string? proxyHost = null, int proxyPort = 0, string? proxyUsername = "", string? proxyPassword = ""){
         var handler = new HttpClientHandler{
             CookieContainer = new CookieContainer(),
             UseCookies = true,
@@ -119,7 +120,11 @@ public class HttpClientReq{
         };
 
         if (useProxy && proxyHost != null){
-            handler.Proxy = new WebProxy($"http://{proxyHost}:{proxyPort}");
+            string scheme = useSocks ? "socks5" : "http";
+            handler.Proxy = new WebProxy($"{scheme}://{proxyHost}:{proxyPort}");
+            if (!string.IsNullOrEmpty(proxyUsername) && !string.IsNullOrEmpty(proxyPassword)){
+                handler.Proxy.Credentials = new NetworkCredential(proxyUsername, proxyPassword);
+            }
         }
 
         return handler;

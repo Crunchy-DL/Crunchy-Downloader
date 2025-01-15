@@ -678,7 +678,7 @@ public class History(){
                 }
             });
 
-            CfgManager.UpdateHistoryFile();
+            
         }
     }
 

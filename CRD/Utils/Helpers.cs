@@ -322,7 +322,22 @@ public class Helpers{
             string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(inputFilePath);
             string tempOutputFilePath = Path.Combine(directory, $"{fileNameWithoutExtension}_output{outputExtension}");
 
-            string additionalParams = string.Join(" ", preset.AdditionalParameters);
+            string additionalParams = string.Join(" ", preset.AdditionalParameters.Select(param => {
+                var splitIndex = param.IndexOf(' ');
+                if (splitIndex > 0){
+                    var prefix = param[..splitIndex];
+                    var value = param[(splitIndex + 1)..];
+
+                    if (value.Contains(' ') && !(value.StartsWith("\"") && value.EndsWith("\""))){
+                        value = $"\"{value}\"";
+                    }
+
+                    return $"{prefix} {value}";
+                }
+
+                return param;
+            }));
+
             string qualityOption = GetQualityOption(preset);
 
             TimeSpan? totalDuration = await GetMediaDurationAsync(CfgManager.PathFFMPEG, inputFilePath);

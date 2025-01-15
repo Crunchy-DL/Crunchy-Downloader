@@ -49,6 +49,7 @@
                 <ui:NavigationView Grid.Row="1"
                                    IsPaneOpen="False"
                                    IsPaneToggleButtonVisible="False"
+                                   IsEnabled="{Binding !ProgramManager.NavigationLock}"
                                    IsSettingsVisible="False"
                                    CompactPaneLength="72"
                                    Name="NavView"

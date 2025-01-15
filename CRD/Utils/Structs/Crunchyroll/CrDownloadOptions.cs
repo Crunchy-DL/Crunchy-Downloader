@@ -89,13 +89,22 @@ public class CrDownloadOptions{
 
     [YamlMember(Alias = "proxy_enabled", ApplyNamingConventions = false)]
     public bool ProxyEnabled{ get; set; }
+    
+    [YamlMember(Alias = "proxy_socks", ApplyNamingConventions = false)]
+    public bool ProxySocks{ get; set; }
 
     [YamlMember(Alias = "proxy_host", ApplyNamingConventions = false)]
     public string? ProxyHost{ get; set; }
 
     [YamlMember(Alias = "proxy_port", ApplyNamingConventions = false)]
     public int ProxyPort{ get; set; }
+    
+    [YamlMember(Alias = "proxy_username", ApplyNamingConventions = false)]
+    public string? ProxyUsername{ get; set; }
 
+    [YamlMember(Alias = "proxy_password", ApplyNamingConventions = false)]
+    public string? ProxyPassword{ get; set; }
+    
     #endregion
 
 

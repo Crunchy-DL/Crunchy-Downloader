@@ -189,6 +189,13 @@
                         <CheckBox IsChecked="{Binding ProxyEnabled}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Use Socks5 Proxy">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding ProxySocks}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
 
                 <controls:SettingsExpanderItem Content="Host">
                     <controls:SettingsExpanderItem.Footer>
@@ -203,6 +210,22 @@
                                             Value="{Binding ProxyPort}"
                                             SpinButtonPlacementMode="Inline"
                                             HorizontalAlignment="Stretch" />
+
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Username">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding ProxyUsername}" />
+
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Password">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding ProxyPassword}" />
 
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>

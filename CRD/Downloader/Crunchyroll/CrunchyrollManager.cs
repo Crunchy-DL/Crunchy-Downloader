@@ -164,41 +164,12 @@ public class CrunchyrollManager{
             CfgManager.DisableLogMode();
         }
 
-        if (CfgManager.CheckIfFileExists(CfgManager.PathCrToken)){
-            Token = CfgManager.DeserializeFromFile<CrToken>(CfgManager.PathCrToken);
-            await CrAuth.LoginWithToken();
-        } else{
-            await CrAuth.AuthAnonymous();
-        }
-
-        if (CrunOptions.History){
-            if (File.Exists(CfgManager.PathCrHistory)){
-                var decompressedJson = CfgManager.DecompressJsonFile(CfgManager.PathCrHistory);
-                if (!string.IsNullOrEmpty(decompressedJson)){
-                    HistoryList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(decompressedJson, CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ?? new ObservableCollection<HistorySeries>();
-
-                    foreach (var historySeries in HistoryList){
-                        historySeries.Init();
-                        foreach (var historySeriesSeason in historySeries.Seasons){
-                            historySeriesSeason.Init();
-                        }
-                    }
-                } else{
-                    HistoryList =[];
-                }
-            }
-
-            await SonarrClient.Instance.RefreshSonarr();
-        }
-
         var jsonFiles = Directory.Exists(CfgManager.PathENCODING_PRESETS_DIR) ? Directory.GetFiles(CfgManager.PathENCODING_PRESETS_DIR, "*.json") :[];
 
         foreach (var file in jsonFiles){
             try{
-                // Read the content of the JSON file
                 var jsonContent = File.ReadAllText(file);
 
-                // Deserialize the JSON content into a MyClass object
                 var obj = Helpers.Deserialize<VideoPreset>(jsonContent, null);
 
                 if (obj != null){
@@ -209,6 +180,48 @@ public class CrunchyrollManager{
             } catch (Exception ex){
                 Console.Error.WriteLine($"Failed to deserialize file {file}: {ex.Message}");
             }
+        }
+
+        if (CfgManager.CheckIfFileExists(CfgManager.PathCrToken)){
+            Token = CfgManager.DeserializeFromFile<CrToken>(CfgManager.PathCrToken);
+            await CrAuth.LoginWithToken();
+        } else{
+            await CrAuth.AuthAnonymous();
+        }
+
+        if (CrunOptions.History){
+            if (File.Exists(CfgManager.PathCrHistory)){
+                var decompressedJson = CfgManager.DecompressJsonFile(CfgManager.PathCrHistory);
+
+                if (!string.IsNullOrEmpty(decompressedJson)){
+                    var historyList = Helpers.Deserialize<ObservableCollection<HistorySeries>>(
+                        decompressedJson,
+                        SettingsJsonSerializerSettings
+                    );
+
+                    if (historyList != null){
+                        
+                        HistoryList = historyList;
+                        
+                        Parallel.ForEach(historyList, historySeries => {
+                            historySeries.Init();
+                        
+                            foreach (var historySeriesSeason in historySeries.Seasons){
+                                historySeriesSeason.Init();
+                            }
+                        });
+                    } else{
+                        HistoryList =[];
+                    }
+                } else{
+                    HistoryList =[];
+                }
+            } else{
+                HistoryList =[];
+            }
+
+
+            await SonarrClient.Instance.RefreshSonarr();
         }
     }
 
@@ -678,14 +691,15 @@ public class CrunchyrollManager{
             };
         }
 
-        if (!File.Exists(CfgManager.PathMP4Decrypt)){
-            Console.Error.WriteLine("mp4decrypt  not found");
-            MainWindow.Instance.ShowError($"Can't find mp4decrypt in lib folder at: {CfgManager.PathMP4Decrypt}");
+        if (!File.Exists(CfgManager.PathMP4Decrypt) && !File.Exists(CfgManager.PathShakaPackager)){
+            Console.Error.WriteLine("mp4decrypt or shaka-packager not found");
+            MainWindow.Instance.ShowError($"Either mp4decrypt (expected in lib folder at: {CfgManager.PathMP4Decrypt}) " +
+                                          $"or shaka-packager (expected in lib folder at: {CfgManager.PathShakaPackager}) must be available.");
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
                 FileName = "./unknown",
-                ErrorText = "Missing mp4decrypt"
+                ErrorText = "Requires either mp4decrypt or shaka-packager"
             };
         }
 
@@ -1308,14 +1322,27 @@ public class CrunchyrollManager{
                                     }
 
 
-                                    if (Path.Exists(CfgManager.PathMP4Decrypt)){
+                                    if (Path.Exists(CfgManager.PathMP4Decrypt) || Path.Exists(CfgManager.PathShakaPackager)){
                                         var keyId = BitConverter.ToString(encryptionKeys[0].KeyID).Replace("-", "").ToLower();
                                         var key = BitConverter.ToString(encryptionKeys[0].Bytes).Replace("-", "").ToLower();
+
+                                        //mp4decrypt
                                         var commandBase = $"--show-progress --key {keyId}:{key}";
                                         var tempTsFileName = Path.GetFileName(tempTsFile);
                                         var tempTsFileWorkDir = Path.GetDirectoryName(tempTsFile) ?? CfgManager.PathVIDEOS_DIR;
                                         var commandVideo = commandBase + $" \"{tempTsFileName}.video.enc.m4s\" \"{tempTsFileName}.video.m4s\"";
                                         var commandAudio = commandBase + $" \"{tempTsFileName}.audio.enc.m4s\" \"{tempTsFileName}.audio.m4s\"";
+
+                                        bool shaka = Path.Exists(CfgManager.PathShakaPackager);
+                                        if (shaka){
+                                            commandBase = " --enable_raw_key_decryption " +
+                                                          string.Join(" ",
+                                                              encryptionKeys.Select(kb =>
+                                                                  $"--keys key_id={BitConverter.ToString(kb.KeyID).Replace("-", "").ToLower()}:key={BitConverter.ToString(kb.Bytes).Replace("-", "").ToLower()}"));
+                                            commandVideo = $"input=\"{tempTsFileName}.video.enc.m4s\",stream=video,output=\"{tempTsFileName}.video.m4s\"" + commandBase;
+                                            commandAudio = $"input=\"{tempTsFileName}.audio.enc.m4s\",stream=audio,output=\"{tempTsFileName}.audio.m4s\"" + commandBase;
+                                        }
+
                                         if (videoDownloaded){
                                             Console.WriteLine("Started decrypting video");
                                             data.DownloadProgress = new DownloadProgress(){
@@ -1326,7 +1353,8 @@ public class CrunchyrollManager{
                                                 Doing = "Decrypting video"
                                             };
                                             QueueManager.Instance.Queue.Refresh();
-                                            var decryptVideo = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandVideo, tempTsFileWorkDir);
+                                            var decryptVideo = await Helpers.ExecuteCommandAsyncWorkDir(shaka ? "shaka-packager" : "mp4decrypt", shaka ? CfgManager.PathShakaPackager : CfgManager.PathMP4Decrypt,
+                                                commandVideo, tempTsFileWorkDir);
 
                                             if (!decryptVideo.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptVideo.ErrorCode}");
@@ -1394,7 +1422,8 @@ public class CrunchyrollManager{
                                                 Doing = "Decrypting audio"
                                             };
                                             QueueManager.Instance.Queue.Refresh();
-                                            var decryptAudio = await Helpers.ExecuteCommandAsyncWorkDir("mp4decrypt", CfgManager.PathMP4Decrypt, commandAudio, tempTsFileWorkDir);
+                                            var decryptAudio = await Helpers.ExecuteCommandAsyncWorkDir(shaka ? "shaka-packager" : "mp4decrypt", shaka ? CfgManager.PathShakaPackager : CfgManager.PathMP4Decrypt,
+                                                commandAudio, tempTsFileWorkDir);
 
                                             if (!decryptAudio.IsOk){
                                                 Console.Error.WriteLine($"Decryption failed with exit code {decryptAudio.ErrorCode}");
@@ -1481,10 +1510,9 @@ public class CrunchyrollManager{
                             }
                         }
                     } else if (options is{ Novids: true, Noaudio: true }){
-                        
                         variables.Add(new Variable("height", 360, false));
                         variables.Add(new Variable("width", 640, false));
-                        
+
                         fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
                     }
 

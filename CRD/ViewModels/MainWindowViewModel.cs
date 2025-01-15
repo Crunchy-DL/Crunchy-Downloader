@@ -11,5 +11,4 @@ public partial class MainWindowViewModel : ViewModelBase{
     public MainWindowViewModel(ProgramManager manager){
         ProgramManager = manager;
     }
-    
 }

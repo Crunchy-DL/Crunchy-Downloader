@@ -52,6 +52,9 @@ public partial class ProgramManager : ObservableObject{
 
     [ObservableProperty]
     private bool _finishedLoading = false;
+    
+    [ObservableProperty]
+    private bool _navigationLock = false;
 
     #endregion
 
@@ -115,7 +118,7 @@ public partial class ProgramManager : ObservableObject{
     }
 
 
-    private async void Init(){
+    private async Task Init(){
         CrunchyrollManager.Instance.InitOptions();
 
         UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();

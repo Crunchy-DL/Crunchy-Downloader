@@ -43,12 +43,20 @@ public class Updater : INotifyPropertyChanged{
     }
 
     private string downloadUrl = "";
-    private readonly string tempPath = Path.Combine(Path.GetTempPath(), "Update.zip");
-    private readonly string extractPath = Path.Combine(Path.GetTempPath(), "ExtractedUpdate");
+    private readonly string tempPath = Path.Combine(CfgManager.PathTEMP_DIR, "Update.zip");
+    private readonly string extractPath = Path.Combine(CfgManager.PathTEMP_DIR, "ExtractedUpdate");
 
     private readonly string apiEndpoint = "https://api.github.com/repos/Crunchy-DL/Crunchy-Downloader/releases/latest";
 
     public async Task<bool> CheckForUpdatesAsync(){
+        if (Directory.Exists(tempPath)){
+            Directory.Delete(tempPath, true);
+        }
+
+        if (Directory.Exists(extractPath)){
+            Directory.Delete(extractPath, true);
+        }
+
         try{
             var platformAssetMapping = new Dictionary<OSPlatform, string>{
                 { OSPlatform.Windows, "windows" },
@@ -114,6 +122,8 @@ public class Updater : INotifyPropertyChanged{
 
     public async Task DownloadAndUpdateAsync(){
         try{
+            Helpers.EnsureDirectoriesExist(tempPath);
+
             // Download the zip file
             var response = await HttpClientReq.Instance.GetHttpClient().GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
 
@@ -160,8 +170,9 @@ public class Updater : INotifyPropertyChanged{
     }
 
     private void ApplyUpdate(string updateFolder){
+        var ExecutableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
         var currentPath = AppDomain.CurrentDomain.BaseDirectory;
-        var updaterPath = Path.Combine(currentPath, "Updater.exe");
+        var updaterPath = Path.Combine(currentPath, "Updater" + ExecutableExtension);
         var arguments = $"\"{currentPath.Substring(0, currentPath.Length - 1)}\" \"{updateFolder}\"";
 
         System.Diagnostics.Process.Start(updaterPath, arguments);

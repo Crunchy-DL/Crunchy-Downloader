@@ -48,9 +48,8 @@ public partial class SeriesPageViewModel : ViewModelBase{
     public bool _seriesFolderPathExists;
 
     public SeriesPageViewModel(){
-        
         _storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
-        
+
         _selectedSeries = CrunchyrollManager.Instance.SelectedSeries;
 
         if (_selectedSeries.ThumbnailImage == null){
@@ -153,7 +152,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         UpdateSeriesFolderPath();
     }
-    
+
     [RelayCommand]
     public async Task MatchSonarrSeries_Button(){
         var dialog = new ContentDialog(){
@@ -221,7 +220,18 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         await Task.WhenAll(downloadTasks);
     }
-    
+
+    [RelayCommand]
+    public void ToggleDownloadedMark(HistorySeason season){
+        bool allDownloaded = season.EpisodesList.All(ep => ep.WasDownloaded);
+
+        foreach (var historyEpisode in season.EpisodesList){
+            if (historyEpisode.WasDownloaded == allDownloaded){
+                season.UpdateDownloaded(historyEpisode.EpisodeId);
+            }
+        }
+    }
+
     [RelayCommand]
     public async Task UpdateData(string? season){
         await SelectedSeries.FetchData(season);

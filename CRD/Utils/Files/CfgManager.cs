@@ -31,6 +31,7 @@ public class CfgManager{
         File.Exists(Path.Combine(WorkingDirectory, "lib", "mkvmerge")) ? Path.Combine(WorkingDirectory, "lib", "mkvmerge") : "mkvmerge";
 
     public static readonly string PathMP4Decrypt = Path.Combine(WorkingDirectory, "lib", "mp4decrypt" + ExecutableExtension);
+    public static readonly string PathShakaPackager = Path.Combine(WorkingDirectory, "lib", "shaka-packager" + ExecutableExtension);
 
     public static readonly string PathWIDEVINE_DIR = Path.Combine(WorkingDirectory, "widevine");
 

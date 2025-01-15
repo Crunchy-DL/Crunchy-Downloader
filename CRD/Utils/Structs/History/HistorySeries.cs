@@ -95,6 +95,9 @@ public class HistorySeries : INotifyPropertyChanged{
     #region Settings Override
 
     [JsonIgnore]
+    private bool Loading = false;
+    
+    [JsonIgnore]
     public StringItem? _selectedVideoQualityItem;
 
     [JsonIgnore]
@@ -105,7 +108,10 @@ public class HistorySeries : INotifyPropertyChanged{
 
             HistorySeriesVideoQualityOverride = value?.stringValue ?? "";
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedVideoQualityItem)));
-            CfgManager.UpdateHistoryFile();
+            if (!Loading){
+                CfgManager.UpdateHistoryFile();
+            }
+            
         }
     }
 
@@ -173,6 +179,7 @@ public class HistorySeries : INotifyPropertyChanged{
     }
 
     public void Init(){
+        Loading = true;
         if (!(SubLangList.Count > 2 || DubLangList.Count > 0)){
             foreach (var languageItem in Languages.languages){
                 SubLangList.Add(new StringItem{ stringValue = languageItem.CrLocale });
@@ -200,6 +207,7 @@ public class HistorySeries : INotifyPropertyChanged{
 
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
+        Loading = false;
     }
 
     #endregion

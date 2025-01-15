@@ -23,85 +23,87 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-    </StackPanel>
-
-
-    <!-- Preset Name -->
-    <StackPanel>
-        <TextBlock Text="Enter Preset Name" Margin="0,0,0,5" />
-        <TextBox Watermark="H.265 1080p" Text="{Binding PresetName}" />
-        <TextBlock Text="Preset name already used" FontSize="12" Foreground="{DynamicResource SystemFillColorCaution}" 
-                   IsVisible="{Binding FileExists}" />
-    </StackPanel>
-
-    <!-- Codec -->
-    <StackPanel>
-        <TextBlock Text="Enter Codec" Margin="0,10,0,5" />
-        <TextBox Watermark="libx265" Text="{Binding Codec}" />
-    </StackPanel>
-
-    <!-- Resolution ComboBox -->
-    <StackPanel>
-        <TextBlock Text="Select Resolution" Margin="0,10,0,5" />
-        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
-                  ItemsSource="{Binding ResolutionList}"
-                  SelectedItem="{Binding SelectedResolution}">
-        </ComboBox>
-    </StackPanel>
-
-    <!-- Frame Rate NumberBox -->
-    <StackPanel>
-        <TextBlock Text="Enter Frame Rate" Margin="0,10,0,5" />
-        <controls:NumberBox Minimum="1" Maximum="999"
-                            Value="{Binding FrameRate}"
-                            SpinButtonPlacementMode="Inline"
-                            HorizontalAlignment="Stretch" />
-    </StackPanel>
-
-    <!-- CRF NumberBox -->
-    <StackPanel>
-        <TextBlock Text="Enter CRF (0-51) - (cq,global_quality,qp)" Margin="0,10,0,5" />
-        <controls:NumberBox Minimum="0" Maximum="51"
-                            Value="{Binding Crf}"
-                            SpinButtonPlacementMode="Inline"
-                            HorizontalAlignment="Stretch" />
-    </StackPanel>
-
-    <!-- Additional Parameters -->
-    <StackPanel Margin="0,20,0,0">
-        <TextBlock Text="Additional Parameters" Margin="0,0,0,5" />
-        <StackPanel Orientation="Horizontal" Spacing="5">
-            <TextBox HorizontalAlignment="Left" MinWidth="250"
-                     Text="{Binding AdditionalParametersString}" />
-            <Button HorizontalAlignment="Center" Command="{Binding AddAdditionalParam}">
-                <StackPanel Orientation="Horizontal">
-                    <controls:SymbolIcon Symbol="Add" FontSize="18" />
-                </StackPanel>
-            </Button>
         </StackPanel>
 
-        <ItemsControl ItemsSource="{Binding AdditionalParameters}" Margin="0,10,0,0" MaxWidth="350">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                    <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
-                            CornerRadius="10" Margin="2">
-                        <StackPanel Orientation="Horizontal" Margin="5">
-                            <TextBlock Text="{Binding stringValue}" Margin="5,0" />
-                            <Button Content="X" FontSize="10" VerticalAlignment="Center"
-                                    HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
-                                    Command="{Binding $parent[ItemsControl].((utils:ContentDialogEncodingPresetViewModel)DataContext).RemoveAdditionalParam}"
-                                    CommandParameter="{Binding .}" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
-        </ItemsControl>
-    </StackPanel>
+
+        <!-- Preset Name -->
+        <StackPanel>
+            <TextBlock Text="Enter Preset Name" Margin="0,0,0,5" />
+            <TextBox Watermark="H.265 1080p" Text="{Binding PresetName}" />
+            <TextBlock Text="Preset name already used" FontSize="12" Foreground="{DynamicResource SystemFillColorCaution}"
+                       IsVisible="{Binding FileExists}" />
+        </StackPanel>
+
+        <!-- Codec -->
+        <StackPanel>
+            <TextBlock Text="Enter Codec" Margin="0,10,0,5" />
+            <TextBox Watermark="libx265" Text="{Binding Codec}" />
+        </StackPanel>
+
+        <!-- Resolution ComboBox -->
+        <StackPanel>
+            <TextBlock Text="Select Resolution" Margin="0,10,0,5" />
+            <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                      ItemsSource="{Binding ResolutionList}"
+                      SelectedItem="{Binding SelectedResolution}">
+            </ComboBox>
+        </StackPanel>
+
+        <!-- Frame Rate NumberBox -->
+        <StackPanel>
+            <TextBlock Text="Enter Frame Rate" Margin="0,10,0,5" />
+            <!-- <controls:NumberBox Minimum="1" Maximum="999" -->
+            <!--                     Value="{Binding FrameRate}" -->
+            <!--                     SpinButtonPlacementMode="Inline" -->
+            <!--                     HorizontalAlignment="Stretch" /> -->
+            <TextBox Watermark="24" Text="{Binding FrameRate}" />
+        </StackPanel>
+
+        <!-- CRF NumberBox -->
+        <StackPanel>
+            <TextBlock Text="Enter CRF (0-51) - (cq,global_quality,qp)" Margin="0,10,0,5" />
+            <controls:NumberBox Minimum="0" Maximum="51"
+                                Value="{Binding Crf}"
+                                SpinButtonPlacementMode="Inline"
+                                HorizontalAlignment="Stretch" />
+        </StackPanel>
+
+        <!-- Additional Parameters -->
+        <StackPanel Margin="0,20,0,0">
+            <TextBlock Text="Additional Parameters" Margin="0,0,0,5" />
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <TextBox HorizontalAlignment="Left" MinWidth="250"
+                         Text="{Binding AdditionalParametersString}" />
+                <Button HorizontalAlignment="Center" Command="{Binding AddAdditionalParam}">
+                    <StackPanel Orientation="Horizontal">
+                        <controls:SymbolIcon Symbol="Add" FontSize="18" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
+            <ItemsControl ItemsSource="{Binding AdditionalParameters}" Margin="0,10,0,0" MaxWidth="350" HorizontalAlignment="Left">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
+                                CornerRadius="10" Margin="2">
+                            <StackPanel Orientation="Horizontal" Margin="5">
+                                <TextBlock Text="{Binding stringValue}" Margin="5,0" />
+                                <Button Content="X" FontSize="8" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                                         Width="15" Height="15" Padding="0"
+                                        Command="{Binding $parent[ItemsControl].((utils:ContentDialogEncodingPresetViewModel)DataContext).RemoveAdditionalParam}"
+                                        CommandParameter="{Binding .}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
 
     </StackPanel>
 
