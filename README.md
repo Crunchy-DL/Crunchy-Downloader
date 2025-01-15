@@ -52,7 +52,10 @@ Visual c++ redist 2015-22 https://github.com/Crunchy-DL/Crunchy-Downloader/issue
 
 ## Decryption Requirements
 
-- **mp4decrypt** (available at [Bento4.com](http://www.bento4.com/)) - Required for the decryption process. This tool should be placed in the `./lib/` directory.
+You will need one of the following tools placed in the `./lib/` directory.
+
+- **mp4decrypt** - Required for the decryption process. Available at [Bento4.com](http://www.bento4.com/).
+- **shaka-packager** - Required for the decryption process. Available at [Shaka-Packager GitHub Releases](https://github.com/shaka-project/shaka-packager/releases/latest).
 
 ## Instructions
 
