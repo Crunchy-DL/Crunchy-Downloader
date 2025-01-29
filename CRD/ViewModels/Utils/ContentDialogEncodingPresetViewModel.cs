@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Utils;
 using CRD.Utils.Ffmpeg_Encoding;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Views;
 using DynamicData;

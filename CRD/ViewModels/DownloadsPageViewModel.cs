@@ -10,7 +10,9 @@ using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 
 namespace CRD.ViewModels;
 
@@ -36,12 +38,12 @@ public partial class DownloadsPageViewModel : ViewModelBase{
             QueueManager.Instance.UpdateDownloadListItems();
         }
 
-        CfgManager.WriteSettingsToFile();
+        CfgManager.WriteCrSettings();
     }
 
     partial void OnRemoveFinishedChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload = value;
-        CfgManager.WriteSettingsToFile();
+        CfgManager.WriteCrSettings();
     }
 }
 
@@ -67,9 +69,10 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     public DownloadItemModel(CrunchyEpMeta epMetaF){
         epMeta = epMetaF;
 
-        ImageUrl = epMeta.Image;
+        ImageUrl = epMeta.Image ?? string.Empty;
         Title = epMeta.SeriesTitle + (!string.IsNullOrEmpty(epMeta.Season) ? " - S" + epMeta.Season + "E" + (epMeta.EpisodeNumber != string.Empty ? epMeta.EpisodeNumber : epMeta.AbsolutEpisodeNumberE) : "") + " - " +
                 epMeta.EpisodeTitle;
+
         isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
 
         Done = epMeta.DownloadProgress.Done;
@@ -81,9 +84,17 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
             epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
-        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString() + (!string.IsNullOrEmpty(epMeta.Resolution) ? "- " + epMeta.Resolution : "");
+        InfoText = JoinWithSeparator(
+            GetDubString(),
+            GetSubtitleString(),
+            epMeta.Resolution
+        );
 
         Error = epMeta.DownloadProgress.Error;
+    }
+
+    string JoinWithSeparator(params string[] parts){
+        return string.Join(" - ", parts.Where(part => !string.IsNullOrEmpty(part)));
     }
 
     private string GetDubString(){
@@ -138,9 +149,14 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
             epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
-        if (epMeta.Data != null) InfoText = GetDubString() + " - " + GetSubtitleString() + (!string.IsNullOrEmpty(epMeta.Resolution) ? "- " + epMeta.Resolution : "");
+        InfoText = JoinWithSeparator(
+            GetDubString(),
+            GetSubtitleString(),
+            epMeta.Resolution
+        );
 
         Error = epMeta.DownloadProgress.Error;
+
 
         if (PropertyChanged != null){
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
@@ -186,15 +202,15 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             epMeta.DownloadProgress.IsDownloading = true;
             Paused = !epMeta.Paused && !isDownloading || epMeta.Paused;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
-            
+
             CrDownloadOptions newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
 
             if (epMeta.OnlySubs){
                 newOptions.Novids = true;
                 newOptions.Noaudio = true;
             }
-            
-            await CrunchyrollManager.Instance.DownloadEpisode(epMeta,newOptions );
+
+            await CrunchyrollManager.Instance.DownloadEpisode(epMeta, newOptions);
         }
     }
 
@@ -209,7 +225,8 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
                         if (File.Exists(downloadItemDownloadedFile)){
                             File.Delete(downloadItemDownloadedFile);
                         }
-                    } catch (Exception e){
+                    } catch (Exception){
+                        // ignored
                     }
                 }
             }

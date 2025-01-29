@@ -191,6 +191,22 @@
             </controls:SettingsExpander>
 
 
+            <controls:SettingsExpander Header="Search Settings"
+                                       IconSource="Find"
+                                       Description="Adjust search settings"
+                                       IsExpanded="False">
+
+
+                <controls:SettingsExpanderItem Content="Include featured Music"
+                                               Description="Fetch featured music when searching for a series">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SearchFetchFeaturedMusic}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                
+            </controls:SettingsExpander>
+            
             <controls:SettingsExpander Header="Download Settings"
                                        IconSource="Download"
                                        Description="Adjust download settings"

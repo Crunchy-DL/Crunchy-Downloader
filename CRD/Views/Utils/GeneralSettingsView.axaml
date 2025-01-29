@@ -33,15 +33,27 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="History Include CR Artists" Description="Add Crunchyroll artists (music) to the history">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding HistoryIncludeCrArtists}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
                 <controls:SettingsExpanderItem Content="History Add Specials" Description="Add specials to the queue if they weren't downloaded before">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryAddSpecials}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-
+                
                 <controls:SettingsExpanderItem Content="History Missing/New Count from Sonarr" Description="The missing count (number in the orange corner) will count the episodes missing from sonarr">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryCountSonarr}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="History Skip Sonarr Unmonitored" Description="Skips unmonitored sonarr episodes when counting Missing/New">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding HistorySkipUnmonitored}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 

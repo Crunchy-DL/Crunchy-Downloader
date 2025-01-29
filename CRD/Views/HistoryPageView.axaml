@@ -186,15 +186,44 @@
                        Placement="BottomEdgeAlignedRight"
                        PlacementTarget="{Binding ElementName=DropdownButtonFilter}">
                     <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
-                        <ListBox SelectionMode="Single" Width="210"
-                                 MaxHeight="400"
-                                 ItemsSource="{Binding FilterList}" SelectedItem="{Binding SelectedFilter}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding FilterTitle}"></TextBlock>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <StackPanel Orientation="Vertical">
+
+                            <Grid Margin="8 0 5 0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" /> <!-- TextBlock takes remaining space -->
+                                    <ColumnDefinition Width="Auto" /> <!-- ToggleSwitch takes only needed space -->
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Series" Grid.Column="0" VerticalAlignment="Center" />
+                                <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding ShowSeries}" VerticalAlignment="Center" />
+                            </Grid>
+
+                            <Grid Margin="8 0 5 0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Artists" Grid.Column="0" VerticalAlignment="Center" />
+                                <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding ShowArtists}" VerticalAlignment="Center" />
+                            </Grid>
+
+
+                            <Rectangle Height="1" Fill="Gray" Margin="0,8,0,8" />
+
+                            <ListBox SelectionMode="Single" Width="210"
+                                     MaxHeight="400"
+                                     ItemsSource="{Binding FilterList}" SelectedItem="{Binding SelectedFilter}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding FilterTitle}"></TextBlock>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+
+                        </StackPanel>
+
                     </Border>
                 </Popup>
             </StackPanel>

@@ -32,28 +32,28 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     private string _buttonTextSelectSeason = "Select Season";
 
     [ObservableProperty]
-    private bool _addAllEpisodes = false;
+    private bool _addAllEpisodes;
 
     [ObservableProperty]
-    private bool _buttonEnabled = false;
+    private bool _buttonEnabled;
 
     [ObservableProperty]
-    private bool _allButtonEnabled = false;
+    private bool _allButtonEnabled;
 
     [ObservableProperty]
-    private bool _showLoading = false;
+    private bool _showLoading;
 
     [ObservableProperty]
-    private bool _searchEnabled = false;
+    private bool _searchEnabled;
 
     [ObservableProperty]
     private bool _searchVisible = true;
 
     [ObservableProperty]
-    private bool _slectSeasonVisible = false;
+    private bool _slectSeasonVisible;
 
     [ObservableProperty]
-    private bool _searchPopupVisible = false;
+    private bool _searchPopupVisible;
 
     public ObservableCollection<ItemModel> Items{ get; set; } = new();
     public ObservableCollection<CrBrowseSeries> SearchItems{ get; set; } = new();
@@ -69,13 +69,13 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
     private Dictionary<string, List<ItemModel>> episodesBySeason = new();
 
-    private List<string> selectedEpisodes = new();
+    private List<ItemModel> selectedEpisodes = new();
 
     private CrunchySeriesList? currentSeriesList;
 
     private CrunchyMusicVideoList? currentMusicVideoList;
 
-    private bool CurrentSeasonFullySelected = false;
+    private bool CurrentSeasonFullySelected;
 
     public AddDownloadPageViewModel(){
         SelectedItems.CollectionChanged += OnSelectedItemsChanged;
@@ -98,9 +98,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 if (episode.ImageBitmap == null){
                     if (episode.Images.PosterTall != null){
                         var posterTall = episode.Images.PosterTall.First();
-                        var imageUrl = posterTall.Find(ele => ele.Height == 180).Source
-                                       ?? (posterTall.Count >= 2 ? posterTall[1].Source : posterTall.FirstOrDefault().Source);
-                        episode.LoadImage(imageUrl);
+                        var imageUrl = posterTall.Find(ele => ele.Height == 180)?.Source
+                                       ?? (posterTall.Count >= 2 ? posterTall[1].Source : posterTall.FirstOrDefault()?.Source);
+                        episode.LoadImage(imageUrl ?? string.Empty);
                     }
                 }
 
@@ -171,14 +171,16 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     #region OnButtonPress
 
     [RelayCommand]
-    public async void OnButtonPress(){
+    public async Task OnButtonPress(){
         if (HasSelectedItemsOrEpisodes()){
             Console.WriteLine("Added to Queue");
 
             if (currentMusicVideoList != null){
                 AddSelectedMusicVideosToQueue();
-            } else{
-                AddSelectedEpisodesToQueue();
+            }
+
+            if (currentSeriesList != null){
+                await AddSelectedEpisodesToQueue();
             }
 
             ResetState();
@@ -194,10 +196,12 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void AddSelectedMusicVideosToQueue(){
-        if (SelectedItems.Count > 0){
+        AddItemsToSelectedEpisodes();
+
+        if (selectedEpisodes.Count > 0){
             var musicClass = CrunchyrollManager.Instance.CrMusic;
-            foreach (var selectedItem in SelectedItems){
-                var music = currentMusicVideoList.Value.Data?.FirstOrDefault(ele => ele.Id == selectedItem.Id);
+            foreach (var selectedItem in selectedEpisodes){
+                var music = currentMusicVideoList?.Data?.FirstOrDefault(ele => ele.Id == selectedItem.Id);
 
                 if (music != null){
                     var meta = musicClass.EpisodeMeta(music);
@@ -207,24 +211,24 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         }
     }
 
-    private async void AddSelectedEpisodesToQueue(){
+    private async Task AddSelectedEpisodesToQueue(){
         AddItemsToSelectedEpisodes();
 
         if (currentSeriesList != null){
             await QueueManager.Instance.CrAddSeriesToQueue(
-                currentSeriesList.Value,
+                currentSeriesList,
                 new CrunchyMultiDownload(
                     CrunchyrollManager.Instance.CrunOptions.DubLang,
                     AddAllEpisodes,
                     false,
-                    selectedEpisodes));
+                    selectedEpisodes.Select(selectedEpisode => selectedEpisode.AbsolutNum).ToList()));
         }
     }
 
     private void AddItemsToSelectedEpisodes(){
         foreach (var selectedItem in SelectedItems){
-            if (!selectedEpisodes.Contains(selectedItem.AbsolutNum)){
-                selectedEpisodes.Add(selectedItem.AbsolutNum);
+            if (!selectedEpisodes.Contains(selectedItem)){
+                selectedEpisodes.Add(selectedItem);
             }
         }
     }
@@ -256,7 +260,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
         var matchResult = ExtractLocaleAndIdFromUrl();
 
-        if (matchResult is (string locale, string id)){
+        if (matchResult is ({ } locale, { } id)){
             switch (GetUrlType()){
                 case CrunchyUrlType.Artist:
                     await HandleArtistUrlAsync(locale, id);
@@ -299,8 +303,8 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     private async Task HandleArtistUrlAsync(string locale, string id){
         SetLoadingState(true);
 
-        var list = await CrunchyrollManager.Instance.CrMusic.ParseArtistMusicVideosByIdAsync(
-            id, DetermineLocale(locale), true);
+        var list = await CrunchyrollManager.Instance.CrMusic.ParseArtistVideosByIdAsync(
+            id, DetermineLocale(locale), true, true);
 
         SetLoadingState(false);
 
@@ -335,6 +339,16 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             id, DetermineLocale(locale),
             new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true), true);
 
+        if (CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic){
+            var musicList = await CrunchyrollManager.Instance.CrMusic.ParseFeaturedMusicVideoByIdAsync(id, DetermineLocale(locale), true);
+            
+            if (musicList != null){
+                currentMusicVideoList = musicList;
+                PopulateItemsFromMusicVideoList();
+            }
+            
+        }
+
         SetLoadingState(false);
 
         if (list != null){
@@ -348,16 +362,37 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
     private void PopulateItemsFromMusicVideoList(){
         if (currentMusicVideoList?.Data != null){
-            foreach (var episode in currentMusicVideoList.Value.Data){
-                var imageUrl = episode.Images?.Thumbnail?.FirstOrDefault().Source ?? "";
+            foreach (var episode in currentMusicVideoList.Data){
+                string seasonKey;
+                switch (episode.EpisodeType){
+                    case EpisodeType.MusicVideo:
+                        seasonKey = "Music Videos ";
+                        break;
+                    case EpisodeType.Concert:
+                        seasonKey = "Concerts ";
+                        break;
+                    case EpisodeType.Episode:
+                    case EpisodeType.Unknown:
+                    default:
+                        seasonKey = "Unknown ";
+                        break;
+                }
+
+                var imageUrl = episode.Images?.Thumbnail.FirstOrDefault()?.Source ?? "";
                 var time = $"{(episode.DurationMs / 1000) / 60}:{(episode.DurationMs / 1000) % 60:D2}";
 
-                var newItem = new ItemModel(episode.Id ?? "", imageUrl, episode.Description ?? "", time, episode.Title ?? "", "",
-                    episode.SequenceNumber.ToString(), episode.SequenceNumber.ToString(), new List<string>());
+                var newItem = new ItemModel(episode.Id, imageUrl, episode.Description ?? "", time, episode.Title ?? "", seasonKey,
+                    episode.SequenceNumber.ToString(), episode.Id, new List<string>(), episode.EpisodeType);
 
-                newItem.LoadImage(imageUrl);
-                Items.Add(newItem);
+                if (!episodesBySeason.ContainsKey(seasonKey)){
+                    episodesBySeason[seasonKey] = new List<ItemModel>{ newItem };
+                    SeasonList.Add(new ComboBoxItem{ Content = seasonKey });
+                } else{
+                    episodesBySeason[seasonKey].Add(newItem);
+                }
             }
+
+            CurrentSelectedSeason = SeasonList.First();
         }
     }
 
@@ -367,7 +402,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             var itemModel = new ItemModel(
                 episode.Id, episode.Img, episode.Description, episode.Time, episode.Name, seasonKey,
                 episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum,
-                episode.E, episode.Lang);
+                episode.E, episode.Lang, episode.EpisodeType);
 
             if (!episodesBySeason.ContainsKey(seasonKey)){
                 episodesBySeason[seasonKey] = new List<ItemModel>{ itemModel };
@@ -407,7 +442,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     public void OnSelectSeasonPressed(){
         if (CurrentSeasonFullySelected){
             foreach (var item in Items){
-                selectedEpisodes.Remove(item.AbsolutNum);
+                selectedEpisodes.Remove(item);
                 SelectedItems.Remove(item);
             }
 
@@ -426,10 +461,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     partial void OnCurrentSelectedSeasonChanging(ComboBoxItem? oldValue, ComboBoxItem newValue){
-        if (SelectedItems == null) return;
         foreach (var selectedItem in SelectedItems){
-            if (!selectedEpisodes.Contains(selectedItem.AbsolutNum)){
-                selectedEpisodes.Add(selectedItem.AbsolutNum);
+            if (!selectedEpisodes.Contains(selectedItem)){
+                selectedEpisodes.Add(selectedItem);
             }
         }
 
@@ -443,7 +477,6 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void OnSelectedItemsChanged(object? sender, NotifyCollectionChangedEventArgs e){
-        if (Items == null) return;
 
         CurrentSeasonFullySelected = Items.All(item => SelectedItems.Contains(item));
 
@@ -486,7 +519,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
         if (list != null){
             currentSeriesList = list;
-            SearchPopulateEpisodesBySeason();
+            await SearchPopulateEpisodesBySeason(value.Id);
             UpdateUiForEpisodeSelection();
         } else{
             ButtonEnabled = true;
@@ -514,7 +547,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             new CrunchyMultiDownload(CrunchyrollManager.Instance.CrunOptions.DubLang, true), true);
     }
 
-    private void SearchPopulateEpisodesBySeason(){
+    private async Task SearchPopulateEpisodesBySeason(string seriesId){
         if (currentSeriesList?.List == null){
             return;
         }
@@ -528,8 +561,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
         GC.Collect();
 
-
-        foreach (var episode in currentSeriesList.Value.List){
+        foreach (var episode in currentSeriesList.List){
             var seasonKey = "S" + episode.Season;
             var episodeModel = new ItemModel(
                 episode.Id,
@@ -540,7 +572,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 seasonKey,
                 episode.EpisodeNum.StartsWith("SP") ? episode.EpisodeNum : "E" + episode.EpisodeNum,
                 episode.E,
-                episode.Lang);
+                episode.Lang, episode.EpisodeType);
 
             if (!episodesBySeason.ContainsKey(seasonKey)){
                 episodesBySeason[seasonKey] = new List<ItemModel>{ episodeModel };
@@ -548,6 +580,19 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             } else{
                 episodesBySeason[seasonKey].Add(episodeModel);
             }
+        }
+        
+        if (CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic){
+            var locale = string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang)
+                ? CrunchyrollManager.Instance.DefaultLocale
+                : CrunchyrollManager.Instance.CrunOptions.HistoryLang;
+            var musicList = await CrunchyrollManager.Instance.CrMusic.ParseFeaturedMusicVideoByIdAsync(seriesId, DetermineLocale(locale), true);
+            
+            if (musicList != null){
+                currentMusicVideoList = musicList;
+                PopulateItemsFromMusicVideoList();
+            }
+            
         }
 
         CurrentSelectedSeason = SeasonList.First();
@@ -575,12 +620,12 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 if (episode.ImageBitmap == null){
                     episode.LoadImage(episode.ImageUrl);
                     Items.Add(episode);
-                    if (selectedEpisodes.Contains(episode.AbsolutNum)){
+                    if (selectedEpisodes.Contains(episode)){
                         SelectedItems.Add(episode);
                     }
                 } else{
                     Items.Add(episode);
-                    if (selectedEpisodes.Contains(episode.AbsolutNum)){
+                    if (selectedEpisodes.Contains(episode)){
                         SelectedItems.Add(episode);
                     }
                 }
@@ -604,21 +649,16 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
         // Clear collections and other managed resources
         Items.Clear();
-        Items = null;
         SearchItems.Clear();
-        SearchItems = null;
         SelectedItems.Clear();
-        SelectedItems = null;
         SeasonList.Clear();
-        SeasonList = null;
         episodesBySeason.Clear();
-        episodesBySeason = null;
         selectedEpisodes.Clear();
-        selectedEpisodes = null;
     }
 }
 
-public class ItemModel(string id, string imageUrl, string description, string time, string title, string season, string episode, string absolutNum, List<string> availableAudios) : INotifyPropertyChanged{
+public class ItemModel(string id, string imageUrl, string description, string time, string title, string season, string episode, string absolutNum, List<string> availableAudios, EpisodeType epType)
+    : INotifyPropertyChanged{
     public string Id{ get; set; } = id;
     public string ImageUrl{ get; set; } = imageUrl;
     public Bitmap? ImageBitmap{ get; set; }
@@ -633,6 +673,9 @@ public class ItemModel(string id, string imageUrl, string description, string ti
     public string TitleFull{ get; set; } = season + episode + " - " + title;
 
     public List<string> AvailableAudios{ get; set; } = availableAudios;
+    public EpisodeType EpisodeType{ get; set; } = epType;
+
+    public bool HasDubs{ get; set; } = availableAudios.Count != 0;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 

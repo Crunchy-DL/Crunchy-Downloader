@@ -87,7 +87,7 @@ public static class MPDParser{
                     throw new NotImplementedException();
                 }
                 
-                var foundLanguage = Languages.FindLang(Languages.languages.FirstOrDefault(a => a.Code == item.language).CrLocale ?? "unknown");
+                var foundLanguage = Languages.FindLang(Languages.languages.FirstOrDefault(a => a.Code == item.language)?.CrLocale ?? "unknown");
                 LanguageItem? audioLang = item.language != null ? foundLanguage : (language != null ? language : foundLanguage);
 
                 var pItem = new AudioPlaylist{

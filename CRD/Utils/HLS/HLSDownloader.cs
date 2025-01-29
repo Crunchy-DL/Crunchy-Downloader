@@ -95,7 +95,7 @@ public class HlsDownloader{
 
         // Check if the file exists and it is not a resume download
         if (File.Exists(fn) && !_data.IsResume){
-            string rwts = _data.Override ?? "Y";
+            string rwts = !string.IsNullOrEmpty(_data.Override) ? _data.Override : "Y";
             rwts = rwts.ToUpper(); // ?? "N"
 
             if (rwts.StartsWith("Y")){
@@ -304,7 +304,7 @@ public class HlsDownloader{
         double downloadSpeed = downloadedBytes / (dateElapsed / 1000);
 
         int partsLeft = partsTotal - partsDownloaded;
-        double remainingTime = (partsLeft * (totalDownloadedBytes / partsDownloaded)) / downloadSpeed;
+        double remainingTime = (partsLeft * ((double)totalDownloadedBytes / partsDownloaded)) / downloadSpeed;
 
         return new Info{
             Percent = percent,

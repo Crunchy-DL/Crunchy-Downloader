@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using CRD.Utils.Files;
 
 namespace CRD.Utils.Updater;
 

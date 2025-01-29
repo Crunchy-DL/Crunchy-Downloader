@@ -54,7 +54,7 @@ public class QueueManager{
         if (e.Action == NotifyCollectionChangedAction.Remove){
             if (e.OldItems != null)
                 foreach (var eOldItem in e.OldItems){
-                    var downloadItem = DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(eOldItem));
+                    var downloadItem = DownloadItemModels.FirstOrDefault(downloadItem => downloadItem.epMeta.Equals(eOldItem));
                     if (downloadItem != null){
                         DownloadItemModels.Remove(downloadItem);
                     } else{
@@ -87,13 +87,17 @@ public class QueueManager{
 
 
     public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false, bool onlySubs = false){
+        if (string.IsNullOrEmpty(epId)){
+            return;
+        }
+
         await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
 
         var episodeL = await CrunchyrollManager.Instance.CrEpisode.ParseEpisodeById(epId, crLocale);
 
 
         if (episodeL != null){
-            if (episodeL.Value.IsPremiumOnly && !CrunchyrollManager.Instance.Profile.HasPremium){
+            if (episodeL.IsPremiumOnly && !CrunchyrollManager.Instance.Profile.HasPremium){
                 MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
                 return;
             }
@@ -206,6 +210,15 @@ public class QueueManager{
 
         if (musicVideo != null){
             var musicVideoMeta = CrunchyrollManager.Instance.CrMusic.EpisodeMeta(musicVideo);
+            
+            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath, string videoQuality) historyEpisode = (null, [], [], "", "");
+
+            if (CrunchyrollManager.Instance.CrunOptions.History){
+                historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDubListAndDownloadDir(musicVideoMeta.SeriesId, musicVideoMeta.SeasonId, musicVideoMeta.Data.First().MediaId);
+            }
+            
+            musicVideoMeta.VideoQuality = !string.IsNullOrEmpty(historyEpisode.videoQuality) ? historyEpisode.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
+            
             Queue.Add(musicVideoMeta);
             MessageBus.Current.SendMessage(new ToastMessage($"Added music video to the queue", ToastType.Information, 1));
         }
@@ -218,6 +231,14 @@ public class QueueManager{
 
         if (concert != null){
             var concertMeta = CrunchyrollManager.Instance.CrMusic.EpisodeMeta(concert);
+            
+            (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath, string videoQuality) historyEpisode = (null, [], [], "", "");
+
+            if (CrunchyrollManager.Instance.CrunOptions.History){
+                historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDubListAndDownloadDir(concertMeta.SeriesId, concertMeta.SeasonId, concertMeta.Data.First().MediaId);
+            }
+            
+            concertMeta.VideoQuality = !string.IsNullOrEmpty(historyEpisode.videoQuality) ? historyEpisode.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
             Queue.Add(concertMeta);
             MessageBus.Current.SendMessage(new ToastMessage($"Added concert to the queue", ToastType.Information, 1));
         }
@@ -232,7 +253,7 @@ public class QueueManager{
         foreach (var crunchyEpMeta in selected.Values.ToList()){
             if (crunchyEpMeta.Data?.First() != null){
                 if (CrunchyrollManager.Instance.CrunOptions.History){
-                    var historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDownloadDir(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
+                    var historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDownloadDir(crunchyEpMeta.SeriesId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
                     if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
                         if (historyEpisode.historyEpisode != null){
                             if (!string.IsNullOrEmpty(historyEpisode.historyEpisode.SonarrEpisodeNumber)){
@@ -258,7 +279,7 @@ public class QueueManager{
                     }
                 }
 
-                var subLangList = CrunchyrollManager.Instance.History.GetSubList(crunchyEpMeta.ShowId, crunchyEpMeta.SeasonId);
+                var subLangList = CrunchyrollManager.Instance.History.GetSubList(crunchyEpMeta.SeriesId, crunchyEpMeta.SeasonId);
 
                 crunchyEpMeta.VideoQuality = !string.IsNullOrEmpty(subLangList.videoQuality) ? subLangList.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
                 crunchyEpMeta.DownloadSubs = subLangList.sublist.Count > 0 ? subLangList.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;

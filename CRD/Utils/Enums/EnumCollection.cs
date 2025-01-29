@@ -5,6 +5,24 @@ using Newtonsoft.Json;
 
 namespace CRD.Utils;
 
+public enum StreamingService{
+    Crunchyroll,
+    Unknown
+}
+
+public enum EpisodeType{
+    MusicVideo,
+    Concert,
+    Episode,
+    Unknown
+}
+
+public enum SeriesType{
+    Artist,
+    Series,
+    Unknown
+}
+
 [DataContract]
 [JsonConverter(typeof(LocaleConverter))]
 public enum Locale{

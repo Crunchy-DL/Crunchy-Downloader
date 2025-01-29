@@ -1,30 +1,24 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;
 using Newtonsoft.Json;
 using ReactiveUI;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace CRD.ViewModels;
 
@@ -147,7 +141,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     #endregion
 
     [ObservableProperty]
-    private AnilistSeries _selectedSeries;
+    private AnilistSeries? _selectedSeries;
 
     [ObservableProperty]
     private int _selectedIndex;
@@ -164,7 +158,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     private SortingType currentSortingType;
 
     [ObservableProperty]
-    private static bool _sortDir = false;
+    private static bool _sortDir;
 
     public ObservableCollection<SortingListElement> SortingList{ get; } =[];
 
@@ -236,12 +230,12 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     }
 
     [RelayCommand]
-    public async void AddToHistory(AnilistSeries series){
+    public async Task AddToHistory(AnilistSeries series){
         if (!string.IsNullOrEmpty(series.CrunchyrollID)){
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 series.IsInHistory = true;
                 RaisePropertyChanged(nameof(series.IsInHistory));
-                var sucess = await CrunchyrollManager.Instance.History.CRUpdateSeries(series.CrunchyrollID, "");
+                var sucess = await CrunchyrollManager.Instance.History.CrUpdateSeries(series.CrunchyrollID, "");
                 series.IsInHistory = sucess;
                 RaisePropertyChanged(nameof(series.IsInHistory));
 
@@ -435,7 +429,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties = new SeasonsPageProperties(){ SelectedSorting = currentSortingType, Ascending = SortDir };
         }
 
-        CfgManager.WriteSettingsToFile();
+        CfgManager.WriteCrSettings();
     }
 
     partial void OnSelectedSortingChanged(SortingListElement? oldValue, SortingListElement? newValue){
@@ -452,11 +446,9 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             return;
         }
 
-        if (newValue.SelectedSorting != null){
-            currentSortingType = newValue.SelectedSorting;
-            if (CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties != null) CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.SelectedSorting = currentSortingType;
-            SortItems();
-        }
+        currentSortingType = newValue.SelectedSorting;
+        if (CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties != null) CrunchyrollManager.Instance.CrunOptions.SeasonsPageProperties.SelectedSorting = currentSortingType;
+        SortItems();
 
         SortingSelectionOpen = false;
         UpdateSettings();

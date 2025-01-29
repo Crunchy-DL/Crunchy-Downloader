@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 
 namespace CRD.Utils.Muxing;

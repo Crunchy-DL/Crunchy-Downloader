@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,7 +12,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
-using CRD.Utils.Structs.History;
 using CRD.Utils.Updater;
 using FluentAvalonia.Styling;
 
@@ -51,10 +49,10 @@ public partial class ProgramManager : ObservableObject{
     private bool _updateAvailable = true;
 
     [ObservableProperty]
-    private bool _finishedLoading = false;
+    private bool _finishedLoading;
     
     [ObservableProperty]
-    private bool _navigationLock = false;
+    private bool _navigationLock;
 
     #endregion
 
@@ -66,7 +64,7 @@ public partial class ProgramManager : ObservableObject{
 
     private Queue<Func<Task>> taskQueue = new Queue<Func<Task>>();
 
-    private bool exitOnTaskFinish = false;
+    private bool exitOnTaskFinish;
 
     public IStorageProvider StorageProvider;
 
@@ -111,7 +109,7 @@ public partial class ProgramManager : ObservableObject{
         await Task.WhenAll(tasks);
 
 
-        while (QueueManager.Instance.Queue.Any(e => e.DownloadProgress != null && e.DownloadProgress.Done != true)){
+        while (QueueManager.Instance.Queue.Any(e => e.DownloadProgress.Done != true)){
             Console.WriteLine("Waiting for downloads to complete...");
             await Task.Delay(2000); // Wait for 2 second before checking again
         }

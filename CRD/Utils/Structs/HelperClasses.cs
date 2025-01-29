@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs;
 
-public struct AuthData{
+public class AuthData{
     public string Username{ get; set; }
     public string Password{ get; set; }
 }
@@ -18,12 +18,12 @@ public class DrmAuthData{
     public string? Token{ get; set; }
 }
 
-public struct Meta{
+public class Meta{
     [JsonProperty("versions_considered")]
     public bool? VersionsConsidered{ get; set; }
 }
 
-public struct LanguageItem{
+public class LanguageItem{
     [JsonProperty("cr_locale")]
     public string CrLocale{ get; set; }
 
@@ -33,12 +33,12 @@ public struct LanguageItem{
     public string Language{ get; set; }
 }
 
-public struct EpisodeAndLanguage{
+public class EpisodeAndLanguage{
     public List<CrunchyEpisode> Items{ get; set; }
     public List<LanguageItem> Langs{ get; set; }
 }
 
-public struct CrunchyMultiDownload(List<string> dubLang, bool? all = null, bool? but = null, List<string>? e = null, string? s = null){
+public class CrunchyMultiDownload(List<string> dubLang, bool? all = null, bool? but = null, List<string>? e = null, string? s = null){
     public List<string> DubLang{ get; set; } = dubLang; //lang code
     public bool? AllEpisodes{ get; set; } = all; // download all episodes
     public bool? But{ get; set; } = but; //download all except selected episodes
@@ -46,12 +46,12 @@ public struct CrunchyMultiDownload(List<string> dubLang, bool? all = null, bool?
     public string? S{ get; set; } = s; //season id
 }
 
-public struct CrunchySeriesList{
+public class CrunchySeriesList{
     public List<Episode> List{ get; set; }
     public Dictionary<string, EpisodeAndLanguage> Data{ get; set; }
 }
 
-public struct Episode{
+public class Episode{
     public string E{ get; set; }
     public List<string> Lang{ get; set; }
     public string Name{ get; set; }
@@ -63,9 +63,11 @@ public struct Episode{
     public string Img{ get; set; }
     public string Description{ get; set; }
     public string Time{ get; set; }
+
+    public EpisodeType EpisodeType{ get; set; } = EpisodeType.Unknown;
 }
 
-public struct DownloadResponse{
+public class DownloadResponse{
     public List<DownloadedMedia> Data{ get; set; }
     public string? FileName{ get; set; }
 

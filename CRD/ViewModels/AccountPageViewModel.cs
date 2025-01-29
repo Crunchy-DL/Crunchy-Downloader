@@ -29,19 +29,19 @@ public partial class AccountPageViewModel : ViewModelBase{
     private static DispatcherTimer? _timer;
     private DateTime _targetTime;
 
-    private bool IsCancelled = false;
-    private bool UnknownEndDate = false;
-    private bool EndedButMaybeActive = false;
+    private bool IsCancelled;
+    private bool UnknownEndDate;
+    private bool EndedButMaybeActive;
 
     public AccountPageViewModel(){
         UpdatetProfile();
     }
 
-    private void Timer_Tick(object sender, EventArgs e){
+    private void Timer_Tick(object? sender, EventArgs e){
         var remaining = _targetTime - DateTime.Now;
         if (remaining <= TimeSpan.Zero){
             RemainingTime = "No active Subscription";
-            _timer.Stop();
+            _timer?.Stop();
             if (UnknownEndDate){
                 RemainingTime = "Unknown Subscription end date";
             }

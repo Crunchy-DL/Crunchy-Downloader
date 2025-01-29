@@ -34,7 +34,7 @@ public class CrMovies{
             return null;
         }
 
-        CrunchyMovieList movie = Helpers.Deserialize<CrunchyMovieList>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+        CrunchyMovieList movie = Helpers.Deserialize<CrunchyMovieList>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings) ?? new CrunchyMovieList();
 
         if (movie.Total < 1){
             return null;
@@ -67,9 +67,9 @@ public class CrMovies{
         epMeta.EpisodeTitle = episodeP.Title;
         epMeta.SeasonId = "";
         epMeta.Season = "";
-        epMeta.ShowId = "";
+        epMeta.SeriesId = "";
         epMeta.AbsolutEpisodeNumberE = "";
-        epMeta.Image = images[images.Count / 2].FirstOrDefault().Source;
+        epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source;
         epMeta.DownloadProgress = new DownloadProgress(){
             IsDownloading = false,
             Done = false,

@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils.Files;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs.History;
@@ -32,12 +33,18 @@ public class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("episode_special_episode")]
     public bool SpecialEpisode{ get; set; }
+    
+    [JsonProperty("episode_type")]
+    public EpisodeType EpisodeType{ get; set; } = EpisodeType.Unknown;
 
     [JsonProperty("sonarr_episode_id")]
     public string? SonarrEpisodeId{ get; set; }
 
     [JsonProperty("sonarr_has_file")]
     public bool SonarrHasFile{ get; set; }
+    
+    [JsonProperty("sonarr_is_monitored")]
+    public bool SonarrIsMonitored{ get; set; }
 
     [JsonProperty("sonarr_episode_number")]
     public string? SonarrEpisodeNumber{ get; set; }
@@ -77,8 +84,22 @@ public class HistoryEpisode : INotifyPropertyChanged{
     }
 
     public async Task DownloadEpisode(bool onlySubs = false){
-        await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId,
-            string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
-            CrunchyrollManager.Instance.CrunOptions.DubLang, false, onlySubs);
+        switch (EpisodeType){
+            case EpisodeType.MusicVideo:
+                await QueueManager.Instance.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty);
+                break;
+            case EpisodeType.Concert:
+                await QueueManager.Instance.CrAddConcertToQueue(EpisodeId ?? string.Empty);
+                break;
+            case EpisodeType.Episode:
+            case EpisodeType.Unknown:
+            default:
+                await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId ?? string.Empty,
+                    string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
+                    CrunchyrollManager.Instance.CrunOptions.DubLang, false, onlySubs);
+                break;
+        }
+        
+        
     }
 }

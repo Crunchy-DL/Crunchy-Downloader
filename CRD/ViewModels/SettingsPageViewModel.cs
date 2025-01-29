@@ -2,7 +2,6 @@ using System;
 using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CRD.Downloader.Crunchyroll.ViewModels;
 using CRD.Downloader.Crunchyroll.Views;
@@ -15,14 +14,14 @@ using Image = Avalonia.Controls.Image;
 
 namespace CRD.ViewModels;
 
-public partial class SettingsPageViewModel : ViewModelBase{
+public class SettingsPageViewModel : ViewModelBase{
     
     public ObservableCollection<TabViewItem> Tabs{ get; } = new();
 
     private TabViewItem CreateTab(string header, string iconPath, UserControl content, object viewModel){
         content.DataContext = viewModel;
 
-        Bitmap bitmap = null;
+        Bitmap? bitmap = null;
         try{
             // Load the image using AssetLoader.Open
             bitmap = new Bitmap(Avalonia.Platform.AssetLoader.Open(new Uri(iconPath)));

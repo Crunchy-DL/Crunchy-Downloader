@@ -4,21 +4,25 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using Newtonsoft.Json;
 using YamlDotNet.RepresentationModel;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace CRD.Utils;
+namespace CRD.Utils.Files;
 
 public class CfgManager{
     private static string WorkingDirectory = AppContext.BaseDirectory;
 
-    public static readonly string PathCrToken = Path.Combine(WorkingDirectory, "config", "cr_token.yml");
-    public static readonly string PathCrDownloadOptions = Path.Combine(WorkingDirectory, "config", "settings.yml");
+    public static readonly string PathCrTokenOld = Path.Combine(WorkingDirectory, "config", "cr_token.yml");
+    public static readonly string PathCrDownloadOptionsOld = Path.Combine(WorkingDirectory, "config", "settings.yml");
+
+    public static readonly string PathCrToken = Path.Combine(WorkingDirectory, "config", "cr_token.json");
+    public static readonly string PathCrDownloadOptions = Path.Combine(WorkingDirectory, "config", "settings.json");
+
     public static readonly string PathCrHistory = Path.Combine(WorkingDirectory, "config", "history.json");
     public static readonly string PathWindowSettings = Path.Combine(WorkingDirectory, "config", "windowSettings.json");
 
@@ -83,18 +87,36 @@ public class CfgManager{
         }
     }
 
-    public static void WriteJsonResponseToYamlFile(string jsonResponse, string filePath){
-        // Convert JSON to an object
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance) // Adjust this as needed
-            .Build();
-        var jsonObject = deserializer.Deserialize<object>(jsonResponse);
+    public static void WriteCrSettings(){
+        WriteJsonToFile(PathCrDownloadOptions, CrunchyrollManager.Instance.CrunOptions);
+    }
 
-        // Convert the object to YAML
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance) // Ensure consistent naming convention
-            .Build();
-        var yaml = serializer.Serialize(jsonObject);
+    // public static void WriteTokenToYamlFile(CrToken token, string filePath){
+    //     // Convert the object to YAML
+    //     var serializer = new SerializerBuilder()
+    //         .WithNamingConvention(UnderscoredNamingConvention.Instance) // Ensure consistent naming convention
+    //         .Build();
+    //     var yaml = serializer.Serialize(token);
+    //
+    //     string dirPath = Path.GetDirectoryName(filePath) ?? string.Empty;
+    //
+    //     if (!Directory.Exists(dirPath)){
+    //         Directory.CreateDirectory(dirPath);
+    //     }
+    //
+    //     if (!File.Exists(filePath)){
+    //         using (var fileStream = File.Create(filePath)){
+    //         }
+    //     }
+    //
+    //     // Write the YAML to a file
+    //     File.WriteAllText(filePath, yaml);
+    // }
+
+    public static void UpdateSettingsFromFile<T>(T options, string filePath) where T : class{
+        if (options == null){
+            throw new ArgumentNullException(nameof(options));
+        }
 
         string dirPath = Path.GetDirectoryName(filePath) ?? string.Empty;
 
@@ -103,74 +125,81 @@ public class CfgManager{
         }
 
         if (!File.Exists(filePath)){
+            // Create the file if it doesn't exist
             using (var fileStream = File.Create(filePath)){
-            }
-        }
-
-        // Write the YAML to a file
-        File.WriteAllText(filePath, yaml);
-    }
-
-    public static void WriteTokenToYamlFile(CrToken token, string filePath){
-        // Convert the object to YAML
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance) // Ensure consistent naming convention
-            .Build();
-        var yaml = serializer.Serialize(token);
-
-        string dirPath = Path.GetDirectoryName(filePath) ?? string.Empty;
-
-        if (!Directory.Exists(dirPath)){
-            Directory.CreateDirectory(dirPath);
-        }
-
-        if (!File.Exists(filePath)){
-            using (var fileStream = File.Create(filePath)){
-            }
-        }
-
-        // Write the YAML to a file
-        File.WriteAllText(filePath, yaml);
-    }
-
-    public static void WriteSettingsToFile(){
-        var serializer = new SerializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance) // Use the underscore style
-            .Build();
-
-        string dirPath = Path.GetDirectoryName(PathCrDownloadOptions) ?? string.Empty;
-
-        if (!Directory.Exists(dirPath)){
-            Directory.CreateDirectory(dirPath);
-        }
-
-        if (!File.Exists(PathCrDownloadOptions)){
-            using (var fileStream = File.Create(PathCrDownloadOptions)){
-            }
-        }
-
-        var yaml = serializer.Serialize(CrunchyrollManager.Instance.CrunOptions);
-
-        // Write to file
-        File.WriteAllText(PathCrDownloadOptions, yaml);
-    }
-
-
-    public static void UpdateSettingsFromFile(CrDownloadOptions options){
-        string dirPath = Path.GetDirectoryName(PathCrDownloadOptions) ?? string.Empty;
-
-        if (!Directory.Exists(dirPath)){
-            Directory.CreateDirectory(dirPath);
-        }
-
-        if (!File.Exists(PathCrDownloadOptions)){
-            using (var fileStream = File.Create(PathCrDownloadOptions)){
             }
 
             return;
         }
 
-        var input = File.ReadAllText(PathCrDownloadOptions);
+        var input = File.ReadAllText(filePath);
+
+        if (string.IsNullOrWhiteSpace(input)){
+            return;
+        }
+
+        // Deserialize JSON into a dictionary to get top-level properties
+        var propertiesPresentInJson = GetTopLevelPropertiesInJson(input);
+
+        // Deserialize JSON into the provided options object type
+        var loadedOptions = JsonConvert.DeserializeObject<T>(input);
+
+        if (loadedOptions == null){
+            return;
+        }
+
+        foreach (PropertyInfo property in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance)){
+            // Use the JSON property name if present, otherwise use the property name
+            string jsonPropertyName = property.Name;
+            var jsonPropertyAttribute = property.GetCustomAttribute<JsonPropertyAttribute>();
+            if (jsonPropertyAttribute != null){
+                jsonPropertyName = jsonPropertyAttribute.PropertyName ?? property.Name;
+            }
+
+            if (propertiesPresentInJson.Contains(jsonPropertyName)){
+                // Update the target property
+                var value = property.GetValue(loadedOptions);
+                var targetProperty = options.GetType().GetProperty(property.Name);
+
+                if (targetProperty != null && targetProperty.CanWrite){
+                    targetProperty.SetValue(options, value);
+                }
+            }
+        }
+    }
+
+    private static HashSet<string> GetTopLevelPropertiesInJson(string jsonContent){
+        var properties = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        using (var reader = new JsonTextReader(new StringReader(jsonContent))){
+            while (reader.Read()){
+                if (reader.TokenType == JsonToken.PropertyName){
+                    properties.Add(reader.Value?.ToString() ?? string.Empty);
+                }
+            }
+        }
+
+        return properties;
+    }
+
+
+    #region YAML OLD
+
+    public static void UpdateSettingsFromFileYAML(CrDownloadOptionsYaml options){
+        string dirPath = Path.GetDirectoryName(PathCrDownloadOptionsOld) ?? string.Empty;
+
+        if (!Directory.Exists(dirPath)){
+            Directory.CreateDirectory(dirPath);
+        }
+
+        if (!File.Exists(PathCrDownloadOptionsOld)){
+            using (var fileStream = File.Create(PathCrDownloadOptionsOld)){
+            }
+
+            return;
+        }
+
+        var input = File.ReadAllText(PathCrDownloadOptionsOld);
 
         if (input.Length <= 0){
             return;
@@ -180,17 +209,18 @@ public class CfgManager{
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .Build();
-
+        
         var propertiesPresentInYaml = GetTopLevelPropertiesInYaml(input);
-        var loadedOptions = deserializer.Deserialize<CrDownloadOptions>(new StringReader(input));
+        var loadedOptions = deserializer.Deserialize<CrDownloadOptionsYaml>(new StringReader(input));
         var instanceOptions = options;
 
-        foreach (PropertyInfo property in typeof(CrDownloadOptions).GetProperties()){
+        foreach (PropertyInfo property in typeof(CrDownloadOptionsYaml).GetProperties()){
             var yamlMemberAttribute = property.GetCustomAttribute<YamlMemberAttribute>();
-            string yamlPropertyName = yamlMemberAttribute?.Alias ?? property.Name;
+            // var jsonMemberAttribute = property.GetCustomAttribute<JsonPropertyAttribute>();
+            string yamlPropertyName = yamlMemberAttribute?.Alias ??  property.Name;
 
             if (propertiesPresentInYaml.Contains(yamlPropertyName)){
-                PropertyInfo instanceProperty = instanceOptions.GetType().GetProperty(property.Name);
+                PropertyInfo? instanceProperty = instanceOptions.GetType().GetProperty(property.Name);
                 if (instanceProperty != null && instanceProperty.CanWrite){
                     instanceProperty.SetValue(instanceOptions, property.GetValue(loadedOptions));
                 }
@@ -215,6 +245,9 @@ public class CfgManager{
 
         return properties;
     }
+
+    #endregion
+
 
     public static void UpdateHistoryFile(){
         if (!CrunchyrollManager.Instance.CrunOptions.History){
@@ -308,12 +341,32 @@ public class CfgManager{
         return Directory.Exists(dirPath) && File.Exists(filePath);
     }
 
-    public static T DeserializeFromFile<T>(string filePath){
-        var deserializer = new DeserializerBuilder()
-            .Build();
+    // public static T DeserializeFromFile<T>(string filePath){
+    //     var deserializer = new DeserializerBuilder()
+    //         .Build();
+    //
+    //     using (var reader = new StreamReader(filePath)){
+    //         return deserializer.Deserialize<T>(reader);
+    //     }
+    // }
 
-        using (var reader = new StreamReader(filePath)){
-            return deserializer.Deserialize<T>(reader);
+    public static T? ReadJsonFromFile<T>(string pathToFile) where T : class{
+        try{
+            if (!File.Exists(pathToFile)){
+                throw new FileNotFoundException($"The file at path {pathToFile} does not exist.");
+            }
+
+            lock (fileLock){
+                using (var fileStream = new FileStream(pathToFile, FileMode.Open, FileAccess.Read))
+                using (var streamReader = new StreamReader(fileStream))
+                using (var jsonReader = new JsonTextReader(streamReader)){
+                    var serializer = new JsonSerializer();
+                    return serializer.Deserialize<T>(jsonReader);
+                }
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred while reading the JSON file: {ex.Message}");
+            return null;
         }
     }
 }

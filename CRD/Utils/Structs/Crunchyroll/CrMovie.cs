@@ -4,7 +4,7 @@ using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs;
 
-public struct CrunchyMovieList{
+public class CrunchyMovieList{
     public int Total{ get; set; }
     public List<CrunchyMovie>? Data{ get; set; }
     public Meta Meta{ get; set; }

@@ -13,6 +13,7 @@
 
     <UserControl.Resources>
         <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
+        <ui:UiListHasElementsConverter x:Key="UiListHasElementsConverter" />
     </UserControl.Resources>
 
     <Grid>
@@ -57,8 +58,8 @@
 
                             <TextBlock Grid.Row="0" FontSize="45" Text="{Binding SelectedSeries.SeriesTitle}" TextTrimming="CharacterEllipsis"></TextBlock>
                             <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}"></TextBlock>
-                            <TextBlock Grid.Row="3" FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding AvailableDubs}"></TextBlock>
-                            <TextBlock Grid.Row="4" FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding AvailableSubs}"></TextBlock>
+                            <TextBlock Grid.Row="3" IsVisible="{Binding SelectedSeries.HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}" FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding AvailableDubs}"></TextBlock>
+                            <TextBlock Grid.Row="4" IsVisible="{Binding SelectedSeries.HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}" FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding AvailableSubs}"></TextBlock>
                             <StackPanel Grid.Row="5" Orientation="Vertical">
 
                                 <StackPanel Orientation="Horizontal" Margin="0 10 10 10">
@@ -183,7 +184,7 @@
 
                                                                 </StackPanel>
 
-                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
+                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10" >
                                                                     <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                     <StackPanel>
                                                                         <ToggleButton x:Name="DropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
@@ -313,14 +314,15 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <StackPanel>
+                                                <StackPanel VerticalAlignment="Center">
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                                         <TextBlock Text="E"></TextBlock>
                                                         <TextBlock Text="{Binding Episode}"></TextBlock>
                                                         <TextBlock Text=" - "></TextBlock>
                                                         <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
                                                     </StackPanel>
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                                IsVisible="{Binding HistoryEpisodeAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
                                                         <TextBlock FontStyle="Italic"
                                                                    FontSize="12"
                                                                    Opacity="0.8" Text="Dubs: ">
@@ -343,9 +345,29 @@
 
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
 
-                                                    <StackPanel VerticalAlignment="Center" Margin="0 0 5 0"
+                                                    <StackPanel VerticalAlignment="Center" Margin="0 0 5 0" Orientation="Horizontal"
                                                                 IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
 
+
+                                                        <StackPanel IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).ShowMonitoredBookmark}"
+                                                                    HorizontalAlignment="Center"
+                                                                    VerticalAlignment="Center">
+                                                            <controls:SymbolIcon IsVisible="{Binding !SonarrIsMonitored}" Margin="0 0 5 0 " Symbol="Bookmark" FontSize="18" HorizontalAlignment="Center"
+                                                                                 VerticalAlignment="Center">
+                                                                <ToolTip.Tip>
+                                                                    <TextBlock Text="Unmonitored" FontSize="15" />
+                                                                </ToolTip.Tip>
+
+                                                            </controls:SymbolIcon>
+
+                                                            <controls:SymbolIcon IsVisible="{Binding SonarrIsMonitored}" Margin="0 0 5 0 " Symbol="BookmarkFilled" FontSize="18" HorizontalAlignment="Center"
+                                                                                 VerticalAlignment="Center">
+                                                                <ToolTip.Tip>
+                                                                    <TextBlock Text="Monitored" FontSize="15" />
+                                                                </ToolTip.Tip>
+
+                                                            </controls:SymbolIcon>
+                                                        </StackPanel>
 
                                                         <controls:ImageIcon IsVisible="{Binding SonarrHasFile}"
                                                                             Source="../Assets/sonarr.png" Width="25"
@@ -382,7 +404,7 @@
                                                     </Button>
 
                                                     <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
-                                                            VerticalAlignment="Center" 
+                                                            VerticalAlignment="Center"
                                                             Command="{Binding DownloadEpisode}"
                                                             CommandParameter="false">
                                                         <StackPanel Orientation="Horizontal">
@@ -392,9 +414,10 @@
                                                             <TextBlock Text="Download Episode" FontSize="15" />
                                                         </ToolTip.Tip>
                                                     </Button>
-                                                    
+
                                                     <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
-                                                            VerticalAlignment="Center" 
+                                                            VerticalAlignment="Center"
+                                                            IsEnabled="{Binding HistoryEpisodeAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}"
                                                             Command="{Binding DownloadEpisode}"
                                                             CommandParameter="true">
                                                         <StackPanel Orientation="Horizontal">
@@ -404,8 +427,6 @@
                                                             <TextBlock Text="Download Subs" FontSize="15" />
                                                         </ToolTip.Tip>
                                                     </Button>
-                                                    
-                                                    
 
 
                                                 </StackPanel>

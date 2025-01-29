@@ -12,8 +12,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Utils;
 using CRD.Utils.Ffmpeg_Encoding;
+using CRD.Utils.Files;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
 using CRD.ViewModels;
 using CRD.ViewModels.Utils;
@@ -42,7 +44,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _includeCcSubs;
-    
+
     [ObservableProperty]
     private ComboBoxItem _selectedScaledBorderAndShadow;
 
@@ -77,10 +79,10 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _skipSubMux;
-    
+
     [ObservableProperty]
     private double? _leadingNumbers;
-    
+
     [ObservableProperty]
     private double? _partSize;
 
@@ -107,7 +109,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedHSLang;
-    
+
     [ObservableProperty]
     private ComboBoxItem _selectedDescriptionLang;
 
@@ -131,81 +133,78 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem? _selectedAudioQuality;
-    
+
     [ObservableProperty]
-    private ObservableCollection<ListBoxItem> _selectedSubLang = new();
-    
+    private ObservableCollection<ListBoxItem> _selectedSubLang =[];
+
     [ObservableProperty]
     private Color _listBoxColor;
-    
-    public ObservableCollection<ComboBoxItem> VideoQualityList{ get; } = new(){
-        new ComboBoxItem(){ Content = "best" },
-        new ComboBoxItem(){ Content = "1080" },
-        new ComboBoxItem(){ Content = "720" },
-        new ComboBoxItem(){ Content = "480" },
-        new ComboBoxItem(){ Content = "360" },
-        new ComboBoxItem(){ Content = "240" },
-        new ComboBoxItem(){ Content = "worst" },
-    };
 
-    public ObservableCollection<ComboBoxItem> AudioQualityList{ get; } = new(){
-        new ComboBoxItem(){ Content = "best" },
-        new ComboBoxItem(){ Content = "128kB/s" },
-        new ComboBoxItem(){ Content = "96kB/s" },
-        new ComboBoxItem(){ Content = "64kB/s" },
-        new ComboBoxItem(){ Content = "worst" },
-    };
+    public ObservableCollection<ComboBoxItem> VideoQualityList{ get; } =[
+        new(){ Content = "best" },
+        new(){ Content = "1080" },
+        new(){ Content = "720" },
+        new(){ Content = "480" },
+        new(){ Content = "360" },
+        new(){ Content = "240" },
+        new(){ Content = "worst" }
+    ];
 
-    public ObservableCollection<ComboBoxItem> HardSubLangList{ get; } = new(){
-        new ComboBoxItem(){ Content = "none" },
-    };
-    
-    public ObservableCollection<ComboBoxItem> DescriptionLangList{ get; } = new(){
-        new ComboBoxItem(){ Content = "default" },
-        new ComboBoxItem(){ Content = "de-DE" },
-        new ComboBoxItem(){ Content = "en-US" },
-        new ComboBoxItem(){ Content = "es-419" },
-        new ComboBoxItem(){ Content = "es-ES" },
-        new ComboBoxItem(){ Content = "fr-FR" },
-        new ComboBoxItem(){ Content = "it-IT" },
-        new ComboBoxItem(){ Content = "pt-BR" },
-        new ComboBoxItem(){ Content = "pt-PT" },
-        new ComboBoxItem(){ Content = "ru-RU" },
-        new ComboBoxItem(){ Content = "hi-IN" },
-        new ComboBoxItem(){ Content = "ar-SA" },
-    };
+    public ObservableCollection<ComboBoxItem> AudioQualityList{ get; } =[
+        new(){ Content = "best" },
+        new(){ Content = "128kB/s" },
+        new(){ Content = "96kB/s" },
+        new(){ Content = "64kB/s" },
+        new(){ Content = "worst" }
+    ];
 
-    public ObservableCollection<ListBoxItem> DubLangList{ get; } = new(){
-    };
+    public ObservableCollection<ComboBoxItem> HardSubLangList{ get; } =[
+        new(){ Content = "none" }
+    ];
 
+    public ObservableCollection<ComboBoxItem> DescriptionLangList{ get; } =[
+        new(){ Content = "default" },
+        new(){ Content = "de-DE" },
+        new(){ Content = "en-US" },
+        new(){ Content = "es-419" },
+        new(){ Content = "es-ES" },
+        new(){ Content = "fr-FR" },
+        new(){ Content = "it-IT" },
+        new(){ Content = "pt-BR" },
+        new(){ Content = "pt-PT" },
+        new(){ Content = "ru-RU" },
+        new(){ Content = "hi-IN" },
+        new(){ Content = "ar-SA" }
+    ];
 
-    public ObservableCollection<ComboBoxItem> DefaultDubLangList{ get; } = new(){
-    };
-
-    public ObservableCollection<ComboBoxItem> DefaultSubLangList{ get; } = new(){
-    };
+    public ObservableCollection<ListBoxItem> DubLangList{ get; } =[];
 
 
-    public ObservableCollection<ListBoxItem> SubLangList{ get; } = new(){
-        new ListBoxItem(){ Content = "all" },
-        new ListBoxItem(){ Content = "none" },
-    };
+    public ObservableCollection<ComboBoxItem> DefaultDubLangList{ get; } =[];
 
-    public ObservableCollection<ComboBoxItem> StreamEndpoints{ get; } = new(){
-        new ComboBoxItem(){ Content = "web/firefox" },
-        new ComboBoxItem(){ Content = "console/switch" },
-        new ComboBoxItem(){ Content = "console/ps4" },
-        new ComboBoxItem(){ Content = "console/ps5" },
-        new ComboBoxItem(){ Content = "console/xbox_one" },
-        new ComboBoxItem(){ Content = "web/edge" },
-        // new ComboBoxItem(){ Content = "web/safari" },
-        new ComboBoxItem(){ Content = "web/chrome" },
-        new ComboBoxItem(){ Content = "web/fallback" },
-        // new ComboBoxItem(){ Content = "ios/iphone" },
-        // new ComboBoxItem(){ Content = "ios/ipad" },
-        new ComboBoxItem(){ Content = "android/phone" },
-        new ComboBoxItem(){ Content = "tv/samsung" },
-    };
+    public ObservableCollection<ComboBoxItem> DefaultSubLangList{ get; } =[];
+
+
+    public ObservableCollection<ListBoxItem> SubLangList{ get; } =[
+        new(){ Content = "all" },
+        new(){ Content = "none" }
+    ];
+
+    public ObservableCollection<ComboBoxItem> StreamEndpoints{ get; } =[
+        new(){ Content = "web/firefox" },
+        new(){ Content = "console/switch" },
+        new(){ Content = "console/ps4" },
+        new(){ Content = "console/ps5" },
+        new(){ Content = "console/xbox_one" },
+        new(){ Content = "web/edge" },
+        // new (){ Content = "web/safari" },
+        new(){ Content = "web/chrome" },
+        new(){ Content = "web/fallback" },
+        // new (){ Content = "ios/iphone" },
+        // new (){ Content = "ios/ipad" },
+        new(){ Content = "android/phone" },
+        new(){ Content = "tv/samsung" }
+    ];
 
     [ObservableProperty]
     private bool _isEncodeEnabled;
@@ -214,8 +213,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private StringItem _selectedEncodingPreset;
 
     public ObservableCollection<StringItem> EncodingPresetsList{ get; } = new();
-    
-    
+
+
     [ObservableProperty]
     private bool _cCSubsMuxingFlag;
 
@@ -224,11 +223,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _signsSubsAsForced;
-    
+
+    [ObservableProperty]
+    private bool _searchFetchFeaturedMusic;
+
     private bool settingsLoaded;
-    
+
     public CrunchyrollSettingsViewModel(){
-        
         foreach (var languageItem in Languages.languages){
             HardSubLangList.Add(new ComboBoxItem{ Content = languageItem.CrLocale });
             SubLangList.Add(new ListBoxItem{ Content = languageItem.CrLocale });
@@ -244,7 +245,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
         CrDownloadOptions options = CrunchyrollManager.Instance.CrunOptions;
 
-        StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => a.stringValue != null && a.stringValue == options.EncodingPresetName) ?? null;
+        StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => !string.IsNullOrEmpty(a.stringValue) && a.stringValue == options.EncodingPresetName) ?? null;
         SelectedEncodingPreset = encodingPresetSelected ?? EncodingPresetsList[0];
 
         ComboBoxItem? descriptionLang = DescriptionLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DescriptionLang) ?? null;
@@ -275,7 +276,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         foreach (var listBoxItem in dubLang){
             SelectedDubLang.Add(listBoxItem);
         }
-        
+
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
@@ -301,22 +302,23 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         SkipSubMux = options.SkipSubsMux;
         LeadingNumbers = options.Numbers;
         FileName = options.FileName;
+        SearchFetchFeaturedMusic = options.SearchFetchFeaturedMusic;
 
         ComboBoxItem? qualityAudio = AudioQualityList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.QualityAudio) ?? null;
         SelectedAudioQuality = qualityAudio ?? AudioQualityList[0];
 
         ComboBoxItem? qualityVideo = VideoQualityList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.QualityVideo) ?? null;
         SelectedVideoQuality = qualityVideo ?? VideoQualityList[0];
-        
+
         MkvMergeOptions.Clear();
-        if (options.MkvmergeOptions != null){
+        if (options.MkvmergeOptions is{ Count: > 0 }){
             foreach (var mkvmergeParam in options.MkvmergeOptions){
                 MkvMergeOptions.Add(new StringItem(){ stringValue = mkvmergeParam });
             }
         }
 
         FfmpegOptions.Clear();
-        if (options.FfmpegOptions != null){
+        if (options.FfmpegOptions is{ Count: > 0 }){
             foreach (var ffmpegParam in options.FfmpegOptions){
                 FfmpegOptions.Add(new StringItem(){ stringValue = ffmpegParam });
             }
@@ -341,7 +343,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         if (!settingsLoaded){
             return;
         }
-        
+
         CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced = SignsSubsAsForced;
         CrunchyrollManager.Instance.CrunOptions.CcSubsMuxingFlag = CCSubsMuxingFlag;
         CrunchyrollManager.Instance.CrunOptions.CcSubsFont = CCSubsFont;
@@ -364,8 +366,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.FileName = FileName;
         CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs;
         CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs;
-        CrunchyrollManager.Instance.CrunOptions.Partsize = Math.Clamp((int)(PartSize ?? 0), 0, 10000);
-        
+        CrunchyrollManager.Instance.CrunOptions.Partsize = Math.Clamp((int)(PartSize ?? 1), 1, 10000);
+        CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic = SearchFetchFeaturedMusic;
+
         CrunchyrollManager.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
 
         List<string> softSubs = new List<string>();
@@ -378,7 +381,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         string descLang = SelectedDescriptionLang.Content + "";
 
         CrunchyrollManager.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : CrunchyrollManager.Instance.DefaultLocale;
-        
+
         string hslang = SelectedHSLang.Content + "";
 
         CrunchyrollManager.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;
@@ -398,7 +401,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.QualityAudio = SelectedAudioQuality?.Content + "";
         CrunchyrollManager.Instance.CrunOptions.QualityVideo = SelectedVideoQuality?.Content + "";
-        
+
         List<string> mkvmergeParams = new List<string>();
         foreach (var mkvmergeParam in MkvMergeOptions){
             mkvmergeParams.Add(mkvmergeParam.stringValue);
@@ -413,7 +416,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.FfmpegOptions = ffmpegParams;
 
-        CfgManager.WriteSettingsToFile();
+        CfgManager.WriteCrSettings();
     }
 
 
@@ -469,7 +472,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         FfmpegOptions.Remove(param);
         RaisePropertyChanged(nameof(FfmpegOptions));
     }
-    
+
     private void Changes(object? sender, NotifyCollectionChangedEventArgs e){
         UpdateSettings();
 
@@ -515,7 +518,6 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
                 CrunchyrollManager.Instance.HistoryList =[];
             }
         }
-        
     }
 
     [RelayCommand]
@@ -542,9 +544,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
             }
 
             settingsLoaded = true;
-            StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => a.stringValue != null && a.stringValue == CrunchyrollManager.Instance.CrunOptions.EncodingPresetName) ?? null;
+            StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => string.IsNullOrEmpty(a.stringValue) && a.stringValue == CrunchyrollManager.Instance.CrunOptions.EncodingPresetName) ?? null;
             SelectedEncodingPreset = encodingPresetSelected ?? EncodingPresetsList[0];
         }
     }
-    
 }

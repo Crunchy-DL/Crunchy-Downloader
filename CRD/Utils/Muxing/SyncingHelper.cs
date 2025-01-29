@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -16,7 +17,7 @@ namespace CRD.Utils.Muxing;
 public class SyncingHelper{
     public static async Task<(bool IsOk, int ErrorCode, double frameRate)> ExtractFrames(string videoPath, string outputDir, double offset, double duration){
         var ffmpegPath = CfgManager.PathFFMPEG;
-        var arguments = $"-i \"{videoPath}\" -vf \"select='gt(scene,0.1)',showinfo\" -fps_mode vfr -frame_pts true -t {duration} -ss {offset} \"{outputDir}\\frame%03d.png\"";
+        var arguments = $"-i \"{videoPath}\" -vf \"select='gt(scene,0.1)',showinfo\" -fps_mode vfr -frame_pts true -t {duration} -ss {offset} \"{outputDir}\\frame%05d.png\"";
 
         var output = "";
 
@@ -68,7 +69,7 @@ public class SyncingHelper{
         return 0;
     }
 
-    private static double CalculateSSIM(float[] pixels1, float[] pixels2, int width, int height){
+    private static double CalculateSSIM(float[] pixels1, float[] pixels2){
         double mean1 = pixels1.Average();
         double mean2 = pixels2.Average();
 
@@ -110,7 +111,7 @@ public class SyncingHelper{
         return pixels;
     }
 
-    public static double ComputeSSIM(string imagePath1, string imagePath2, int targetWidth, int targetHeight){
+    public static (double ssim, double pixelDiff) ComputeSSIM(string imagePath1, string imagePath2, int targetWidth, int targetHeight){
         using (var image1 = Image.Load<Rgba32>(imagePath1))
         using (var image2 = Image.Load<Rgba32>(imagePath2)){
             // Preprocess images (resize and convert to grayscale)
@@ -131,12 +132,23 @@ public class SyncingHelper{
             // Check if any frame is completely black, if so, skip SSIM calculation
             if (IsBlackFrame(pixels1) || IsBlackFrame(pixels2)){
                 // Return a negative value or zero to indicate no SSIM comparison for black frames.
-                return -1.0;
+                return (-1.0,99);
             }
             
             // Compute SSIM
-            return CalculateSSIM(pixels1, pixels2, targetWidth, targetHeight);
+            return (CalculateSSIM(pixels1, pixels2),CalculatePixelDifference(pixels1,pixels2));
         }
+    }
+    
+    private static double CalculatePixelDifference(float[] pixels1, float[] pixels2){
+        double totalDifference = 0;
+        int count = pixels1.Length;
+
+        for (int i = 0; i < count; i++){
+            totalDifference += Math.Abs(pixels1[i] - pixels2[i]);
+        }
+
+        return totalDifference / count; // Average difference
     }
 
     private static bool IsBlackFrame(float[] pixels, float threshold = 1.0f){
@@ -145,10 +157,13 @@ public class SyncingHelper{
     }
     
     public static bool AreFramesSimilar(string imagePath1, string imagePath2, double ssimThreshold){
-        double ssim = ComputeSSIM(imagePath1, imagePath2, 256, 256);
+        var (ssim, pixelDiff) = ComputeSSIM(imagePath1, imagePath2, 256, 256);
         // Console.WriteLine($"SSIM: {ssim}");
-        return ssim > ssimThreshold;
+        // Console.WriteLine(pixelDiff);
+        
+        return ssim > ssimThreshold && pixelDiff < 10;
     }
+    
 
     public static double CalculateOffset(List<FrameData> baseFrames, List<FrameData> compareFrames,bool reverseCompare = false, double ssimThreshold = 0.9){
 
@@ -160,7 +175,9 @@ public class SyncingHelper{
         foreach (var baseFrame in baseFrames){
             var matchingFrame = compareFrames.FirstOrDefault(f => AreFramesSimilar(baseFrame.FilePath, f.FilePath, ssimThreshold));
             if (matchingFrame != null){
-                Console.WriteLine($"Matched Frame: Base Frame Time: {baseFrame.Time}, Compare Frame Time: {matchingFrame.Time}");
+                Console.WriteLine($"Matched Frame:");
+                Console.WriteLine($"\t Base Frame Path: {baseFrame.FilePath} Time: {baseFrame.Time},");
+                Console.WriteLine($"\t Compare Frame Path: {matchingFrame.FilePath} Time: {matchingFrame.Time}");
                 return baseFrame.Time - matchingFrame.Time;
             } else{
                 // Console.WriteLine($"No Match Found for Base Frame Time: {baseFrame.Time}");

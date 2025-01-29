@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
+using CRD.Utils.Structs.History;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs;
 
-public struct CrunchyEpisodeList{
+public class CrunchyEpisodeList{
     public int Total{ get; set; }
     public List<CrunchyEpisode>? Data{ get; set; }
     public Meta Meta{ get; set; }
 }
 
-public struct CrunchyEpisode{
+public class CrunchyEpisode : IHistorySource{
     [JsonProperty("next_episode_id")]
     public string NextEpisodeId{ get; set; }
 
@@ -81,7 +84,7 @@ public struct CrunchyEpisode{
     [JsonProperty("audio_locale")]
     public string AudioLocale{ get; set; }
 
-    public string Id{ get; set; }
+    public required string Id{ get; set; }
 
     [JsonProperty("media_type")]
     public string? MediaType{ get; set; }
@@ -173,9 +176,123 @@ public struct CrunchyEpisode{
 
     [JsonProperty("__links__")]
     public Links? Links{ get; set; }
+
+    [JsonIgnore]
+    public EpisodeType EpisodeType{ get; set; } = EpisodeType.Episode;
+
+    #region Interface
+
+    public string GetSeriesId(){
+        return SeriesId;
+    }
+
+    public string GetSeriesTitle(){
+        return SeriesTitle;
+    }
+
+    public string GetSeasonTitle(){
+        return SeasonTitle;
+    }
+
+    public string GetSeasonNum(){
+        return Helpers.ExtractNumberAfterS(Identifier) ?? SeasonNumber + "";
+    }
+
+    public string GetSeasonId(){
+        return SeasonId;
+    }
+
+    public string GetEpisodeId(){
+        return Id;
+    }
+
+    public string GetEpisodeNumber(){
+        return Episode ?? "";
+    }
+
+    public string GetEpisodeTitle(){
+        if (Identifier.Contains("|M|")){
+            if (string.IsNullOrEmpty(Title)){
+                if (SeasonTitle.StartsWith(SeriesTitle)){
+                    var splitTitle = SeasonTitle.Split(new[]{ SeriesTitle }, StringSplitOptions.None);
+                    var titlePart = splitTitle.Length > 1 ? splitTitle[1] : splitTitle[0];
+                    var cleanedTitle = Regex.Replace(titlePart, @"^[^a-zA-Z]+", "");
+
+                    return cleanedTitle;
+                }
+
+                return SeasonTitle;
+            }
+
+            if (Title.StartsWith(SeriesTitle)){
+                var splitTitle = Title.Split(new[]{ SeriesTitle }, StringSplitOptions.None);
+                var titlePart = splitTitle.Length > 1 ? splitTitle[1] : splitTitle[0];
+                var cleanedTitle = Regex.Replace(titlePart, @"^[^a-zA-Z]+", "");
+
+                return cleanedTitle;
+            }
+
+            return Title;
+        }
+
+        return Title;
+    }
+
+    public string GetEpisodeDescription(){
+        return Description;
+    }
+
+    public bool IsSpecialSeason(){
+        if (string.IsNullOrEmpty(Identifier)){
+            return false;
+        }
+
+        // does NOT contain "|S" followed by one or more digits immediately after
+        string pattern = @"^(?!.*\|S\d+).*";
+
+        return Regex.IsMatch(Identifier, pattern);
+    }
+
+    public bool IsSpecialEpisode(){
+        return !int.TryParse(Episode, out _);
+    }
+
+    public List<string> GetAnimeIds(){
+        return[];
+    }
+
+    public List<string> GetEpisodeAvailableDubLang(){
+        var langList = new List<string>();
+
+        if (Versions != null){
+            langList.AddRange(Versions.Select(version => version.AudioLocale));
+        } else{
+            langList.Add(AudioLocale);
+        }
+
+        return Languages.SortListByLangList(langList);
+    }
+
+    public List<string> GetEpisodeAvailableSoftSubs(){
+        return Languages.SortListByLangList(SubtitleLocales);
+    }
+
+    public DateTime GetAvailableDate(){
+        return PremiumAvailableDate;
+    }
+
+    public SeriesType GetSeriesType(){
+        return SeriesType.Series;
+    }
+
+    public EpisodeType GetEpisodeType(){
+        return EpisodeType;
+    }
+
+    #endregion
 }
 
-public struct Images{
+public class Images{
     [JsonProperty("poster_tall")]
     public List<List<Image>>? PosterTall{ get; set; }
 
@@ -188,14 +305,14 @@ public struct Images{
     public List<List<Image>>? Thumbnail{ get; set; }
 }
 
-public struct Image{
+public class Image{
     public int Height{ get; set; }
     public string Source{ get; set; }
     public ImageType Type{ get; set; }
     public int Width{ get; set; }
 }
 
-public struct EpisodeVersion{
+public class EpisodeVersion{
     [JsonProperty("audio_locale")]
     public string AudioLocale{ get; set; }
 
@@ -215,11 +332,11 @@ public struct EpisodeVersion{
     public string Variant{ get; set; }
 }
 
-public struct Link{
+public class Link{
     public string Href{ get; set; }
 }
 
-public struct Links(){
+public class Links(){
     public Dictionary<string, Link> LinkMappings{ get; set; } = new(){
         { "episode/channel", default },
         { "episode/next_episode", default },
@@ -230,7 +347,7 @@ public struct Links(){
 }
 
 public class CrunchyEpMeta{
-    public List<CrunchyEpMetaData>? Data{ get; set; }
+    public List<CrunchyEpMetaData> Data{ get; set; } =[];
 
     public string? SeriesTitle{ get; set; }
     public string? SeasonTitle{ get; set; }
@@ -239,11 +356,11 @@ public class CrunchyEpMeta{
     public string? Description{ get; set; }
     public string? SeasonId{ get; set; }
     public string? Season{ get; set; }
-    public string? ShowId{ get; set; }
+    public string? SeriesId{ get; set; }
     public string? AbsolutEpisodeNumberE{ get; set; }
     public string? Image{ get; set; }
     public bool Paused{ get; set; }
-    public DownloadProgress? DownloadProgress{ get; set; }
+    public DownloadProgress DownloadProgress{ get; set; } = new();
 
     public List<string>? SelectedDubs{ get; set; }
 
@@ -259,7 +376,7 @@ public class CrunchyEpMeta{
     public string Resolution{ get; set; }
 
     public List<string> downloadedFiles{ get; set; } =[];
-    
+
     public bool OnlySubs{ get; set; }
 }
 
@@ -274,7 +391,7 @@ public class DownloadProgress{
     public double DownloadSpeed{ get; set; }
 }
 
-public struct CrunchyEpMetaData{
+public class CrunchyEpMetaData{
     public string MediaId{ get; set; }
     public LanguageItem? Lang{ get; set; }
     public string? Playback{ get; set; }
@@ -283,7 +400,7 @@ public struct CrunchyEpMetaData{
     public bool IsDubbed{ get; set; }
 }
 
-public struct CrunchyRollEpisodeData{
+public class CrunchyRollEpisodeData{
     public string Key{ get; set; }
     public EpisodeAndLanguage EpisodeAndLanguages{ get; set; }
 }

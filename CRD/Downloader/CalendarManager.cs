@@ -11,7 +11,6 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
-using DynamicData;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
 
@@ -90,56 +89,60 @@ public class CalendarManager{
             foreach (var day in dayNodes){
                 // Extract the date and day name
                 var date = day.SelectSingleNode(".//time[@datetime]")?.GetAttributeValue("datetime", "No date");
-                DateTime dayDateTime = DateTime.Parse(date, null, DateTimeStyles.RoundtripKind);
+                if (date != null){
+                    DateTime dayDateTime = DateTime.Parse(date, null, DateTimeStyles.RoundtripKind);
 
-                if (week.FirstDayOfWeek == DateTime.MinValue){
-                    week.FirstDayOfWeek = dayDateTime;
-                    week.FirstDayOfWeekString = dayDateTime.ToString("yyyy-MM-dd");
-                }
-
-                var dayName = day.SelectSingleNode(".//h1[@class='day-name']/time")?.InnerText.Trim();
-
-                CalendarDay calDay = new CalendarDay();
-
-                calDay.CalendarEpisodes = new List<CalendarEpisode>();
-                calDay.DayName = dayName;
-                calDay.DateTime = dayDateTime;
-
-                // Iterate through each episode listed under this day
-                var episodes = day.SelectNodes(".//article[contains(@class, 'release')]");
-                if (episodes != null){
-                    foreach (var episode in episodes){
-                        var episodeTimeStr = episode.SelectSingleNode(".//time[contains(@class, 'available-time')]")?.GetAttributeValue("datetime", null);
-                        DateTime episodeTime = DateTime.Parse(episodeTimeStr, null, DateTimeStyles.RoundtripKind);
-                        var hasPassed = DateTime.Now > episodeTime;
-
-                        var episodeName = episode.SelectSingleNode(".//h1[contains(@class, 'episode-name')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
-                        var seasonLink = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.GetAttributeValue("href", "No link");
-                        var episodeLink = episode.SelectSingleNode(".//a[contains(@class, 'available-episode-link')]")?.GetAttributeValue("href", "No link");
-                        var thumbnailUrl = episode.SelectSingleNode(".//img[contains(@class, 'thumbnail')]")?.GetAttributeValue("src", "No image");
-                        var isPremiumOnly = episode.SelectSingleNode(".//svg[contains(@class, 'premium-flag')]") != null;
-                        var isPremiere = episode.SelectSingleNode(".//div[contains(@class, 'premiere-flag')]") != null;
-                        var seasonName = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
-                        var episodeNumber = episode.SelectSingleNode(".//meta[contains(@itemprop, 'episodeNumber')]")?.GetAttributeValue("content", "?");
-
-                        CalendarEpisode calEpisode = new CalendarEpisode();
-
-                        calEpisode.DateTime = episodeTime;
-                        calEpisode.HasPassed = hasPassed;
-                        calEpisode.EpisodeName = episodeName;
-                        calEpisode.SeriesUrl = seasonLink;
-                        calEpisode.EpisodeUrl = episodeLink;
-                        calEpisode.ThumbnailUrl = thumbnailUrl;
-                        calEpisode.IsPremiumOnly = isPremiumOnly;
-                        calEpisode.IsPremiere = isPremiere;
-                        calEpisode.SeasonName = seasonName;
-                        calEpisode.EpisodeNumber = episodeNumber;
-
-                        calDay.CalendarEpisodes.Add(calEpisode);
+                    if (week.FirstDayOfWeek == DateTime.MinValue){
+                        week.FirstDayOfWeek = dayDateTime;
+                        week.FirstDayOfWeekString = dayDateTime.ToString("yyyy-MM-dd");
                     }
-                }
 
-                week.CalendarDays.Add(calDay);
+                    var dayName = day.SelectSingleNode(".//h1[@class='day-name']/time")?.InnerText.Trim();
+
+                    CalendarDay calDay = new CalendarDay();
+
+                    calDay.CalendarEpisodes = new List<CalendarEpisode>();
+                    calDay.DayName = dayName;
+                    calDay.DateTime = dayDateTime;
+
+                    // Iterate through each episode listed under this day
+                    var episodes = day.SelectNodes(".//article[contains(@class, 'release')]");
+                    if (episodes != null){
+                        foreach (var episode in episodes){
+                            var episodeTimeStr = episode.SelectSingleNode(".//time[contains(@class, 'available-time')]")?.GetAttributeValue("datetime", null);
+                            if (episodeTimeStr != null){
+                                DateTime episodeTime = DateTime.Parse(episodeTimeStr, null, DateTimeStyles.RoundtripKind);
+                                var hasPassed = DateTime.Now > episodeTime;
+
+                                var episodeName = episode.SelectSingleNode(".//h1[contains(@class, 'episode-name')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
+                                var seasonLink = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.GetAttributeValue("href", "No link");
+                                var episodeLink = episode.SelectSingleNode(".//a[contains(@class, 'available-episode-link')]")?.GetAttributeValue("href", "No link");
+                                var thumbnailUrl = episode.SelectSingleNode(".//img[contains(@class, 'thumbnail')]")?.GetAttributeValue("src", "No image");
+                                var isPremiumOnly = episode.SelectSingleNode(".//svg[contains(@class, 'premium-flag')]") != null;
+                                var isPremiere = episode.SelectSingleNode(".//div[contains(@class, 'premiere-flag')]") != null;
+                                var seasonName = episode.SelectSingleNode(".//a[contains(@class, 'js-season-name-link')]")?.SelectSingleNode(".//cite[@itemprop='name']")?.InnerText.Trim();
+                                var episodeNumber = episode.SelectSingleNode(".//meta[contains(@itemprop, 'episodeNumber')]")?.GetAttributeValue("content", "?");
+
+                                CalendarEpisode calEpisode = new CalendarEpisode();
+
+                                calEpisode.DateTime = episodeTime;
+                                calEpisode.HasPassed = hasPassed;
+                                calEpisode.EpisodeName = episodeName;
+                                calEpisode.SeriesUrl = seasonLink;
+                                calEpisode.EpisodeUrl = episodeLink;
+                                calEpisode.ThumbnailUrl = thumbnailUrl;
+                                calEpisode.IsPremiumOnly = isPremiumOnly;
+                                calEpisode.IsPremiere = isPremiere;
+                                calEpisode.SeasonName = seasonName;
+                                calEpisode.EpisodeNumber = episodeNumber;
+
+                                calDay.CalendarEpisodes.Add(calEpisode);
+                            }
+                        }
+                    }
+
+                    week.CalendarDays.Add(calDay);
+                }
             }
         } else{
             Console.Error.WriteLine("No days found in the HTML document.");
@@ -260,7 +263,7 @@ public class CalendarManager{
                     calEpisode.EpisodeName = crBrowseEpisode.Title;
                     calEpisode.SeriesUrl = $"https://www.crunchyroll.com/{CrunchyrollManager.Instance.CrunOptions.HistoryLang}/series/" + crBrowseEpisode.EpisodeMetadata.SeriesId;
                     calEpisode.EpisodeUrl = $"https://www.crunchyroll.com/{CrunchyrollManager.Instance.CrunOptions.HistoryLang}/watch/{crBrowseEpisode.Id}/";
-                    calEpisode.ThumbnailUrl = crBrowseEpisode.Images.Thumbnail?.FirstOrDefault()?.FirstOrDefault().Source ?? ""; //https://www.crunchyroll.com/i/coming_soon_beta_thumb.jpg
+                    calEpisode.ThumbnailUrl = crBrowseEpisode.Images.Thumbnail?.FirstOrDefault()?.FirstOrDefault()?.Source ?? ""; //https://www.crunchyroll.com/i/coming_soon_beta_thumb.jpg
                     calEpisode.IsPremiumOnly = crBrowseEpisode.EpisodeMetadata.IsPremiumOnly;
                     calEpisode.IsPremiere = crBrowseEpisode.EpisodeMetadata.Episode == "1";
                     calEpisode.SeasonName = crBrowseEpisode.EpisodeMetadata.SeasonTitle;
@@ -268,10 +271,10 @@ public class CalendarManager{
                     calEpisode.CrSeriesID = crBrowseEpisode.EpisodeMetadata.SeriesId;
 
                     var existingEpisode = calendarDay.CalendarEpisodes
-                        ?.FirstOrDefault(e => e.SeasonName == calEpisode.SeasonName);
+                        .FirstOrDefault(e => e.SeasonName == calEpisode.SeasonName);
 
                     if (existingEpisode != null){
-                        if (!int.TryParse(existingEpisode.EpisodeNumber, out var num)){
+                        if (!int.TryParse(existingEpisode.EpisodeNumber, out _)){
                             existingEpisode.EpisodeNumber = "...";
                         } else{
                             var existingNumbers = existingEpisode.EpisodeNumber
@@ -300,7 +303,7 @@ public class CalendarManager{
 
                         existingEpisode.CalendarEpisodes.Add(calEpisode);
                     } else{
-                        calendarDay.CalendarEpisodes?.Add(calEpisode);
+                        calendarDay.CalendarEpisodes.Add(calEpisode);
                     }
                 }
             }
@@ -429,8 +432,6 @@ public class CalendarManager{
             calEp.EpisodeNumber = anilistEle.Episode.ToString();
             calEp.AnilistEpisode = true;
 
-            var crunchyrollID = "";
-
             if (anilistEle.Media?.ExternalLinks != null){
                 var url = anilistEle.Media.ExternalLinks.First(external =>
                     string.Equals(external.Site, "Crunchyroll", StringComparison.OrdinalIgnoreCase)).Url;
@@ -438,10 +439,11 @@ public class CalendarManager{
                 string pattern = @"series\/([^\/]+)";
 
                 Match match = Regex.Match(url, pattern);
+                string crunchyrollId;
                 if (match.Success){
-                    crunchyrollID = match.Groups[1].Value;
+                    crunchyrollId = match.Groups[1].Value;
 
-                    AdjustReleaseTimeToHistory(calEp, crunchyrollID);
+                    AdjustReleaseTimeToHistory(calEp, crunchyrollId);
                 } else{
                     Uri uri = new Uri(url);
 
@@ -462,9 +464,9 @@ public class CalendarManager{
 
                         Match match2 = Regex.Match(finalUrl ?? string.Empty, pattern);
                         if (match2.Success){
-                            crunchyrollID = match2.Groups[1].Value;
+                            crunchyrollId = match2.Groups[1].Value;
 
-                            AdjustReleaseTimeToHistory(calEp, crunchyrollID);
+                            AdjustReleaseTimeToHistory(calEp, crunchyrollId);
                         }
                     }
                 }

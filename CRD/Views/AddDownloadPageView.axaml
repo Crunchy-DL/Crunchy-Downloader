@@ -212,6 +212,7 @@
                                 </Grid>
                                 <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
                                     <TextBlock FontStyle="Italic"
+                                               IsVisible="{Binding HasDubs}"
                                                Opacity="0.8" Text="Dubs: ">
                                     </TextBlock>
                                     <TextBlock Text="{Binding AvailableAudios, Converter={StaticResource UiListToStringConverter}}"

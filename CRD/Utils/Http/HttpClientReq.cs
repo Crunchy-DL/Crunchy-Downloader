@@ -249,26 +249,26 @@ public static class ApiUrls{
     public static readonly string ApiBeta = "https://beta-api.crunchyroll.com";
     public static readonly string ApiN = "https://www.crunchyroll.com";
     public static readonly string Anilist = "https://graphql.anilist.co";
-
+    
     public static readonly string Auth = ApiN + "/auth/v1/token";
-    public static readonly string BetaAuth = ApiBeta + "/auth/v1/token";
-    public static readonly string BetaProfile = ApiBeta + "/accounts/v1/me/profile";
-    public static readonly string BetaCmsToken = ApiBeta + "/index/v2";
-    public static readonly string Search = ApiBeta + "/content/v2/discover/search";
-    public static readonly string Browse = ApiBeta + "/content/v2/discover/browse";
-    public static readonly string Cms = ApiBeta + "/content/v2/cms";
-    public static readonly string Content = ApiBeta + "/content/v2";
+    public static readonly string Profile = ApiN + "/accounts/v1/me/profile";
+    public static readonly string CmsToken = ApiN + "/index/v2";
+    public static readonly string Search = ApiN + "/content/v2/discover/search";
+    public static readonly string Browse = ApiN + "/content/v2/discover/browse";
+    public static readonly string Cms = ApiN + "/content/v2/cms";
+    public static readonly string Content = ApiN + "/content/v2";
+    
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
 
-    public static readonly string Subscription = ApiBeta + "/subs/v3/subscriptions/";
-    public static readonly string CmsN = ApiN + "/content/v2/cms";
+    public static readonly string Subscription = ApiN + "/subs/v3/subscriptions/";
 
     public static readonly string authBasic = "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6";
 
-    public static readonly string authBasicMob = "Basic dXU4aG0wb2g4dHFpOWV0eXl2aGo6SDA2VnVjRnZUaDJ1dEYxM0FBS3lLNE85UTRhX3BlX1o=";
+    public static readonly string authBasicMob = "Basic ZG1yeWZlc2NkYm90dWJldW56NXo6NU45aThPV2cyVmtNcm1oekNfNUNXekRLOG55SXo0QU0=";
     public static readonly string authBasicSwitch = "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=";
 
     public static readonly string ChromeUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
+    public static readonly string MobileUserAgent = "Crunchyroll/3.74.2 Android/14 okhttp/4.12.0";
 }

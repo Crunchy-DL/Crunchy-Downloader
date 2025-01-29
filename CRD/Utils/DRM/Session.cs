@@ -15,7 +15,7 @@ using ProtoBuf;
 
 namespace CRD.Utils.DRM;
 
-public struct ContentDecryptionModule{
+public class ContentDecryptionModule{
     public byte[] privateKey{ get; set; }
     public byte[] identifierBlob{ get; set; }
 }

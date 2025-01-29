@@ -9,7 +9,7 @@ public class CrSeriesSearch{
     public Meta Meta{ get; set; }
 }
 
-public struct SeriesSearchItem{
+public class SeriesSearchItem{
     public string Description{ get; set; }
 
     [JsonProperty("seo_description")]
@@ -91,7 +91,7 @@ public struct SeriesSearchItem{
     public string SeoTitle{ get; set; }
 }
 
-public struct Version{
+public class Version{
     [JsonProperty("audio_locale")]
     public string? AudioLocale{ get; set; }
 

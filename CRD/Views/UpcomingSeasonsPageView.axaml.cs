@@ -1,8 +1,4 @@
-﻿using System;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
-using CRD.Utils.Sonarr;
+﻿using Avalonia.Controls;
 using CRD.Utils.Structs;
 using CRD.ViewModels;
 

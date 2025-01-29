@@ -7,13 +7,14 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Views;
 using ReactiveUI;
 
 namespace CRD.Downloader.Crunchyroll;
 
-public class CrSeries(){
+public class CrSeries{
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public Dictionary<string, CrunchyEpMeta> ItemSelectMultiDub(Dictionary<string, EpisodeAndLanguage> eps, List<string> dubLang, bool? but, bool? all, List<string>? e){
@@ -61,15 +62,15 @@ public class CrSeries(){
 
                 var epMeta = new CrunchyEpMeta();
                 epMeta.Data = new List<CrunchyEpMetaData>{ new(){ MediaId = item.Id, Versions = item.Versions, IsSubbed = item.IsSubbed, IsDubbed = item.IsDubbed } };
-                epMeta.SeriesTitle = episode.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeriesTitle)).SeriesTitle ?? Regex.Replace(episode.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd();
-                epMeta.SeasonTitle = episode.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeasonTitle)).SeasonTitle ?? Regex.Replace(episode.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
+                epMeta.SeriesTitle = episode.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeriesTitle))?.SeriesTitle ?? Regex.Replace(episode.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd();
+                epMeta.SeasonTitle = episode.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeasonTitle))?.SeasonTitle ?? Regex.Replace(episode.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
                 epMeta.EpisodeNumber = item.Episode;
                 epMeta.EpisodeTitle = item.Title;
                 epMeta.SeasonId = item.SeasonId;
                 epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + "";
-                epMeta.ShowId = item.SeriesId;
+                epMeta.SeriesId = item.SeriesId;
                 epMeta.AbsolutEpisodeNumberE = epNum;
-                epMeta.Image = images[images.Count / 2].FirstOrDefault().Source;
+                epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source ?? "";
                 epMeta.DownloadProgress = new DownloadProgress(){
                     IsDownloading = false,
                     Done = false,
@@ -98,7 +99,7 @@ public class CrSeries(){
                 if (all is true || e != null && e.Contains(epNum)){
                     if (ret.TryGetValue(key, out var epMe)){
                         epMetaData.Lang = episode.Langs[index];
-                        epMe.Data?.Add(epMetaData);
+                        epMe.Data.Add(epMetaData);
                     } else{
                         epMetaData.Lang = episode.Langs[index];
                         epMeta.Data[0] = epMetaData;
@@ -122,7 +123,7 @@ public class CrSeries(){
 
         bool serieshasversions = true;
 
-        CrSeriesSearch? parsedSeries = await ParseSeriesById(id, crLocale,forcedLocale);
+        CrSeriesSearch? parsedSeries = await ParseSeriesById(id, crLocale, forcedLocale);
 
         if (parsedSeries == null || parsedSeries.Data == null){
             Console.Error.WriteLine("Parse Data Invalid");
@@ -131,66 +132,59 @@ public class CrSeries(){
 
         // var result = ParseSeriesResult(parsedSeries);
         Dictionary<string, EpisodeAndLanguage> episodes = new Dictionary<string, EpisodeAndLanguage>();
-        
+
         if (crunInstance.CrunOptions.History){
-            crunInstance.History.CRUpdateSeries(id,"");
+            _ = crunInstance.History.CrUpdateSeries(id, "");
         }
 
-        var cachedSeasonID = "";
+        var cachedSeasonId = "";
         var seasonData = new CrunchyEpisodeList();
-        
+
         foreach (var s in parsedSeries.Data){
-                if (data?.S != null && s.Id != data.Value.S) continue;
-                int fallbackIndex = 0;
-                if (cachedSeasonID != s.Id){
-                    seasonData = await GetSeasonDataById(s.Id, forcedLocale ? crLocale : "");
-                    cachedSeasonID = s.Id;
-                }
-                
-                if (seasonData.Data != null){
-                    
+            if (data?.S != null && s.Id != data.S) continue;
+            int fallbackIndex = 0;
+            if (cachedSeasonId != s.Id){
+                seasonData = await GetSeasonDataById(s.Id, forcedLocale ? crLocale : "");
+                cachedSeasonId = s.Id;
+            }
 
-                    foreach (var episode in seasonData.Data){
-                        // Prepare the episode array
-                        EpisodeAndLanguage item;
+            if (seasonData.Data != null){
+                foreach (var episode in seasonData.Data){
+                    // Prepare the episode array
+                    EpisodeAndLanguage item;
 
 
-                        string episodeNum = (episode.Episode != String.Empty ? episode.Episode : (episode.EpisodeNumber != null ? episode.EpisodeNumber + "" : $"F{fallbackIndex++}")) ?? string.Empty;
+                    string episodeNum = (episode.Episode != String.Empty ? episode.Episode : (episode.EpisodeNumber != null ? episode.EpisodeNumber + "" : $"F{fallbackIndex++}")) ?? string.Empty;
 
-                        var seasonIdentifier = !string.IsNullOrEmpty(s.Identifier) ? s.Identifier.Split('|')[1] : $"S{episode.SeasonNumber}";
-                        var episodeKey = $"{seasonIdentifier}E{episodeNum}";
+                    var seasonIdentifier = !string.IsNullOrEmpty(s.Identifier) ? s.Identifier.Split('|')[1] : $"S{episode.SeasonNumber}";
+                    var episodeKey = $"{seasonIdentifier}E{episodeNum}";
 
-                        if (!episodes.ContainsKey(episodeKey)){
-                            item = new EpisodeAndLanguage{
-                                Items = new List<CrunchyEpisode>(),
-                                Langs = new List<LanguageItem>()
-                            };
-                            episodes[episodeKey] = item;
-                        } else{
-                            item = episodes[episodeKey];
-                        }
+                    if (!episodes.ContainsKey(episodeKey)){
+                        item = new EpisodeAndLanguage{
+                            Items = new List<CrunchyEpisode>(),
+                            Langs = new List<LanguageItem>()
+                        };
+                        episodes[episodeKey] = item;
+                    } else{
+                        item = episodes[episodeKey];
+                    }
 
-                        if (episode.Versions != null){
-                            foreach (var version in episode.Versions){
-                                // Ensure there is only one of the same language
-                                if (item.Langs.All(a => a.CrLocale != version.AudioLocale)){
-                                    // Push to arrays if there are no duplicates of the same language
-                                    item.Items.Add(episode);
-                                    item.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == version.AudioLocale));
-                                }
-                            }
-                        } else{
-                            // Episode didn't have versions, mark it as such to be logged.
-                            serieshasversions = false;
-                            // Ensure there is only one of the same language
-                            if (item.Langs.All(a => a.CrLocale != episode.AudioLocale)){
-                                // Push to arrays if there are no duplicates of the same language
+                    if (episode.Versions != null){
+                        foreach (var version in episode.Versions){
+                            if (item.Langs.All(a => a.CrLocale != version.AudioLocale)){
                                 item.Items.Add(episode);
-                                item.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == episode.AudioLocale));
+                                item.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == version.AudioLocale) ?? new LanguageItem());
                             }
+                        }
+                    } else{
+                        serieshasversions = false;
+                        if (item.Langs.All(a => a.CrLocale != episode.AudioLocale)){
+                            item.Items.Add(episode);
+                            item.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == episode.AudioLocale) ?? new LanguageItem());
                         }
                     }
                 }
+            }
         }
 
         if (crunInstance.CrunOptions.History){
@@ -215,21 +209,21 @@ public class CrSeries(){
 
             string newKey;
             if (isSpecial && !string.IsNullOrEmpty(item.Items[0].Episode)){
-                newKey = $"SP{specialIndex}_" + item.Items[0].Episode ?? "SP" + (specialIndex + " " + item.Items[0].Id);
+                newKey = $"SP{specialIndex}_" + item.Items[0].Episode;// ?? "SP" + (specialIndex + " " + item.Items[0].Id);
             } else{
                 newKey = $"{(isSpecial ? "SP" : 'E')}{(isSpecial ? (specialIndex + " " + item.Items[0].Id) : epIndex + "")}";
             }
 
-            
+
             episodes.Remove(key);
-            
+
             int counter = 1;
             string originalKey = newKey;
             while (episodes.ContainsKey(newKey)){
                 newKey = originalKey + "_" + counter;
                 counter++;
             }
-            
+
             episodes.Add(newKey, item);
 
             if (isSpecial){
@@ -249,14 +243,14 @@ public class CrSeries(){
             var key = kvp.Key;
             var item = kvp.Value;
 
-            var seasonTitle = item.Items.FirstOrDefault(a => !Regex.IsMatch(a.SeasonTitle, @"\(\w+ Dub\)")).SeasonTitle
+            var seasonTitle = item.Items.FirstOrDefault(a => !Regex.IsMatch(a.SeasonTitle, @"\(\w+ Dub\)"))?.SeasonTitle
                               ?? Regex.Replace(item.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
 
             var title = item.Items[0].Title;
             var seasonNumber = Helpers.ExtractNumberAfterS(item.Items[0].Identifier) ?? item.Items[0].SeasonNumber.ToString();
 
             var languages = item.Items.Select((a, index) =>
-                $"{(a.IsPremiumOnly ? "+ " : "")}{item.Langs.ElementAtOrDefault(index).Name ?? "Unknown"}").ToArray(); //☆
+                $"{(a.IsPremiumOnly ? "+ " : "")}{item.Langs.ElementAtOrDefault(index)?.Name ?? "Unknown"}").ToArray(); //☆
 
             Console.WriteLine($"[{key}] {seasonTitle} - Season {seasonNumber} - {title} [{string.Join(", ", languages)}]");
         }
@@ -275,7 +269,7 @@ public class CrSeries(){
             var seconds = (int)Math.Floor(value.Items[0].DurationMs / 1000.0);
             var langList = value.Langs.Select(a => a.CrLocale).ToList();
             Languages.SortListByLangList(langList);
-            
+
             return new Episode{
                 E = key.StartsWith("E") ? key.Substring(1) : key,
                 Lang = langList,
@@ -285,8 +279,9 @@ public class CrSeries(){
                 SeasonTitle = Regex.Replace(value.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd(),
                 EpisodeNum = key.StartsWith("SP") ? key : value.Items[0].EpisodeNumber?.ToString() ?? value.Items[0].Episode ?? "?",
                 Id = value.Items[0].SeasonId,
-                Img = images[images.Count / 2].FirstOrDefault().Source,
+                Img = images[images.Count / 2].FirstOrDefault()?.Source ?? "",
                 Description = value.Items[0].Description,
+                EpisodeType = EpisodeType.Episode,
                 Time = $"{seconds / 60}:{seconds % 60:D2}" // Ensures two digits for seconds.
             };
         }).ToList();
@@ -294,7 +289,7 @@ public class CrSeries(){
         return crunchySeriesList;
     }
 
-    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonID, string? crLocale, bool forcedLang = false, bool log = false){
+    public async Task<CrunchyEpisodeList> GetSeasonDataById(string seasonId, string? crLocale, bool forcedLang = false, bool log = false){
         CrunchyEpisodeList episodeList = new CrunchyEpisodeList(){ Data = new List<CrunchyEpisode>(), Total = 0, Meta = new Meta() };
 
         NameValueCollection query;
@@ -309,7 +304,7 @@ public class CrSeries(){
                 }
             }
 
-            var showRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonID}", HttpMethod.Get, true, true, query);
+            var showRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonId}", HttpMethod.Get, true, true, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
@@ -330,14 +325,15 @@ public class CrSeries(){
             }
         }
 
-        var episodeRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonID}/episodes", HttpMethod.Get, true, true, query);
+        var episodeRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonId}/episodes", HttpMethod.Get, true, true, query);
 
         var episodeRequestResponse = await HttpClientReq.Instance.SendHttpRequest(episodeRequest);
 
         if (!episodeRequestResponse.IsOk){
             Console.Error.WriteLine($"Episode List Request FAILED! uri: {episodeRequest.RequestUri}");
         } else{
-            episodeList = Helpers.Deserialize<CrunchyEpisodeList>(episodeRequestResponse.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+            episodeList = Helpers.Deserialize<CrunchyEpisodeList>(episodeRequestResponse.ResponseContent, crunInstance.SettingsJsonSerializerSettings) ??
+                          new CrunchyEpisodeList(){ Data =[], Total = 0, Meta = new Meta() };
         }
 
         if (episodeList.Total < 1){
@@ -351,6 +347,8 @@ public class CrSeries(){
         var ret = new Dictionary<int, Dictionary<string, SeriesSearchItem>>();
         int i = 0;
 
+        if (seasonsList.Data == null) return ret;
+        
         foreach (var item in seasonsList.Data){
             i++;
             foreach (var lang in Languages.languages){
@@ -482,12 +480,12 @@ public class CrSeries(){
                 }
             }
         }
-        
+
         return series;
     }
 
     public async Task<CrBrowseSeriesBase?> GetAllSeries(string? crLocale){
-        CrBrowseSeriesBase? complete = new CrBrowseSeriesBase();
+        CrBrowseSeriesBase complete = new CrBrowseSeriesBase();
         complete.Data =[];
 
         var i = 0;

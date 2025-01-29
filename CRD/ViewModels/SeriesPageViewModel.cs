@@ -29,6 +29,9 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     public static bool _sonarrAvailable;
+    
+    [ObservableProperty]
+    public static bool _showMonitoredBookmark;
 
     [ObservableProperty]
     public static bool _sonarrConnected;
@@ -53,7 +56,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
         _selectedSeries = CrunchyrollManager.Instance.SelectedSeries;
 
         if (_selectedSeries.ThumbnailImage == null){
-            _selectedSeries.LoadImage();
+            _ = _selectedSeries.LoadImage();
         }
 
         if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null){
@@ -61,13 +64,18 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
             if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId)){
                 SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && SonarrConnected;
+                
+                if (SonarrAvailable){
+                    ShowMonitoredBookmark = CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored;
+                }
+                
             } else{
                 SonarrAvailable = false;
             }
         } else{
             SonarrConnected = SonarrAvailable = false;
         }
-
+        
         AvailableDubs = "Available Dubs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableDubLang);
         AvailableSubs = "Available Subs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableSoftSubs);
 
@@ -87,17 +95,19 @@ public partial class SeriesPageViewModel : ViewModelBase{
                 var seasonPath = season.SeasonDownloadPath;
                 var directoryInfo = new DirectoryInfo(seasonPath);
 
-                string parentFolderPath = directoryInfo.Parent?.FullName;
+                if (!string.IsNullOrEmpty(directoryInfo.Parent?.FullName)){
+                    string parentFolderPath = directoryInfo.Parent?.FullName ?? string.Empty;
 
-                if (Directory.Exists(parentFolderPath)){
-                    SeriesFolderPath = parentFolderPath;
-                    SeriesFolderPathExists = true;
+                    if (Directory.Exists(parentFolderPath)){
+                        SeriesFolderPath = parentFolderPath;
+                        SeriesFolderPathExists = true;
+                    }
                 }
             } catch (Exception e){
                 Console.Error.WriteLine($"An error occurred while opening the folder: {e.Message}");
             }
         } else{
-            var customPath = string.Empty;
+            string customPath;
 
             if (string.IsNullOrEmpty(SelectedSeries.SeriesTitle))
                 return;
@@ -110,10 +120,10 @@ public partial class SeriesPageViewModel : ViewModelBase{
             // Check Crunchyroll download directory
             var downloadDirPath = CrunchyrollManager.Instance.CrunOptions.DownloadDirPath;
             if (!string.IsNullOrEmpty(downloadDirPath)){
-                customPath = System.IO.Path.Combine(downloadDirPath, seriesTitle);
+                customPath = Path.Combine(downloadDirPath, seriesTitle);
             } else{
                 // Fallback to configured VIDEOS_DIR path
-                customPath = System.IO.Path.Combine(CfgManager.PathVIDEOS_DIR, seriesTitle);
+                customPath = Path.Combine(CfgManager.PathVIDEOS_DIR, seriesTitle);
             }
 
             // Check if custom path exists
@@ -186,7 +196,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
                 SonarrConnected = SonarrAvailable = false;
             }
 
-            UpdateData("");
+            _ = UpdateData("");
         }
     }
 

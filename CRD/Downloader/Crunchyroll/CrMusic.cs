@@ -14,31 +14,106 @@ namespace CRD.Downloader.Crunchyroll;
 public class CrMusic{
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
-    public async Task<CrunchyMusicVideo?> ParseMusicVideoByIdAsync(string id, string crLocale, bool forcedLang = false){
-        return await ParseMediaByIdAsync(id, crLocale, forcedLang, "music/music_videos");
+    public async Task<CrunchyMusicVideoList?> ParseFeaturedMusicVideoByIdAsync(string seriesId, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        var musicVideos = await FetchMediaListAsync($"{ApiUrls.Content}/music/featured/{seriesId}", crLocale, forcedLang);
+
+        if (musicVideos.Data is{ Count: > 0 } && updateHistory){
+            await crunInstance.History.UpdateWithMusicEpisodeList(musicVideos.Data);
+        }
+
+        return musicVideos;
+    }
+    
+    public async Task<CrunchyMusicVideo?> ParseMusicVideoByIdAsync(string id, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        var musicVideo = await ParseMediaByIdAsync(id, crLocale, forcedLang, "music/music_videos");
+
+        if (musicVideo != null && updateHistory){
+            await crunInstance.History.UpdateWithMusicEpisodeList([musicVideo]);
+        }
+
+        return musicVideo;
     }
 
-    public async Task<CrunchyMusicVideo?> ParseConcertByIdAsync(string id, string crLocale, bool forcedLang = false){
-        return await ParseMediaByIdAsync(id, crLocale, forcedLang, "music/concerts");
+    public async Task<CrunchyMusicVideo?> ParseConcertByIdAsync(string id, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        var concert = await ParseMediaByIdAsync(id, crLocale, forcedLang, "music/concerts");
+
+        if (concert != null){
+            concert.EpisodeType = EpisodeType.Concert;
+            if (updateHistory){
+                await crunInstance.History.UpdateWithMusicEpisodeList([concert]);
+            }
+        }
+
+        return concert;
     }
 
-    public async Task<CrunchyMusicVideoList?> ParseArtistMusicVideosByIdAsync(string id, string crLocale, bool forcedLang = false){
-        var musicVideosTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{id}/music_videos", crLocale, forcedLang);
-        var concertsTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{id}/concerts", crLocale, forcedLang);
+    public async Task<CrunchyMusicVideoList?> ParseArtistMusicVideosByIdAsync(string artistId, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        var musicVideos = await FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/music_videos", crLocale, forcedLang);
+
+        if (updateHistory){
+            await crunInstance.History.UpdateWithMusicEpisodeList(musicVideos.Data);
+        }
+
+        return musicVideos;
+    }
+
+    public async Task<CrunchyMusicVideoList?> ParseArtistConcertVideosByIdAsync(string artistId, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        var concerts = await FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/concerts", crLocale, forcedLang);
+        
+        if (concerts.Data.Count > 0){
+            foreach (var crunchyConcertVideo in concerts.Data){
+                crunchyConcertVideo.EpisodeType = EpisodeType.Concert;
+            }
+        }
+
+        if (updateHistory){
+            await crunInstance.History.UpdateWithMusicEpisodeList(concerts.Data);
+        }
+
+        return concerts;
+    }
+
+
+    public async Task<CrunchyMusicVideoList?> ParseArtistVideosByIdAsync(string artistId, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        var musicVideosTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/music_videos", crLocale, forcedLang);
+        var concertsTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/concerts", crLocale, forcedLang);
 
         await Task.WhenAll(musicVideosTask, concertsTask);
 
         var musicVideos = await musicVideosTask;
         var concerts = await concertsTask;
-        
-        musicVideos.Total += concerts.Total;
-        musicVideos.Data ??= new List<CrunchyMusicVideo>();
 
-        if (concerts.Data != null){
+        musicVideos.Total += concerts.Total;
+
+        if (concerts.Data.Count > 0){
+            foreach (var crunchyConcertVideo in concerts.Data){
+                crunchyConcertVideo.EpisodeType = EpisodeType.Concert;
+            }
+
             musicVideos.Data.AddRange(concerts.Data);
         }
 
+        if (updateHistory){
+            await crunInstance.History.UpdateWithMusicEpisodeList(musicVideos.Data);
+        }
+
         return musicVideos;
+    }
+
+    public async Task<CrArtist> ParseArtistByIdAsync(string id, string crLocale, bool forcedLang = false){
+        var query = CreateQueryParameters(crLocale, forcedLang);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/music/artists/{id}", HttpMethod.Get, true, true, query);
+
+        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+        if (!response.IsOk){
+            Console.Error.WriteLine($"Request to {ApiUrls.Content}/music/artists/{id} failed");
+            return new CrArtist();
+        }
+
+        var artistList = Helpers.Deserialize<CrunchyArtistList>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings) ?? new CrunchyArtistList();
+
+        return artistList.Data.FirstOrDefault() ?? new CrArtist();
     }
 
     private async Task<CrunchyMusicVideo?> ParseMediaByIdAsync(string id, string crLocale, bool forcedLang, string endpoint){
@@ -47,11 +122,11 @@ public class CrMusic{
         switch (mediaList.Total){
             case < 1:
                 return null;
-            case 1 when mediaList.Data != null:
+            case 1 when mediaList.Data.Count > 0:
                 return mediaList.Data.First();
             default:
                 Console.Error.WriteLine($"Multiple items returned for endpoint {endpoint} with ID {id}");
-                return mediaList.Data?.First();
+                return mediaList.Data.First();
         }
     }
 
@@ -66,7 +141,7 @@ public class CrMusic{
             return new CrunchyMusicVideoList();
         }
 
-        return Helpers.Deserialize<CrunchyMusicVideoList>(response.ResponseContent,  crunInstance.SettingsJsonSerializerSettings);
+        return Helpers.Deserialize<CrunchyMusicVideoList>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings) ?? new CrunchyMusicVideoList();
     }
 
     private NameValueCollection CreateQueryParameters(string crLocale, bool forcedLang){
@@ -88,15 +163,16 @@ public class CrMusic{
     public CrunchyEpMeta EpisodeMeta(CrunchyMusicVideo episodeP){
         var images = (episodeP.Images?.Thumbnail ?? new List<Image>{ new Image{ Source = "/notFound.png" } });
 
+        
         var epMeta = new CrunchyEpMeta();
         epMeta.Data = new List<CrunchyEpMetaData>{ new(){ MediaId = episodeP.Id, Versions = null } };
-        epMeta.SeriesTitle = "Music";
-        epMeta.SeasonTitle = episodeP.DisplayArtistName;
+        epMeta.SeriesTitle = episodeP.GetSeriesTitle();
+        epMeta.SeasonTitle = episodeP.GetSeasonTitle();
         epMeta.EpisodeNumber = episodeP.SequenceNumber + "";
-        epMeta.EpisodeTitle = episodeP.Title;
-        epMeta.SeasonId = "";
+        epMeta.EpisodeTitle = episodeP.GetEpisodeTitle();
+        epMeta.SeasonId = episodeP.GetSeasonId();
         epMeta.Season = "";
-        epMeta.ShowId = "";
+        epMeta.SeriesId = episodeP.GetSeriesId();
         epMeta.AbsolutEpisodeNumberE = "";
         epMeta.Image = images[images.Count / 2].Source;
         epMeta.DownloadProgress = new DownloadProgress(){

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Views;
@@ -15,6 +16,11 @@ namespace CRD.Downloader.Crunchyroll;
 public class CrAuth{
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
+    private readonly string authorization = ApiUrls.authBasicMob;
+    private readonly string userAgent = ApiUrls.MobileUserAgent;
+    private const string DeviceType = "OnePlus CPH2449";
+    private const string DeviceName = "CPH2449";
+
     public async Task AuthAnonymous(){
         string uuid = Guid.NewGuid().ToString();
 
@@ -22,17 +28,18 @@ public class CrAuth{
             { "grant_type", "client_id" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", "Chrome on Windows" }
+            { "device_name", DeviceName },
+            { "device_type", DeviceType },
         };
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", ApiUrls.authBasicSwitch },
-            { "User-Agent", ApiUrls.ChromeUserAgent }
+            { "Authorization", authorization },
+            { "User-Agent", userAgent }
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
             Content = requestContent
         };
 
@@ -63,7 +70,7 @@ public class CrAuth{
             crunInstance.Token.device_id = deviceId;
             crunInstance.Token.expires = DateTime.Now.AddSeconds((double)crunInstance.Token.expires_in);
 
-            CfgManager.WriteTokenToYamlFile(crunInstance.Token, CfgManager.PathCrToken);
+            CfgManager.WriteJsonToFile(CfgManager.PathCrToken, crunInstance.Token);
         }
     }
 
@@ -76,17 +83,18 @@ public class CrAuth{
             { "grant_type", "password" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", "Chrome on Windows" }
+            { "device_name", DeviceName },
+            { "device_type", DeviceType },
         };
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", ApiUrls.authBasicSwitch },
-            { "User-Agent", ApiUrls.ChromeUserAgent }
+            { "Authorization", authorization },
+            { "User-Agent", userAgent }
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
             Content = requestContent
         };
 
@@ -120,7 +128,7 @@ public class CrAuth{
             return;
         }
 
-        var request = HttpClientReq.CreateRequestMessage(ApiUrls.BetaProfile, HttpMethod.Get, true, true, null);
+        var request = HttpClientReq.CreateRequestMessage(ApiUrls.Profile, HttpMethod.Get, true, true, null);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -183,18 +191,19 @@ public class CrAuth{
             { "refresh_token", crunInstance.Token.refresh_token },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", "Chrome on Windows" },
-            { "grant_type", "refresh_token" }
+            { "grant_type", "refresh_token" },
+            { "device_name", DeviceName },
+            { "device_type", DeviceType },
         };
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", ApiUrls.authBasicSwitch },
-            { "User-Agent", ApiUrls.ChromeUserAgent }
+            { "Authorization", authorization },
+            { "User-Agent", userAgent }
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
             Content = requestContent
         };
 
@@ -237,21 +246,22 @@ public class CrAuth{
         string uuid = Guid.NewGuid().ToString();
 
         var formData = new Dictionary<string, string>{
-            { "refresh_token", crunInstance.Token.refresh_token },
+            { "refresh_token", crunInstance.Token?.refresh_token ?? "" },
             { "grant_type", "refresh_token" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", "Chrome on Windows" }
+            { "device_name", DeviceName },
+            { "device_type", DeviceType },
         };
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", ApiUrls.authBasicSwitch },
-            { "User-Agent", ApiUrls.ChromeUserAgent }
+            { "Authorization", authorization },
+            { "User-Agent", userAgent }
         };
 
-        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.BetaAuth){
+        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
             Content = requestContent
         };
 
@@ -259,7 +269,7 @@ public class CrAuth{
             request.Headers.Add(header.Key, header.Value);
         }
 
-        HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
+        HttpClientReq.Instance.SetETPCookie(crunInstance.Token?.refresh_token ?? string.Empty);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

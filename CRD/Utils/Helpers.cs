@@ -15,8 +15,10 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CRD.Downloader;
 using CRD.Utils.Ffmpeg_Encoding;
+using CRD.Utils.Files;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 
@@ -746,5 +748,96 @@ public class Helpers{
             // If an exception is caught, mkvmerge is not installed or accessible
             return false;
         }
+    }
+
+    public static CrDownloadOptions MigrateSettings(CrDownloadOptionsYaml yaml){
+        if (yaml == null){
+            throw new ArgumentNullException(nameof(yaml));
+        }
+
+        return new CrDownloadOptions{
+            // General Settings
+            AutoDownload = yaml.AutoDownload,
+            RemoveFinishedDownload = yaml.RemoveFinishedDownload,
+            Timeout = yaml.Timeout,
+            FsRetryTime = yaml.FsRetryTime,
+            Force = yaml.Force,
+            SimultaneousDownloads = yaml.SimultaneousDownloads,
+            Theme = yaml.Theme,
+            AccentColor = yaml.AccentColor,
+            BackgroundImagePath = yaml.BackgroundImagePath,
+            BackgroundImageOpacity = yaml.BackgroundImageOpacity,
+            BackgroundImageBlurRadius = yaml.BackgroundImageBlurRadius,
+            Override = yaml.Override,
+            CcTag = yaml.CcTag,
+            Nocleanup = yaml.Nocleanup,
+            History = yaml.History,
+            HistoryIncludeCrArtists = yaml.HistoryIncludeCrArtists,
+            HistoryLang = yaml.HistoryLang,
+            HistoryAddSpecials = yaml.HistoryAddSpecials,
+            HistorySkipUnmonitored = yaml.HistorySkipUnmonitored,
+            HistoryCountSonarr = yaml.HistoryCountSonarr,
+            SonarrProperties = yaml.SonarrProperties,
+            LogMode = yaml.LogMode,
+            DownloadDirPath = yaml.DownloadDirPath,
+            DownloadTempDirPath = yaml.DownloadTempDirPath,
+            DownloadToTempFolder = yaml.DownloadToTempFolder,
+            HistoryPageProperties = yaml.HistoryPageProperties,
+            SeasonsPageProperties = yaml.SeasonsPageProperties,
+            DownloadSpeedLimit = yaml.DownloadSpeedLimit,
+            ProxyEnabled = yaml.ProxyEnabled,
+            ProxySocks = yaml.ProxySocks,
+            ProxyHost = yaml.ProxyHost,
+            ProxyPort = yaml.ProxyPort,
+            ProxyUsername = yaml.ProxyUsername,
+            ProxyPassword = yaml.ProxyPassword,
+
+            // Crunchyroll Settings
+            Hslang = yaml.Hslang,
+            Kstream = yaml.Kstream,
+            Novids = yaml.Novids,
+            Noaudio = yaml.Noaudio,
+            StreamServer = yaml.StreamServer,
+            QualityVideo = yaml.QualityVideo,
+            QualityAudio = yaml.QualityAudio,
+            FileName = yaml.FileName,
+            Numbers = yaml.Numbers,
+            Partsize = yaml.Partsize,
+            DlSubs = yaml.DlSubs,
+            SkipSubs = yaml.SkipSubs,
+            SkipSubsMux = yaml.SkipSubsMux,
+            SubsAddScaledBorder = yaml.SubsAddScaledBorder,
+            IncludeSignsSubs = yaml.IncludeSignsSubs,
+            SignsSubsAsForced = yaml.SignsSubsAsForced,
+            IncludeCcSubs = yaml.IncludeCcSubs,
+            CcSubsFont = yaml.CcSubsFont,
+            CcSubsMuxingFlag = yaml.CcSubsMuxingFlag,
+            Mp4 = yaml.Mp4,
+            VideoTitle = yaml.VideoTitle,
+            IncludeVideoDescription = yaml.IncludeVideoDescription,
+            DescriptionLang = yaml.DescriptionLang,
+            FfmpegOptions = yaml.FfmpegOptions,
+            MkvmergeOptions = yaml.MkvmergeOptions,
+            DefaultSub = yaml.DefaultSub,
+            DefaultSubSigns = yaml.DefaultSubSigns,
+            DefaultSubForcedDisplay = yaml.DefaultSubForcedDisplay,
+            DefaultAudio = yaml.DefaultAudio,
+            DlVideoOnce = yaml.DlVideoOnce,
+            KeepDubsSeperate = yaml.KeepDubsSeperate,
+            SkipMuxing = yaml.SkipMuxing,
+            SyncTiming = yaml.SyncTiming,
+            IsEncodeEnabled = yaml.IsEncodeEnabled,
+            EncodingPresetName = yaml.EncodingPresetName,
+            Chapters = yaml.Chapters,
+            DubLang = yaml.DubLang,
+            SelectedCalendarLanguage = yaml.SelectedCalendarLanguage,
+            CalendarDubFilter = yaml.CalendarDubFilter,
+            CustomCalendar = yaml.CustomCalendar,
+            CalendarHideDubs = yaml.CalendarHideDubs,
+            CalendarFilterByAirDate = yaml.CalendarFilterByAirDate,
+            CalendarShowUpcomingEpisodes = yaml.CalendarShowUpcomingEpisodes,
+            StreamEndpoint = yaml.StreamEndpoint,
+            SearchFetchFeaturedMusic = yaml.SearchFetchFeaturedMusic
+        };
     }
 }

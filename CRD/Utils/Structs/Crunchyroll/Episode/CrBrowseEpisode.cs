@@ -185,7 +185,7 @@ public class CrBrowseEpisodeMetaData{
  
 }
 
-public struct CrBrowseEpisodeVersion{
+public class CrBrowseEpisodeVersion{
     [JsonProperty("audio_locale")]
     public Locale? AudioLocale{ get; set; }
 

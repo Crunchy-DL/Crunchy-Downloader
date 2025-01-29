@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 
 namespace CRD.Utils.Muxing;
@@ -332,18 +333,25 @@ public class Merger{
                 Time = GetTimeFromFileName(fp, extractFramesCompareEnd.frameRate)
             }).ToList();
 
+            
+            
             // Calculate offsets
             var startOffset = SyncingHelper.CalculateOffset(baseFramesStart, compareFramesStart);
             var endOffset = SyncingHelper.CalculateOffset(baseFramesEnd, compareFramesEnd,true);
 
-            var lengthDiff = Math.Abs(baseVideoDurationTimeSpan.Value.TotalMicroseconds - compareVideoDurationTimeSpan.Value.TotalMicroseconds) / 1000000;
-
+            var lengthDiff = (baseVideoDurationTimeSpan.Value.TotalMicroseconds - compareVideoDurationTimeSpan.Value.TotalMicroseconds) / 1000000;
+            
             endOffset += lengthDiff;
             
             Console.WriteLine($"Start offset: {startOffset} seconds");
             Console.WriteLine($"End offset: {endOffset} seconds");
 
             CleanupDirectory(cleanupDir);
+            
+            baseFramesStart.Clear();
+            baseFramesEnd.Clear();
+            compareFramesStart.Clear();
+            compareFramesEnd.Clear();
 
             var difference = Math.Abs(startOffset - endOffset);
 
@@ -370,7 +378,7 @@ public class Merger{
     private static double GetTimeFromFileName(string fileName, double frameRate){
         var match = Regex.Match(Path.GetFileName(fileName), @"frame(\d+)");
         if (match.Success){
-            return int.Parse(match.Groups[1].Value) / frameRate; // Assuming 30 fps
+            return int.Parse(match.Groups[1].Value) / frameRate; 
         }
 
         return 0;

@@ -17,8 +17,9 @@ using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Sonarr;
-using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
 using FluentAvalonia.Styling;
 
@@ -36,7 +37,13 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     private bool _history;
 
     [ObservableProperty]
+    private bool _historyIncludeCrArtists;
+    
+    [ObservableProperty]
     private bool _historyAddSpecials;
+    
+    [ObservableProperty]
+    private bool _historySkipUnmonitored;
 
     [ObservableProperty]
     private bool _historyCountSonarr;
@@ -236,7 +243,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         ProxyUsername = options.ProxyUsername ?? "";
         ProxyPassword = options.ProxyPassword ?? "";
         ProxyPort = options.ProxyPort;
+        HistoryIncludeCrArtists = options.HistoryIncludeCrArtists;
         HistoryAddSpecials = options.HistoryAddSpecials;
+        HistorySkipUnmonitored = options.HistorySkipUnmonitored;
         HistoryCountSonarr = options.HistoryCountSonarr;
         DownloadSpeed = options.DownloadSpeedLimit;
         DownloadToTempFolder = options.DownloadToTempFolder;
@@ -265,6 +274,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.DownloadToTempFolder = DownloadToTempFolder;
         CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials = HistoryAddSpecials;
+        CrunchyrollManager.Instance.CrunOptions.HistoryIncludeCrArtists = HistoryIncludeCrArtists;
+        CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored = HistorySkipUnmonitored;
         CrunchyrollManager.Instance.CrunOptions.HistoryCountSonarr = HistoryCountSonarr;
         CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
         CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
@@ -309,7 +320,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.LogMode = LogMode;
 
-        CfgManager.WriteSettingsToFile();
+        CfgManager.WriteCrSettings();
     }
 
     [RelayCommand]
@@ -364,7 +375,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             pathSetter(selectedFolder.Path.LocalPath);
             var finalPath = string.IsNullOrEmpty(pathGetter()) ? defaultPath : pathGetter();
             pathSetter(finalPath);
-            CfgManager.WriteSettingsToFile();
+            CfgManager.WriteCrSettings();
         }
     }
 
@@ -411,7 +422,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             pathSetter(selectedFile.Path.LocalPath);
             var finalPath = string.IsNullOrEmpty(pathGetter()) ? defaultPath : pathGetter();
             pathSetter(finalPath);
-            CfgManager.WriteSettingsToFile();
+            CfgManager.WriteCrSettings();
         }
     }
 
@@ -490,9 +501,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                             decompressedJson,
                             CrunchyrollManager.Instance.SettingsJsonSerializerSettings
                         ) ?? new ObservableCollection<HistorySeries>();
-                        
+
                         CrunchyrollManager.Instance.HistoryList = historyList;
-                        
+
                         Parallel.ForEach(historyList, historySeries => {
                             historySeries.Init();
 
@@ -500,14 +511,13 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                                 historySeriesSeason.Init();
                             }
                         });
-                        
                     } else{
                         CrunchyrollManager.Instance.HistoryList = new ObservableCollection<HistorySeries>();
                     }
                 } else{
                     CrunchyrollManager.Instance.HistoryList = new ObservableCollection<HistorySeries>();
                 }
-                
+
                 _ = Task.Run(() => SonarrClient.Instance.RefreshSonarrLite());
             } else{
                 CrunchyrollManager.Instance.HistoryList = new ObservableCollection<HistorySeries>();

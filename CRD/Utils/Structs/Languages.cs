@@ -54,7 +54,7 @@ public class Languages{
             else if (yExists)
                 return 1;  // y comes before any missing value
             else
-                return string.Compare(x, y);  // Sort alphabetically or by another logic for missing values
+                return string.CompareOrdinal(x, y);  // Sort alphabetically or by another logic for missing values
         });
 
         return langList;
@@ -116,8 +116,8 @@ public class Languages{
     }
 
     public static LanguageItem FindLang(string crLocale){
-        LanguageItem lang = languages.FirstOrDefault(l => l.CrLocale == crLocale);
-        if (lang.CrLocale != null){
+        LanguageItem? lang = languages.FirstOrDefault(l => l.CrLocale == crLocale);
+        if (lang?.CrLocale != null){
             return lang;
         } else{
             return new LanguageItem{
@@ -159,7 +159,7 @@ public class Languages{
             var property = typeof(T).GetProperty(sortKey, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
             if (property == null) throw new ArgumentException($"Property '{sortKey}' not found on type '{typeof(T).Name}'.");
 
-            var value = property.GetValue(item) as string;
+            var value = property.GetValue(item) as string ?? string.Empty;
             int index = idx.ContainsKey(value) ? idx[value] : 50;
             return index;
         }).ToList();

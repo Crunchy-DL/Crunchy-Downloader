@@ -9,7 +9,7 @@ public class CrSeriesBase{
     public Meta Meta{ get; set; }
 }
 
-public struct SeriesBaseItem{
+public class SeriesBaseItem{
     [JsonProperty("extended_maturity_rating")]
     public Dictionary<object, object>
         ExtendedMaturityRating{ get; set; }
