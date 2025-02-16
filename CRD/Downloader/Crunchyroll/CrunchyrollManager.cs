@@ -96,6 +96,7 @@ public class CrunchyrollManager{
     private CrDownloadOptions InitDownloadOptions(){
         var options = new CrDownloadOptions();
 
+        options.UseCrBetaApi = true;
         options.AutoDownload = false;
         options.RemoveFinishedDownload = false;
         options.Chapters = true;
@@ -146,6 +147,7 @@ public class CrunchyrollManager{
         if (Path.Exists(CfgManager.PathCrDownloadOptionsOld)){
             var optionsYaml = new CrDownloadOptionsYaml();
 
+            optionsYaml.UseCrBetaApi = true;
             optionsYaml.AutoDownload = false;
             optionsYaml.RemoveFinishedDownload = false;
             optionsYaml.Chapters = true;
@@ -349,6 +351,8 @@ public class CrunchyrollManager{
                 foreach (var keyValue in groupByDub){
                     var result = await MuxStreams(keyValue.Value,
                         new CrunchyMuxOptions{
+                            DubLangList = options.DubLang,
+                            SubLangList = options.DlSubs,
                             FfmpegOptions = options.FfmpegOptions,
                             SkipSubMux = options.SkipSubsMux,
                             Output = fileNameAndPath,
@@ -364,7 +368,11 @@ public class CrunchyrollManager{
                             CcTag = options.CcTag,
                             KeepAllVideos = true,
                             MuxDescription = options.IncludeVideoDescription,
-                            DlVideoOnce = options.DlVideoOnce
+                            DlVideoOnce = options.DlVideoOnce,
+                            DefaultSubSigns = options.DefaultSubSigns,
+                            DefaultSubForcedDisplay = options.DefaultSubForcedDisplay,
+                            CcSubsMuxingFlag = options.CcSubsMuxingFlag,
+                            SignsSubsAsForced = options.SignsSubsAsForced,
                         },
                         fileNameAndPath);
 
@@ -403,6 +411,8 @@ public class CrunchyrollManager{
             } else{
                 var result = await MuxStreams(res.Data,
                     new CrunchyMuxOptions{
+                        DubLangList = options.DubLang,
+                        SubLangList = options.DlSubs,
                         FfmpegOptions = options.FfmpegOptions,
                         SkipSubMux = options.SkipSubsMux,
                         Output = fileNameAndPath,
@@ -418,7 +428,11 @@ public class CrunchyrollManager{
                         CcTag = options.CcTag,
                         KeepAllVideos = true,
                         MuxDescription = options.IncludeVideoDescription,
-                        DlVideoOnce = options.DlVideoOnce
+                        DlVideoOnce = options.DlVideoOnce,
+                        DefaultSubSigns = options.DefaultSubSigns,
+                        DefaultSubForcedDisplay = options.DefaultSubForcedDisplay,
+                        CcSubsMuxingFlag = options.CcSubsMuxingFlag,
+                        SignsSubsAsForced = options.SignsSubsAsForced,
                     },
                     fileNameAndPath);
 
@@ -497,6 +511,9 @@ public class CrunchyrollManager{
             History.SetAsDownloaded(data.SeriesId, data.SeasonId, data.Data.First().MediaId);
         }
 
+        if (options.MarkAsWatched && data.Data is{ Count: > 0 }){
+            _ = CrEpisode.MarkAsWatched(data.Data.First().MediaId);
+        }
 
         return true;
     }
@@ -623,6 +640,8 @@ public class CrunchyrollManager{
 
 
         var merger = new Merger(new MergerOptions{
+            DubLangList = options.DubLangList,
+            SubLangList = options.SubLangList,
             OnlyVid = data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
             SkipSubMux = options.SkipSubMux,
             OnlyAudio = data.Where(a => a.Type == DownloadMediaType.Audio).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
@@ -643,6 +662,10 @@ public class CrunchyrollManager{
             },
             CcTag = options.CcTag,
             mp3 = muxToMp3,
+            DefaultSubSigns = options.DefaultSubSigns,
+            DefaultSubForcedDisplay = options.DefaultSubForcedDisplay,
+            CcSubsMuxingFlag = options.CcSubsMuxingFlag,
+            SignsSubsAsForced = options.SignsSubsAsForced,
             Description = muxDesc ? data.Where(a => a.Type == DownloadMediaType.Description).Select(a => new MergerInput{ Path = a.Path ?? string.Empty }).ToList() :[],
         });
 
@@ -805,7 +828,7 @@ public class CrunchyrollManager{
 
         if (data.Data is{ Count: > 0 }){
             options.Partsize = options.Partsize > 0 ? options.Partsize : 1;
-            
+
             var sortedMetaData = data.Data
                 .OrderBy(metaData => options.DubLang.IndexOf(metaData.Lang?.CrLocale ?? string.Empty) != -1 ? options.DubLang.IndexOf(metaData.Lang?.CrLocale ?? string.Empty) : int.MaxValue)
                 .ToList();
@@ -1332,7 +1355,7 @@ public class CrunchyrollManager{
                                         Data = files,
                                         Error = dlFailed,
                                         FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
-                                        ErrorText = ""
+                                        ErrorText = "Audio or Video download failed",
                                     };
                                 }
 

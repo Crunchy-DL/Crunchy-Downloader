@@ -9,13 +9,14 @@
              x:DataType="vm:CrunchyrollSettingsViewModel"
              x:Class="CRD.Downloader.Crunchyroll.Views.CrunchyrollSettingsView">
 
-    
+
     <Design.DataContext>
         <vm:CrunchyrollSettingsViewModel />
     </Design.DataContext>
 
     <ScrollViewer Padding="20 20 20 0">
         <StackPanel Spacing="8">
+
 
             <controls:SettingsExpander Header="Dub language"
                                        IconSource="Speaker2"
@@ -203,10 +204,10 @@
                         <CheckBox IsChecked="{Binding SearchFetchFeaturedMusic}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                
+
+
             </controls:SettingsExpander>
-            
+
             <controls:SettingsExpander Header="Download Settings"
                                        IconSource="Download"
                                        Description="Adjust download settings"
@@ -265,6 +266,12 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="Download First Available Dub" Description="Downloads only the first available dub from the dubs list">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadFirstAvailableDub}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
                 <controls:SettingsExpanderItem Content="Audio Quality">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
@@ -277,6 +284,12 @@
                 <controls:SettingsExpanderItem Content="Chapters">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadChapters}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Mark as watched" Description="Mark the downloaded episodes as watched on Crunchyroll">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MarkAsWatched}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -539,6 +552,27 @@
                 <controls:SettingsExpander.Footer>
 
                 </controls:SettingsExpander.Footer>
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="CR Api"
+                                       IconSource="World"
+                                       Description="Change connection settings for the api">
+                <controls:SettingsExpander.Footer>
+
+                </controls:SettingsExpander.Footer>
+
+                <controls:SettingsExpanderItem Content="CR Beta Api">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding UseCrBetaApi}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <!-- <controls:SettingsExpanderItem Content="CR Old Auth" Description="You have to logout and login if you change this"> -->
+                <!--     <controls:SettingsExpanderItem.Footer> -->
+                <!--         <CheckBox IsChecked="{Binding UseCrOldAuthHeader}"> </CheckBox> -->
+                <!--     </controls:SettingsExpanderItem.Footer> -->
+                <!-- </controls:SettingsExpanderItem> -->
+
             </controls:SettingsExpander>
 
 

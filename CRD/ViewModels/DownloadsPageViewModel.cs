@@ -45,6 +45,26 @@ public partial class DownloadsPageViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload = value;
         CfgManager.WriteCrSettings();
     }
+
+    [RelayCommand]
+    public void ClearQueue(){
+        var items = QueueManager.Instance.Queue;
+        QueueManager.Instance.Queue.Clear();
+        
+        foreach (var crunchyEpMeta in items){
+            if (!crunchyEpMeta.DownloadProgress.Done){
+                foreach (var downloadItemDownloadedFile in crunchyEpMeta.downloadedFiles){
+                    try{
+                        if (File.Exists(downloadItemDownloadedFile)){
+                            File.Delete(downloadItemDownloadedFile);
+                        }
+                    } catch (Exception){
+                        // ignored
+                    }
+                }
+            }
+        }
+    }
 }
 
 public partial class DownloadItemModel : INotifyPropertyChanged{
@@ -210,7 +230,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
                 newOptions.Noaudio = true;
             }
 
-            await CrunchyrollManager.Instance.DownloadEpisode(epMeta, newOptions);
+            await CrunchyrollManager.Instance.DownloadEpisode(epMeta, epMeta.DownloadSettings ?? newOptions);
         }
     }
 

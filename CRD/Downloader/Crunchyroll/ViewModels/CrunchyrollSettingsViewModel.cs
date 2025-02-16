@@ -227,6 +227,15 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     [ObservableProperty]
     private bool _searchFetchFeaturedMusic;
 
+    [ObservableProperty]
+    private bool _useCrBetaApi;
+
+    [ObservableProperty]
+    private bool _downloadFirstAvailableDub;
+
+    [ObservableProperty]
+    private bool _markAsWatched;
+
     private bool settingsLoaded;
 
     public CrunchyrollSettingsViewModel(){
@@ -280,6 +289,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        MarkAsWatched = options.MarkAsWatched;
+        DownloadFirstAvailableDub = options.DownloadFirstAvailableDub;
+        UseCrBetaApi = options.UseCrBetaApi;
         CCSubsFont = options.CcSubsFont ?? "";
         CCSubsMuxingFlag = options.CcSubsMuxingFlag;
         SignsSubsAsForced = options.SignsSubsAsForced;
@@ -344,6 +356,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
             return;
         }
 
+        CrunchyrollManager.Instance.CrunOptions.MarkAsWatched = MarkAsWatched;
+        CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub = DownloadFirstAvailableDub;
+        CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi = UseCrBetaApi;
         CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced = SignsSubsAsForced;
         CrunchyrollManager.Instance.CrunOptions.CcSubsMuxingFlag = CCSubsMuxingFlag;
         CrunchyrollManager.Instance.CrunOptions.CcSubsFont = CCSubsFont;

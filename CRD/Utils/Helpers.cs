@@ -21,6 +21,7 @@ using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using Microsoft.Win32;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace CRD.Utils;
 
@@ -39,9 +40,18 @@ public class Helpers{
     }
 
     public static T DeepCopy<T>(T obj){
-        var json = JsonConvert.SerializeObject(obj);
+        var settings = new JsonSerializerSettings{
+            ContractResolver = new DefaultContractResolver{
+                IgnoreSerializableAttribute = true,
+                IgnoreSerializableInterface = true
+            },
+            ObjectCreationHandling = ObjectCreationHandling.Replace
+        };
+
+        var json = JsonConvert.SerializeObject(obj, settings);
         return JsonConvert.DeserializeObject<T>(json);
     }
+
 
     public static string ConvertTimeFormat(string time){
         var timeParts = time.Split(':', '.');

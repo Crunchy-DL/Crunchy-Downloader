@@ -178,8 +178,10 @@ public partial class MainWindow : AppWindow{
     public async void ShowUpdateDialog(){
         var dialog = new ContentDialog(){
             Title = "Updating",
-            // CloseButtonText = "Close"
+            PrimaryButtonText = "Close"
         };
+
+        dialog.IsPrimaryButtonEnabled = false;
 
         var viewModel = new ContentDialogUpdateViewModel(dialog);
         dialog.Content = new ContentDialogUpdateView(){

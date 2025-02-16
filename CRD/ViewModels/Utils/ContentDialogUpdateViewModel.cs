@@ -12,6 +12,8 @@ public partial class ContentDialogUpdateViewModel : ViewModelBase{
     [ObservableProperty]
     private double _progress;
 
+    [ObservableProperty]
+    private bool _failed;
 
     private AccountPageViewModel accountPageViewModel;
 
@@ -28,7 +30,11 @@ public partial class ContentDialogUpdateViewModel : ViewModelBase{
     private void Progress_PropertyChanged(object? sender, PropertyChangedEventArgs e){
         if (e.PropertyName == nameof(Updater.Instance.progress)){
             Progress = Updater.Instance.progress;
+        }else if (e.PropertyName == nameof(Updater.Instance.failed)){
+            Failed = Updater.Instance.failed;
+            dialog.IsPrimaryButtonEnabled = !Failed;
         }
+        
     }
 
 

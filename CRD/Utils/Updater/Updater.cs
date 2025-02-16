@@ -15,6 +15,7 @@ namespace CRD.Utils.Updater;
 
 public class Updater : INotifyPropertyChanged{
     public double progress = 0;
+    public bool failed = false;
 
     #region Singelton
 
@@ -50,8 +51,8 @@ public class Updater : INotifyPropertyChanged{
     private readonly string apiEndpoint = "https://api.github.com/repos/Crunchy-DL/Crunchy-Downloader/releases/latest";
 
     public async Task<bool> CheckForUpdatesAsync(){
-        if (Directory.Exists(tempPath)){
-            Directory.Delete(tempPath, true);
+        if (File.Exists(tempPath)){
+            File.Delete(tempPath);
         }
 
         if (Directory.Exists(extractPath)){
@@ -123,6 +124,7 @@ public class Updater : INotifyPropertyChanged{
 
     public async Task DownloadAndUpdateAsync(){
         try{
+            failed = false;
             Helpers.EnsureDirectoriesExist(tempPath);
 
             // Download the zip file
@@ -164,19 +166,54 @@ public class Updater : INotifyPropertyChanged{
                 ApplyUpdate(extractPath);
             } else{
                 Console.Error.WriteLine("Failed to get Update");
+                failed = true;
+                OnPropertyChanged(nameof(failed));
             }
         } catch (Exception e){
             Console.Error.WriteLine($"Failed to get Update: {e.Message}");
+            failed = true;
+            OnPropertyChanged(nameof(failed));
         }
     }
 
     private void ApplyUpdate(string updateFolder){
-        var ExecutableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
-        var currentPath = AppDomain.CurrentDomain.BaseDirectory;
-        var updaterPath = Path.Combine(currentPath, "Updater" + ExecutableExtension);
-        var arguments = $"\"{currentPath.Substring(0, currentPath.Length - 1)}\" \"{updateFolder}\"";
+        var executableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
+        var currentPath = Path.GetFullPath(AppContext.BaseDirectory);
+        var updaterPath = Path.Combine(currentPath, "Updater" + executableExtension);
 
-        System.Diagnostics.Process.Start(updaterPath, arguments);
-        Environment.Exit(0);
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)){
+            try{
+                var chmodProcess = new System.Diagnostics.ProcessStartInfo{
+                    FileName = "/bin/bash",
+                    Arguments = $"-c \"chmod +x '{updaterPath}'\"",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                System.Diagnostics.Process.Start(chmodProcess)?.WaitForExit();
+            } catch (Exception ex){
+                Console.Error.WriteLine($"Error setting execute permissions: {ex.Message}");
+                failed = true;
+                OnPropertyChanged(nameof(failed));
+                return;
+            }
+        }
+
+        try{
+            var startInfo = new System.Diagnostics.ProcessStartInfo{
+                FileName = updaterPath,
+                UseShellExecute = false
+            };
+            startInfo.ArgumentList.Add(currentPath);
+            startInfo.ArgumentList.Add(updateFolder);
+
+            System.Diagnostics.Process.Start(startInfo);
+            Environment.Exit(0);
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Error launching updater: {ex.Message}");
+            failed = true;
+            OnPropertyChanged(nameof(failed));
+        }
     }
 }

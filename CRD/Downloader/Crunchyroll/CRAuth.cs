@@ -18,8 +18,8 @@ public class CrAuth{
 
     private readonly string authorization = ApiUrls.authBasicMob;
     private readonly string userAgent = ApiUrls.MobileUserAgent;
-    private const string DeviceType = "OnePlus CPH2449";
-    private const string DeviceName = "CPH2449";
+    private readonly string deviceType = "OnePlus CPH2449";
+    private readonly string deviceName = "CPH2449";
 
     public async Task AuthAnonymous(){
         string uuid = Guid.NewGuid().ToString();
@@ -28,9 +28,12 @@ public class CrAuth{
             { "grant_type", "client_id" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_name", DeviceName },
-            { "device_type", DeviceType },
+            { "device_type", deviceType },
         };
+
+        if (!string.IsNullOrEmpty(deviceName)){
+            formData.Add("device_name", deviceName);
+        }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
@@ -78,14 +81,17 @@ public class CrAuth{
         string uuid = Guid.NewGuid().ToString();
 
         var formData = new Dictionary<string, string>{
-            { "username", data.Username }, // Replace with actual data
-            { "password", data.Password }, // Replace with actual data
+            { "username", data.Username }, 
+            { "password", data.Password }, 
             { "grant_type", "password" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_name", DeviceName },
-            { "device_type", DeviceType },
+            { "device_type", deviceType },
         };
+
+        if (!string.IsNullOrEmpty(deviceName)){
+            formData.Add("device_name", deviceName);
+        }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
@@ -192,9 +198,12 @@ public class CrAuth{
             { "scope", "offline_access" },
             { "device_id", uuid },
             { "grant_type", "refresh_token" },
-            { "device_name", DeviceName },
-            { "device_type", DeviceType },
+            { "device_type", deviceType },
         };
+
+        if (!string.IsNullOrEmpty(deviceName)){
+            formData.Add("device_name", deviceName);
+        }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
@@ -250,9 +259,12 @@ public class CrAuth{
             { "grant_type", "refresh_token" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_name", DeviceName },
-            { "device_type", DeviceType },
+            { "device_type", deviceType },
         };
+
+        if (!string.IsNullOrEmpty(deviceName)){
+            formData.Add("device_name", deviceName);
+        }
 
         var requestContent = new FormUrlEncodedContent(formData);
 

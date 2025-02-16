@@ -249,20 +249,20 @@ public static class ApiUrls{
     public static readonly string ApiBeta = "https://beta-api.crunchyroll.com";
     public static readonly string ApiN = "https://www.crunchyroll.com";
     public static readonly string Anilist = "https://graphql.anilist.co";
-    
-    public static readonly string Auth = ApiN + "/auth/v1/token";
-    public static readonly string Profile = ApiN + "/accounts/v1/me/profile";
-    public static readonly string CmsToken = ApiN + "/index/v2";
-    public static readonly string Search = ApiN + "/content/v2/discover/search";
-    public static readonly string Browse = ApiN + "/content/v2/discover/browse";
-    public static readonly string Cms = ApiN + "/content/v2/cms";
-    public static readonly string Content = ApiN + "/content/v2";
-    
+
+    public static string Auth => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/auth/v1/token";
+    public static string Profile => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/accounts/v1/me/profile";
+    public static string CmsToken => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/index/v2";
+    public static string Search => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/discover/search";
+    public static string Browse => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/discover/browse";
+    public static string Cms => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/cms";
+    public static string Content => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2";
+
+    public static string Subscription => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/subs/v3/subscriptions/";
+
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
-
-    public static readonly string Subscription = ApiN + "/subs/v3/subscriptions/";
 
     public static readonly string authBasic = "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6";
 

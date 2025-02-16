@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -175,7 +176,10 @@ public partial class ProgramManager : ObservableObject{
 
 
     private void CleanUpOldUpdater(){
-        string backupFilePath = Path.Combine(Directory.GetCurrentDirectory(), "Updater.exe.bak");
+        
+        var executableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
+        
+        string backupFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"Updater{executableExtension}.bak");
 
         if (File.Exists(backupFilePath)){
             try{

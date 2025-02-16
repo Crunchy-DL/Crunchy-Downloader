@@ -281,4 +281,18 @@ public class CrEpisode(){
 
         return complete;
     }
+    
+    public async Task MarkAsWatched(string episodeId){
+        
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true,false,null);
+
+        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+        if (!response.IsOk){
+            Console.Error.WriteLine($"Mark as watched for {episodeId} failed");
+        }
+        
+    }
+    
+    
 }

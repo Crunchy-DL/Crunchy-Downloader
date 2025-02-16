@@ -86,7 +86,7 @@ public class Merger{
                 args.Add($"-i \"{sub.value.File}\"");
                 metaData.Add($"-map {index}:s");
                 if (options.Defaults.Sub.Code == sub.value.Language.Code &&
-                    (CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == sub.value.Signs || CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns && !hasSignsSub)
+                    (options.DefaultSubSigns == sub.value.Signs || options.DefaultSubSigns && !hasSignsSub)
                     && sub.value.ClosedCaption == false){
                     metaData.Add($"-disposition:s:{sub.i} default");
                 } else{
@@ -168,9 +168,9 @@ public class Merger{
                 args.Add($"\"{Helpers.AddUncPrefixIfNeeded(vid.Path)}\"");
             }
         }
-        
+
         var sortedAudio = options.OnlyAudio
-            .OrderBy(sub => CrunchyrollManager.Instance.CrunOptions.DubLang.IndexOf(sub.Language.CrLocale) != -1 ? CrunchyrollManager.Instance.CrunOptions.DubLang.IndexOf(sub.Language.CrLocale) : int.MaxValue)
+            .OrderBy(sub => options.DubLangList.IndexOf(sub.Language.CrLocale) != -1 ? options.DubLangList.IndexOf(sub.Language.CrLocale) : int.MaxValue)
             .ToList();
 
         foreach (var aud in sortedAudio){
@@ -198,11 +198,12 @@ public class Merger{
             bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
 
             var sortedSubtitles = options.Subtitles
-                .OrderBy(sub => CrunchyrollManager.Instance.CrunOptions.DlSubs.IndexOf(sub.Language.CrLocale) != -1 ? CrunchyrollManager.Instance.CrunOptions.DlSubs.IndexOf(sub.Language.CrLocale) : int.MaxValue)
-                .ThenBy(sub => sub.Signs ? 0 : 1)  
-                .ThenBy(sub => sub.ClosedCaption ? 0 : 1)
+                .OrderBy(sub => options.SubLangList.IndexOf(sub.Language.CrLocale) != -1
+                    ? options.SubLangList.IndexOf(sub.Language.CrLocale)
+                    : int.MaxValue)
+                .ThenBy(sub => sub.ClosedCaption ? 2 : sub.Signs ? 1 : 0)
                 .ToList();
-            
+
             foreach (var subObj in sortedSubtitles){
                 bool isForced = false;
                 if (subObj.Delay.HasValue){
@@ -210,17 +211,17 @@ public class Merger{
                     args.Add($"--sync 0:{delay}");
                 }
 
-                string trackNameExtra = subObj.ClosedCaption == true ? $" {options.CcTag}" : "";
-                trackNameExtra += subObj.Signs == true ? " Signs" : "";
+                string trackNameExtra = subObj.ClosedCaption ? $" {options.CcTag}" : "";
+                trackNameExtra += subObj.Signs ? " Signs" : "";
 
                 string trackName = $"0:\"{(subObj.Language.Language ?? subObj.Language.Name) + trackNameExtra}\"";
                 args.Add($"--track-name {trackName}");
                 args.Add($"--language 0:\"{subObj.Language.Code}\"");
 
                 if (options.Defaults.Sub.Code == subObj.Language.Code &&
-                    (CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns == subObj.Signs || CrunchyrollManager.Instance.CrunOptions.DefaultSubSigns && !hasSignsSub) && subObj.ClosedCaption == false){
+                    (options.DefaultSubSigns == subObj.Signs || options.DefaultSubSigns && !hasSignsSub) && subObj.ClosedCaption == false){
                     args.Add("--default-track 0");
-                    if (CrunchyrollManager.Instance.CrunOptions.DefaultSubForcedDisplay){
+                    if (options.DefaultSubForcedDisplay){
                         args.Add("--forced-track 0:yes");
                         isForced = true;
                     }
@@ -228,11 +229,11 @@ public class Merger{
                     args.Add("--default-track 0:0");
                 }
 
-                if (subObj.ClosedCaption == true && CrunchyrollManager.Instance.CrunOptions.CcSubsMuxingFlag){
+                if (subObj.ClosedCaption && options.CcSubsMuxingFlag){
                     args.Add("--hearing-impaired-flag 0:yes");
                 }
 
-                if (subObj.Signs && CrunchyrollManager.Instance.CrunOptions.SignsSubsAsForced && !isForced){
+                if (subObj.Signs && options.SignsSubsAsForced && !isForced){
                     args.Add("--forced-track 0:yes");
                 }
 
@@ -302,7 +303,7 @@ public class Merger{
                 Console.Error.WriteLine("Failed to retrieve video durations");
                 return -100;
             }
-            
+
             var extractFramesBaseEnd = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDirEnd, baseVideoDurationTimeSpan.Value.TotalSeconds - 360, 360);
             var extractFramesCompareEnd = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDirEnd, compareVideoDurationTimeSpan.Value.TotalSeconds - 360, 360);
 
@@ -333,21 +334,20 @@ public class Merger{
                 Time = GetTimeFromFileName(fp, extractFramesCompareEnd.frameRate)
             }).ToList();
 
-            
-            
+
             // Calculate offsets
             var startOffset = SyncingHelper.CalculateOffset(baseFramesStart, compareFramesStart);
-            var endOffset = SyncingHelper.CalculateOffset(baseFramesEnd, compareFramesEnd,true);
+            var endOffset = SyncingHelper.CalculateOffset(baseFramesEnd, compareFramesEnd, true);
 
             var lengthDiff = (baseVideoDurationTimeSpan.Value.TotalMicroseconds - compareVideoDurationTimeSpan.Value.TotalMicroseconds) / 1000000;
-            
+
             endOffset += lengthDiff;
-            
+
             Console.WriteLine($"Start offset: {startOffset} seconds");
             Console.WriteLine($"End offset: {endOffset} seconds");
 
             CleanupDirectory(cleanupDir);
-            
+
             baseFramesStart.Clear();
             baseFramesEnd.Clear();
             compareFramesStart.Clear();
@@ -378,7 +378,7 @@ public class Merger{
     private static double GetTimeFromFileName(string fileName, double frameRate){
         var match = Regex.Match(Path.GetFileName(fileName), @"frame(\d+)");
         if (match.Success){
-            return int.Parse(match.Groups[1].Value) / frameRate; 
+            return int.Parse(match.Groups[1].Value) / frameRate;
         }
 
         return 0;
@@ -452,6 +452,8 @@ public class ParsedFont{
 }
 
 public class CrunchyMuxOptions{
+    public List<string> DubLangList{ get; set; } = new List<string>();
+    public List<string> SubLangList{ get; set; } = new List<string>();
     public string Output{ get; set; }
     public bool? SkipSubMux{ get; set; }
     public bool? KeepAllVideos{ get; set; }
@@ -468,9 +470,17 @@ public class CrunchyMuxOptions{
     public string CcTag{ get; set; }
     public bool SyncTiming{ get; set; }
     public bool DlVideoOnce{ get; set; }
+
+    public bool DefaultSubSigns{ get; set; }
+
+    public bool DefaultSubForcedDisplay{ get; set; }
+    public bool CcSubsMuxingFlag{ get; set; }
+    public bool SignsSubsAsForced{ get; set; }
 }
 
 public class MergerOptions{
+    public List<string> DubLangList{ get; set; } = new List<string>();
+    public List<string> SubLangList{ get; set; } = new List<string>();
     public List<MergerInput> OnlyVid{ get; set; } = new List<MergerInput>();
     public List<MergerInput> OnlyAudio{ get; set; } = new List<MergerInput>();
     public List<SubtitleInput> Subtitles{ get; set; } = new List<SubtitleInput>();
@@ -484,6 +494,10 @@ public class MergerOptions{
     public MuxOptions Options{ get; set; }
     public Defaults Defaults{ get; set; }
     public bool mp3{ get; set; }
+    public bool DefaultSubSigns{ get; set; }
+    public bool DefaultSubForcedDisplay{ get; set; }
+    public bool CcSubsMuxingFlag{ get; set; }
+    public bool SignsSubsAsForced{ get; set; }
     public List<MergerInput> Description{ get; set; } = new List<MergerInput>();
 }
 

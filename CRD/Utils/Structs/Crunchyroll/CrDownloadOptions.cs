@@ -46,7 +46,7 @@ public class CrDownloadOptions{
     public List<string> Override{ get; set; } =[];
 
     [JsonIgnore]
-    public string CcTag{ get; set; } = "";
+    public string CcTag{ get; set; } = "CC";
 
     [JsonIgnore]
     public bool Nocleanup{ get; set; }
@@ -114,6 +114,12 @@ public class CrDownloadOptions{
     #endregion
 
     #region Crunchyroll Settings
+
+    [JsonProperty("cr_mark_as_watched")]
+    public bool MarkAsWatched{ get; set; }
+
+    [JsonProperty("cr_beta_api")]
+    public bool UseCrBetaApi{ get; set; }
 
     [JsonProperty("hard_sub_lang")]
     public string Hslang{ get; set; } = "";
@@ -207,6 +213,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("keep_dubs_seperate")]
     public bool KeepDubsSeperate{ get; set; }
+
+    [JsonProperty("dl_first_available_dub")]
+    public bool DownloadFirstAvailableDub{ get; set; }
 
     [JsonProperty("mux_skip_muxing")]
     public bool SkipMuxing{ get; set; }
@@ -363,6 +372,9 @@ public class CrDownloadOptionsYaml{
 
 
     #region Crunchyroll Settings
+
+    [YamlIgnore]
+    public bool UseCrBetaApi{ get; set; }
 
     [YamlMember(Alias = "hard_sub_lang", ApplyNamingConventions = false)]
     public string Hslang{ get; set; } = "";
