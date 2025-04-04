@@ -5,6 +5,7 @@
         xmlns:vm="clr-namespace:CRD.ViewModels"
         xmlns:ui="using:FluentAvalonia.UI.Controls"
         xmlns:views="clr-namespace:CRD.Views"
+        xmlns:ui1="clr-namespace:CRD.Utils.UI"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="CRD.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
@@ -68,8 +69,8 @@
                                                IconSource="Library" />
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.FooterMenuItems>
-                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Update Available" Tag="UpdateAvailable"
-                                               IconSource="CloudDownload" Focusable="False" IsEnabled="{Binding ProgramManager.UpdateAvailable}" />
+                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Update" Tag="Update" Opacity="{Binding ProgramManager.OpacityButton}"
+                                               IconSource="CloudDownload" Focusable="False" /> 
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Account" Tag="Account"
                                                IconSource="Contact" />
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Settings" Tag="Settings"

@@ -126,7 +126,7 @@ public class CrunchyrollManager{
         options.CustomCalendar = true;
         options.DlVideoOnce = true;
         options.StreamEndpoint = "web/firefox";
-        options.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+        options.SubsAddScaledBorder = ScaledBorderAndShadowSelection.DontAdd;
         options.HistoryLang = DefaultLocale;
 
         options.BackgroundImageOpacity = 0.5;
@@ -177,7 +177,7 @@ public class CrunchyrollManager{
             optionsYaml.CustomCalendar = true;
             optionsYaml.DlVideoOnce = true;
             optionsYaml.StreamEndpoint = "web/firefox";
-            optionsYaml.SubsAddScaledBorder = ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
+            optionsYaml.SubsAddScaledBorder = ScaledBorderAndShadowSelection.DontAdd;
             optionsYaml.HistoryLang = DefaultLocale;
 
             optionsYaml.BackgroundImageOpacity = 0.5;
@@ -230,11 +230,40 @@ public class CrunchyrollManager{
         }
     }
 
+    public static async Task<string> GetBase64EncodedTokenAsync(){
+        string url = "https://static.crunchyroll.com/vilos-v2/web/vilos/js/bundle.js";
+
+        try{
+            string jsContent = await HttpClientReq.Instance.GetHttpClient().GetStringAsync(url);
+
+            Match match = Regex.Match(jsContent, @"prod=""([\w-]+:[\w-]+)""");
+
+            if (!match.Success)
+                throw new Exception("Token not found in JS file.");
+
+            string token = match.Groups[1].Value;
+
+            byte[] tokenBytes = Encoding.UTF8.GetBytes(token);
+            string base64Token = Convert.ToBase64String(tokenBytes);
+
+            return base64Token;
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Auth Token Fetch Error: {ex.Message}");
+            return "";
+        }
+    }
+
     public async Task Init(){
         if (CrunOptions.LogMode){
             CfgManager.EnableLogMode();
         } else{
             CfgManager.DisableLogMode();
+        }
+
+        var token = await GetBase64EncodedTokenAsync();
+
+        if (!string.IsNullOrEmpty(token)){
+            ApiUrls.authBasicMob = "Basic " + token;
         }
 
         var jsonFiles = Directory.Exists(CfgManager.PathENCODING_PRESETS_DIR) ? Directory.GetFiles(CfgManager.PathENCODING_PRESETS_DIR, "*.json") :[];
@@ -331,6 +360,7 @@ public class CrunchyrollManager{
 
         if (options.SkipMuxing == false){
             bool syncError = false;
+            bool muxError = false;
 
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = true,
@@ -341,6 +371,10 @@ public class CrunchyrollManager{
             };
 
             QueueManager.Instance.Queue.Refresh();
+
+            if (options.MuxFonts){
+                await FontsManager.Instance.GetFontsAsync();
+            }
 
             var fileNameAndPath = options.DownloadToTempFolder
                 ? Path.Combine(res.TempFolderPath ?? string.Empty, res.FileName ?? string.Empty)
@@ -357,6 +391,7 @@ public class CrunchyrollManager{
                             SkipSubMux = options.SkipSubsMux,
                             Output = fileNameAndPath,
                             Mp4 = options.Mp4,
+                            MuxFonts = options.MuxFonts,
                             VideoTitle = res.VideoTitle,
                             Novids = options.Novids,
                             NoCleanup = options.Nocleanup,
@@ -378,6 +413,10 @@ public class CrunchyrollManager{
 
                     if (result is{ merger: not null, isMuxed: true }){
                         mergers.Add(result.merger);
+                    }
+
+                    if (!result.isMuxed){
+                        muxError = true;
                     }
 
                     if (result.syncError){
@@ -417,6 +456,7 @@ public class CrunchyrollManager{
                         SkipSubMux = options.SkipSubsMux,
                         Output = fileNameAndPath,
                         Mp4 = options.Mp4,
+                        MuxFonts = options.MuxFonts,
                         VideoTitle = res.VideoTitle,
                         Novids = options.Novids,
                         NoCleanup = options.Nocleanup,
@@ -437,12 +477,13 @@ public class CrunchyrollManager{
                     fileNameAndPath);
 
                 syncError = result.syncError;
+                muxError = !result.isMuxed;
 
                 if (result is{ merger: not null, isMuxed: true }){
                     result.merger.CleanUp();
                 }
 
-                if (options.IsEncodeEnabled){
+                if (options.IsEncodeEnabled && !muxError){
                     data.DownloadProgress = new DownloadProgress(){
                         IsDownloading = true,
                         Percent = 100,
@@ -469,10 +510,10 @@ public class CrunchyrollManager{
                 Percent = 100,
                 Time = 0,
                 DownloadSpeed = 0,
-                Doing = "Done" + (syncError ? " - Couldn't sync dubs" : "")
+                Doing = (muxError ? "Muxing Failed" : "Done") + (syncError ? " - Couldn't sync dubs" : "")
             };
 
-            if (options.RemoveFinishedDownload && !syncError){
+            if (CrunOptions.RemoveFinishedDownload && !syncError){
                 QueueManager.Instance.Queue.Remove(data);
             }
         } else{
@@ -498,7 +539,7 @@ public class CrunchyrollManager{
                 Doing = "Done - Skipped muxing"
             };
 
-            if (options.RemoveFinishedDownload){
+            if (CrunOptions.RemoveFinishedDownload){
                 QueueManager.Instance.Queue.Remove(data);
             }
         }
@@ -513,6 +554,18 @@ public class CrunchyrollManager{
 
         if (options.MarkAsWatched && data.Data is{ Count: > 0 }){
             _ = CrEpisode.MarkAsWatched(data.Data.First().MediaId);
+        }
+
+        if (QueueManager.Instance.Queue.Count == 0){
+            try{
+                var audioPath = CrunOptions.DownloadFinishedSoundPath;
+                if (!string.IsNullOrEmpty(audioPath)){
+                    var player = new AudioPlayer();
+                    player.Play(audioPath);
+                }
+            } catch (Exception exception){
+                Console.Error.WriteLine("Failed to play sound: " + exception);
+            }
         }
 
         return true;
@@ -630,7 +683,7 @@ public class CrunchyrollManager{
 
         bool muxDesc = false;
         if (options.MuxDescription){
-            var descriptionPath = data.Where(a => a.Type == DownloadMediaType.Description).First().Path;
+            var descriptionPath = data.First(a => a.Type == DownloadMediaType.Description).Path;
             if (File.Exists(descriptionPath)){
                 muxDesc = true;
             } else{
@@ -649,7 +702,7 @@ public class CrunchyrollManager{
             Subtitles = data.Where(a => a.Type == DownloadMediaType.Subtitle).Select(a => new SubtitleInput
                 { File = a.Path ?? string.Empty, Language = a.Language, ClosedCaption = a.Cc ?? false, Signs = a.Signs ?? false, RelatedVideoDownloadMedia = a.RelatedVideoDownloadMedia }).ToList(),
             KeepAllVideos = options.KeepAllVideos,
-            Fonts = FontsManager.Instance.MakeFontsList(CfgManager.PathFONTS_DIR, subsList),
+            Fonts = options.MuxFonts ? FontsManager.Instance.MakeFontsList(CfgManager.PathFONTS_DIR, subsList) :[],
             Chapters = data.Where(a => a.Type == DownloadMediaType.Chapters).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
             VideoTitle = options.VideoTitle,
             Options = new MuxOptions(){
@@ -714,11 +767,9 @@ public class CrunchyrollManager{
         }
 
         if (!options.Mp4 && !muxToMp3){
-            await merger.Merge("mkvmerge", CfgManager.PathMKVMERGE);
-            isMuxed = true;
+            isMuxed = await merger.Merge("mkvmerge", CfgManager.PathMKVMERGE);
         } else{
-            await merger.Merge("ffmpeg", CfgManager.PathFFMPEG);
-            isMuxed = true;
+            isMuxed = await merger.Merge("ffmpeg", CfgManager.PathFFMPEG);
         }
 
         return (merger, isMuxed, syncError);
@@ -916,21 +967,43 @@ public class CrunchyrollManager{
                 var fetchPlaybackData = await FetchPlaybackData(options, mediaId, mediaGuid, data.Music);
 
                 if (!fetchPlaybackData.IsOk){
-                    if (!fetchPlaybackData.IsOk && fetchPlaybackData.error != string.Empty){
-                        var s = fetchPlaybackData.error;
-                        var error = StreamError.FromJson(s);
-                        if (error != null && error.IsTooManyActiveStreamsError()){
+                    var errorJson = fetchPlaybackData.error;
+                    if (!string.IsNullOrEmpty(errorJson)){
+                        var error = StreamError.FromJson(errorJson);
+
+                        if (error?.IsTooManyActiveStreamsError() == true){
                             MainWindow.Instance.ShowError("Too many active streams that couldn't be stopped");
                             return new DownloadResponse{
                                 Data = new List<DownloadedMedia>(),
                                 Error = true,
                                 FileName = "./unknown",
-                                ErrorText = "Too many active streams that couldn't be stopped\nClose open cruchyroll tabs in your browser"
+                                ErrorText = "Too many active streams that couldn't be stopped\nClose open Crunchyroll tabs in your browser"
+                            };
+                        }
+
+                        if (error?.Error.Contains("Account maturity rating is lower than video rating") == true ||
+                            errorJson.Contains("Account maturity rating is lower than video rating")){
+                            MainWindow.Instance.ShowError("Account maturity rating is lower than video rating\nChange it in the Crunchyroll account settings");
+                            return new DownloadResponse{
+                                Data = new List<DownloadedMedia>(),
+                                Error = true,
+                                FileName = "./unknown",
+                                ErrorText = "Account maturity rating is lower than video rating"
+                            };
+                        }
+
+                        if (!string.IsNullOrEmpty(error?.Error)){
+                            MainWindow.Instance.ShowError($"Couldn't get Playback Data\n{error.Error}");
+                            return new DownloadResponse{
+                                Data = new List<DownloadedMedia>(),
+                                Error = true,
+                                FileName = "./unknown",
+                                ErrorText = "Playback data not found"
                             };
                         }
                     }
 
-                    MainWindow.Instance.ShowError("Couldn't get Playback Data\nTry again later or else check logs and crunchyroll");
+                    MainWindow.Instance.ShowError("Couldn't get Playback Data\nTry again later or else check logs and Crunchyroll");
                     return new DownloadResponse{
                         Data = new List<DownloadedMedia>(),
                         Error = true,
@@ -938,6 +1011,7 @@ public class CrunchyrollManager{
                         ErrorText = "Playback data not found"
                     };
                 }
+
 
                 var pbData = fetchPlaybackData.pbData;
 
@@ -1815,7 +1889,11 @@ public class CrunchyrollManager{
                 }
 
                 if (data.DownloadSubs.Contains("all") || data.DownloadSubs.Contains(langItem.CrLocale)){
-                    var subsAssReq = HttpClientReq.CreateRequestMessage(subsItem.url ?? string.Empty, HttpMethod.Get, false, false, null);
+                    if (string.IsNullOrEmpty(subsItem.url)){
+                        continue;
+                    }
+
+                    var subsAssReq = HttpClientReq.CreateRequestMessage(subsItem.url, HttpMethod.Get, false, false, null);
 
                     var subsAssReqResponse = await HttpClientReq.Instance.SendHttpRequest(subsAssReq);
 
@@ -2025,7 +2103,7 @@ public class CrunchyrollManager{
             Data = new Dictionary<string, StreamDetails>()
         };
 
-        var playbackEndpoint = $"https://cr-play-service.prd.crunchyrollsvc.com/v1/{(music ? "music/" : "")}{mediaGuidId}/{options.StreamEndpoint}/play";
+        var playbackEndpoint = $"https://cr-play-service.prd.crunchyrollsvc.com/v2/{(music ? "music/" : "")}{mediaGuidId}/{options.StreamEndpoint}/play";
         var playbackRequestResponse = await SendPlaybackRequestAsync(playbackEndpoint);
 
         if (!playbackRequestResponse.IsOk){
@@ -2036,7 +2114,7 @@ public class CrunchyrollManager{
             temppbData = await ProcessPlaybackResponseAsync(playbackRequestResponse.ResponseContent, mediaId, mediaGuidId);
         } else{
             Console.WriteLine("Request Stream URLs FAILED! Attempting fallback");
-            playbackEndpoint = $"https://cr-play-service.prd.crunchyrollsvc.com/v1/{(music ? "music/" : "")}{mediaGuidId}/web/firefox/play";
+            playbackEndpoint = $"https://cr-play-service.prd.crunchyrollsvc.com/v2/{(music ? "music/" : "")}{mediaGuidId}/web/firefox/play";
             playbackRequestResponse = await SendPlaybackRequestAsync(playbackEndpoint);
 
             if (!playbackRequestResponse.IsOk){
@@ -2185,13 +2263,11 @@ public class CrunchyrollManager{
                 foreach (CrunchyChapter chapter in chapterData.Chapters){
                     if (chapter.start == null || chapter.end == null) continue;
 
-                    DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    TimeSpan startTime = TimeSpan.FromSeconds(chapter.start.Value);
+                    TimeSpan endTime = TimeSpan.FromSeconds(chapter.end.Value);
 
-                    DateTime startTime = epoch.AddSeconds(chapter.start.Value);
-                    DateTime endTime = epoch.AddSeconds(chapter.end.Value);
-
-                    string startFormatted = startTime.ToString("HH:mm:ss") + ".00";
-                    string endFormatted = endTime.ToString("HH:mm:ss") + ".00";
+                    string startFormatted = startTime.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture);
+                    string endFormatted = endTime.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture);
 
                     int chapterNumber = (compiledChapters.Count / 2) + 1;
                     if (chapter.type == "intro"){
@@ -2227,19 +2303,12 @@ public class CrunchyrollManager{
             if (showRequestResponse.IsOk){
                 CrunchyOldChapter chapterData = Helpers.Deserialize<CrunchyOldChapter>(showRequestResponse.ResponseContent, SettingsJsonSerializerSettings) ?? new CrunchyOldChapter();
 
-                DateTime epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                TimeSpan startTime = TimeSpan.FromSeconds(chapterData.startTime);
+                TimeSpan endTime = TimeSpan.FromSeconds(chapterData.endTime);
 
-                DateTime startTime = epoch.AddSeconds(chapterData.startTime);
-                DateTime endTime = epoch.AddSeconds(chapterData.endTime);
+                string startFormatted = startTime.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture);
+                string endFormatted = endTime.ToString(@"hh\:mm\:ss\.fff", CultureInfo.InvariantCulture);
 
-                string[] startTimeParts = startTime.ToString(CultureInfo.CurrentCulture).Split('.');
-                string[] endTimeParts = endTime.ToString(CultureInfo.CurrentCulture).Split('.');
-
-                string startMs = startTimeParts.Length > 1 ? startTimeParts[1] : "00";
-                string endMs = endTimeParts.Length > 1 ? endTimeParts[1] : "00";
-
-                string startFormatted = startTime.ToString("HH:mm:ss") + "." + startMs;
-                string endFormatted = endTime.ToString("HH:mm:ss") + "." + endMs;
 
                 int chapterNumber = (compiledChapters.Count / 2) + 1;
                 if (chapterData.startTime > 1){

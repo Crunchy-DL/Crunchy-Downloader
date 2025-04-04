@@ -64,6 +64,16 @@ public partial class AnilistSeries : ObservableObject{
     [JsonIgnore]
     [ObservableProperty]
     public bool _isInHistory;
+    
+    [ObservableProperty]
+    public bool _isExpanded;
+
+    [JsonIgnore]
+    public List<string> AudioLocales{ get; set; } =[];
+    
+    [JsonIgnore]
+    public List<string> SubtitleLocales{ get; set; } =[];
+    
 }
 
 public class Title{

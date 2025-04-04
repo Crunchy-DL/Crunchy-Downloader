@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,7 @@ using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.CustomList;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
@@ -24,18 +26,23 @@ public partial class DownloadsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _removeFinished;
-
+    
+    [ObservableProperty]
+    private QueueManager _queueManagerIns;
+    
     public DownloadsPageViewModel(){
-        QueueManager.Instance.UpdateDownloadListItems();
-        Items = QueueManager.Instance.DownloadItemModels;
+        QueueManagerIns = QueueManager.Instance;
+        QueueManagerIns.UpdateDownloadListItems();
+        Items = QueueManagerIns.DownloadItemModels;
         AutoDownload = CrunchyrollManager.Instance.CrunOptions.AutoDownload;
         RemoveFinished = CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload;
     }
+    
 
     partial void OnAutoDownloadChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.AutoDownload = value;
         if (value){
-            QueueManager.Instance.UpdateDownloadListItems();
+            QueueManagerIns.UpdateDownloadListItems();
         }
 
         CfgManager.WriteCrSettings();
@@ -48,8 +55,8 @@ public partial class DownloadsPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public void ClearQueue(){
-        var items = QueueManager.Instance.Queue;
-        QueueManager.Instance.Queue.Clear();
+        var items = QueueManagerIns.Queue;
+        QueueManagerIns.Queue.Clear();
         
         foreach (var crunchyEpMeta in items){
             if (!crunchyEpMeta.DownloadProgress.Done){
@@ -65,6 +72,20 @@ public partial class DownloadsPageViewModel : ViewModelBase{
             }
         }
     }
+    
+    [RelayCommand]
+    public void RetryQueue(){
+        var items = QueueManagerIns.Queue;
+
+        foreach (var crunchyEpMeta in items){
+            if (crunchyEpMeta.DownloadProgress.Error){
+                crunchyEpMeta.DownloadProgress = new();
+            }
+        }
+
+        QueueManagerIns.UpdateDownloadListItems();
+    }
+    
 }
 
 public partial class DownloadItemModel : INotifyPropertyChanged{

@@ -8,14 +8,18 @@ using System.Net.Http;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Utils.Files;
+using Newtonsoft.Json;
 
 namespace CRD.Utils.Updater;
 
 public class Updater : INotifyPropertyChanged{
     public double progress = 0;
     public bool failed = false;
+
+    public string latestVersion = "";
 
     #region Singelton
 
@@ -47,8 +51,10 @@ public class Updater : INotifyPropertyChanged{
     private string downloadUrl = "";
     private readonly string tempPath = Path.Combine(CfgManager.PathTEMP_DIR, "Update.zip");
     private readonly string extractPath = Path.Combine(CfgManager.PathTEMP_DIR, "ExtractedUpdate");
+    private readonly string changelogFilePath = Path.Combine(AppContext.BaseDirectory, "CHANGELOG.md");
 
-    private readonly string apiEndpoint = "https://api.github.com/repos/Crunchy-DL/Crunchy-Downloader/releases/latest";
+    private static readonly string apiEndpoint = "https://api.github.com/repos/Crunchy-DL/Crunchy-Downloader/releases";
+    private static readonly string apiEndpointLatest = apiEndpoint + "/latest";
 
     public async Task<bool> CheckForUpdatesAsync(){
         if (File.Exists(tempPath)){
@@ -86,18 +92,24 @@ public class Updater : INotifyPropertyChanged{
             handler.UseProxy = false;
             using (var client = new HttpClient(handler)){
                 client.DefaultRequestHeaders.Add("User-Agent", "C# App");
-                var response = await client.GetStringAsync(apiEndpoint);
-                var releaseInfo = Helpers.Deserialize<dynamic>(response, null);
+                var response = await client.GetStringAsync(apiEndpointLatest);
+                var releaseInfo = Helpers.Deserialize<GithubRelease>(response, null);
 
-                var latestVersion = releaseInfo.tag_name;
-
-                foreach (var asset in releaseInfo.assets){
-                    string assetName = (string)asset.name;
-                    if (assetName.Contains(platformName)){
-                        downloadUrl = asset.browser_download_url;
-                        break;
-                    }
+                if (releaseInfo == null){
+                    Console.WriteLine($"Failed to get Update info");
+                    return false;
                 }
+
+                latestVersion = releaseInfo.TagName;
+
+                if (releaseInfo.Assets != null)
+                    foreach (var asset in releaseInfo.Assets){
+                        string assetName = (string)asset.name;
+                        if (assetName.Contains(platformName)){
+                            downloadUrl = asset.browser_download_url;
+                            break;
+                        }
+                    }
 
                 if (string.IsNullOrEmpty(downloadUrl)){
                     Console.WriteLine($"Failed to get Update url for {platformName}");
@@ -109,10 +121,12 @@ public class Updater : INotifyPropertyChanged{
 
                 if (latestVersion != currentVersion){
                     Console.WriteLine("Update available: " + latestVersion + " - Current Version: " + currentVersion);
+                    _ = UpdateChangelogAsync();
                     return true;
                 }
 
                 Console.WriteLine("No updates available.");
+                _ = UpdateChangelogAsync();
                 return false;
             }
         } catch (Exception e){
@@ -121,6 +135,99 @@ public class Updater : INotifyPropertyChanged{
         }
     }
 
+    public async Task UpdateChangelogAsync(){
+        var client = HttpClientReq.Instance.GetHttpClient();
+        client.DefaultRequestHeaders.Add("User-Agent", "C# App");
+
+        string existingVersion = GetLatestVersionFromFile();
+
+        if (string.IsNullOrEmpty(existingVersion)){
+            existingVersion = "v1.0.0";
+        }
+        
+        if (string.IsNullOrEmpty(latestVersion)){
+            latestVersion = "v1.0.0";
+        }
+
+        if (existingVersion == latestVersion || Version.Parse(existingVersion.TrimStart('v')) >= Version.Parse(latestVersion.TrimStart('v'))){
+            Console.WriteLine("CHANGELOG.md is already up to date.");
+            return;
+        }
+
+        try{
+            string jsonResponse = await client.GetStringAsync(apiEndpoint); // + "?per_page=100&page=1"
+
+            var releases = Helpers.Deserialize<List<GithubRelease>>(jsonResponse, null);
+
+            // Filter out pre-releases
+            if (releases != null){
+                releases = releases.Where(r => !r.Prerelease).ToList();
+
+                if (releases.Count == 0){
+                    Console.WriteLine("No stable releases found.");
+                    return;
+                }
+
+                var newReleases = releases.TakeWhile(r => r.TagName != existingVersion).ToList();
+
+                if (newReleases.Count == 0){
+                    Console.WriteLine("CHANGELOG.md is already up to date.");
+                    return;
+                }
+
+                Console.WriteLine($"Adding {newReleases.Count} new releases to CHANGELOG.md...");
+
+                AppendNewReleasesToChangelog(newReleases);
+
+                Console.WriteLine("CHANGELOG.md updated successfully.");
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Error updating changelog: {ex.Message}");
+        }
+    }
+
+    private string GetLatestVersionFromFile(){
+        if (!File.Exists(changelogFilePath))
+            return string.Empty;
+
+        string[] lines = File.ReadAllLines(changelogFilePath);
+        foreach (string line in lines){
+            Match match = Regex.Match(line, @"## \[(v?\d+\.\d+\.\d+)\]");
+            if (match.Success)
+                return match.Groups[1].Value;
+        }
+
+        return string.Empty;
+    }
+
+    private void AppendNewReleasesToChangelog(List<GithubRelease> newReleases){
+        string existingContent = "";
+
+        if (File.Exists(changelogFilePath)){
+            existingContent = File.ReadAllText(changelogFilePath);
+        }
+
+        string newEntries = "";
+
+        foreach (var release in newReleases){
+            string version = release.TagName;
+            string date = release.PublishedAt.Split('T')[0];
+            string notes = RemoveUnwantedContent(release.Body);
+
+            newEntries += $"## [{version}] - {date}\n\n{notes}\n\n---\n\n";
+        }
+
+
+        if (string.IsNullOrWhiteSpace(existingContent)){
+            File.WriteAllText(changelogFilePath, "# Changelog\n\n" + newEntries);
+        } else{
+            File.WriteAllText(changelogFilePath, "# Changelog\n\n" + newEntries + existingContent.Substring("# Changelog\n\n".Length));
+        }
+    }
+
+    private static string RemoveUnwantedContent(string notes){
+        return Regex.Split(notes, @"##\r\n\r\n### Linux/MacOS Builds", RegexOptions.IgnoreCase)[0].Trim();
+    }
 
     public async Task DownloadAndUpdateAsync(){
         try{
@@ -215,5 +322,18 @@ public class Updater : INotifyPropertyChanged{
             failed = true;
             OnPropertyChanged(nameof(failed));
         }
+    }
+
+    public class GithubRelease{
+        [JsonProperty("tag_name")]
+        public string TagName{ get; set; } = string.Empty;
+
+        public dynamic? Assets{ get; set; }
+        public string Body{ get; set; } = string.Empty;
+
+        [JsonProperty("published_at")]
+        public string PublishedAt{ get; set; } = string.Empty;
+
+        public bool Prerelease{ get; set; }
     }
 }

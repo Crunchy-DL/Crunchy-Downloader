@@ -237,7 +237,11 @@ public class Helpers{
 
                 process.OutputDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
-                        Console.WriteLine(e.Data);
+                        if (e.Data.StartsWith("Error:")){
+                            Console.Error.WriteLine(e.Data);
+                        } else{
+                            Console.WriteLine(e.Data); 
+                        }
                     }
                 };
 

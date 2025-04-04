@@ -5,9 +5,15 @@
              xmlns:vm="clr-namespace:CRD.ViewModels"
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              xmlns:structs="clr-namespace:CRD.Utils.Structs"
+             xmlns:ui="clr-namespace:CRD.Utils.UI"
              x:DataType="vm:UpcomingPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.UpcomingPageView">
+
+    <UserControl.Resources>
+        <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
+        <ui:UiListHasElementsConverter x:Key="UiListHasElementsConverter" />
+    </UserControl.Resources>
 
     <Grid>
 
@@ -140,6 +146,141 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
+
+                        <Expander Grid.Column="0" Grid.ColumnSpan="2" ExpandDirection="Right" IsExpanded="{Binding IsExpanded}">
+                            <Expander.Styles>
+                                <Style Selector="Expander:not(:expanded) /template/ ToggleButton#ExpanderHeader">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                </Style>
+                                <Style Selector="Expander:expanded /template/ ToggleButton#ExpanderHeader">
+                                    <Setter Property="Background" Value="Transparent" />
+                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ToggleButton:pointerover /template/ Border#ExpandCollapseChevronBorder">
+                                    <Setter Property="Background" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ToggleButton:not(:checked) /template/ TextBlock#ExpandCollapseChevron">
+                                    <Setter Property="Foreground" Value="Transparent" />
+                                </Style>
+                                <Style Selector="ToggleButton:checked /template/ TextBlock#ExpandCollapseChevron">
+                                    <Setter Property="Foreground" Value="Transparent" />
+                                </Style>
+                            </Expander.Styles>
+                            <Expander.Header>
+                                <Border Width="117" Height="315" />
+                            </Expander.Header>
+                            <Expander.Content>
+
+                                <StackPanel>
+
+                                    <ScrollViewer MaxHeight="265" MinHeight="265" PointerWheelChanged="ScrollViewer_PointerWheelChanged" Margin="0 0 0 5">
+                                        <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
+                                                   Text="{Binding Description}"
+                                                   TextWrapping="Wrap"
+                                                   Width="185"
+                                                   FontSize="16"
+                                                   Margin="5">
+                                        </TextBlock>
+                                    </ScrollViewer>
+
+
+                                    <Grid MaxWidth="185" IsVisible="{Binding AudioLocales, Converter={StaticResource UiListHasElementsConverter}}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Dubs -->
+                                        <TextBlock Grid.Row="0" Grid.Column="0"
+                                                   FontStyle="Italic"
+                                                   FontSize="12"
+                                                   Opacity="0.8"
+                                                   Text="Dubs: " />
+                                        <TextBlock Grid.Row="0" Grid.Column="1"
+                                                   FontStyle="Italic"
+                                                   FontSize="12"
+                                                   Opacity="0.8"
+                                                   Text="{Binding AudioLocales, Converter={StaticResource UiListToStringConverter}}"
+                                                   TextWrapping="NoWrap" />
+
+                                        <!-- Subs -->
+                                        <TextBlock Grid.Row="1" Grid.Column="0"
+                                                   FontStyle="Italic"
+                                                   FontSize="12"
+                                                   Opacity="0.8"
+                                                   Text="Subs: " />
+                                        <TextBlock Grid.Row="1" Grid.Column="1"
+                                                   FontStyle="Italic"
+                                                   FontSize="12"
+                                                   Opacity="0.8"
+                                                   Text="{Binding SubtitleLocales, Converter={StaticResource UiListToStringConverter}}"
+                                                   TextWrapping="NoWrap" />
+
+                                        <ToolTip.Tip>
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <!-- Dubs -->
+                                                <TextBlock Grid.Row="0" Grid.Column="0"
+                                                           FontSize="17"
+                                                           Text="Dubs: " />
+                                                <TextBlock Grid.Row="0" Grid.Column="1"
+                                                           FontSize="17"
+                                                           Text="{Binding AudioLocales, Converter={StaticResource UiListToStringConverter}}"
+                                                           TextWrapping="Wrap" />
+
+                                                <!-- Subs -->
+                                                <TextBlock Grid.Row="1" Grid.Column="0"
+                                                           FontSize="17"
+                                                           Text="Subs: " />
+                                                <TextBlock Grid.Row="1" Grid.Column="1"
+                                                           FontSize="17"
+                                                           Text="{Binding SubtitleLocales, Converter={StaticResource UiListToStringConverter}}"
+                                                           TextWrapping="Wrap" />
+
+
+                                            </Grid>
+                                        </ToolTip.Tip>
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Trailer" Margin=" 0 0 5 0"
+                                                Command="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).OpenTrailer}"
+                                                CommandParameter="{Binding}">
+                                        </Button>
+                                        <StackPanel IsVisible="{Binding HasCrID}">
+                                            <Button HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                    IsVisible="{Binding !IsInHistory}"
+                                                    Command="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).AddToHistory}"
+                                                    CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <controls:SymbolIcon Symbol="Library" FontSize="20" />
+                                                    <controls:SymbolIcon Symbol="Add" FontSize="20" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+
+
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander.Content>
+                        </Expander>
+
+
                         <StackPanel Grid.Column="0" Orientation="Vertical" HorizontalAlignment="Center"
                                     Width="185"
                                     Height="315"
@@ -187,65 +328,6 @@
                             </TextBlock>
 
                         </StackPanel>
-
-                        <Expander Grid.Column="0" Grid.ColumnSpan="2" ExpandDirection="Right">
-                            <Expander.Styles>
-                                <Style Selector="Expander:not(:expanded) /template/ ToggleButton#ExpanderHeader">
-                                    <Setter Property="Background" Value="Transparent" />
-                                    <Setter Property="BorderBrush" Value="Transparent" />
-                                </Style>
-                                <Style Selector="Expander:expanded /template/ ToggleButton#ExpanderHeader">
-                                    <Setter Property="Background" Value="Transparent" />
-                                    <Setter Property="BorderBrush" Value="Transparent" />
-                                </Style>
-                                <Style Selector="ToggleButton:pointerover /template/ Border#ExpandCollapseChevronBorder">
-                                    <Setter Property="Background" Value="Transparent" />
-                                </Style>
-                                <Style Selector="ToggleButton:not(:checked) /template/ TextBlock#ExpandCollapseChevron">
-                                    <Setter Property="Foreground" Value="Transparent" />
-                                </Style>
-                                <Style Selector="ToggleButton:checked /template/ TextBlock#ExpandCollapseChevron">
-                                    <Setter Property="Foreground" Value="Transparent" />
-                                </Style>
-                            </Expander.Styles>
-                            <Expander.Header>
-                                <Border Width="117" Height="315" />
-                            </Expander.Header>
-                            <Expander.Content>
-
-                                <StackPanel>
-
-                                    <ScrollViewer MaxHeight="265" MinHeight="265" PointerWheelChanged="ScrollViewer_PointerWheelChanged" Margin="0 0 0 5">
-                                        <TextBlock HorizontalAlignment="Center" TextAlignment="Center"
-                                                   Text="{Binding Description}"
-                                                   TextWrapping="Wrap"
-                                                   Width="185"
-                                                   FontSize="16"
-                                                   Margin="5">
-                                        </TextBlock>
-                                    </ScrollViewer>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Trailer" Margin=" 0 0 5 0"
-                                                Command="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).OpenTrailer}"
-                                                CommandParameter="{Binding}">
-                                        </Button>
-                                        <StackPanel IsVisible="{Binding HasCrID}">
-                                            <Button HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                    IsVisible="{Binding !IsInHistory}"
-                                                    Command="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).AddToHistory}"
-                                                    CommandParameter="{Binding}">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <controls:SymbolIcon Symbol="Library" FontSize="20" />
-                                                    <controls:SymbolIcon Symbol="Add" FontSize="20" />
-                                                </StackPanel>
-                                            </Button>
-                                        </StackPanel>
-
-
-                                    </StackPanel>
-                                </StackPanel>
-                            </Expander.Content>
-                        </Expander>
 
                     </Grid>
 

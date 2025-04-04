@@ -454,7 +454,7 @@ public class CrSeries{
 
         query["q"] = searchString;
         query["n"] = "6";
-        query["type"] = "top_results";
+        query["type"] = "series";
 
         var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Search}", HttpMethod.Get, true, false, query);
 
@@ -525,4 +525,29 @@ public class CrSeries{
 
         return complete;
     }
+    
+    public async Task<CrBrowseSeriesBase?> GetSeasonalSeries(string season, string year, string? crLocale){
+        NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+        }
+        
+        query["seasonal_tag"] = season.ToLower() + "-" + year;
+        query["n"] = "100";
+
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, false, query);
+
+        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+        if (!response.IsOk){
+            Console.Error.WriteLine("Series Request Failed");
+            return null;
+        }
+
+        CrBrowseSeriesBase? series = Helpers.Deserialize<CrBrowseSeriesBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+
+        return series;
+    }
+    
 }

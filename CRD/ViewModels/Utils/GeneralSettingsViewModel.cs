@@ -38,10 +38,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _historyIncludeCrArtists;
-    
+
     [ObservableProperty]
     private bool _historyAddSpecials;
-    
+
     [ObservableProperty]
     private bool _historySkipUnmonitored;
 
@@ -194,6 +194,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     private string _tempDownloadDirPath;
 
     [ObservableProperty]
+    private bool _downloadFinishedPlaySound;
+
+    [ObservableProperty]
+    private string _downloadFinishedSoundPath;
+
+    [ObservableProperty]
     private string _currentIp = "";
 
     private readonly FluentAvaloniaTheme _faTheme;
@@ -208,7 +214,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         _currentVersion = $"{version?.Major}.{version?.Minor}.{version?.Build}";
 
-        _faTheme = App.Current.Styles[0] as FluentAvaloniaTheme;
+        _faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme ??[];
 
         if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
             CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
@@ -221,6 +227,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         BackgroundImageBlurRadius = options.BackgroundImageBlurRadius;
         BackgroundImageOpacity = options.BackgroundImageOpacity;
         BackgroundImagePath = options.BackgroundImagePath ?? string.Empty;
+
+        DownloadFinishedSoundPath = options.DownloadFinishedSoundPath ?? string.Empty;
+        DownloadFinishedPlaySound = options.DownloadFinishedPlaySound;
+
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
         TempDownloadDirPath = string.IsNullOrEmpty(options.DownloadTempDirPath) ? CfgManager.PathTEMP_DIR : options.DownloadTempDirPath;
 
@@ -268,6 +278,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         if (!settingsLoaded){
             return;
         }
+
+        CrunchyrollManager.Instance.CrunOptions.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
 
         CrunchyrollManager.Instance.CrunOptions.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
         CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);
@@ -371,13 +383,16 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         if (result.Count > 0){
             var selectedFolder = result[0];
-            Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
-            pathSetter(selectedFolder.Path.LocalPath);
+            var folderPath = selectedFolder.Path.IsAbsoluteUri ? selectedFolder.Path.LocalPath : selectedFolder.Path.ToString();
+            Console.WriteLine($"Selected folder: {folderPath}");
+            pathSetter(folderPath);
             var finalPath = string.IsNullOrEmpty(pathGetter()) ? defaultPath : pathGetter();
             pathSetter(finalPath);
             CfgManager.WriteCrSettings();
         }
     }
+
+    #region Background Image
 
     [RelayCommand]
     public void ClearBackgroundImagePath(){
@@ -388,7 +403,13 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task OpenImageFileDialogAsyncInternalBackgroundImage(){
-        await OpenImageFileDialogAsyncInternal(
+        await OpenFileDialogAsyncInternal(
+            title: "Select Image File",
+            fileTypes: new List<FilePickerFileType>{
+                new("Image Files"){
+                    Patterns = new[]{ "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif" }
+                }
+            },
             pathSetter: (path) => {
                 CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath = path;
                 BackgroundImagePath = path;
@@ -399,20 +420,51 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         );
     }
 
-    private async Task OpenImageFileDialogAsyncInternal(Action<string> pathSetter, Func<string> pathGetter, string defaultPath){
+    #endregion
+
+
+    #region Download Finished Sound
+
+    [RelayCommand]
+    public void ClearFinishedSoundPath(){
+        CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath = string.Empty;
+        DownloadFinishedSoundPath = string.Empty;
+    }
+
+    [RelayCommand]
+    public async Task OpenImageFileDialogAsyncInternalFinishedSound(){
+        await OpenFileDialogAsyncInternal(
+            title: "Select Audio File",
+            fileTypes: new List<FilePickerFileType>{
+                new("Audio Files"){
+                    Patterns = new[]{ "*.mp3", "*.wav", "*.ogg", "*.flac", "*.aac" }
+                }
+            },
+            pathSetter: (path) => {
+                CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath = path;
+                DownloadFinishedSoundPath = path;
+            },
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath,
+            defaultPath: string.Empty
+        );
+    }
+
+    #endregion
+
+    private async Task OpenFileDialogAsyncInternal(
+        string title,
+        List<FilePickerFileType> fileTypes,
+        Action<string> pathSetter,
+        Func<string> pathGetter,
+        string defaultPath){
         if (_storageProvider == null){
             Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
             throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
         }
 
-        // Open the file picker dialog with only image file types allowed
         var result = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{
-            Title = "Select Image File",
-            FileTypeFilter = new List<FilePickerFileType>{
-                new FilePickerFileType("Image Files"){
-                    Patterns = new[]{ "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif" }
-                }
-            },
+            Title = title,
+            FileTypeFilter = fileTypes,
             AllowMultiple = false
         });
 
@@ -425,6 +477,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             CfgManager.WriteCrSettings();
         }
     }
+
 
     partial void OnCurrentAppThemeChanged(ComboBoxItem? value){
         if (value?.Content?.ToString() == "System"){

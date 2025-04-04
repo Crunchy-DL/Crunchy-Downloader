@@ -36,6 +36,13 @@ public class CrDownloadOptions{
     [JsonProperty("background_image_path")]
     public string? BackgroundImagePath{ get; set; }
 
+    [JsonProperty("download_finished_play_sound")]
+    public bool DownloadFinishedPlaySound{ get; set; }
+    
+    [JsonProperty("download_finished_sound_path")]
+    public string? DownloadFinishedSoundPath{ get; set; }
+    
+    
     [JsonProperty("background_image_opacity")]
     public double BackgroundImageOpacity{ get; set; }
 
@@ -180,6 +187,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_mp4")]
     public bool Mp4{ get; set; }
+    
+    [JsonProperty("mux_fonts")]
+    public bool MuxFonts{ get; set; }
 
     [JsonProperty("mux_video_title")]
     public string? VideoTitle{ get; set; }
@@ -369,8 +379,7 @@ public class CrDownloadOptionsYaml{
     public string? ProxyPassword{ get; set; }
 
     #endregion
-
-
+    
     #region Crunchyroll Settings
 
     [YamlIgnore]

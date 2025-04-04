@@ -453,6 +453,8 @@ public class HlsDownloader{
                     Console.WriteLine($"\tError: {ex.Message}");
                     if (attempt == retryCount)
                         throw; // rethrow after last retry
+                    
+                    await Task.Delay(_data.WaitTime);
                 }
             }
         }

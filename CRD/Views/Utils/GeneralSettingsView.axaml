@@ -14,7 +14,7 @@
     </Design.DataContext>
 
 
-    <ScrollViewer Padding="20 20 20 0" >
+    <ScrollViewer Padding="20 20 20 0">
         <StackPanel Spacing="8">
 
             <controls:SettingsExpander Header="History"
@@ -38,19 +38,19 @@
                         <CheckBox IsChecked="{Binding HistoryIncludeCrArtists}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="History Add Specials" Description="Add specials to the queue if they weren't downloaded before">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryAddSpecials}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="History Missing/New Count from Sonarr" Description="The missing count (number in the orange corner) will count the episodes missing from sonarr">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryCountSonarr}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="History Skip Sonarr Unmonitored" Description="Skips unmonitored sonarr episodes when counting Missing/New">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistorySkipUnmonitored}"> </CheckBox>
@@ -145,6 +145,96 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+
+                <controls:SettingsExpanderItem Content="Play completion sound" Description="Enables a notification sound to be played when all downloads have finished">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                <TextBlock IsVisible="{Binding DownloadFinishedPlaySound}"
+                                           Text="{Binding DownloadFinishedSoundPath, Mode=OneWay}"
+                                           FontSize="15"
+                                           Opacity="0.8"
+                                           TextWrapping="NoWrap"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center" />
+
+                                <Button IsVisible="{Binding DownloadFinishedPlaySound}"
+                                        Command="{Binding OpenImageFileDialogAsyncInternalFinishedSound}"
+                                        VerticalAlignment="Center"
+                                        FontStyle="Italic">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Select Finished Sound" FontSize="15" />
+                                    </ToolTip.Tip>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button IsVisible="{Binding DownloadFinishedPlaySound}"
+                                        Command="{Binding ClearFinishedSoundPath}"
+                                        VerticalAlignment="Center"
+                                        FontStyle="Italic">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Remove Finished Sound Path" FontSize="15" />
+                                    </ToolTip.Tip>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <controls:SymbolIcon Symbol="Clear" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+
+                                <CheckBox IsChecked="{Binding DownloadFinishedPlaySound}"> </CheckBox>
+                            </StackPanel>
+
+                            <!-- <Grid HorizontalAlignment="Right" Margin="0 5 0 0"> -->
+                            <!--     <Grid.ColumnDefinitions> -->
+                            <!--         <ColumnDefinition Width="Auto" /> -->
+                            <!--         <ColumnDefinition Width="150" /> -->
+                            <!--     </Grid.ColumnDefinitions> -->
+                            <!-- -->
+                            <!--     <Grid.RowDefinitions> -->
+                            <!--         <RowDefinition Height="Auto" /> -->
+                            <!--         <RowDefinition Height="Auto" /> -->
+                            <!--     </Grid.RowDefinitions> -->
+                            <!-- -->
+                            <!--     <TextBlock Text="Opacity" -->
+                            <!--                FontSize="15" -->
+                            <!--                Opacity="0.8" -->
+                            <!--                VerticalAlignment="Center" -->
+                            <!--                HorizontalAlignment="Right" -->
+                            <!--                Margin="0 0 5 10" -->
+                            <!--                Grid.Row="0" Grid.Column="0" /> -->
+                            <!--     <controls:NumberBox Minimum="0" Maximum="1" -->
+                            <!--                         SmallChange="0.05" -->
+                            <!--                         LargeChange="0.1" -->
+                            <!--                         SimpleNumberFormat="F2" -->
+                            <!--                         Value="{Binding BackgroundImageOpacity}" -->
+                            <!--                         SpinButtonPlacementMode="Inline" -->
+                            <!--                         HorizontalAlignment="Stretch" -->
+                            <!--                         Margin="0 0 0 10" -->
+                            <!--                         Grid.Row="0" Grid.Column="1" /> -->
+                            <!-- -->
+                            <!--     <TextBlock Text="Blur Radius" -->
+                            <!--                FontSize="15" -->
+                            <!--                Opacity="0.8" -->
+                            <!--                VerticalAlignment="Center" -->
+                            <!--                HorizontalAlignment="Right" -->
+                            <!--                Margin="0 0 5 0" -->
+                            <!--                Grid.Row="1" Grid.Column="0" /> -->
+                            <!--     <controls:NumberBox Minimum="0" Maximum="40" -->
+                            <!--                         SmallChange="1" -->
+                            <!--                         LargeChange="5" -->
+                            <!--                         SimpleNumberFormat="F0" -->
+                            <!--                         Value="{Binding BackgroundImageBlurRadius}" -->
+                            <!--                         SpinButtonPlacementMode="Inline" -->
+                            <!--                         HorizontalAlignment="Stretch" -->
+                            <!--                         Grid.Row="1" Grid.Column="1" /> -->
+                            <!-- </Grid> -->
+                        </StackPanel>
+
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+
                 <controls:SettingsExpander.Footer>
                 </controls:SettingsExpander.Footer>
             </controls:SettingsExpander>
@@ -201,13 +291,13 @@
                         <CheckBox IsChecked="{Binding ProxyEnabled}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Use Socks5 Proxy">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding ProxySocks}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
 
                 <controls:SettingsExpanderItem Content="Host">
                     <controls:SettingsExpanderItem.Footer>
@@ -225,7 +315,7 @@
 
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Username">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox HorizontalAlignment="Left" MinWidth="250"
@@ -233,7 +323,7 @@
 
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Password">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox HorizontalAlignment="Left" MinWidth="250"

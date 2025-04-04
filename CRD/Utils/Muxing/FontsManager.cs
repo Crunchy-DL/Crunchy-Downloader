@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
+using CRD.Views;
 
 namespace CRD.Utils.Muxing;
 
@@ -65,7 +66,7 @@ public class FontsManager{
             var fontLoc = Path.Combine(CfgManager.PathFONTS_DIR, font);
 
             if (File.Exists(fontLoc) && new FileInfo(fontLoc).Length != 0){
-                Console.WriteLine($"{font} already downloaded!");
+                // Console.WriteLine($"{font} already downloaded!");
             } else{
                 var fontFolder = Path.GetDirectoryName(fontLoc);
                 if (File.Exists(fontLoc) && new FileInfo(fontLoc).Length == 0){
@@ -82,19 +83,18 @@ public class FontsManager{
 
                 var fontUrl = root + font;
 
-                using (var httpClient = HttpClientReq.Instance.GetHttpClient()){
-                    try{
-                        var response = await httpClient.GetAsync(fontUrl);
-                        if (response.IsSuccessStatusCode){
-                            var fontData = await response.Content.ReadAsByteArrayAsync();
-                            await File.WriteAllBytesAsync(fontLoc, fontData);
-                            Console.WriteLine($"Downloaded: {font}");
-                        } else{
-                            Console.Error.WriteLine($"Failed to download: {font}");
-                        }
-                    } catch (Exception e){
-                        Console.Error.WriteLine($"Error downloading {font}: {e.Message}");
+                var httpClient = HttpClientReq.Instance.GetHttpClient();
+                try{
+                    var response = await httpClient.GetAsync(fontUrl);
+                    if (response.IsSuccessStatusCode){
+                        var fontData = await response.Content.ReadAsByteArrayAsync();
+                        await File.WriteAllBytesAsync(fontLoc, fontData);
+                        Console.WriteLine($"Downloaded: {font}");
+                    } else{
+                        Console.Error.WriteLine($"Failed to download: {font}");
                     }
+                } catch (Exception e){
+                    Console.Error.WriteLine($"Error downloading {font}: {e.Message}");
                 }
             }
         }
@@ -171,6 +171,8 @@ public class FontsManager{
             Console.WriteLine((isNstr ? "\n" : "") + "Required fonts: {0} (Total: {1})", string.Join(", ", fontsNameList), fontsNameList.Count);
         }
 
+        List<string> missingFonts = new List<string>();
+
         foreach (var f in fontsNameList){
             if (Fonts.TryGetValue(f.Key, out var fontFiles)){
                 foreach (var fontFile in fontFiles){
@@ -180,7 +182,13 @@ public class FontsManager{
                         fontsList.Add(new ParsedFont{ Name = fontFile, Path = fontPath, Mime = mime });
                     }
                 }
+            } else{
+                missingFonts.Add(f.Key);
             }
+        }
+
+        if (missingFonts.Count > 0){
+            MainWindow.Instance.ShowError($"Missing Fonts: \n{string.Join(", ", fontsNameList)}");
         }
 
         return fontsList;

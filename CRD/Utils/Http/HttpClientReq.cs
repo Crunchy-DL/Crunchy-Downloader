@@ -216,6 +216,11 @@ public class HttpClientReq{
 
 
     public static HttpRequestMessage CreateRequestMessage(string uri, HttpMethod requestMethod, bool authHeader, bool disableDrmHeader, NameValueCollection? query){
+        if (string.IsNullOrEmpty(uri)){
+            Console.Error.WriteLine($" Request URI is empty");
+            return new HttpRequestMessage(HttpMethod.Get, "about:blank");
+        }
+        
         UriBuilder uriBuilder = new UriBuilder(uri);
 
         if (query != null){
@@ -263,12 +268,8 @@ public static class ApiUrls{
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
+    
+    public static string authBasicMob = "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=";
 
-    public static readonly string authBasic = "Basic bm9haWhkZXZtXzZpeWcwYThsMHE6";
-
-    public static readonly string authBasicMob = "Basic ZG1yeWZlc2NkYm90dWJldW56NXo6NU45aThPV2cyVmtNcm1oekNfNUNXekRLOG55SXo0QU0=";
-    public static readonly string authBasicSwitch = "Basic dC1rZGdwMmg4YzNqdWI4Zm4wZnE6eWZMRGZNZnJZdktYaDRKWFMxTEVJMmNDcXUxdjVXYW4=";
-
-    public static readonly string ChromeUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36";
-    public static readonly string MobileUserAgent = "Crunchyroll/3.74.2 Android/14 okhttp/4.12.0";
+    public static readonly string MobileUserAgent = "Crunchyroll/3.78.3 Android/15 okhttp/4.12.0";
 }

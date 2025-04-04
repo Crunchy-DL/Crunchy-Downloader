@@ -39,39 +39,55 @@ public class Widevine{
     public Widevine(){
         try{
             if (Directory.Exists(CfgManager.PathWIDEVINE_DIR)){
-                var files = Directory.GetFiles(CfgManager.PathWIDEVINE_DIR);
-
-                foreach (var file in files){
+                foreach (var file in Directory.EnumerateFiles(CfgManager.PathWIDEVINE_DIR)){
                     var fileInfo = new FileInfo(file);
-                    if (fileInfo.Length < 1024 * 8 && !fileInfo.Attributes.HasFlag(FileAttributes.Directory)){
-                        string fileContents = File.ReadAllText(file, Encoding.UTF8);
-                        if (fileContents.Contains("-BEGIN RSA PRIVATE KEY-") || fileContents.Contains("-BEGIN PRIVATE KEY-")){
-                            privateKey = File.ReadAllBytes(file);
-                        }
+                    
+                    if (fileInfo.Length >= 1024 * 8 || fileInfo.Attributes.HasFlag(FileAttributes.Directory))
+                        continue;
+                    
+                    string fileContents = File.ReadAllText(file, Encoding.UTF8);
 
-                        if (fileContents.Contains("widevine_cdm_version")){
-                            identifierBlob = File.ReadAllBytes(file);
-                        }
+                    if (IsPrivateKey(fileContents)){
+                        privateKey = File.ReadAllBytes(file);
+                    } else if (IsWidevineIdentifierBlob(fileContents)){
+                        identifierBlob = File.ReadAllBytes(file);
                     }
                 }
             }
 
-
-            if (privateKey.Length != 0 && identifierBlob.Length != 0){
+            if (privateKey?.Length > 0 && identifierBlob?.Length > 0){
                 canDecrypt = true;
-            } else if (privateKey.Length == 0){
-                Console.Error.WriteLine("Private key missing");
+            } else{
                 canDecrypt = false;
-            } else if (identifierBlob.Length == 0){
-                Console.Error.WriteLine("Identifier blob missing");
-                canDecrypt = false;
+                if (privateKey == null || privateKey.Length == 0){
+                    Console.Error.WriteLine("Private key missing");
+                }
+
+                if (identifierBlob == null || identifierBlob.Length == 0){
+                    Console.Error.WriteLine("Identifier blob missing");
+                }
             }
-        } catch (Exception e){
-            Console.Error.WriteLine("Widevine: " + e);
+        } catch (IOException ioEx){
+            Console.Error.WriteLine("I/O error accessing Widevine files: " + ioEx);
+            canDecrypt = false;
+        } catch (UnauthorizedAccessException uaEx){
+            Console.Error.WriteLine("Permission error accessing Widevine files: " + uaEx);
+            canDecrypt = false;
+        } catch (Exception ex){
+            Console.Error.WriteLine("Unexpected Widevine error: " + ex);
             canDecrypt = false;
         }
 
         Console.WriteLine($"CDM available: {canDecrypt}");
+    }
+
+    private bool IsPrivateKey(string content){
+        return content.Contains("-BEGIN RSA PRIVATE KEY-", StringComparison.Ordinal) ||
+               content.Contains("-BEGIN PRIVATE KEY-", StringComparison.Ordinal);
+    }
+
+    private bool IsWidevineIdentifierBlob(string content){
+        return content.Contains("widevine_cdm_version", StringComparison.Ordinal);
     }
 
     public async Task<List<ContentKey>> getKeys(string? pssh, string licenseServer, Dictionary<string, string> authData){

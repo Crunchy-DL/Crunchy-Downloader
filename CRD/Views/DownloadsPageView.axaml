@@ -23,15 +23,32 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding RemoveFinished}" OffContent="Remove Finished" OnContent="Remove Finished"></ToggleSwitch>
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding AutoDownload}" OffContent="Auto Download" OnContent="Auto Download"></ToggleSwitch>
-            <Button  BorderThickness="0" 
-                    HorizontalAlignment="Right" 
+            
+            <Button BorderThickness="0"
+                    HorizontalAlignment="Right"
                     Margin="0 0 10 0 "
                     VerticalAlignment="Center"
-                    Command="{Binding ClearQueue}">
+                    IsEnabled="{Binding QueueManagerIns.HasFailedItem}"
+                    Command="{Binding RetryQueue}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <controls:SymbolIcon Symbol="Refresh" FontSize="22" />
+                </StackPanel>
+                <ToolTip.Tip>
+                    <TextBlock Text="Retry failed" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
+                </ToolTip.Tip>
+            </Button>
+            
+            <Button  BorderThickness="0" 
+                     HorizontalAlignment="Right" 
+                     Margin="0 0 10 0 "
+                     VerticalAlignment="Center"
+                     Command="{Binding ClearQueue}">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <controls:SymbolIcon Symbol="Delete" FontSize="22" />
-                    <TextBlock Text="Clear Queue" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" ></TextBlock>
                 </StackPanel>
+                <ToolTip.Tip>
+                    <TextBlock Text="Clear Queue" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" ></TextBlock>
+                </ToolTip.Tip>
             </Button>
             
         </StackPanel>

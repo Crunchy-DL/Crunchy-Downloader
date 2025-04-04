@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -339,7 +340,6 @@ public partial class HistoryPageViewModel : ViewModelBase{
         }
 
         SelectedSeries = null;
-
     }
 
     [RelayCommand]
@@ -356,7 +356,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public void NavToSeries(){
-        if (ProgramManager.FetchingData){
+        if (ProgramManager.FetchingData && SelectedSeries is{ FetchingData: true }){
             return;
         }
 
@@ -461,8 +461,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
         }
     }
 
+
     [RelayCommand]
-    public async Task OpenFolderDialogAsyncSeason(HistorySeason? season){
+    public async Task OpenFolderDialogAsync(SeasonDialogArgs? seriesArgs){
         if (_storageProvider == null){
             Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
             throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
@@ -475,38 +476,19 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         if (result.Count > 0){
             var selectedFolder = result[0];
-            // Do something with the selected folder path
-            Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
+            var folderPath = selectedFolder.Path.IsAbsoluteUri ? selectedFolder.Path.LocalPath : selectedFolder.Path.ToString();
+            Console.WriteLine($"Selected folder: {folderPath}");
 
-            if (season != null){
-                season.SeasonDownloadPath = selectedFolder.Path.LocalPath;
+            if (seriesArgs?.Season != null){
+                seriesArgs.Season.SeasonDownloadPath = folderPath;
+                CfgManager.UpdateHistoryFile();
+            } else if (seriesArgs?.Series != null){
+                seriesArgs.Series.SeriesDownloadPath = folderPath;
                 CfgManager.UpdateHistoryFile();
             }
         }
-    }
 
-    [RelayCommand]
-    public async Task OpenFolderDialogAsyncSeries(HistorySeries? series){
-        if (_storageProvider == null){
-            Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
-            throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
-        }
-
-
-        var result = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{
-            Title = "Select Folder"
-        });
-
-        if (result.Count > 0){
-            var selectedFolder = result[0];
-            // Do something with the selected folder path
-            Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
-
-            if (series != null){
-                series.SeriesDownloadPath = selectedFolder.Path.LocalPath;
-                CfgManager.UpdateHistoryFile();
-            }
-        }
+        seriesArgs?.Series?.UpdateSeriesFolderPath();
     }
 
     [RelayCommand]
@@ -533,6 +515,34 @@ public partial class HistoryPageViewModel : ViewModelBase{
             .Select(episode => episode.DownloadEpisode());
 
         await Task.WhenAll(downloadTasks);
+    }
+
+    [RelayCommand]
+    public void ToggleDownloadedMark(SeasonDialogArgs seriesArgs){
+        if (seriesArgs.Season != null){
+            bool allDownloaded = seriesArgs.Season.EpisodesList.All(ep => ep.WasDownloaded);
+
+            foreach (var historyEpisode in seriesArgs.Season.EpisodesList){
+                if (historyEpisode.WasDownloaded == allDownloaded){
+                    seriesArgs.Season.UpdateDownloaded(historyEpisode.EpisodeId);
+                }
+            }
+        }
+
+        seriesArgs.Series?.UpdateNewEpisodes();
+    }
+
+    [RelayCommand]
+    public void OpenFolderPath(HistorySeries? series){
+        try{
+            Process.Start(new ProcessStartInfo{
+                FileName = series?.SeriesFolderPath,
+                UseShellExecute = true,
+                Verb = "open"
+            });
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred while opening the folder: {ex.Message}");
+        }
     }
 }
 

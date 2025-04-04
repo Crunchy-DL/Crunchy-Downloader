@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.CustomList;
@@ -16,7 +17,7 @@ using ReactiveUI;
 
 namespace CRD.Downloader;
 
-public class QueueManager{
+public partial class QueueManager : ObservableObject{
     #region Download Variables
 
     public RefreshableObservableCollection<CrunchyEpMeta> Queue = new RefreshableObservableCollection<CrunchyEpMeta>();
@@ -24,7 +25,9 @@ public class QueueManager{
     public int ActiveDownloads;
 
     #endregion
-
+    
+    [ObservableProperty]
+    private bool _hasFailedItem;
 
     #region Singelton
 
@@ -87,8 +90,11 @@ public class QueueManager{
                 downloadItem.StartDownload();
             }
         }
-    }
 
+        HasFailedItem = Queue.Any(item => item.DownloadProgress.Error);
+
+    }
+    
 
     public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false, bool onlySubs = false){
         if (string.IsNullOrEmpty(epId)){
@@ -230,7 +236,9 @@ public class QueueManager{
                     newOptions.DubLang = dubLang;
 
                     movieMeta.DownloadSettings = newOptions;
-
+                    
+                    movieMeta.VideoQuality = CrunchyrollManager.Instance.CrunOptions.QualityVideo;
+                    
                     Queue.Add(movieMeta);
 
                     Console.WriteLine("Added Movie to Queue");

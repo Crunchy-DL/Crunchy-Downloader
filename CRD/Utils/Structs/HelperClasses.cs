@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CRD.Utils.Structs.History;
 using CRD.Views;
 using Newtonsoft.Json;
 
@@ -73,7 +74,7 @@ public class DownloadResponse{
 
     public string? FolderPath{ get; set; }
     public string? TempFolderPath{ get; set; }
-    
+
     public string VideoTitle{ get; set; }
     public bool Error{ get; set; }
     public string ErrorText{ get; set; }
@@ -107,14 +108,13 @@ public class StringItem{
     public string stringValue{ get; set; }
 }
 
-public class WindowSettings
-{
-    public double Width { get; set; }
-    public double Height { get; set; }
-    public int ScreenIndex { get; set; }
-    public int PosX { get; set; }
-    public int PosY { get; set; }
-    public bool IsMaximized { get; set; }
+public class WindowSettings{
+    public double Width{ get; set; }
+    public double Height{ get; set; }
+    public int ScreenIndex{ get; set; }
+    public int PosX{ get; set; }
+    public int PosY{ get; set; }
+    public bool IsMaximized{ get; set; }
 }
 
 public class ToastMessage(string message, ToastType type, int i){
@@ -143,4 +143,14 @@ public partial class SeasonViewModel : ObservableObject{
     public int Year{ get; set; }
 
     public string Display => $"{Season}\n{Year}";
+}
+
+public class SeasonDialogArgs{
+    public HistorySeries? Series{ get; set; }
+    public HistorySeason? Season{ get; set; }
+
+    public SeasonDialogArgs(HistorySeries? series, HistorySeason? season){
+        Series = series;
+        Season = season;
+    }
 }

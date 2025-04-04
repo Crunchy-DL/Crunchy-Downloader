@@ -43,13 +43,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _availableSubs;
-
-    [ObservableProperty]
-    private string _seriesFolderPath;
-
-    [ObservableProperty]
-    public bool _seriesFolderPathExists;
-
+    
     public SeriesPageViewModel(){
         _storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
 
@@ -79,60 +73,10 @@ public partial class SeriesPageViewModel : ViewModelBase{
         AvailableDubs = "Available Dubs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableDubLang);
         AvailableSubs = "Available Subs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableSoftSubs);
 
-        UpdateSeriesFolderPath();
+        SelectedSeries.UpdateSeriesFolderPath();
     }
 
-    private void UpdateSeriesFolderPath(){
-        var season = SelectedSeries.Seasons.FirstOrDefault(season => !string.IsNullOrEmpty(season.SeasonDownloadPath));
-
-        if (!string.IsNullOrEmpty(SelectedSeries.SeriesDownloadPath) && Directory.Exists(SelectedSeries.SeriesDownloadPath)){
-            SeriesFolderPath = SelectedSeries.SeriesDownloadPath;
-            SeriesFolderPathExists = true;
-        }
-
-        if (season is{ SeasonDownloadPath: not null }){
-            try{
-                var seasonPath = season.SeasonDownloadPath;
-                var directoryInfo = new DirectoryInfo(seasonPath);
-
-                if (!string.IsNullOrEmpty(directoryInfo.Parent?.FullName)){
-                    string parentFolderPath = directoryInfo.Parent?.FullName ?? string.Empty;
-
-                    if (Directory.Exists(parentFolderPath)){
-                        SeriesFolderPath = parentFolderPath;
-                        SeriesFolderPathExists = true;
-                    }
-                }
-            } catch (Exception e){
-                Console.Error.WriteLine($"An error occurred while opening the folder: {e.Message}");
-            }
-        } else{
-            string customPath;
-
-            if (string.IsNullOrEmpty(SelectedSeries.SeriesTitle))
-                return;
-
-            var seriesTitle = FileNameManager.CleanupFilename(SelectedSeries.SeriesTitle);
-
-            if (string.IsNullOrEmpty(seriesTitle))
-                return;
-
-            // Check Crunchyroll download directory
-            var downloadDirPath = CrunchyrollManager.Instance.CrunOptions.DownloadDirPath;
-            if (!string.IsNullOrEmpty(downloadDirPath)){
-                customPath = Path.Combine(downloadDirPath, seriesTitle);
-            } else{
-                // Fallback to configured VIDEOS_DIR path
-                customPath = Path.Combine(CfgManager.PathVIDEOS_DIR, seriesTitle);
-            }
-
-            // Check if custom path exists
-            if (Directory.Exists(customPath)){
-                SeriesFolderPath = customPath;
-                SeriesFolderPathExists = true;
-            }
-        }
-    }
+    
 
     [RelayCommand]
     public async Task OpenFolderDialogAsync(HistorySeason? season){
@@ -148,19 +92,19 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         if (result.Count > 0){
             var selectedFolder = result[0];
-            // Do something with the selected folder path
-            Console.WriteLine($"Selected folder: {selectedFolder.Path.LocalPath}");
+            var folderPath = selectedFolder.Path.IsAbsoluteUri ? selectedFolder.Path.LocalPath : selectedFolder.Path.ToString();
+            Console.WriteLine($"Selected folder: {folderPath}");
 
             if (season != null){
-                season.SeasonDownloadPath = selectedFolder.Path.LocalPath;
+                season.SeasonDownloadPath = folderPath;
                 CfgManager.UpdateHistoryFile();
             } else{
-                SelectedSeries.SeriesDownloadPath = selectedFolder.Path.LocalPath;
+                SelectedSeries.SeriesDownloadPath = folderPath;
                 CfgManager.UpdateHistoryFile();
             }
         }
 
-        UpdateSeriesFolderPath();
+        SelectedSeries.UpdateSeriesFolderPath();
     }
 
     [RelayCommand]
@@ -277,7 +221,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
     public void OpenFolderPath(){
         try{
             Process.Start(new ProcessStartInfo{
-                FileName = SeriesFolderPath,
+                FileName = SelectedSeries.SeriesFolderPath,
                 UseShellExecute = true,
                 Verb = "open"
             });

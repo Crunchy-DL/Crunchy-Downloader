@@ -50,8 +50,11 @@ public partial class ProgramManager : ObservableObject{
     private bool _updateAvailable = true;
 
     [ObservableProperty]
+    private double _opacityButton = 0.4;
+
+    [ObservableProperty]
     private bool _finishedLoading;
-    
+
     [ObservableProperty]
     private bool _navigationLock;
 
@@ -122,6 +125,8 @@ public partial class ProgramManager : ObservableObject{
 
         UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
 
+        OpacityButton = UpdateAvailable ? 1.0 : 0.4;
+
         if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
             if (_faTheme != null) _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
         }
@@ -176,9 +181,8 @@ public partial class ProgramManager : ObservableObject{
 
 
     private void CleanUpOldUpdater(){
-        
         var executableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
-        
+
         string backupFilePath = Path.Combine(Directory.GetCurrentDirectory(), $"Updater{executableExtension}.bak");
 
         if (File.Exists(backupFilePath)){

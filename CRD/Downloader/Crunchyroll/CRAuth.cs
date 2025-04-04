@@ -81,8 +81,8 @@ public class CrAuth{
         string uuid = Guid.NewGuid().ToString();
 
         var formData = new Dictionary<string, string>{
-            { "username", data.Username }, 
-            { "password", data.Password }, 
+            { "username", data.Username },
+            { "password", data.Password },
             { "grant_type", "password" },
             { "scope", "offline_access" },
             { "device_id", uuid },
@@ -115,9 +115,16 @@ public class CrAuth{
         } else{
             if (response.ResponseContent.Contains("invalid_credentials")){
                 MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 10));
+            } else if (response.ResponseContent.Contains("<title>Just a moment...</title>") || 
+                       response.ResponseContent.Contains("<title>Access denied</title>") || 
+                       response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") || 
+                       response.ResponseContent.Trim().Equals("error code: 1020") || 
+                       response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error try to change to BetaAPI in settings", ToastType.Error, 10));
             } else{
                 MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0, response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}",
                     ToastType.Error, 10));
+                await Console.Error.WriteLineAsync("Full Response: " + response.ResponseContent);
             }
         }
 
@@ -191,7 +198,7 @@ public class CrAuth{
             return;
         }
 
-        string uuid = Guid.NewGuid().ToString();
+        string uuid = string.IsNullOrEmpty(crunInstance.Token.device_id) ? Guid.NewGuid().ToString() : crunInstance.Token.device_id;
 
         var formData = new Dictionary<string, string>{
             { "refresh_token", crunInstance.Token.refresh_token },
@@ -252,7 +259,7 @@ public class CrAuth{
             return;
         }
 
-        string uuid = Guid.NewGuid().ToString();
+        string uuid = string.IsNullOrEmpty(crunInstance.Token?.device_id) ? Guid.NewGuid().ToString() : crunInstance.Token.device_id;
 
         var formData = new Dictionary<string, string>{
             { "refresh_token", crunInstance.Token?.refresh_token ?? "" },

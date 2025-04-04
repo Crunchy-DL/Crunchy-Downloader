@@ -15,36 +15,36 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace CRD.Utils.Files;
 
 public class CfgManager{
-    private static string WorkingDirectory = AppContext.BaseDirectory;
+    private static string workingDirectory = AppContext.BaseDirectory;
 
-    public static readonly string PathCrTokenOld = Path.Combine(WorkingDirectory, "config", "cr_token.yml");
-    public static readonly string PathCrDownloadOptionsOld = Path.Combine(WorkingDirectory, "config", "settings.yml");
+    public static readonly string PathCrTokenOld = Path.Combine(workingDirectory, "config", "cr_token.yml");
+    public static readonly string PathCrDownloadOptionsOld = Path.Combine(workingDirectory, "config", "settings.yml");
 
-    public static readonly string PathCrToken = Path.Combine(WorkingDirectory, "config", "cr_token.json");
-    public static readonly string PathCrDownloadOptions = Path.Combine(WorkingDirectory, "config", "settings.json");
+    public static readonly string PathCrToken = Path.Combine(workingDirectory, "config", "cr_token.json");
+    public static readonly string PathCrDownloadOptions = Path.Combine(workingDirectory, "config", "settings.json");
 
-    public static readonly string PathCrHistory = Path.Combine(WorkingDirectory, "config", "history.json");
-    public static readonly string PathWindowSettings = Path.Combine(WorkingDirectory, "config", "windowSettings.json");
+    public static readonly string PathCrHistory = Path.Combine(workingDirectory, "config", "history.json");
+    public static readonly string PathWindowSettings = Path.Combine(workingDirectory, "config", "windowSettings.json");
 
     private static readonly string ExecutableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
 
-    public static readonly string PathFFMPEG = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(WorkingDirectory, "lib", "ffmpeg.exe") :
-        File.Exists(Path.Combine(WorkingDirectory, "lib", "ffmpeg")) ? Path.Combine(WorkingDirectory, "lib", "ffmpeg") : "ffmpeg";
+    public static readonly string PathFFMPEG = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(workingDirectory, "lib", "ffmpeg.exe") :
+        File.Exists(Path.Combine(workingDirectory, "lib", "ffmpeg")) ? Path.Combine(workingDirectory, "lib", "ffmpeg") : "ffmpeg";
 
-    public static readonly string PathMKVMERGE = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(WorkingDirectory, "lib", "mkvmerge.exe") :
-        File.Exists(Path.Combine(WorkingDirectory, "lib", "mkvmerge")) ? Path.Combine(WorkingDirectory, "lib", "mkvmerge") : "mkvmerge";
+    public static readonly string PathMKVMERGE = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? Path.Combine(workingDirectory, "lib", "mkvmerge.exe") :
+        File.Exists(Path.Combine(workingDirectory, "lib", "mkvmerge")) ? Path.Combine(workingDirectory, "lib", "mkvmerge") : "mkvmerge";
 
-    public static readonly string PathMP4Decrypt = Path.Combine(WorkingDirectory, "lib", "mp4decrypt" + ExecutableExtension);
-    public static readonly string PathShakaPackager = Path.Combine(WorkingDirectory, "lib", "shaka-packager" + ExecutableExtension);
+    public static readonly string PathMP4Decrypt = Path.Combine(workingDirectory, "lib", "mp4decrypt" + ExecutableExtension);
+    public static readonly string PathShakaPackager = Path.Combine(workingDirectory, "lib", "shaka-packager" + ExecutableExtension);
 
-    public static readonly string PathWIDEVINE_DIR = Path.Combine(WorkingDirectory, "widevine");
+    public static readonly string PathWIDEVINE_DIR = Path.Combine(workingDirectory, "widevine");
 
-    public static readonly string PathVIDEOS_DIR = Path.Combine(WorkingDirectory, "video");
-    public static readonly string PathENCODING_PRESETS_DIR = Path.Combine(WorkingDirectory, "presets");
-    public static readonly string PathTEMP_DIR = Path.Combine(WorkingDirectory, "temp");
-    public static readonly string PathFONTS_DIR = Path.Combine(WorkingDirectory, "fonts");
+    public static readonly string PathVIDEOS_DIR = Path.Combine(workingDirectory, "video");
+    public static readonly string PathENCODING_PRESETS_DIR = Path.Combine(workingDirectory, "presets");
+    public static readonly string PathTEMP_DIR = Path.Combine(workingDirectory, "temp");
+    public static readonly string PathFONTS_DIR = Path.Combine(workingDirectory, "fonts");
 
-    public static readonly string PathLogFile = Path.Combine(WorkingDirectory, "logfile.txt");
+    public static readonly string PathLogFile = Path.Combine(workingDirectory, "logfile.txt");
 
     private static StreamWriter logFile;
     private static bool isLogModeEnabled = false;
@@ -290,7 +290,7 @@ public class CfgManager{
             }
 
             lock (fileLock){
-                using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write))
+                using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write, FileShare.None))
                 using (var streamWriter = new StreamWriter(fileStream))
                 using (var jsonWriter = new JsonTextWriter(streamWriter){ Formatting = Formatting.Indented }){
                     var serializer = new JsonSerializer();

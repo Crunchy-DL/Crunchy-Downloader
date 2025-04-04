@@ -47,22 +47,23 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
     public event PropertyChangedEventHandler? PropertyChanged;
 
     [RelayCommand]
-    public void AddEpisodeToQue(){
-        if (CalendarEpisodes.Count > 0){
-            foreach (var calendarEpisode in CalendarEpisodes){
-                calendarEpisode.AddEpisodeToQue();
-            }
-        }
-
+    public async Task AddEpisodeToQue(){
         if (EpisodeUrl != null){
             var match = Regex.Match(EpisodeUrl, "/([^/]+)/watch/([^/]+)");
 
             if (match.Success){
                 var locale = match.Groups[1].Value; // Capture the locale part
                 var id = match.Groups[2].Value; // Capture the ID part
-                QueueManager.Instance.CrAddEpisodeToQueue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
+                await QueueManager.Instance.CrAddEpisodeToQueue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
             }
         }
+        
+        if (CalendarEpisodes.Count > 0){
+            foreach (var calendarEpisode in CalendarEpisodes){
+                calendarEpisode.AddEpisodeToQue();
+            }
+        }
+        
     }
 
     public async Task LoadImage(int width = 0, int height = 0){

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
@@ -99,6 +100,12 @@ public class HistorySeries : INotifyPropertyChanged{
     [JsonIgnore]
     private bool _editModeEnabled;
 
+    [JsonIgnore]
+    public string SeriesFolderPath{ get; set; }
+    
+    [JsonIgnore]
+    public bool SeriesFolderPathExists{ get; set; }
+    
     #region Settings Override
 
     [JsonIgnore]
@@ -213,6 +220,9 @@ public class HistorySeries : INotifyPropertyChanged{
 
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
+        
+        UpdateSeriesFolderPath();
+        
         Loading = false;
     }
 
@@ -516,4 +526,59 @@ public class HistorySeries : INotifyPropertyChanged{
                 break;
         }
     }
+    
+    public void UpdateSeriesFolderPath(){
+        var season = Seasons.FirstOrDefault(season => !string.IsNullOrEmpty(season.SeasonDownloadPath));
+
+        if (!string.IsNullOrEmpty(SeriesDownloadPath) && Directory.Exists(SeriesDownloadPath)){
+            SeriesFolderPath = SeriesDownloadPath;
+            SeriesFolderPathExists = true;
+        }
+
+        if (season is{ SeasonDownloadPath: not null }){
+            try{
+                var seasonPath = season.SeasonDownloadPath;
+                var directoryInfo = new DirectoryInfo(seasonPath);
+
+                if (!string.IsNullOrEmpty(directoryInfo.Parent?.FullName)){
+                    string parentFolderPath = directoryInfo.Parent?.FullName ?? string.Empty;
+
+                    if (Directory.Exists(parentFolderPath)){
+                        SeriesFolderPath = parentFolderPath;
+                        SeriesFolderPathExists = true;
+                    }
+                }
+            } catch (Exception e){
+                Console.Error.WriteLine($"An error occurred while opening the folder: {e.Message}");
+            }
+        } else{
+            string customPath;
+
+            if (string.IsNullOrEmpty(SeriesTitle))
+                return;
+
+            var seriesTitle = FileNameManager.CleanupFilename(SeriesTitle);
+
+            if (string.IsNullOrEmpty(seriesTitle))
+                return;
+
+            // Check Crunchyroll download directory
+            var downloadDirPath = CrunchyrollManager.Instance.CrunOptions.DownloadDirPath;
+            if (!string.IsNullOrEmpty(downloadDirPath)){
+                customPath = Path.Combine(downloadDirPath, seriesTitle);
+            } else{
+                // Fallback to configured VIDEOS_DIR path
+                customPath = Path.Combine(CfgManager.PathVIDEOS_DIR, seriesTitle);
+            }
+
+            // Check if custom path exists
+            if (Directory.Exists(customPath)){
+                SeriesFolderPath = customPath;
+                SeriesFolderPathExists = true;
+            }
+        }
+        
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));
+    }
+    
 }

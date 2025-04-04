@@ -385,7 +385,7 @@ public class Merger{
     }
 
 
-    public async Task Merge(string type, string bin){
+    public async Task<bool> Merge(string type, string bin){
         string command = type switch{
             "ffmpeg" => FFmpeg(),
             "mkvmerge" => MkvMerge(),
@@ -394,7 +394,7 @@ public class Merger{
 
         if (string.IsNullOrEmpty(command)){
             Console.Error.WriteLine("Unable to merge files.");
-            return;
+            return false;
         }
 
         Console.WriteLine($"[{type}] Started merging");
@@ -404,9 +404,12 @@ public class Merger{
             Console.WriteLine($"[{type}] Mkvmerge finished with at least one warning");
         } else if (!result.IsOk){
             Console.Error.WriteLine($"[{type}] Merging failed with exit code {result.ErrorCode}");
+            return false;
         } else{
             Console.WriteLine($"[{type} Done]");
         }
+
+        return true;
     }
 
 
@@ -459,6 +462,7 @@ public class CrunchyMuxOptions{
     public bool? KeepAllVideos{ get; set; }
     public bool? Novids{ get; set; }
     public bool Mp4{ get; set; }
+    public bool MuxFonts{ get; set; }
     public bool MuxDescription{ get; set; }
     public string ForceMuxer{ get; set; }
     public bool? NoCleanup{ get; set; }

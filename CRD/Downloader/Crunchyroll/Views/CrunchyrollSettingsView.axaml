@@ -377,6 +377,12 @@
                         <CheckBox IsChecked="{Binding DefaultSubSigns}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Include Fonts" Description="Includes the fonts in the mkv">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MuxFonts}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="File title"
                                                Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs}">

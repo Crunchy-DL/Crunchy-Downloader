@@ -40,24 +40,27 @@ public class Languages{
     };
 
     public static List<string> SortListByLangList(List<string> langList){
-        var orderMap = languages.Select((value, index) => new { Value = value.CrLocale, Index = index })
+        var orderMap = languages.Select((value, index) => new{ Value = value.CrLocale, Index = index })
             .ToDictionary(x => x.Value, x => x.Index);
-        langList.Sort((x, y) =>
-        {
+        langList.Sort((x, y) => {
             bool xExists = orderMap.ContainsKey(x);
             bool yExists = orderMap.ContainsKey(y);
 
             if (xExists && yExists)
-                return orderMap[x].CompareTo(orderMap[y]);  // Sort by main list order
+                return orderMap[x].CompareTo(orderMap[y]); // Sort by main list order
             else if (xExists)
-                return -1;  // x comes before any missing value
+                return -1; // x comes before any missing value
             else if (yExists)
-                return 1;  // y comes before any missing value
+                return 1; // y comes before any missing value
             else
-                return string.CompareOrdinal(x, y);  // Sort alphabetically or by another logic for missing values
+                return string.CompareOrdinal(x, y); // Sort alphabetically or by another logic for missing values
         });
 
         return langList;
+    }
+
+    public static List<string> LocalListToLangList(List<Locale> langList){
+        return SortListByLangList(langList.Select(seriesMetadataAudioLocale => seriesMetadataAudioLocale.GetEnumMemberValue()).ToList());
     }
 
     public static LanguageItem FixAndFindCrLc(string cr_locale){
@@ -69,14 +72,14 @@ public class Languages{
         return FindLang(str);
     }
 
-    public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem, bool isCC, string ccTag , bool? isSigns = false, string? format = "ass", bool addIndexAndLangCode = true){
+    public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem, bool isCC, string ccTag, bool? isSigns = false, string? format = "ass", bool addIndexAndLangCode = true){
         subsIndex = (int.Parse(subsIndex) + 1).ToString().PadLeft(2, '0');
         string fileName = $"{fnOutput}";
 
         if (addIndexAndLangCode){
-            fileName += $".{subsIndex}.{langItem.CrLocale}";
+            fileName += $".{langItem.CrLocale}"; //.{subsIndex}
         }
-        
+
         //removed .{langItem.language} from file name at end
 
         if (isCC){

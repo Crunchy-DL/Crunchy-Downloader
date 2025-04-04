@@ -89,7 +89,7 @@
 
                                     <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
                                             BorderThickness="0" CornerRadius="50"
-                                            IsVisible="{Binding SeriesFolderPathExists}"
+                                            IsVisible="{Binding SelectedSeries.SeriesFolderPathExists}"
                                             Command="{Binding OpenFolderPath}">
                                         <ToolTip.Tip>
                                             <TextBlock Text="Open Series Folder" FontSize="15" />

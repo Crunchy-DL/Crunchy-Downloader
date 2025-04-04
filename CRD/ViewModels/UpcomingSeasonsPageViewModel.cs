@@ -197,8 +197,18 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
         var list = await GetSeriesForSeason(currentSelection.Season, currentSelection.Year, false);
         SelectedSeason.Clear();
+        
+        var crunchySimul = await CrunchyrollManager.Instance.CrSeries.GetSeasonalSeries(currentSelection.Season, currentSelection.Year + "", "");  
+        
         foreach (var anilistSeries in list){
             SelectedSeason.Add(anilistSeries);
+            if (!string.IsNullOrEmpty(anilistSeries.CrunchyrollID) && crunchySimul?.Data is{ Count: > 0 }){
+                var crunchySeries = crunchySimul.Data.FirstOrDefault(ele => ele.Id == anilistSeries.CrunchyrollID);
+                if (crunchySeries != null){
+                    anilistSeries.AudioLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.AudioLocales ??[]));
+                    anilistSeries.SubtitleLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.SubtitleLocales ??[]));
+                }
+            }
         }
 
         SortItems();
@@ -212,8 +222,18 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
         var list = await GetSeriesForSeason(currentSelection.Season, currentSelection.Year, false);
         SelectedSeason.Clear();
+        
+        var crunchySimul = await CrunchyrollManager.Instance.CrSeries.GetSeasonalSeries(currentSelection.Season, currentSelection.Year + "", "");  
+        
         foreach (var anilistSeries in list){
             SelectedSeason.Add(anilistSeries);
+            if (!string.IsNullOrEmpty(anilistSeries.CrunchyrollID) && crunchySimul?.Data is{ Count: > 0 }){
+                var crunchySeries = crunchySimul.Data.FirstOrDefault(ele => ele.Id == anilistSeries.CrunchyrollID);
+                if (crunchySeries != null){
+                    anilistSeries.AudioLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.AudioLocales ??[]));
+                    anilistSeries.SubtitleLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.SubtitleLocales ??[]));
+                }
+            }
         }
         SortItems();
     }
@@ -411,6 +431,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     }
 
     public void SelectionChangedOfSeries(AnilistSeries? value){
+        if (value != null) value.IsExpanded = !value.IsExpanded;
         SelectedSeries = null;
         SelectedIndex = -1;
     }

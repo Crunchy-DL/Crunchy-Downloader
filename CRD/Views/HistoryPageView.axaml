@@ -7,7 +7,6 @@
              xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              xmlns:history="clr-namespace:CRD.Utils.Structs.History"
              xmlns:structs="clr-namespace:CRD.Utils.Structs"
-             xmlns:local="clr-namespace:CRD.Utils"
              x:DataType="vm:HistoryPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.HistoryPageView">
@@ -15,7 +14,11 @@
     <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
         <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
+        <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
+        <ui:UiListHasElementsConverter x:Key="UiListHasElementsConverter" />
+        <ui:UiSeriesSeasonConverter x:Key="UiSeriesSeasonConverter"/>
     </UserControl.Resources>
+    
 
     <Grid>
 
@@ -25,7 +28,7 @@
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" /> <!-- Takes up most space for the title -->
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
@@ -393,13 +396,26 @@
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="*" />
                                                         <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
 
-                                                    <TextBlock Grid.Row="0" FontSize="25" Text="{Binding SeriesTitle}"></TextBlock>
-                                                    <TextBlock Grid.Row="1" FontSize="15" TextWrapping="Wrap"
+                                                    <TextBlock Grid.Row="0" FontSize="25" Text="{Binding SeriesTitle}" TextTrimming="CharacterEllipsis"></TextBlock>
+                                                    <TextBlock Grid.Row="1" FontSize="15" Margin="0 0 0 5" TextWrapping="Wrap"
                                                                Text="{Binding SeriesDescription}">
                                                     </TextBlock>
-                                                    <StackPanel Grid.Row="3" Orientation="Vertical">
+                                                    <StackPanel Grid.Row="3" Orientation="Horizontal" IsVisible="{Binding HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
+                                                        <TextBlock FontSize="15" Opacity="0.8" Text="Available Dubs: " />
+                                                        <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding HistorySeriesAvailableDubLang, Converter={StaticResource UiListToStringConverter}}"></TextBlock>
+                                                    </StackPanel>
+                                                    
+                                                    <StackPanel Grid.Row="4" Orientation="Horizontal" IsVisible="{Binding HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}">
+                                                        <TextBlock FontSize="15" Opacity="0.8" Text="Available Subs: " />
+                                                        <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListToStringConverter}}"></TextBlock>
+                                                    </StackPanel>
+                                                    
+                                                    
+                                                    <StackPanel Grid.Row="5" Orientation="Vertical">
 
                                                         <StackPanel Orientation="Horizontal" Margin="0 10 10 10">
 
@@ -427,6 +443,20 @@
                                                                         Height="30" />
                                                                 </Grid>
                                                             </Button>
+                                                            
+                                                            <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                                                    BorderThickness="0" CornerRadius="50"
+                                                                    IsVisible="{Binding SeriesFolderPathExists}"
+                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderPath}"
+                                                                    CommandParameter="{Binding .}">
+                                                                <ToolTip.Tip>
+                                                                    <TextBlock Text="Open Series Folder" FontSize="15" />
+                                                                </ToolTip.Tip>
+                                                                <Grid>
+                                                                    <!-- <controls:ImageIcon Source="../Assets/sonarr.png" Width="30" Height="30" /> -->
+                                                                    <controls:SymbolIcon Symbol="Folder" FontSize="20" Width="30" Height="30" />
+                                                                </Grid>
+                                                            </Button>
 
 
                                                         </StackPanel>
@@ -437,8 +467,13 @@
 
                                                             <Button Margin="0 0 5 10" FontStyle="Italic"
                                                                     VerticalAlignment="Center"
-                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsyncSeries}"
-                                                                    CommandParameter="{Binding .}">
+                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsync}"
+                                                                    >
+                                                                <Button.CommandParameter>
+                                                                    <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
+                                                                        <Binding />
+                                                                    </MultiBinding>
+                                                                </Button.CommandParameter>
                                                                 <ToolTip.Tip>
                                                                     <TextBlock Text="{Binding SeriesDownloadPath}"
                                                                                FontSize="15" />
@@ -613,7 +648,7 @@
 
 
                                     <controls:SettingsExpanderItem>
-                                        <ScrollViewer>
+                                        <ScrollViewer x:Name="TableViewScrollViewer">
                                             <ItemsControl ItemsSource="{Binding Seasons}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate DataType="{x:Type history:HistorySeason}">
@@ -705,6 +740,19 @@
                                                                                                          FontSize="18" />
                                                                                 </StackPanel>
                                                                             </Button>
+                                                                            
+                                                                            <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
+                                                                                    VerticalAlignment="Center"
+                                                                                    IsEnabled="{Binding HistoryEpisodeAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}"
+                                                                                    Command="{Binding DownloadEpisode}"
+                                                                                    CommandParameter="true">
+                                                                                <StackPanel Orientation="Horizontal">
+                                                                                    <controls:SymbolIcon Symbol="ClosedCaption" FontSize="18" />
+                                                                                </StackPanel>
+                                                                                <ToolTip.Tip>
+                                                                                    <TextBlock Text="Download Subs" FontSize="15" />
+                                                                                </ToolTip.Tip>
+                                                                            </Button>
 
                                                                         </StackPanel>
                                                                     </Grid>
@@ -770,16 +818,34 @@
                                                                                             Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).DownloadSeasonMissingSonarr}"
                                                                                             CommandParameter="{Binding }">
                                                                                     </Button>
+                                                                                    <Button Margin="10 5"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Stretch"
+                                                                                            Content="Toggle Downloaded"
+                                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).ToggleDownloadedMark}">
+                                                                                        <Button.CommandParameter>
+                                                                                            <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
+                                                                                                <Binding Path="DataContext" ElementName="TableViewScrollViewer" />
+                                                                                                <Binding />
+                                                                                            </MultiBinding>
+                                                                                        </Button.CommandParameter>
+                                                                                    </Button>
                                                                                 </StackPanel>
 
                                                                             </Border>
                                                                         </Popup>
                                                                     </StackPanel>
-
+                                                                    
                                                                     <Button Margin="10 0 0 0" FontStyle="Italic"
                                                                             VerticalAlignment="Center"
-                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsyncSeason}"
-                                                                            CommandParameter="{Binding .}">
+                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsync}"
+                                                                            >
+                                                                        <Button.CommandParameter>
+                                                                            <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
+                                                                                <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=ScrollViewer}" />
+                                                                                <Binding />
+                                                                            </MultiBinding>
+                                                                        </Button.CommandParameter>
                                                                         <ToolTip.Tip>
                                                                             <TextBlock Text="{Binding SeasonDownloadPath}"
                                                                                        FontSize="15" />

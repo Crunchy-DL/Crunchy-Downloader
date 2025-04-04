@@ -10,14 +10,12 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
-using CRD.Utils.Updater;
 using CRD.ViewModels;
-using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
 using Newtonsoft.Json;
 using ReactiveUI;
-using ContentDialogUpdateViewModel = CRD.ViewModels.Utils.ContentDialogUpdateViewModel;
+using UpdateViewModel = CRD.ViewModels.UpdateViewModel;
 
 namespace CRD.Views;
 
@@ -163,9 +161,9 @@ public partial class MainWindow : AppWindow{
                         navView.Content = viewModel;
                         selectedNavVieItem = selectedItem;
                         break;
-                    case "UpdateAvailable":
-                        Updater.Instance.DownloadAndUpdateAsync();
-                        ShowUpdateDialog();
+                    case "Update":
+                        navView.Content = Activator.CreateInstance(typeof(UpdateViewModel));
+                        selectedNavVieItem = selectedItem;
                         break;
                     default:
                         // (sender as NavigationView).Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
@@ -174,23 +172,7 @@ public partial class MainWindow : AppWindow{
             }
         }
     }
-
-    public async void ShowUpdateDialog(){
-        var dialog = new ContentDialog(){
-            Title = "Updating",
-            PrimaryButtonText = "Close"
-        };
-
-        dialog.IsPrimaryButtonEnabled = false;
-
-        var viewModel = new ContentDialogUpdateViewModel(dialog);
-        dialog.Content = new ContentDialogUpdateView(){
-            DataContext = viewModel
-        };
-
-        _ = await dialog.ShowAsync();
-    }
-
+    
     private void OnOpened(object sender, EventArgs e){
         if (File.Exists(CfgManager.PathWindowSettings)){
             var settings = JsonConvert.DeserializeObject<WindowSettings>(File.ReadAllText(CfgManager.PathWindowSettings));
