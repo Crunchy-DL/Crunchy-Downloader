@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -312,6 +313,7 @@ public class Merger{
                 return -100;
             }
 
+
             // Load frames from start of the videos
             var baseFramesStart = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData{
                 FilePath = fp,
@@ -401,9 +403,10 @@ public class Merger{
         var result = await Helpers.ExecuteCommandAsync(type, bin, command);
 
         if (!result.IsOk && type == "mkvmerge" && result.ErrorCode == 1){
-            Console.WriteLine($"[{type}] Mkvmerge finished with at least one warning");
+            Console.Error.WriteLine($"[{type}] Mkvmerge finished with at least one warning");
         } else if (!result.IsOk){
             Console.Error.WriteLine($"[{type}] Merging failed with exit code {result.ErrorCode}");
+            Console.Error.WriteLine($"[{type}] Merging failed command: {command}");
             return false;
         } else{
             Console.WriteLine($"[{type} Done]");

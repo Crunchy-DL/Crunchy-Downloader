@@ -361,7 +361,7 @@ public class HlsDownloader{
                     throw new Exception("Failed to download key");
                 _data.Keys[kUri] = rkey;
             } catch (Exception ex){
-                throw new Exception($"Error at segment {p}: {ex.Message}", ex);
+                throw new Exception($"Key Error at segment {p}: {ex.Message}", ex);
             }
         }
 
@@ -431,7 +431,7 @@ public class HlsDownloader{
 
         // Set default user-agent if not provided
         if (!request.Headers.Contains("User-Agent")){
-            request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:70.0) Gecko/20100101 Firefox/70.0");
+            request.Headers.Add("User-Agent", ApiUrls.FirefoxUserAgent);
         }
 
         return await SendRequestWithRetry(request, partIndex, segOffset, isKey, retryCount);
@@ -445,7 +445,7 @@ public class HlsDownloader{
                     response = await HttpClientReq.Instance.GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
                     response.EnsureSuccessStatusCode();
                     return await ReadContentAsByteArrayAsync(response.Content);
-                } catch (HttpRequestException ex){
+                } catch (Exception ex) when (ex is HttpRequestException or IOException){
                     // Log retry attempts
                     string partType = isKey ? "Key" : "Part";
                     int partIndx = partIndex + 1 + segOffset;
@@ -453,8 +453,14 @@ public class HlsDownloader{
                     Console.WriteLine($"\tError: {ex.Message}");
                     if (attempt == retryCount)
                         throw; // rethrow after last retry
-                    
+
                     await Task.Delay(_data.WaitTime);
+                }catch (Exception ex) {
+                    
+                    Console.WriteLine($"Unexpected exception at part {partIndex + 1 + segOffset}:");
+                    Console.WriteLine($"\tType: {ex.GetType()}");
+                    Console.WriteLine($"\tMessage: {ex.Message}");
+                    throw; 
                 }
             }
         }

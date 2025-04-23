@@ -406,6 +406,7 @@ public class Helpers{
                     // If something went wrong, delete the temporary output file
                     File.Delete(tempOutputFilePath);
                     Console.Error.WriteLine("FFmpeg processing failed.");
+                    Console.Error.WriteLine($"Command: {ffmpegCommand}");
                 }
 
                 return (IsOk: isSuccess, ErrorCode: process.ExitCode);
@@ -774,7 +775,7 @@ public class Helpers{
             AutoDownload = yaml.AutoDownload,
             RemoveFinishedDownload = yaml.RemoveFinishedDownload,
             Timeout = yaml.Timeout,
-            FsRetryTime = yaml.FsRetryTime,
+            RetryDelay = yaml.FsRetryTime,
             Force = yaml.Force,
             SimultaneousDownloads = yaml.SimultaneousDownloads,
             Theme = yaml.Theme,

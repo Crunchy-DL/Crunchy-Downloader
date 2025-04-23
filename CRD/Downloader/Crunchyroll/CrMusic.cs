@@ -74,7 +74,11 @@ public class CrMusic{
     }
 
 
-    public async Task<CrunchyMusicVideoList?> ParseArtistVideosByIdAsync(string artistId, string crLocale, bool forcedLang = false, bool updateHistory = false){
+    public async Task<CrunchyMusicVideoList?> ParseArtistVideosByIdAsync(string? artistId, string crLocale, bool forcedLang = false, bool updateHistory = false){
+        if (string.IsNullOrEmpty(artistId)){
+            return new CrunchyMusicVideoList();
+        }
+        
         var musicVideosTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/music_videos", crLocale, forcedLang);
         var concertsTask = FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/concerts", crLocale, forcedLang);
 

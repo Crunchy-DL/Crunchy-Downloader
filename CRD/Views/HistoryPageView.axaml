@@ -16,9 +16,9 @@
         <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
         <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
         <ui:UiListHasElementsConverter x:Key="UiListHasElementsConverter" />
-        <ui:UiSeriesSeasonConverter x:Key="UiSeriesSeasonConverter"/>
+        <ui:UiSeriesSeasonConverter x:Key="UiSeriesSeasonConverter" />
     </UserControl.Resources>
-    
+
 
     <Grid>
 
@@ -402,19 +402,41 @@
 
                                                     <TextBlock Grid.Row="0" FontSize="25" Text="{Binding SeriesTitle}" TextTrimming="CharacterEllipsis"></TextBlock>
                                                     <TextBlock Grid.Row="1" FontSize="15" Margin="0 0 0 5" TextWrapping="Wrap"
-                                                               Text="{Binding SeriesDescription}">
+                                                               Text="{Binding SeriesDescription}" MinWidth="200">
                                                     </TextBlock>
-                                                    <StackPanel Grid.Row="3" Orientation="Horizontal" IsVisible="{Binding HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
-                                                        <TextBlock FontSize="15" Opacity="0.8" Text="Available Dubs: " />
-                                                        <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding HistorySeriesAvailableDubLang, Converter={StaticResource UiListToStringConverter}}"></TextBlock>
+                                                    <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Center"
+                                                                IsVisible="{Binding HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
+                                                        <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="Available Dubs: "></TextBlock>
+
+                                                        <ui:HighlightingTextBlock
+                                                            Items="{Binding HistorySeriesAvailableDubLang}"
+                                                            Series="{Binding .}"
+                                                            Season=""
+                                                            StreamingService="Crunchyroll"
+                                                            CheckDubs="True"
+                                                            FontSize="15"
+                                                            Opacity="0.8"
+                                                            TextWrapping="Wrap" />
+                                                        
                                                     </StackPanel>
-                                                    
-                                                    <StackPanel Grid.Row="4" Orientation="Horizontal" IsVisible="{Binding HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}">
-                                                        <TextBlock FontSize="15" Opacity="0.8" Text="Available Subs: " />
-                                                        <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListToStringConverter}}"></TextBlock>
+
+                                                    <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center"
+                                                                IsVisible="{Binding HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}">
+                                                        <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="Available Subs: "></TextBlock>
+
+                                                        <ui:HighlightingTextBlock
+                                                            Items="{Binding HistorySeriesAvailableSoftSubs}"
+                                                            Series="{Binding .}"
+                                                            Season=""
+                                                            StreamingService="Crunchyroll"
+                                                            CheckDubs="False"
+                                                            FontSize="15"
+                                                            Opacity="0.8"
+                                                            TextWrapping="Wrap" />
+                                                        
                                                     </StackPanel>
-                                                    
-                                                    
+
+
                                                     <StackPanel Grid.Row="5" Orientation="Vertical">
 
                                                         <StackPanel Orientation="Horizontal" Margin="0 10 10 10">
@@ -443,7 +465,7 @@
                                                                         Height="30" />
                                                                 </Grid>
                                                             </Button>
-                                                            
+
                                                             <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
                                                                     BorderThickness="0" CornerRadius="50"
                                                                     IsVisible="{Binding SeriesFolderPathExists}"
@@ -462,13 +484,20 @@
                                                         </StackPanel>
 
                                                         <StackPanel Orientation="Horizontal">
-                                                            <Button Command="{Binding FetchData}" Margin="0 0 5  10">Refresh Series</Button>
+                                                            <Button Content="Refresh Series"
+                                                                    Margin="0 0 5  10"
+                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).UpdateData}">
+                                                                <Button.CommandParameter>
+                                                                    <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
+                                                                        <Binding />
+                                                                    </MultiBinding>
+                                                                </Button.CommandParameter>
+                                                            </Button>
                                                             <ToggleButton x:Name="SeriesEditModeToggle" IsChecked="{Binding EditModeEnabled}" Margin="0 0 5  10">Edit</ToggleButton>
 
                                                             <Button Margin="0 0 5 10" FontStyle="Italic"
                                                                     VerticalAlignment="Center"
-                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsync}"
-                                                                    >
+                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsync}">
                                                                 <Button.CommandParameter>
                                                                     <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
                                                                         <Binding />
@@ -482,6 +511,25 @@
                                                                     <controls:SymbolIcon Symbol="Folder" FontSize="18" />
                                                                 </StackPanel>
                                                             </Button>
+
+                                                            <ToggleButton Margin="0 0 5 10" FontStyle="Italic"
+                                                                          VerticalAlignment="Center"
+                                                                          IsChecked="{Binding IsInactive}" 
+                                                                          Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).ToggleInactive}">
+                                                                <ToolTip.Tip>
+                                                                    <StackPanel Orientation="Vertical">
+                                                                        <TextBlock Text="Set Active"
+                                                                                   IsVisible="{Binding IsInactive}"
+                                                                                   FontSize="15" />
+                                                                        <TextBlock Text="Set Inactive"
+                                                                                   IsVisible="{Binding !IsInactive}"
+                                                                                   FontSize="15" />
+                                                                    </StackPanel>
+                                                                </ToolTip.Tip>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <controls:SymbolIcon Symbol="CloudOffline" FontSize="18" />
+                                                                </StackPanel>
+                                                            </ToggleButton>
 
                                                             <StackPanel>
                                                                 <ToggleButton x:Name="SeriesOverride" Margin="0 0 5 10" FontStyle="Italic"
@@ -671,22 +719,45 @@
                                                                             <ColumnDefinition Width="Auto" />
                                                                         </Grid.ColumnDefinitions>
 
-                                                                        <StackPanel Orientation="Horizontal"
-                                                                                    VerticalAlignment="Center">
-                                                                            <TextBlock Text="E"></TextBlock>
-                                                                            <TextBlock Text="{Binding Episode}"></TextBlock>
-                                                                            <TextBlock Text=" - "></TextBlock>
-                                                                            <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
+                                                                        <StackPanel VerticalAlignment="Center">
+                                                                                <ui:EpisodeHighlightTextBlock
+                                                                                    Series="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}"
+                                                                                    Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
+                                                                                    Episode="{Binding .}"
+                                                                                    StreamingService="Crunchyroll" 
+                                                                                    MinWidth="50"
+                                                                                    TextWrapping="NoWrap"
+                                                                                    TextTrimming="CharacterEllipsis"/>
+                                                                            
+                                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                                                                        IsVisible="{Binding HistoryEpisodeAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
+                                                                                <TextBlock FontStyle="Italic"
+                                                                                           FontSize="12"
+                                                                                           Opacity="0.8" Text="Dubs: ">
+                                                                                </TextBlock>
+                                                                                
+                                                                                <ui:HighlightingTextBlock
+                                                                                    Items="{Binding HistoryEpisodeAvailableDubLang}"
+                                                                                    Series="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}"
+                                                                                    Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
+                                                                                    StreamingService="Crunchyroll"
+                                                                                    CheckDubs="True"
+                                                                                    FontSize="12"
+                                                                                    Opacity="0.8"
+                                                                                    FontStyle="Italic" />
+                                                                                
+                                                                            </StackPanel>
                                                                         </StackPanel>
 
                                                                         <StackPanel Grid.Column="1"
                                                                                     Orientation="Horizontal"
                                                                                     VerticalAlignment="Center">
+                                                                            <TextBlock Text="{Binding ReleaseDateFormated}" VerticalAlignment="Center" FontSize="15" Opacity="0.8" Margin="0 0 20  0"></TextBlock>
 
                                                                             <StackPanel VerticalAlignment="Center"
                                                                                         Margin="0 0 5 0"
                                                                                         IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).SonarrSeriesId, Converter={StaticResource UiSonarrIdToVisibilityConverter}}">
-
+                                                                                
                                                                                 <controls:ImageIcon
                                                                                     IsVisible="{Binding SonarrHasFile}"
                                                                                     Source="../Assets/sonarr.png"
@@ -740,7 +811,7 @@
                                                                                                          FontSize="18" />
                                                                                 </StackPanel>
                                                                             </Button>
-                                                                            
+
                                                                             <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
                                                                                     VerticalAlignment="Center"
                                                                                     IsEnabled="{Binding HistoryEpisodeAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}"
@@ -768,8 +839,13 @@
 
                                                                     <Button Margin="10 0 0 0" FontStyle="Italic"
                                                                             VerticalAlignment="Center"
-                                                                            Command="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).FetchData}"
-                                                                            CommandParameter="{Binding SeasonId}">
+                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).UpdateData}">
+                                                                        <Button.CommandParameter>
+                                                                            <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
+                                                                                <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=ScrollViewer}" />
+                                                                                <Binding Path="SeasonId" />
+                                                                            </MultiBinding>
+                                                                        </Button.CommandParameter>
                                                                         <ToolTip.Tip>
                                                                             <TextBlock Text="Refresh Season" FontSize="15" />
                                                                         </ToolTip.Tip>
@@ -825,7 +901,7 @@
                                                                                             Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).ToggleDownloadedMark}">
                                                                                         <Button.CommandParameter>
                                                                                             <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
-                                                                                                <Binding Path="DataContext" ElementName="TableViewScrollViewer" />
+                                                                                                <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=ScrollViewer}" />
                                                                                                 <Binding />
                                                                                             </MultiBinding>
                                                                                         </Button.CommandParameter>
@@ -835,11 +911,10 @@
                                                                             </Border>
                                                                         </Popup>
                                                                     </StackPanel>
-                                                                    
+
                                                                     <Button Margin="10 0 0 0" FontStyle="Italic"
                                                                             VerticalAlignment="Center"
-                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsync}"
-                                                                            >
+                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).OpenFolderDialogAsync}">
                                                                         <Button.CommandParameter>
                                                                             <MultiBinding Converter="{StaticResource UiSeriesSeasonConverter}">
                                                                                 <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=ScrollViewer}" />

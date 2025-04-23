@@ -36,6 +36,7 @@
             <Popup IsLightDismissEnabled="True"
                    MaxWidth="{Binding Bounds.Width, ElementName=SearchBar}"
                    MaxHeight="{Binding Bounds.Height, ElementName=Grid}"
+                   Width="{Binding Bounds.Width, ElementName=SearchBar}"
                    IsOpen="{Binding SearchPopupVisible}"
                    Placement="Bottom"
                    PlacementTarget="{Binding ElementName=SearchBar}"

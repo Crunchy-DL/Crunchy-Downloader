@@ -23,7 +23,7 @@ public class LocaleConverter : JsonConverter{
                 return locale;
         }
 
-        return Locale.Unknown; // Default to defaulT if no match is found
+        return Locale.Unknown; 
     }
 
     public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer){

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -114,7 +115,8 @@ public class CrunchyrollManager{
         options.QualityVideo = "best";
         options.CcTag = "CC";
         options.CcSubsFont = "Trebuchet MS";
-        options.FsRetryTime = 5;
+        options.RetryDelay = 5;
+        options.RetryAttempts = 5;
         options.Numbers = 2;
         options.Timeout = 15000;
         options.DubLang = new List<string>(){ "ja-JP" };
@@ -409,7 +411,7 @@ public class CrunchyrollManager{
                             CcSubsMuxingFlag = options.CcSubsMuxingFlag,
                             SignsSubsAsForced = options.SignsSubsAsForced,
                         },
-                        fileNameAndPath);
+                        fileNameAndPath, data);
 
                     if (result is{ merger: not null, isMuxed: true }){
                         mergers.Add(result.merger);
@@ -474,7 +476,7 @@ public class CrunchyrollManager{
                         CcSubsMuxingFlag = options.CcSubsMuxingFlag,
                         SignsSubsAsForced = options.SignsSubsAsForced,
                     },
-                    fileNameAndPath);
+                    fileNameAndPath, data);
 
                 syncError = result.syncError;
                 muxError = !result.isMuxed;
@@ -646,7 +648,7 @@ public class CrunchyrollManager{
 
     #endregion
 
-    private async Task<(Merger? merger, bool isMuxed, bool syncError)> MuxStreams(List<DownloadedMedia> data, CrunchyMuxOptions options, string filename){
+    private async Task<(Merger? merger, bool isMuxed, bool syncError)> MuxStreams(List<DownloadedMedia> data, CrunchyMuxOptions options, string filename, CrunchyEpMeta crunchyEpMeta){
         var muxToMp3 = false;
 
         if (options.Novids == true || data.FindAll(a => a.Type == DownloadMediaType.Video).Count == 0){
@@ -733,6 +735,16 @@ public class CrunchyrollManager{
         bool isMuxed, syncError = false;
 
         if (options is{ SyncTiming: true, DlVideoOnce: true }){
+            crunchyEpMeta.DownloadProgress = new DownloadProgress(){
+                IsDownloading = true,
+                Percent = 100,
+                Time = 0,
+                DownloadSpeed = 0,
+                Doing = "Muxing – Syncing Dub Timings"
+            };
+
+            QueueManager.Instance.Queue.Refresh();
+
             var basePath = merger.options.OnlyVid.First().Path;
             var syncVideosList = data.Where(a => a.Type == DownloadMediaType.SyncVideo).ToList();
 
@@ -764,6 +776,16 @@ public class CrunchyrollManager{
             syncVideosList.ForEach(syncVideo => {
                 if (syncVideo.Path != null) Helpers.DeleteFile(syncVideo.Path);
             });
+
+            crunchyEpMeta.DownloadProgress = new DownloadProgress(){
+                IsDownloading = true,
+                Percent = 100,
+                Time = 0,
+                DownloadSpeed = 0,
+                Doing = "Muxing"
+            };
+
+            QueueManager.Instance.Queue.Refresh();
         }
 
         if (!options.Mp4 && !muxToMp3){
@@ -777,12 +799,12 @@ public class CrunchyrollManager{
 
     private async Task<DownloadResponse> DownloadMediaList(CrunchyEpMeta data, CrDownloadOptions options){
         if (Profile.Username == "???"){
-            MainWindow.Instance.ShowError("User Account not recognized - are you signed in?");
+            MainWindow.Instance.ShowError($"User Account not recognized - are you signed in?");
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
                 FileName = "./unknown",
-                ErrorText = "Login problem"
+                ErrorText = "User Account not recognized - are you signed in?"
             };
         }
 
@@ -1347,7 +1369,7 @@ public class CrunchyrollManager{
 
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
 
-                                string onlyFileName = Path.GetFileNameWithoutExtension(fileName);
+                                string onlyFileName = Path.GetFileName(fileName);
                                 int maxLength = 220;
 
                                 if (onlyFileName.Length > maxLength){
@@ -1361,7 +1383,7 @@ public class CrunchyrollManager{
                                             if (excessLength > 0 && ((string)titleVariable.ReplaceWith).Length > excessLength){
                                                 titleVariable.ReplaceWith = ((string)titleVariable.ReplaceWith).Substring(0, ((string)titleVariable.ReplaceWith).Length - excessLength);
                                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
-                                                onlyFileName = Path.GetFileNameWithoutExtension(fileName);
+                                                onlyFileName = Path.GetFileName(fileName);
 
                                                 if (onlyFileName.Length > maxLength){
                                                     fileName = Helpers.LimitFileNameLength(fileName, maxLength);
@@ -1372,7 +1394,7 @@ public class CrunchyrollManager{
                                         fileName = Helpers.LimitFileNameLength(fileName, maxLength);
                                     }
 
-                                    Console.Error.WriteLine($"Filename changed to {Path.GetFileNameWithoutExtension(fileName)}");
+                                    Console.Error.WriteLine($"Filename changed to {Path.GetFileName(fileName)}");
                                 }
 
                                 //string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale ?? lang.Value.Name), variables, options.Numbers, options.Override).ToArray());
@@ -1704,7 +1726,7 @@ public class CrunchyrollManager{
                         try{
                             // Parsing and constructing the file names
                             fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
-                            string outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale), variables, options.Numbers, options.Override).ToArray());
+                            var outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale), variables, options.Numbers, options.Override).ToArray());
                             if (Path.IsPathRooted(outFile)){
                                 tsFile = outFile;
                             } else{
@@ -1712,14 +1734,14 @@ public class CrunchyrollManager{
                             }
 
                             // Check if the path is absolute
-                            bool isAbsolute = Path.IsPathRooted(outFile);
+                            var isAbsolute = Path.IsPathRooted(outFile);
 
                             // Get all directory parts of the path except the last segment (assuming it's a file)
-                            string[] directories = Path.GetDirectoryName(outFile)?.Split(Path.DirectorySeparatorChar) ?? Array.Empty<string>();
+                            var directories = Path.GetDirectoryName(outFile)?.Split(Path.DirectorySeparatorChar) ??[];
 
                             // Initialize the cumulative path based on whether the original path is absolute or not
-                            string cumulativePath = isAbsolute ? "" : fileDir;
-                            for (int i = 0; i < directories.Length; i++){
+                            var cumulativePath = isAbsolute ? "" : fileDir;
+                            for (var i = 0; i < directories.Length; i++){
                                 // Build the path incrementally
                                 cumulativePath = Path.Combine(cumulativePath, directories[i]);
 
@@ -2028,7 +2050,8 @@ public class CrunchyrollManager{
             M3U8Json = videoJson,
             // BaseUrl = chunkPlaylist.BaseUrl, 
             Threads = options.Partsize,
-            FsRetryTime = options.FsRetryTime * 1000,
+            FsRetryTime = options.RetryDelay * 1000,
+            Retries = options.RetryAttempts,
             Override = options.Force,
         }, data, true, false);
 
@@ -2085,7 +2108,8 @@ public class CrunchyrollManager{
             M3U8Json = audioJson,
             // BaseUrl = chunkPlaylist.BaseUrl, 
             Threads = options.Partsize,
-            FsRetryTime = options.FsRetryTime * 1000,
+            FsRetryTime = options.RetryDelay * 1000,
+            Retries = options.RetryAttempts,
             Override = options.Force,
         }, data, false, true);
 

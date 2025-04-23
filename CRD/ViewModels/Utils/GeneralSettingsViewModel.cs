@@ -53,6 +53,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private double? _downloadSpeed;
+    
+    [ObservableProperty]
+    private double? _retryAttempts;
+    
+    [ObservableProperty]
+    private double? _retryDelay;
 
     [ObservableProperty]
     private ComboBoxItem _selectedHistoryLang;
@@ -258,6 +264,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         HistorySkipUnmonitored = options.HistorySkipUnmonitored;
         HistoryCountSonarr = options.HistoryCountSonarr;
         DownloadSpeed = options.DownloadSpeedLimit;
+        RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10); 
+        RetryDelay =  Math.Clamp((options.RetryDelay), 1, 30); 
         DownloadToTempFolder = options.DownloadToTempFolder;
         SimultaneousDownloads = options.SimultaneousDownloads;
         LogMode = options.LogMode;
@@ -283,6 +291,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
         CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);
+        
+        CrunchyrollManager.Instance.CrunOptions.RetryAttempts = Math.Clamp((int)(RetryAttempts ?? 0), 1, 10);
+        CrunchyrollManager.Instance.CrunOptions.RetryDelay = Math.Clamp((int)(RetryDelay ?? 0), 1, 30);
 
         CrunchyrollManager.Instance.CrunOptions.DownloadToTempFolder = DownloadToTempFolder;
         CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials = HistoryAddSpecials;

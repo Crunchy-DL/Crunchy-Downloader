@@ -22,6 +22,7 @@ namespace CRD.Views;
 public partial class MainWindow : AppWindow{
     private Stack<object> navigationStack = new Stack<object>();
 
+    private static HashSet<string> activeErrors = new HashSet<string>();
 
     #region Singelton
 
@@ -43,7 +44,7 @@ public partial class MainWindow : AppWindow{
     }
 
     #endregion
-    
+
     private object selectedNavVieItem;
 
     private const int TitleBarHeightAdjustment = 31;
@@ -55,12 +56,12 @@ public partial class MainWindow : AppWindow{
         ProgramManager.Instance.StorageProvider = StorageProvider;
         AvaloniaXamlLoader.Load(this);
         InitializeComponent();
-        
+
         ExtendClientAreaTitleBarHeightHint = TitleBarHeightAdjustment;
         TitleBar.Height = TitleBarHeightAdjustment;
         TitleBar.ExtendsContentIntoTitleBar = true;
         TitleBar.TitleBarHitTestType = TitleBarHitTestType.Complex;
-        
+
         Opened += OnOpened;
         Closing += OnClosing;
 
@@ -72,36 +73,59 @@ public partial class MainWindow : AppWindow{
 
         //select first element as default
         var nv = this.FindControl<NavigationView>("NavView");
-        nv.SelectedItem =  nv.MenuItems.ElementAt(0);
+        nv.SelectedItem = nv.MenuItems.ElementAt(0);
         selectedNavVieItem = nv.SelectedItem;
 
         MessageBus.Current.Listen<NavigationMessage>()
             .Subscribe(message => {
                 if (message.Refresh){
-                    navigationStack.Pop();
-                    var viewModel = Activator.CreateInstance(message.ViewModelType);
-                    
+                    if (navigationStack.Count > 0){
+                        navigationStack.Pop();
+                    }
 
-                    navigationStack.Push(viewModel);
-                    nv.Content = viewModel;
-                } else if (!message.Back && message.ViewModelType != null){
-                    var viewModel = Activator.CreateInstance(message.ViewModelType);
-                    
-
-                    navigationStack.Push(viewModel);
-                    nv.Content = viewModel;
+                    try{
+                        var viewModel = Activator.CreateInstance(message.ViewModelType);
+                        navigationStack.Push(viewModel);
+                        nv.Content = viewModel;
+                    } catch (Exception ex){
+                        Console.Error.WriteLine($"Failed to create or push viewModel: {ex.Message}");
+                    }
+                } else if (message is{ Back: false, ViewModelType: not null }){
+                    try{
+                        var viewModel = Activator.CreateInstance(message.ViewModelType);
+                        navigationStack.Push(viewModel);
+                        nv.Content = viewModel;
+                    } catch (Exception ex){
+                        Console.Error.WriteLine($"Failed to create or push viewModel: {ex.Message}");
+                    }
                 } else{
-                    navigationStack.Pop();
-                    var viewModel = navigationStack.Peek();
-                    nv.Content = viewModel;
+                    if (navigationStack.Count > 0){
+                        navigationStack.Pop();
+                    }
+
+                    if (navigationStack.Count > 0){
+                        var viewModel = navigationStack.Peek();
+                        if (viewModel is HistoryPageViewModel historyView){
+                            historyView.ApplyFilter();
+                        }
+
+                        nv.Content = viewModel;
+                    } else{
+                        Console.Error.WriteLine("Navigation stack is empty. Cannot peek.");
+                    }
                 }
             });
 
         MessageBus.Current.Listen<ToastMessage>()
-            .Subscribe(message => ShowToast(message.Message, message.Type, message.Seconds));
+            .Subscribe(message => ShowToast(message.Message ?? string.Empty, message.Type, message.Seconds));
     }
 
-    public async void ShowError(string message,bool githubWikiButton = false){
+    public async void ShowError(string message, bool githubWikiButton = false){
+        if (activeErrors.Contains(message))
+            return;
+
+        activeErrors.Add(message);
+
         var dialog = new ContentDialog(){
             Title = "Error",
             Content = message,
@@ -109,19 +133,22 @@ public partial class MainWindow : AppWindow{
         };
 
         if (githubWikiButton){
-            dialog.PrimaryButtonText = "Github Wiki"; 
+            dialog.PrimaryButtonText = "Github Wiki";
         }
-        
+
         var result = await dialog.ShowAsync();
 
         if (result == ContentDialogResult.Primary){
             Helpers.OpenUrl($"https://github.com/Crunchy-DL/Crunchy-Downloader/wiki");
         }
+
+        activeErrors.Remove(message);
     }
 
 
     public void ShowToast(string message, ToastType type, int durationInSeconds = 5){
-        this.FindControl<ToastNotification>("Toast").Show(message, type, durationInSeconds);
+        var toastControl = this.FindControl<ToastNotification>("Toast");
+        toastControl?.Show(message, type, durationInSeconds);
     }
 
 
@@ -172,7 +199,7 @@ public partial class MainWindow : AppWindow{
             }
         }
     }
-    
+
     private void OnOpened(object sender, EventArgs e){
         if (File.Exists(CfgManager.PathWindowSettings)){
             var settings = JsonConvert.DeserializeObject<WindowSettings>(File.ReadAllText(CfgManager.PathWindowSettings));
@@ -193,7 +220,7 @@ public partial class MainWindow : AppWindow{
                     _restorePosition = new PixelPoint(settings.PosX, settings.PosY);
 
                     // Ensure the window is on the correct screen before maximizing
-                    Position = new PixelPoint(settings.PosX, settings.PosY );
+                    Position = new PixelPoint(settings.PosX, settings.PosY);
                 }
 
                 if (settings.IsMaximized){
@@ -242,7 +269,7 @@ public partial class MainWindow : AppWindow{
     private void OnPositionChanged(object sender, PixelPointEventArgs e){
         if (WindowState == WindowState.Normal){
             var screens = Screens.All;
-            
+
             bool isWithinAnyScreen = screens.Any(screen =>
                 e.Point.X >= screen.WorkingArea.X &&
                 e.Point.X <= screen.WorkingArea.X + screen.WorkingArea.Width &&

@@ -95,4 +95,8 @@ public class CrunchyMovie{
 
     [JsonProperty("premium_date")]
     public DateTime PremiumDate{ get; set; }
+    
+    [JsonProperty("type")]
+    public string type{ get; set; }
+    
 }

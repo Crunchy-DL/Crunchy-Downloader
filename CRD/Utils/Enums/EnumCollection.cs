@@ -2,24 +2,37 @@
 using System.Runtime.Serialization;
 using CRD.Utils.JsonConv;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace CRD.Utils;
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum StreamingService{
+    [EnumMember(Value = "Crunchyroll")]
     Crunchyroll,
+    [EnumMember(Value = "Unknown")]
     Unknown
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum EpisodeType{
+    [EnumMember(Value = "MusicVideo")]
     MusicVideo,
+    [EnumMember(Value = "Concert")]
     Concert,
+    [EnumMember(Value = "Episode")]
     Episode,
+    [EnumMember(Value = "Unknown")]
     Unknown
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum SeriesType{
+    [EnumMember(Value = "Artist")]
     Artist,
+    [EnumMember(Value = "Series")]
     Series,
+    [EnumMember(Value = "Unknown")]
     Unknown
 }
 
@@ -171,17 +184,25 @@ public enum DownloadMediaType{
     Description,
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum ScaledBorderAndShadowSelection{
+    [EnumMember(Value = "Dont Add")]
     DontAdd,
+    [EnumMember(Value = "ScaledBorderAndShadow Yes")]
     ScaledBorderAndShadowYes,
+    [EnumMember(Value = "ScaledBorderAndShadow No")]
     ScaledBorderAndShadowNo,
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum HistoryViewType{
+    [EnumMember(Value = "Posters")]
     Posters,
+    [EnumMember(Value = "Table")]
     Table,
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum SortingType{
     [EnumMember(Value = "Series Title")]
     SeriesTitle,
@@ -193,6 +214,7 @@ public enum SortingType{
     HistorySeriesAddDate,
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum FilterType{
     [EnumMember(Value = "All")]
     All,
@@ -205,14 +227,27 @@ public enum FilterType{
 
     [EnumMember(Value = "Continuing Only")]
     ContinuingOnly,
+    
+    [EnumMember(Value = "Active")]
+    Active,
+    
+    [EnumMember(Value = "Inactive")]
+    Inactive,
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum CrunchyUrlType{
+    [EnumMember(Value = "Artist")]
     Artist,
+    [EnumMember(Value = "MusicVideo")]
     MusicVideo,
+    [EnumMember(Value = "Concert")]
     Concert,
+    [EnumMember(Value = "Episode")]
     Episode,
+    [EnumMember(Value = "Series")]
     Series,
+    [EnumMember(Value = "Unknown")]
     Unknown
 }
 

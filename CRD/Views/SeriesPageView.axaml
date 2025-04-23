@@ -57,9 +57,42 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" FontSize="45" Text="{Binding SelectedSeries.SeriesTitle}" TextTrimming="CharacterEllipsis"></TextBlock>
-                            <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}"></TextBlock>
-                            <TextBlock Grid.Row="3" IsVisible="{Binding SelectedSeries.HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}" FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding AvailableDubs}"></TextBlock>
-                            <TextBlock Grid.Row="4" IsVisible="{Binding SelectedSeries.HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}" FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="{Binding AvailableSubs}"></TextBlock>
+                            <TextBlock Grid.Row="1" FontSize="20" TextWrapping="Wrap" Text="{Binding SelectedSeries.SeriesDescription}" MinWidth="250"></TextBlock>
+
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Center"
+                                        IsVisible="{Binding SelectedSeries.HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
+                                <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="Available Dubs: "></TextBlock>
+
+                                <ui:HighlightingTextBlock
+                                    Items="{Binding SelectedSeries.HistorySeriesAvailableDubLang}"
+                                    Series="{Binding SelectedSeries}"
+                                    Season=""
+                                    StreamingService="Crunchyroll"
+                                    CheckDubs="True"
+                                    FontSize="15"
+                                    Opacity="0.8"
+                                    TextWrapping="Wrap" />
+
+
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center"
+                                        IsVisible="{Binding SelectedSeries.HistorySeriesAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}">
+                                <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="Available Subs: "></TextBlock>
+
+                                <ui:HighlightingTextBlock
+                                    Items="{Binding SelectedSeries.HistorySeriesAvailableSoftSubs}"
+                                    Series="{Binding SelectedSeries}"
+                                    Season=""
+                                    StreamingService="Crunchyroll"
+                                    CheckDubs="False"
+                                    FontSize="15"
+                                    Opacity="0.8"
+                                    TextWrapping="Wrap" />
+
+
+                            </StackPanel>
+
                             <StackPanel Grid.Row="5" Orientation="Vertical">
 
                                 <StackPanel Orientation="Horizontal" Margin="0 10 10 10">
@@ -116,6 +149,24 @@
                                             <controls:SymbolIcon Symbol="Folder" FontSize="18" />
                                         </StackPanel>
                                     </Button>
+
+                                    <ToggleButton Margin="0 0 5 10" FontStyle="Italic"
+                                                  VerticalAlignment="Center"
+                                                  IsChecked="{Binding SelectedSeries.IsInactive}" Command="{Binding ToggleInactive}">
+                                        <ToolTip.Tip>
+                                            <StackPanel Orientation="Vertical">
+                                                <TextBlock Text="Set Active"
+                                                           IsVisible="{Binding SelectedSeries.IsInactive}"
+                                                           FontSize="15" />
+                                                <TextBlock Text="Set Inactive"
+                                                           IsVisible="{Binding !SelectedSeries.IsInactive}"
+                                                           FontSize="15" />
+                                            </StackPanel>
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal">
+                                            <controls:SymbolIcon Symbol="CloudOffline" FontSize="18" />
+                                        </StackPanel>
+                                    </ToggleButton>
 
                                     <StackPanel>
                                         <ToggleButton x:Name="SeriesOverride" Margin="0 0 5 10" FontStyle="Italic"
@@ -184,7 +235,7 @@
 
                                                                 </StackPanel>
 
-                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10" >
+                                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0 0 0 10">
                                                                     <TextBlock Text="Dub" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0 0 10 0"></TextBlock>
                                                                     <StackPanel>
                                                                         <ToggleButton x:Name="DropdownButtonDub" Width="210" HorizontalContentAlignment="Stretch">
@@ -310,26 +361,53 @@
                                             <Grid VerticalAlignment="Center">
 
                                                 <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <StackPanel VerticalAlignment="Center">
-                                                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                                        <TextBlock Text="E"></TextBlock>
-                                                        <TextBlock Text="{Binding Episode}"></TextBlock>
-                                                        <TextBlock Text=" - "></TextBlock>
-                                                        <TextBlock Text="{Binding EpisodeTitle}"></TextBlock>
-                                                    </StackPanel>
+                                                <controls:SymbolIcon Grid.Column="0" IsVisible="{Binding !IsEpisodeAvailableOnStreamingService}" 
+                                                                     Margin="0 0 5 0 " 
+                                                                     Symbol="AlertOn" 
+                                                                     FontSize="18" 
+                                                                     HorizontalAlignment="Center"
+                                                                     VerticalAlignment="Center">
+                                                    <ToolTip.Tip>
+                                                        <TextBlock Text="Episode unavailable — it might not be available on the streaming service" FontSize="15" />
+                                                    </ToolTip.Tip>
+
+                                                </controls:SymbolIcon>
+                                                
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left">
+                                                    
+                                                    <ui:EpisodeHighlightTextBlock
+                                                        Series="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SelectedSeries}"
+                                                        Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
+                                                        Episode="{Binding }"
+                                                        StreamingService="Crunchyroll"
+                                                        MinWidth="50"
+                                                        TextWrapping="NoWrap"
+                                                        TextTrimming="CharacterEllipsis" />
+
+
                                                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                                 IsVisible="{Binding HistoryEpisodeAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
                                                         <TextBlock FontStyle="Italic"
                                                                    FontSize="12"
                                                                    Opacity="0.8" Text="Dubs: ">
                                                         </TextBlock>
-                                                        <TextBlock FontStyle="Italic"
-                                                                   FontSize="12"
-                                                                   Opacity="0.8" Text="{Binding HistoryEpisodeAvailableDubLang, Converter={StaticResource UiListToStringConverter}}" />
+
+                                                        <ui:HighlightingTextBlock
+                                                            Items="{Binding HistoryEpisodeAvailableDubLang}"
+                                                            Series="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SelectedSeries}"
+                                                            Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
+                                                            StreamingService="Crunchyroll"
+                                                            CheckDubs="True"
+                                                            FontSize="12"
+                                                            Opacity="0.8"
+                                                            FontStyle="Italic" />
+
+
                                                     </StackPanel>
                                                     <!-- <StackPanel Orientation="Horizontal" VerticalAlignment="Center"> -->
                                                     <!--     <TextBlock FontStyle="Italic" -->
@@ -343,7 +421,9 @@
                                                 </StackPanel>
 
 
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+
+                                                    <TextBlock Text="{Binding ReleaseDateFormated}" VerticalAlignment="Center" FontSize="15" Opacity="0.8" Margin="0 0 20  0"></TextBlock>
 
                                                     <StackPanel VerticalAlignment="Center" Margin="0 0 5 0" Orientation="Horizontal"
                                                                 IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">

@@ -13,7 +13,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.History;
 using CRD.Utils.Updater;
+using ExtendedXmlSerializer.Core.Sources;
 using FluentAvalonia.Styling;
 
 namespace CRD.Downloader;
@@ -66,9 +68,14 @@ public partial class ProgramManager : ObservableObject{
 
     private readonly FluentAvaloniaTheme? _faTheme;
 
-    private Queue<Func<Task>> taskQueue = new Queue<Func<Task>>();
+    #region Startup Param Variables
 
+    private Queue<Func<Task>> taskQueue = new Queue<Func<Task>>();
+    bool historyRefreshAdded = false;
     private bool exitOnTaskFinish;
+
+    #endregion
+
 
     public IStorageProvider StorageProvider;
 
@@ -76,12 +83,27 @@ public partial class ProgramManager : ObservableObject{
         _faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme;
 
         foreach (var arg in Environment.GetCommandLineArgs()){
-            if (arg == "--historyRefreshAll"){
-                taskQueue.Enqueue(RefreshAll);
-            } else if (arg == "--historyAddToQueue"){
-                taskQueue.Enqueue(AddMissingToQueue);
-            } else if (arg == "--exit"){
-                exitOnTaskFinish = true;
+            switch (arg){
+                case "--historyRefreshAll":
+                    if (!historyRefreshAdded){
+                        taskQueue.Enqueue(() => RefreshHistory(FilterType.All));
+                        historyRefreshAdded = true;
+                    }
+
+                    break;
+                case "--historyRefreshActive":
+                    if (!historyRefreshAdded){
+                        taskQueue.Enqueue(() => RefreshHistory(FilterType.Active));
+                        historyRefreshAdded = true;
+                    }
+
+                    break;
+                case "--historyAddToQueue":
+                    taskQueue.Enqueue(AddMissingToQueue);
+                    break;
+                case "--exit":
+                    exitOnTaskFinish = true;
+                    break;
             }
         }
 
@@ -90,16 +112,54 @@ public partial class ProgramManager : ObservableObject{
         CleanUpOldUpdater();
     }
 
-    private async Task RefreshAll(){
+    private async Task RefreshHistory(FilterType filterType){
         FetchingData = true;
 
-        foreach (var item in CrunchyrollManager.Instance.HistoryList){
+
+        List<HistorySeries> filteredItems;
+        var historyList = CrunchyrollManager.Instance.HistoryList;
+
+        switch (filterType){
+            case FilterType.All:
+                filteredItems = historyList.ToList();
+                break;
+
+            case FilterType.MissingEpisodes:
+                filteredItems = historyList.Where(item => item.NewEpisodes > 0).ToList();
+                break;
+
+            case FilterType.MissingEpisodesSonarr:
+                filteredItems = historyList.Where(historySeries =>
+                        !string.IsNullOrEmpty(historySeries.SonarrSeriesId) &&
+                        historySeries.Seasons.Any(season =>
+                            season.EpisodesList.Any(historyEpisode =>
+                                !string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId) && !historyEpisode.SonarrHasFile &&
+                                (!CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored || historyEpisode.SonarrIsMonitored))))
+                    .ToList();
+                break;
+
+            case FilterType.ContinuingOnly:
+                filteredItems = historyList.Where(item => !string.IsNullOrEmpty(item.SonarrNextAirDate)).ToList();
+                break;
+            case FilterType.Active:
+                filteredItems = historyList.Where(item => !item.IsInactive).ToList();
+                break;
+            case FilterType.Inactive:
+                filteredItems = historyList.Where(item => item.IsInactive).ToList();
+                break;
+
+            default:
+                filteredItems = new List<HistorySeries>();
+                break;
+        }
+
+        foreach (var item in filteredItems){
             item.SetFetchingData();
         }
 
-        for (int i = 0; i < CrunchyrollManager.Instance.HistoryList.Count; i++){
-            await CrunchyrollManager.Instance.HistoryList[i].FetchData("");
-            CrunchyrollManager.Instance.HistoryList[i].UpdateNewEpisodes();
+        for (int i = 0; i < filteredItems.Count; i++){
+            await filteredItems[i].FetchData("");
+            filteredItems[i].UpdateNewEpisodes();
         }
 
         FetchingData = false;
@@ -115,10 +175,16 @@ public partial class ProgramManager : ObservableObject{
 
         while (QueueManager.Instance.Queue.Any(e => e.DownloadProgress.Done != true)){
             Console.WriteLine("Waiting for downloads to complete...");
-            await Task.Delay(2000); // Wait for 2 second before checking again
+            await Task.Delay(2000); 
         }
     }
-
+    
+    public void SetBackgroundImage(){
+        if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath)){
+            Helpers.SetBackgroundImage(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath, CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity,
+                CrunchyrollManager.Instance.CrunOptions.BackgroundImageBlurRadius);
+        }
+    }
 
     private async Task Init(){
         CrunchyrollManager.Instance.InitOptions();
@@ -142,12 +208,7 @@ public partial class ProgramManager : ObservableObject{
                 Application.Current.RequestedThemeVariant = ThemeVariant.Light;
             }
         }
-
-        if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath)){
-            Helpers.SetBackgroundImage(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath, CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity,
-                CrunchyrollManager.Instance.CrunOptions.BackgroundImageBlurRadius);
-        }
-
+        
         await CrunchyrollManager.Instance.Init();
 
         FinishedLoading = true;

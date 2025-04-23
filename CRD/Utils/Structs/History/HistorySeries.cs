@@ -10,7 +10,9 @@ using Avalonia.Media.Imaging;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.CustomList;
 using CRD.Utils.Files;
+using CRD.Views;
 using Newtonsoft.Json;
+using ReactiveUI;
 
 namespace CRD.Utils.Structs.History;
 
@@ -20,6 +22,9 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonProperty("series_type")]
     public SeriesType SeriesType{ get; set; } = SeriesType.Unknown;
+    
+    [JsonProperty("series_is_inactive")]
+    public bool IsInactive{ get; set; }
 
     [JsonProperty("series_title")]
     public string? SeriesTitle{ get; set; }
@@ -67,10 +72,10 @@ public class HistorySeries : INotifyPropertyChanged{
     public List<string> HistorySeriesAvailableDubLang{ get; set; } =[];
 
     [JsonProperty("history_series_soft_subs_override")]
-    public List<string> HistorySeriesSoftSubsOverride{ get; set; } =[];
+    public ObservableCollection<string> HistorySeriesSoftSubsOverride{ get; set; } =[];
 
     [JsonProperty("history_series_dub_lang_override")]
-    public List<string> HistorySeriesDubLangOverride{ get; set; } =[];
+    public ObservableCollection<string> HistorySeriesDubLangOverride{ get; set; } =[];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -460,17 +465,19 @@ public class HistorySeries : INotifyPropertyChanged{
         }
     }
 
-    public async Task FetchData(string? seasonId){
+    public async Task<bool> FetchData(string? seasonId){
         Console.WriteLine($"Fetching Data for: {SeriesTitle}");
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-
+        var isOk = true;
+        
         switch (SeriesType){
             case SeriesType.Artist:
                 try{
                     await CrunchyrollManager.Instance.CrMusic.ParseArtistVideosByIdAsync(SeriesId,
                         string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang, true, true);
                 } catch (Exception e){
+                    isOk = false;
                     Console.Error.WriteLine("Failed to update History artist");
                     Console.Error.WriteLine(e);
                 }
@@ -480,8 +487,9 @@ public class HistorySeries : INotifyPropertyChanged{
             case SeriesType.Unknown:
             default:
                 try{
-                    await CrunchyrollManager.Instance.History.CrUpdateSeries(SeriesId, seasonId);
+                    isOk = await CrunchyrollManager.Instance.History.CrUpdateSeries(SeriesId, seasonId);
                 } catch (Exception e){
+                    isOk = false;
                     Console.Error.WriteLine("Failed to update History series");
                     Console.Error.WriteLine(e);
                 }
@@ -495,6 +503,8 @@ public class HistorySeries : INotifyPropertyChanged{
         UpdateNewEpisodes();
         FetchingData = false;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
+        
+        return isOk;
     }
 
     public void RemoveSeason(string? season){

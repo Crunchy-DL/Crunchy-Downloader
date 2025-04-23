@@ -34,6 +34,9 @@ public class HistoryEpisode : INotifyPropertyChanged{
     [JsonProperty("episode_special_episode")]
     public bool SpecialEpisode{ get; set; }
     
+    [JsonProperty("episode_available_on_streaming_service")]
+    public bool IsEpisodeAvailableOnStreamingService{ get; set; }
+    
     [JsonProperty("episode_type")]
     public EpisodeType EpisodeType{ get; set; } = EpisodeType.Unknown;
 
@@ -61,6 +64,22 @@ public class HistoryEpisode : INotifyPropertyChanged{
     [JsonProperty("history_episode_available_dub_lang")]
     public List<string> HistoryEpisodeAvailableDubLang{ get; set; } =[];
 
+    [JsonIgnore]
+    public string ReleaseDateFormated{
+        get{
+            if (!EpisodeCrPremiumAirDate.HasValue ||
+                EpisodeCrPremiumAirDate.Value == DateTime.MinValue ||
+                EpisodeCrPremiumAirDate.Value.Date == new DateTime(1970, 1, 1))
+                return string.Empty;
+
+
+            var cultureInfo = System.Globalization.CultureInfo.InvariantCulture;
+            string monthAbbreviation = cultureInfo.DateTimeFormat.GetAbbreviatedMonthName(EpisodeCrPremiumAirDate.Value.Month);
+
+            return string.Format("{0:00}.{1}.{2}", EpisodeCrPremiumAirDate.Value.Day, monthAbbreviation, EpisodeCrPremiumAirDate.Value.Year);
+        }
+    }
+    
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public void ToggleWasDownloaded(){

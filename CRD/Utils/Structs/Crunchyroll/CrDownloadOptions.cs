@@ -18,8 +18,11 @@ public class CrDownloadOptions{
     [JsonIgnore]
     public int Timeout{ get; set; }
 
-    [JsonIgnore]
-    public int FsRetryTime{ get; set; }
+    [JsonProperty("retry_delay")]
+    public int RetryDelay{ get; set; }
+    
+    [JsonProperty("retry_attempts")]
+    public int RetryAttempts{ get; set; }
 
     [JsonIgnore]
     public string Force{ get; set; } = "";
@@ -232,6 +235,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_sync_dubs")]
     public bool SyncTiming{ get; set; }
+    
+    [JsonProperty("mux_sync_hwaccel")]
+    public string? FfmpegHwAccelFlag{ get; set; }
 
     [JsonProperty("encode_enabled")]
     public bool IsEncodeEnabled{ get; set; }

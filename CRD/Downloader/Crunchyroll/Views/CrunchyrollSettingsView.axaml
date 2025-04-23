@@ -286,7 +286,7 @@
                         <CheckBox IsChecked="{Binding DownloadChapters}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Mark as watched" Description="Mark the downloaded episodes as watched on Crunchyroll">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MarkAsWatched}"> </CheckBox>
@@ -377,7 +377,7 @@
                         <CheckBox IsChecked="{Binding DefaultSubSigns}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Include Fonts" Description="Includes the fonts in the mkv">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MuxFonts}"> </CheckBox>
@@ -409,7 +409,23 @@
 
                 <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Sync Timings" Description="Does not work for all episodes but for the ones that only have a different intro">
                     <controls:SettingsExpanderItem.Footer>
-                        <CheckBox IsChecked="{Binding SyncTimings}"> </CheckBox>
+                        <StackPanel HorizontalAlignment="Right">
+                            <CheckBox HorizontalAlignment="Right" IsChecked="{Binding SyncTimings}"> </CheckBox>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" IsVisible="{Binding SyncTimings}">
+                                <TextBlock VerticalAlignment="Center" Text="Video Processing Method" Margin=" 0 0 5 0" ></TextBlock>
+                                <ComboBox HorizontalAlignment="Right"
+                                          ItemsSource="{Binding FFmpegHWAccel}"
+                                          SelectedItem="{Binding SelectedFFmpegHWAccel}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding DisplayName}"></TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                            
+                        </StackPanel>
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -438,7 +454,11 @@
                                         <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
                                                 CornerRadius="10" Margin="2">
                                             <StackPanel Orientation="Horizontal" Margin="5">
-                                                <TextBlock Text="{Binding stringValue}" Margin="5,0" />
+                                                <TextBlock Text="{Binding stringValue}" Margin="5,0" TextTrimming="CharacterEllipsis" MaxWidth="300" TextWrapping="NoWrap">
+                                                    <ToolTip.Tip>
+                                                        <TextBlock Text="{Binding stringValue}" FontSize="15" />
+                                                    </ToolTip.Tip>
+                                                </TextBlock>
                                                 <Button Content="X" FontSize="10" VerticalAlignment="Center"
                                                         HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
                                                         Command="{Binding  $parent[ItemsControl].((vm:CrunchyrollSettingsViewModel)DataContext).RemoveMkvMergeParam}"
@@ -476,7 +496,11 @@
                                         <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
                                                 CornerRadius="10" Margin="2">
                                             <StackPanel Orientation="Horizontal" Margin="5">
-                                                <TextBlock Text="{Binding stringValue}" Margin="5,0" />
+                                                <TextBlock Text="{Binding stringValue}" Margin="5,0" TextTrimming="CharacterEllipsis" MaxWidth="300" TextWrapping="NoWrap">
+                                                    <ToolTip.Tip>
+                                                        <TextBlock Text="{Binding stringValue}" FontSize="15" />
+                                                    </ToolTip.Tip>
+                                                </TextBlock>
                                                 <Button Content="X" FontSize="10" VerticalAlignment="Center"
                                                         HorizontalAlignment="Center" Width="15" Height="15" Padding="0"
                                                         Command="{Binding  $parent[ItemsControl].((vm:CrunchyrollSettingsViewModel)DataContext).RemoveFfmpegParam}"

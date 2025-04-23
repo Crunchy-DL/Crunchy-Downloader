@@ -25,7 +25,7 @@ public partial class QueueManager : ObservableObject{
     public int ActiveDownloads;
 
     #endregion
-    
+
     [ObservableProperty]
     private bool _hasFailedItem;
 
@@ -92,9 +92,8 @@ public partial class QueueManager : ObservableObject{
         }
 
         HasFailedItem = Queue.Any(item => item.DownloadProgress.Error);
-
     }
-    
+
 
     public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false, bool onlySubs = false){
         if (string.IsNullOrEmpty(epId)){
@@ -190,6 +189,7 @@ public partial class QueueManager : ObservableObject{
 
                 Queue.Add(selected);
 
+
                 if (selected.Data.Count < dubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub){
                     Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
                     Console.Error.WriteLine("Added Episode to Queue but couldn't find all selected dubs - Available dubs/subs: ");
@@ -214,38 +214,44 @@ public partial class QueueManager : ObservableObject{
                 Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
                 MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
             }
-        } else{
-            Console.WriteLine("Couldn't find episode trying to find movie with id");
 
-            var movie = await CrunchyrollManager.Instance.CrMovies.ParseMovieById(epId, crLocale);
+            return;
+        }
 
-            if (movie != null){
-                var movieMeta = CrunchyrollManager.Instance.CrMovies.EpisodeMeta(movie, dubLang);
+        Console.WriteLine("Couldn't find episode trying to find movie with id");
 
-                if (movieMeta != null){
-                    movieMeta.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
-                    movieMeta.OnlySubs = onlySubs;
+        var movie = await CrunchyrollManager.Instance.CrMovies.ParseMovieById(epId, crLocale);
 
-                    var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
+        if (movie != null){
+            var movieMeta = CrunchyrollManager.Instance.CrMovies.EpisodeMeta(movie, dubLang);
 
-                    if (movieMeta.OnlySubs){
-                        newOptions.Novids = true;
-                        newOptions.Noaudio = true;
-                    }
+            if (movieMeta != null){
+                movieMeta.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
+                movieMeta.OnlySubs = onlySubs;
 
-                    newOptions.DubLang = dubLang;
+                var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
 
-                    movieMeta.DownloadSettings = newOptions;
-                    
-                    movieMeta.VideoQuality = CrunchyrollManager.Instance.CrunOptions.QualityVideo;
-                    
-                    Queue.Add(movieMeta);
-
-                    Console.WriteLine("Added Movie to Queue");
-                    MessageBus.Current.SendMessage(new ToastMessage($"Added Movie to Queue", ToastType.Information, 1));
+                if (movieMeta.OnlySubs){
+                    newOptions.Novids = true;
+                    newOptions.Noaudio = true;
                 }
+
+                newOptions.DubLang = dubLang;
+
+                movieMeta.DownloadSettings = newOptions;
+
+                movieMeta.VideoQuality = CrunchyrollManager.Instance.CrunOptions.QualityVideo;
+
+                Queue.Add(movieMeta);
+
+                Console.WriteLine("Added Movie to Queue");
+                MessageBus.Current.SendMessage(new ToastMessage($"Added Movie to Queue", ToastType.Information, 1));
+                return;
             }
         }
+
+        Console.Error.WriteLine($"No episode or movie found with the id: {epId}");
+        MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue - No episode or movie found with the id: {epId}", ToastType.Error, 3));
     }
 
 

@@ -92,10 +92,14 @@
                         <Border BorderBrush="#4a4a4a" Background="{DynamicResource ControlAltFillColorQuarternary}" BorderThickness="1"
                                 CornerRadius="10" Margin="2">
                             <StackPanel Orientation="Horizontal" Margin="5">
-                                <TextBlock Text="{Binding stringValue}" Margin="5,0" />
+                                <TextBlock Text="{Binding stringValue}" Margin="5,0" TextTrimming="CharacterEllipsis" MaxWidth="300" TextWrapping="NoWrap">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding stringValue}" FontSize="15" />
+                                    </ToolTip.Tip>
+                                </TextBlock>
                                 <Button Content="X" FontSize="8" VerticalAlignment="Center" HorizontalAlignment="Center"
                                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-                                         Width="15" Height="15" Padding="0"
+                                        Width="15" Height="15" Padding="0"
                                         Command="{Binding $parent[ItemsControl].((utils:ContentDialogEncodingPresetViewModel)DataContext).RemoveAdditionalParam}"
                                         CommandParameter="{Binding .}" />
                             </StackPanel>

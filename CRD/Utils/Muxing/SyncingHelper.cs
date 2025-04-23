@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using SixLabors.ImageSharp;
@@ -17,7 +18,8 @@ namespace CRD.Utils.Muxing;
 public class SyncingHelper{
     public static async Task<(bool IsOk, int ErrorCode, double frameRate)> ExtractFrames(string videoPath, string outputDir, double offset, double duration){
         var ffmpegPath = CfgManager.PathFFMPEG;
-        var arguments = $"-i \"{videoPath}\" -vf \"select='gt(scene,0.1)',showinfo\" -fps_mode vfr -frame_pts true -t {duration} -ss {offset} \"{outputDir}\\frame%05d.png\"";
+        var arguments =
+            $"{CrunchyrollManager.Instance.CrunOptions.FfmpegHwAccelFlag}-ss {offset} -t {duration} -i \"{videoPath}\" -vf \"select='gt(scene,0.1)',showinfo\" -vsync vfr -frame_pts true \"{outputDir}\\frame%05d.jpg\"";
 
         var output = "";
 
@@ -86,8 +88,8 @@ public class SyncingHelper{
         var2 /= count - 1;
         covariance /= count - 1;
 
-        double c1 = 0.01 * 0.01 * 255 * 255;
-        double c2 = 0.03 * 0.03 * 255 * 255;
+        double c1 = 0.01 * 0.01;
+        double c2 = 0.03 * 0.03;
 
         double ssim = ((2 * mean1 * mean2 + c1) * (2 * covariance + c2)) /
                       ((mean1 * mean1 + mean2 * mean2 + c1) * (var1 + var2 + c2));
@@ -103,7 +105,8 @@ public class SyncingHelper{
             for (int y = 0; y < accessor.Height; y++){
                 Span<Rgba32> row = accessor.GetRowSpan(y);
                 for (int x = 0; x < row.Length; x++){
-                    pixels[index++] = row[x].R;
+                    pixels[index++] = row[x].R / 255f;
+                    ;
                 }
             }
         });
@@ -130,16 +133,17 @@ public class SyncingHelper{
             float[] pixels2 = ExtractPixels(image2, targetWidth, targetHeight);
 
             // Check if any frame is completely black, if so, skip SSIM calculation
-            if (IsBlackFrame(pixels1) || IsBlackFrame(pixels2)){
+            if (IsBlackFrame(pixels1) || IsBlackFrame(pixels2) ||
+                IsMonochromaticFrame(pixels1) || IsMonochromaticFrame(pixels2)){
                 // Return a negative value or zero to indicate no SSIM comparison for black frames.
-                return (-1.0,99);
+                return (-1.0, 99);
             }
-            
+
             // Compute SSIM
-            return (CalculateSSIM(pixels1, pixels2),CalculatePixelDifference(pixels1,pixels2));
+            return (CalculateSSIM(pixels1, pixels2), CalculatePixelDifference(pixels1, pixels2));
         }
     }
-    
+
     private static double CalculatePixelDifference(float[] pixels1, float[] pixels2){
         double totalDifference = 0;
         int count = pixels1.Length;
@@ -151,40 +155,84 @@ public class SyncingHelper{
         return totalDifference / count; // Average difference
     }
 
-    private static bool IsBlackFrame(float[] pixels, float threshold = 1.0f){
+    private static bool IsBlackFrame(float[] pixels, float threshold = 0.02f){
         // Check if all pixel values are below the threshold, indicating a black frame.
         return pixels.All(p => p <= threshold);
     }
-    
+
+    private static bool IsMonochromaticFrame(float[] pixels, float stdDevThreshold = 0.05f){
+        float avg = pixels.Average();
+        double variance = pixels.Average(p => Math.Pow(p - avg, 2));
+        double stdDev = Math.Sqrt(variance);
+        return stdDev < stdDevThreshold;
+    }
+
     public static bool AreFramesSimilar(string imagePath1, string imagePath2, double ssimThreshold){
-        var (ssim, pixelDiff) = ComputeSSIM(imagePath1, imagePath2, 256, 256);
+        var (ssim, pixelDiff) = ComputeSSIM(imagePath1, imagePath2, 256, 144);
         // Console.WriteLine($"SSIM: {ssim}");
         // Console.WriteLine(pixelDiff);
-        
-        return ssim > ssimThreshold && pixelDiff < 10;
+
+        return ssim > ssimThreshold && pixelDiff < 0.04;
     }
-    
 
-    public static double CalculateOffset(List<FrameData> baseFrames, List<FrameData> compareFrames,bool reverseCompare = false, double ssimThreshold = 0.9){
+    public static float[] GetPixelsArray(string imagePath, int targetWidth = 256, int targetHeight = 144){
+        using var image = Image.Load<Rgba32>(imagePath);
+        image.Mutate(x => x.Resize(new ResizeOptions{
+            Size = new Size(targetWidth, targetHeight),
+            Mode = ResizeMode.Max
+        }).Grayscale());
+        return ExtractPixels(image, targetWidth, targetHeight);
+    }
 
+    public static bool AreFramesSimilarPreprocessed(float[] image1, float[] image2, double ssimThreshold){
+        if (IsBlackFrame(image1) || IsBlackFrame(image2) ||
+            IsMonochromaticFrame(image1) || IsMonochromaticFrame(image2)){
+            return false;
+        }
+
+        var pixelDiff = CalculatePixelDifference(image1, image2);
+
+        if (pixelDiff > 0.04){
+            return false;
+        }
+
+        var ssim = CalculateSSIM(image1, image2);
+
+        return ssim > ssimThreshold && pixelDiff < 0.04;
+    }
+
+    public static double CalculateOffset(List<FrameData> baseFrames, List<FrameData> compareFrames, bool reverseCompare = false, double ssimThreshold = 0.9){
         if (reverseCompare){
             baseFrames.Reverse();
             compareFrames.Reverse();
         }
-        
+
+        var preprocessedCompareFrames = compareFrames.Select(f => new{
+            Frame = f,
+            Pixels = GetPixelsArray(f.FilePath)
+        }).ToList();
+
+        var delay = 0.0;
+
         foreach (var baseFrame in baseFrames){
-            var matchingFrame = compareFrames.FirstOrDefault(f => AreFramesSimilar(baseFrame.FilePath, f.FilePath, ssimThreshold));
+            var baseFramePixels = GetPixelsArray(baseFrame.FilePath);
+            var matchingFrame = preprocessedCompareFrames.AsParallel()
+                .WithExecutionMode(ParallelExecutionMode.ForceParallelism).FirstOrDefault(f => AreFramesSimilarPreprocessed(baseFramePixels, f.Pixels, ssimThreshold));
             if (matchingFrame != null){
                 Console.WriteLine($"Matched Frame:");
                 Console.WriteLine($"\t Base Frame Path: {baseFrame.FilePath} Time: {baseFrame.Time},");
-                Console.WriteLine($"\t Compare Frame Path: {matchingFrame.FilePath} Time: {matchingFrame.Time}");
-                return baseFrame.Time - matchingFrame.Time;
+                Console.WriteLine($"\t Compare Frame Path: {matchingFrame.Frame.FilePath} Time: {matchingFrame.Frame.Time}");
+                delay = baseFrame.Time - matchingFrame.Frame.Time;
+                break;
             } else{
                 // Console.WriteLine($"No Match Found for Base Frame Time: {baseFrame.Time}");
                 Debug.WriteLine($"No Match Found for Base Frame Time: {baseFrame.Time}");
             }
         }
 
-        return 0;
+        preprocessedCompareFrames.Clear();
+        GC.Collect(); // Segment float arrays to avoid calling GC.Collect ?
+
+        return delay;
     }
 }

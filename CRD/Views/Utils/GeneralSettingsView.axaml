@@ -74,6 +74,30 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="Download Retry"
+                                               Description="Sett the number of retry attempts and the delay between each retry">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Width="100" Text="Retry Attempts" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
+                                <controls:NumberBox Minimum="1" Maximum="10"
+                                                    Value="{Binding RetryAttempts}"
+                                                    SpinButtonPlacementMode="Hidden"
+                                                    HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0 5">
+                                <TextBlock Width="100" Text="Retry Delay (s)" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
+                                <controls:NumberBox Minimum="1" Maximum="30"
+                                                    Value="{Binding RetryDelay}"
+                                                    SpinButtonPlacementMode="Hidden"
+                                                    HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </StackPanel>
+
+
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
                 <controls:SettingsExpanderItem Content="Use Temp Download Folder">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel Orientation="Horizontal">

@@ -14,30 +14,36 @@ public partial class ToastNotification : UserControl{
         AvaloniaXamlLoader.Load(this);
     }
 
+    private DispatcherTimer? currentTimer;
+
     public void Show(string message, ToastType type, int durationInSeconds){
-        this.FindControl<TextBlock>("MessageText").Text = message;
+        var text = this.FindControl<TextBlock>("MessageText");
+        if (text != null) text.Text = message;
         SetStyle(type);
-        DispatcherTimer timer = new DispatcherTimer{ Interval = TimeSpan.FromSeconds(durationInSeconds) };
-        timer.Tick += (sender, args) => {
-            timer.Stop();
-            this.IsVisible = false;
+
+        currentTimer?.Stop();
+
+        currentTimer = new DispatcherTimer{ Interval = TimeSpan.FromSeconds(durationInSeconds) };
+        currentTimer.Tick += (sender, args) => {
+            currentTimer?.Stop();
+            IsVisible = false;
         };
-        timer.Start();
-        this.IsVisible = true;
+        currentTimer.Start();
+        IsVisible = true;
     }
 
     private void SetStyle(ToastType type){
         var border = this.FindControl<Border>("MessageBorder");
-        border.Classes.Clear(); // Clear previous styles
+        border?.Classes.Clear(); // Clear previous styles
         switch (type){
             case ToastType.Information:
-                border.Classes.Add("info");
+                border?.Classes.Add("info");
                 break;
             case ToastType.Error:
-                border.Classes.Add("error");
+                border?.Classes.Add("error");
                 break;
             case ToastType.Warning:
-                border.Classes.Add("warning");
+                border?.Classes.Add("warning");
                 break;
         }
     }

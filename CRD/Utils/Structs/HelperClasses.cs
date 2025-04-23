@@ -108,6 +108,11 @@ public class StringItem{
     public string stringValue{ get; set; }
 }
 
+public class StringItemWithDisplayName{
+    public string DisplayName{ get; set; }
+    public string value{ get; set; }
+}
+
 public class WindowSettings{
     public double Width{ get; set; }
     public double Height{ get; set; }

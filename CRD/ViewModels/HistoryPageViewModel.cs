@@ -18,6 +18,7 @@ using CRD.Utils.Files;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
+using CRD.Views;
 using DynamicData;
 using ReactiveUI;
 
@@ -265,7 +266,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         ApplyFilter();
     }
 
-    private void ApplyFilter(){
+    public void ApplyFilter(){
         List<HistorySeries> filteredItems;
 
         switch (currentFilterType){
@@ -282,12 +283,19 @@ public partial class HistoryPageViewModel : ViewModelBase{
                         !string.IsNullOrEmpty(historySeries.SonarrSeriesId) &&
                         historySeries.Seasons.Any(season =>
                             season.EpisodesList.Any(historyEpisode =>
-                                !string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId) && !historyEpisode.SonarrHasFile)))
+                                !string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId) && !historyEpisode.SonarrHasFile &&
+                                (!CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored || historyEpisode.SonarrIsMonitored))))
                     .ToList();
                 break;
 
             case FilterType.ContinuingOnly:
                 filteredItems = Items.Where(item => !string.IsNullOrEmpty(item.SonarrNextAirDate)).ToList();
+                break;
+            case FilterType.Active:
+                filteredItems = Items.Where(item => !item.IsInactive).ToList();
+                break;
+            case FilterType.Inactive:
+                filteredItems = Items.Where(item => item.IsInactive).ToList();
                 break;
 
             default:
@@ -533,6 +541,20 @@ public partial class HistoryPageViewModel : ViewModelBase{
     }
 
     [RelayCommand]
+    public async Task UpdateData(SeasonDialogArgs seriesArgs){
+        if (seriesArgs.Series != null){
+            var result = await seriesArgs.Series.FetchData(seriesArgs.Season?.SeasonId);
+
+            MessageBus.Current.SendMessage(result
+                ? new ToastMessage(string.IsNullOrEmpty(seriesArgs.Season?.SeasonId) ? $"Series Refreshed" : $"Season Refreshed", ToastType.Information, 2)
+                : new ToastMessage(string.IsNullOrEmpty(seriesArgs.Season?.SeasonId) ? $"Series Refresh Failed" : $"Season Refreshed Failed", ToastType.Error, 2));
+        } else{
+            MessageBus.Current.SendMessage(new ToastMessage(string.IsNullOrEmpty(seriesArgs.Season?.SeasonId) ? $"Refresh Failed" : $"Season Refresh Failed", ToastType.Error, 2));
+            Console.Error.WriteLine("Failed to get Series Data from View Tree - report issue");
+        }
+    }
+
+    [RelayCommand]
     public void OpenFolderPath(HistorySeries? series){
         try{
             Process.Start(new ProcessStartInfo{
@@ -543,6 +565,11 @@ public partial class HistoryPageViewModel : ViewModelBase{
         } catch (Exception ex){
             Console.Error.WriteLine($"An error occurred while opening the folder: {ex.Message}");
         }
+    }
+
+    [RelayCommand]
+    public void ToggleInactive(){
+        CfgManager.UpdateHistoryFile();
     }
 }
 

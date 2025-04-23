@@ -114,16 +114,16 @@ public class CrAuth{
             JsonTokenToFileAndVariable(response.ResponseContent, uuid);
         } else{
             if (response.ResponseContent.Contains("invalid_credentials")){
-                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 10));
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 5));
             } else if (response.ResponseContent.Contains("<title>Just a moment...</title>") || 
                        response.ResponseContent.Contains("<title>Access denied</title>") || 
                        response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") || 
                        response.ResponseContent.Trim().Equals("error code: 1020") || 
                        response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
-                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error try to change to BetaAPI in settings", ToastType.Error, 10));
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error try to change to BetaAPI in settings", ToastType.Error, 5));
             } else{
                 MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0, response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}",
-                    ToastType.Error, 10));
+                    ToastType.Error, 5));
                 await Console.Error.WriteLineAsync("Full Response: " + response.ResponseContent);
             }
         }
@@ -231,6 +231,15 @@ public class CrAuth{
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
+        if (response.ResponseContent.Contains("<title>Just a moment...</title>") || 
+            response.ResponseContent.Contains("<title>Access denied</title>") || 
+            response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") || 
+            response.ResponseContent.Trim().Equals("error code: 1020") || 
+            response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
+            MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error try to change to BetaAPI in settings", ToastType.Error, 5));
+            Console.Error.WriteLine($"Failed to login - Cloudflare error try to change to BetaAPI in settings");
+        }
+        
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent, uuid);
 
@@ -242,6 +251,9 @@ public class CrAuth{
         } else{
             Console.Error.WriteLine("Token Auth Failed");
             await AuthAnonymous();
+            
+            MainWindow.Instance.ShowError("Login failed. Please check the log for more details.");
+            
         }
     }
 

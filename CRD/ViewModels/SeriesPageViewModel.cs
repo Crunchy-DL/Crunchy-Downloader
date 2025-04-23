@@ -29,7 +29,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     public static bool _sonarrAvailable;
-    
+
     [ObservableProperty]
     public static bool _showMonitoredBookmark;
 
@@ -38,12 +38,6 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     private IStorageProvider? _storageProvider;
 
-    [ObservableProperty]
-    private string _availableDubs;
-
-    [ObservableProperty]
-    private string _availableSubs;
-    
     public SeriesPageViewModel(){
         _storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
 
@@ -58,25 +52,20 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
             if (!string.IsNullOrEmpty(SelectedSeries.SonarrSeriesId)){
                 SonarrAvailable = SelectedSeries.SonarrSeriesId.Length > 0 && SonarrConnected;
-                
+
                 if (SonarrAvailable){
                     ShowMonitoredBookmark = CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored;
                 }
-                
             } else{
                 SonarrAvailable = false;
             }
         } else{
             SonarrConnected = SonarrAvailable = false;
         }
-        
-        AvailableDubs = "Available Dubs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableDubLang);
-        AvailableSubs = "Available Subs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableSoftSubs);
 
         SelectedSeries.UpdateSeriesFolderPath();
     }
 
-    
 
     [RelayCommand]
     public async Task OpenFolderDialogAsync(HistorySeason? season){
@@ -188,12 +177,13 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task UpdateData(string? season){
-        await SelectedSeries.FetchData(season);
+        var result = await SelectedSeries.FetchData(season);
+
+        MessageBus.Current.SendMessage(result
+            ? new ToastMessage(string.IsNullOrEmpty(season) ? $"Series Refreshed" : $"Season Refreshed", ToastType.Information, 2)
+            : new ToastMessage(string.IsNullOrEmpty(season) ? $"Series Refresh Failed" : $"Season Refresh Failed", ToastType.Error, 2));
 
         SelectedSeries.Seasons.Refresh();
-
-        AvailableDubs = "Available Dubs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableDubLang);
-        AvailableSubs = "Available Subs: " + string.Join(", ", SelectedSeries.HistorySeriesAvailableSoftSubs);
 
         // MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
@@ -209,6 +199,11 @@ public partial class SeriesPageViewModel : ViewModelBase{
         MessageBus.Current.SendMessage(new NavigationMessage(typeof(SeriesPageViewModel), false, true));
     }
 
+
+    [RelayCommand]
+    public void ToggleInactive(){
+        CfgManager.UpdateHistoryFile();
+    }
 
     [RelayCommand]
     public void NavBack(){

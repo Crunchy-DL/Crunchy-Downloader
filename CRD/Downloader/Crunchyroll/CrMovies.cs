@@ -40,23 +40,27 @@ public class CrMovies{
             return null;
         }
 
-        if (movie.Total == 1 && movie.Data != null){
-            return movie.Data.First();
+        if (movie is{ Total: 1, Data: not null }){
+            var movieRes = movie.Data.First();
+            return movieRes.type != "movie" ? null : movieRes;
         }
 
         Console.Error.WriteLine("Multiple movie returned with one ID?");
-        if (movie.Data != null) return movie.Data.First();
+        if (movie.Data != null){
+            var movieRes = movie.Data.First();
+            return movieRes.type != "movie" ? null : movieRes;
+        }
+
         return null;
     }
 
 
     public CrunchyEpMeta? EpisodeMeta(CrunchyMovie episodeP, List<string> dubLang){
-  
         if (!string.IsNullOrEmpty(episodeP.AudioLocale) && !dubLang.Contains(episodeP.AudioLocale)){
             Console.Error.WriteLine("Movie not available in the selected dub lang");
             return null;
         }
-        
+
         var images = (episodeP.Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
 
         var epMeta = new CrunchyEpMeta();
@@ -78,7 +82,7 @@ public class CrMovies{
             Time = 0,
             DownloadSpeed = 0
         };
-        epMeta.AvailableSubs = new List<string>();
+        epMeta.AvailableSubs = [];
         epMeta.Description = episodeP.Description;
         epMeta.Hslang = CrunchyrollManager.Instance.CrunOptions.Hslang;
 

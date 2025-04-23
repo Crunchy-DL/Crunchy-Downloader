@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ using CRD.Utils.Structs.History;
 using CRD.ViewModels;
 using CRD.ViewModels.Utils;
 using CRD.Views.Utils;
+using DynamicData;
 using FluentAvalonia.UI.Controls;
 
 // ReSharper disable InconsistentNaming
@@ -58,7 +60,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
-    
+
     [ObservableProperty]
     private bool _muxFonts;
 
@@ -209,6 +211,11 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "tv/samsung" }
     ];
 
+    public ObservableCollection<StringItemWithDisplayName> FFmpegHWAccel{ get; } =[];
+
+    [ObservableProperty]
+    private StringItemWithDisplayName _selectedFFmpegHWAccel;
+
     [ObservableProperty]
     private bool _isEncodeEnabled;
 
@@ -274,6 +281,12 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
         ComboBoxItem? streamEndpoint = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpoint ?? "")) ?? null;
         SelectedStreamEndpoint = streamEndpoint ?? StreamEndpoints[0];
+
+        FFmpegHWAccel.AddRange(GetAvailableHWAccelOptions());
+
+        StringItemWithDisplayName? hwAccellFlag = FFmpegHWAccel.FirstOrDefault(a => a.value == options.FfmpegHwAccelFlag) ?? null;
+        SelectedFFmpegHWAccel = hwAccellFlag ?? FFmpegHWAccel[0];
+
 
         var softSubLang = SubLangList.Where(a => options.DlSubs.Contains(a.Content)).ToList();
 
@@ -390,6 +403,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic = SearchFetchFeaturedMusic;
 
         CrunchyrollManager.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();
+
+        CrunchyrollManager.Instance.CrunOptions.FfmpegHwAccelFlag = SelectedFFmpegHWAccel.value;
 
         List<string> softSubs = new List<string>();
         foreach (var listBoxItem in SelectedSubLang){
@@ -567,5 +582,62 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
             StringItem? encodingPresetSelected = EncodingPresetsList.FirstOrDefault(a => string.IsNullOrEmpty(a.stringValue) && a.stringValue == CrunchyrollManager.Instance.CrunOptions.EncodingPresetName) ?? null;
             SelectedEncodingPreset = encodingPresetSelected ?? EncodingPresetsList[0];
         }
+    }
+
+    private List<StringItemWithDisplayName> GetAvailableHWAccelOptions(){
+        try{
+            using (var process = new Process()){
+                process.StartInfo.FileName = CfgManager.PathFFMPEG;
+                process.StartInfo.Arguments = "-hwaccels";
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.CreateNoWindow = true;
+
+                string output = string.Empty;
+                
+                process.OutputDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        output += e.Data + Environment.NewLine;
+                    }
+                };
+
+                process.Start();
+                
+                process.BeginOutputReadLine();
+                // process.BeginErrorReadLine();
+
+                process.WaitForExit();
+
+                var lines = output.Split(new[]{ '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                var accels = lines.Skip(1).Select(l => l.Trim().ToLower()).ToList();
+                return MapHWAccelOptions(accels);
+            }
+        } catch (Exception e){
+            Console.WriteLine("Failed to get Available HW Accel Options" + e);
+        }
+
+
+        return[];
+    }
+
+    private List<StringItemWithDisplayName> MapHWAccelOptions(List<string> accels){
+        var options = new List<StringItemWithDisplayName>{
+            new(){ DisplayName = "CPU Only", value = "" },
+            new(){ DisplayName = "Auto", value = "-hwaccel auto " }
+        };
+
+        if (accels.Contains("cuda")) options.Add(new StringItemWithDisplayName{ DisplayName = "NVIDIA (CUDA)", value = "-hwaccel cuda " });
+        if (accels.Contains("qsv")) options.Add(new StringItemWithDisplayName{ DisplayName = "Intel Quick Sync (QSV)", value = "-hwaccel qsv " });
+        if (accels.Contains("dxva2")) options.Add(new StringItemWithDisplayName{ DisplayName = "AMD/Intel DXVA2", value = "-hwaccel dxva2" });
+        if (accels.Contains("d3d11va")) options.Add(new StringItemWithDisplayName{ DisplayName = "AMD/Intel D3D11VA", value = "-hwaccel d3d11va " });
+        if (accels.Contains("d3d12va")) options.Add(new StringItemWithDisplayName{ DisplayName = "AMD/Intel D3D12VA", value = "-hwaccel d3d12va " });
+        if (accels.Contains("vaapi")) options.Add(new StringItemWithDisplayName{ DisplayName = "VAAPI (Linux)", value = "-hwaccel vaapi " });
+        if (accels.Contains("videotoolbox")) options.Add(new StringItemWithDisplayName{ DisplayName = "Apple VideoToolbox", value = "-hwaccel videotoolbox " });
+
+        // if (accels.Contains("opencl")) options.Add(new(){DisplayName = "OpenCL (Advanced)", value ="-hwaccel opencl "});
+        // if (accels.Contains("vulkan")) options.Add(new(){DisplayName = "Vulkan (Experimental)", value ="-hwaccel vulkan "});
+
+        return options;
     }
 }

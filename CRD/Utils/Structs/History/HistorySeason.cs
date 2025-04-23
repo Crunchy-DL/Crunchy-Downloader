@@ -34,10 +34,10 @@ public class HistorySeason : INotifyPropertyChanged{
     public string HistorySeasonVideoQualityOverride{ get; set; } = "";
 
     [JsonProperty("history_season_soft_subs_override")]
-    public List<string> HistorySeasonSoftSubsOverride{ get; set; } =[];
+    public ObservableCollection<string> HistorySeasonSoftSubsOverride{ get; set; } =[];
 
     [JsonProperty("history_season_dub_lang_override")]
-    public List<string> HistorySeasonDubLangOverride{ get; set; } =[];
+    public ObservableCollection<string> HistorySeasonDubLangOverride{ get; set; } =[];
 
     [JsonIgnore]
     public string CombinedProperty => SpecialSeason ?? false ? $"Specials {SeasonNum}" : $"Season {SeasonNum}";
