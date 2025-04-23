@@ -2,6 +2,9 @@
 
 A simple crunchyroll downloader that allows you to download your favorite series and episodes directly from [Crunchyroll](https://www.crunchyroll.com).
 
+> ⚠️ **Disclaimer:** This tool is intended for private use only. It is not affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates. Use of this application may violate Crunchyroll's Terms of Service and could be illegal in your country. You are solely responsible for your use of Crunchy-Downloader. You need a [Crunchyroll Premium](https://www.crunchyroll.com/premium) subscription to access premium content.
+
+
 <p align="center">
   <a href="https://github.com/Crunchy-DL/Crunchy-Downloader">
     <img src="https://img.shields.io/github/languages/code-size/Crunchy-DL/Crunchy-Downloader?style=flat-square" alt="Code size">
@@ -23,48 +26,42 @@ A simple crunchyroll downloader that allows you to download your favorite series
 </p>
 
 
+## 🛠️ System Requirements
 
-# 📜 Disclaimer
+- **Operating System:** Windows 10 or Windows 11
+- **.NET Desktop Runtime:** Version 8.0
+- **Visual C++ Redistributable:** 2015–2022
 
-> I am in no way affiliated with, maintained, authorized, sponsored, or officially associated with Crunchyroll LLC or any of its subsidiaries or affiliates.
-> The official Crunchyroll website can be found at https://crunchyroll.com/.
+## 🖥️ Features
 
-This tool is meant for private use only. You need a [Crunchyroll Premium](https://www.crunchyroll.com/premium) subscription to access premium content.
+- **Download Episodes and Series:** Fetch individual episodes or entire series from Crunchyroll
+- **Multiple Subtitle and Audio Tracks:** Support for downloading videos with various subtitles and audio tracks
+- **User-Friendly Interface:** Intuitive GUI for easy navigation and operation
+- **Calendar View:** View upcoming episodes and schedule downloads
+- **Download History:** Keep track of your downloaded content
+- **Settings Customization:** Adjust settings to suit your preferences
 
-The usage of this application may also cause a violation of the Terms of Service between you and the stream provider.
+For detailed information on each feature, please refer to the [GitHub Wiki](https://github.com/Crunchy-DL/Crunchy-Downloader/wiki).
 
-This application enables you to download videos for offline viewing which may be forbidden by law in your country. You are entirely responsible for what happens when you use crunchy-downloader.
+## 🔐 DRM Decryption Guide
 
-# ✏️ Software Requirements
+### 1. Obtain Decryption Tools
 
-Windows 10 or Windows 11
+Place one of the following tools in the `./lib/` directory:
 
-.NET Desktop Runtime 8.0
+- **mp4decrypt:** Available at [Bento4](http://www.bento4.com/)
+- **shaka-packager:** Available at [Shaka Packager Releases](https://github.com/shaka-project/shaka-packager/releases/latest)
 
-Visual c++ redist 2015-22 https://github.com/Crunchy-DL/Crunchy-Downloader/issues/144
+### 2. Acquire Widevine CDM Files
 
-## ✨ Features
-
-[Github Wiki](https://github.com/Crunchy-DL/Crunchy-Downloader/wiki)
-
-
-# 🛠️ DRM Decryption Guide
-
-## Decryption Requirements
-
-You will need one of the following tools placed in the `./lib/` directory.
-
-- **mp4decrypt** - Required for the decryption process. Available at [Bento4.com](http://www.bento4.com/).
-- **shaka-packager** - Required for the decryption process. Available at [Shaka-Packager GitHub Releases](https://github.com/shaka-project/shaka-packager/releases/latest).
-
-## Instructions
-
-To decrypt DRM content, it's essential to first acquire a CDM (Content Decryption Module). Once obtained, you will need to place the following CDM files into the `./widevine/` directory:
+Create a folder named `widevine` in the root directory of Crunchy-Downloader and place the following files inside:
 
 - `device_client_id_blob.bin`
 - `device_private_key.pem`
 
-For legal reasons, the CDM is not included with the software package, and you must source it independently.
+> ⚠️ **Note:** Due to legal reasons, these CDM files are not provided with the application. You must source them independently.
+
+For more information, refer to the [Widevine FAQ](https://github.com/Crunchy-DL/Crunchy-Downloader/discussions/36)
 
 
 
