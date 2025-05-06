@@ -147,6 +147,9 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     private int _selectedIndex;
 
     [ObservableProperty]
+    private bool _quickAddMode;
+    
+    [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
@@ -251,6 +254,11 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task AddToHistory(AnilistSeries series){
+        if (ProgramManager.Instance.FetchingData){
+            MessageBus.Current.SendMessage(new ToastMessage($"History still loading", ToastType.Warning, 3));
+            return;
+        }
+        
         if (!string.IsNullOrEmpty(series.CrunchyrollID)){
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 series.IsInHistory = true;
@@ -431,7 +439,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     }
 
     public void SelectionChangedOfSeries(AnilistSeries? value){
-        if (value != null) value.IsExpanded = !value.IsExpanded;
+        if (value != null && !QuickAddMode) value.IsExpanded = !value.IsExpanded;
         SelectedSeries = null;
         SelectedIndex = -1;
     }

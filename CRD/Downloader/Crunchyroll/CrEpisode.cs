@@ -82,13 +82,7 @@ public class CrEpisode(){
                 if (episode.EpisodeAndLanguages.Langs.All(a => a.CrLocale != version.AudioLocale)){
                     // Push to arrays if there are no duplicates of the same language
                     episode.EpisodeAndLanguages.Items.Add(dlEpisode);
-                    episode.EpisodeAndLanguages.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == version.AudioLocale) ?? new LanguageItem{
-                        CrLocale = "und",
-                        Locale = "un",
-                        Code = "und",
-                        Name = string.Empty,
-                        Language = string.Empty
-                    });
+                    episode.EpisodeAndLanguages.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == version.AudioLocale) ?? Languages.DEFAULT_lang);
                 }
             }
         } else{
@@ -98,13 +92,7 @@ public class CrEpisode(){
             if (episode.EpisodeAndLanguages.Langs.All(a => a.CrLocale != dlEpisode.AudioLocale)){
                 // Push to arrays if there are no duplicates of the same language
                 episode.EpisodeAndLanguages.Items.Add(dlEpisode);
-                episode.EpisodeAndLanguages.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == dlEpisode.AudioLocale) ?? new LanguageItem{
-                    CrLocale = "und",
-                    Locale = "un",
-                    Code = "und",
-                    Name = string.Empty,
-                    Language = string.Empty
-                });
+                episode.EpisodeAndLanguages.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == dlEpisode.AudioLocale) ?? Languages.DEFAULT_lang);
             }
         }
 

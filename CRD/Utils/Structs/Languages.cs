@@ -9,35 +9,53 @@ namespace CRD.Utils.Structs;
 public class Languages{
     public static readonly LanguageItem[] languages ={
         new(){ CrLocale = "ja-JP", Locale = "ja", Code = "jpn", Name = "Japanese" },
-        new(){ CrLocale = "en-US", Locale = "en", Code = "eng", Name = "English" },
+        
         new(){ CrLocale = "de-DE", Locale = "de", Code = "deu", Name = "German" },
+        
+        new(){ CrLocale = "en-US", Locale = "en", Code = "eng", Name = "English" },
         new(){ CrLocale = "en-IN", Locale = "en-IN", Code = "eng", Name = "English (India)" },
-        new(){ CrLocale = "es-LA", Locale = "es-LA", Code = "spa", Name = "Spanish", Language = "Latin American Spanish" },
+        
         new(){ CrLocale = "es-419", Locale = "es-419", Code = "spa-419", Name = "Spanish", Language = "Latin American Spanish" },
         new(){ CrLocale = "es-ES", Locale = "es-ES", Code = "spa-ES", Name = "Castilian", Language = "European Spanish" },
+        
         new(){ CrLocale = "pt-BR", Locale = "pt-BR", Code = "por", Name = "Portuguese", Language = "Brazilian Portuguese" },
         new(){ CrLocale = "pt-PT", Locale = "pt-PT", Code = "por", Name = "Portuguese (Portugal)", Language = "Portugues (Portugal)" },
+        
         new(){ CrLocale = "fr-FR", Locale = "fr", Code = "fra", Name = "French" },
-        new(){ CrLocale = "ar-ME", Locale = "ar", Code = "ara-ME", Name = "Arabic" },
-        new(){ CrLocale = "ar-SA", Locale = "ar", Code = "ara", Name = "Arabic (Saudi Arabia)" },
         new(){ CrLocale = "it-IT", Locale = "it", Code = "ita", Name = "Italian" },
-        new(){ CrLocale = "ru-RU", Locale = "ru", Code = "rus", Name = "Russian" },
-        new(){ CrLocale = "tr-TR", Locale = "tr", Code = "tur", Name = "Turkish" },
-        new(){ CrLocale = "hi-IN", Locale = "hi", Code = "hin", Name = "Hindi" },
-        // new(){ locale = "zh", code = "cmn", name = "Chinese (Mandarin, PRC)" },
-        new(){ CrLocale = "zh-CN", Locale = "zh-CN", Code = "zho", Name = "Chinese (Mainland China)" },
-        new(){ CrLocale = "zh-TW", Locale = "zh-TW", Code = "chi", Name = "Chinese (Taiwan)" },
-        new(){ CrLocale = "zh-HK", Locale = "zh-HK", Code = "zho-HK", Name = "Chinese (Hong Kong)" },
-        new(){ CrLocale = "ko-KR", Locale = "ko", Code = "kor", Name = "Korean" },
-        new(){ CrLocale = "ca-ES", Locale = "ca-ES", Code = "cat", Name = "Catalan" },
         new(){ CrLocale = "pl-PL", Locale = "pl-PL", Code = "pol", Name = "Polish" },
-        new(){ CrLocale = "th-TH", Locale = "th-TH", Code = "tha", Name = "Thai", Language = "ไทย" },
-        new(){ CrLocale = "ta-IN", Locale = "ta-IN", Code = "tam", Name = "Tamil (India)", Language = "தமிழ்" },
-        new(){ CrLocale = "ms-MY", Locale = "ms-MY", Code = "may", Name = "Malay (Malaysia)", Language = "Bahasa Melayu" },
-        new(){ CrLocale = "vi-VN", Locale = "vi-VN", Code = "vie", Name = "Vietnamese", Language = "Tiếng Việt" },
+        
         new(){ CrLocale = "id-ID", Locale = "id-ID", Code = "ind", Name = "Indonesian", Language = "Bahasa Indonesia" },
+        new(){ CrLocale = "ms-MY", Locale = "ms-MY", Code = "may", Name = "Malay (Malaysia)", Language = "Bahasa Melayu" },
+        
+        new(){ CrLocale = "ca-ES", Locale = "ca-ES", Code = "cat", Name = "Catalan" },
+        
+        new(){ CrLocale = "vi-VN", Locale = "vi-VN", Code = "vie", Name = "Vietnamese", Language = "Tiếng Việt" },
+        new(){ CrLocale = "tr-TR", Locale = "tr", Code = "tur", Name = "Turkish" },
+        new(){ CrLocale = "ru-RU", Locale = "ru", Code = "rus", Name = "Russian" },
+        
+        new(){ CrLocale = "ar-SA", Locale = "ar-SA", Code = "ara", Name = "Arabic" },
+        new(){ CrLocale = "hi-IN", Locale = "hi", Code = "hin", Name = "Hindi" },
+        new(){ CrLocale = "ta-IN", Locale = "ta-IN", Code = "tam", Name = "Tamil (India)", Language = "தமிழ்" },
         new(){ CrLocale = "te-IN", Locale = "te-IN", Code = "tel", Name = "Telugu (India)", Language = "తెలుగు" },
+        
+        new(){ CrLocale = "zh-CN", Locale = "zh-CN", Code = "zho", Name = "Chinese (Mainland China)" },
+        new(){ CrLocale = "zh-HK", Locale = "zh-HK", Code = "zho-HK", Name = "Chinese (Hong Kong)" },
+        new(){ CrLocale = "zh-TW", Locale = "zh-TW", Code = "chi", Name = "Chinese (Taiwan)" },
+        
+        new(){ CrLocale = "ko-KR", Locale = "ko", Code = "kor", Name = "Korean" },
+        new(){ CrLocale = "th-TH", Locale = "th-TH", Code = "tha", Name = "Thai", Language = "ไทย" },
+        
     };
+    
+    public static readonly LanguageItem DEFAULT_lang = new LanguageItem{
+        CrLocale = "und",
+        Locale = "un",
+        Code = "und",
+        Name = string.Empty,
+        Language = string.Empty
+    };
+    
 
     public static List<string> SortListByLangList(List<string> langList){
         var orderMap = languages.Select((value, index) => new{ Value = value.CrLocale, Index = index })
@@ -65,7 +83,7 @@ public class Languages{
 
     public static LanguageItem FixAndFindCrLc(string cr_locale){
         if (string.IsNullOrEmpty(cr_locale)){
-            return new LanguageItem();
+            return DEFAULT_lang;
         }
 
         string str = FixLanguageTag(cr_locale);
@@ -77,7 +95,7 @@ public class Languages{
         string fileName = $"{fnOutput}";
 
         if (addIndexAndLangCode){
-            fileName += $".{langItem.CrLocale}"; //.{subsIndex}
+            fileName += $".{langItem.Locale}"; //.{subsIndex}
         }
 
         //removed .{langItem.language} from file name at end
@@ -123,13 +141,7 @@ public class Languages{
         if (lang?.CrLocale != null){
             return lang;
         } else{
-            return new LanguageItem{
-                CrLocale = "und",
-                Locale = "un",
-                Code = "und",
-                Name = string.Empty,
-                Language = string.Empty
-            };
+            return DEFAULT_lang;
         }
     }
 
@@ -139,13 +151,7 @@ public class Languages{
         if (filteredLocale != null){
             return (LanguageItem)filteredLocale;
         } else{
-            return new LanguageItem{
-                CrLocale = "und",
-                Locale = "un",
-                Code = "und",
-                Name = string.Empty,
-                Language = string.Empty
-            };
+            return DEFAULT_lang;
         }
     }
 

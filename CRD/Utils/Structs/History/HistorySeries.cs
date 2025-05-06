@@ -22,7 +22,7 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonProperty("series_type")]
     public SeriesType SeriesType{ get; set; } = SeriesType.Unknown;
-    
+
     [JsonProperty("series_is_inactive")]
     public bool IsInactive{ get; set; }
 
@@ -107,10 +107,10 @@ public class HistorySeries : INotifyPropertyChanged{
 
     [JsonIgnore]
     public string SeriesFolderPath{ get; set; }
-    
+
     [JsonIgnore]
     public bool SeriesFolderPathExists{ get; set; }
-    
+
     #region Settings Override
 
     [JsonIgnore]
@@ -225,9 +225,9 @@ public class HistorySeries : INotifyPropertyChanged{
 
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
-        
+
         UpdateSeriesFolderPath();
-        
+
         Loading = false;
     }
 
@@ -249,111 +249,81 @@ public class HistorySeries : INotifyPropertyChanged{
 
     public void UpdateNewEpisodes(){
         int count = 0;
+
         bool foundWatched = false;
-        var historyAddSpecials = CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials;
-        var sonarrEnabled = SeriesType != SeriesType.Artist && CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null && CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled &&
-                            !string.IsNullOrEmpty(SonarrSeriesId);
+        var options = CrunchyrollManager.Instance.CrunOptions;
 
-        var sonarrSkipUnmonitored = CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored;
+        bool historyAddSpecials = options.HistoryAddSpecials;
+        bool sonarrEnabled = SeriesType != SeriesType.Artist &&
+                             options.SonarrProperties?.SonarrEnabled == true &&
+                             !string.IsNullOrEmpty(SonarrSeriesId);
+        bool skipUnmonitored = options.HistorySkipUnmonitored;
+        bool countMissing = options.HistoryCountMissing;
+        bool useSonarrCounting = options.HistoryCountSonarr;
 
-        if (sonarrEnabled && CrunchyrollManager.Instance.CrunOptions.HistoryCountSonarr){
-            for (int i = Seasons.Count - 1; i >= 0; i--){
-                var season = Seasons[i];
+        for (int i = Seasons.Count - 1; i >= 0; i--){
+            var season = Seasons[i];
+            var episodes = season.EpisodesList;
 
-                if (season.SpecialSeason == true){
-                    if (historyAddSpecials){
-                        var episodes = season.EpisodesList;
-                        for (int j = episodes.Count - 1; j >= 0; j--){
-                            if (sonarrSkipUnmonitored && !episodes[j].SonarrIsMonitored){
-                                continue;
-                            }
+            if (season.SpecialSeason == true){
+                if (historyAddSpecials){
+                    for (int j = episodes.Count - 1; j >= 0; j--){
+                        var ep = episodes[j];
 
-                            if (!string.IsNullOrEmpty(episodes[j].SonarrEpisodeId) && !episodes[j].SonarrHasFile){
-                                count++;
-                            }
+                        if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
+                            continue;
                         }
+
+                        if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
+                            count++;
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+
+            for (int j = episodes.Count - 1; j >= 0; j--){
+                var ep = episodes[j];
+
+                if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
+                    continue;
+                }
+
+                if (ep.SpecialEpisode){
+                    if (historyAddSpecials && ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
+                        count++;
                     }
 
                     continue;
                 }
 
-                var episodesList = season.EpisodesList;
-                for (int j = episodesList.Count - 1; j >= 0; j--){
-                    var episode = episodesList[j];
-
-                    if (sonarrSkipUnmonitored && !episode.SonarrIsMonitored){
-                        continue;
-                    }
-
-                    if (episode.SpecialEpisode){
-                        if (historyAddSpecials && !episode.SonarrHasFile){
-                            count++;
-                        }
-
-                        continue;
-                    }
-
-                    if (!string.IsNullOrEmpty(episode.SonarrEpisodeId) && !episode.SonarrHasFile){
-                        count++;
+                if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, foundWatched)){
+                    count++;
+                } else{
+                    foundWatched = true;
+                    //if not count specials break
+                    if (!historyAddSpecials && !countMissing){
+                        break;
                     }
                 }
             }
-        } else{
-            for (int i = Seasons.Count - 1; i >= 0; i--){
-                var season = Seasons[i];
 
-                if (season.SpecialSeason == true){
-                    if (historyAddSpecials){
-                        var episodes = season.EpisodesList;
-                        for (int j = episodes.Count - 1; j >= 0; j--){
-                            if (sonarrEnabled && sonarrSkipUnmonitored && !episodes[j].SonarrIsMonitored){
-                                continue;
-                            }
-
-                            if (!episodes[j].WasDownloaded){
-                                count++;
-                            }
-                        }
-                    }
-
-                    continue;
-                }
-
-                var episodesList = season.EpisodesList;
-                for (int j = episodesList.Count - 1; j >= 0; j--){
-                    var episode = episodesList[j];
-
-                    if (sonarrEnabled && sonarrSkipUnmonitored && !episode.SonarrIsMonitored){
-                        continue;
-                    }
-
-                    if (episode.SpecialEpisode){
-                        if (historyAddSpecials && !episode.WasDownloaded){
-                            count++;
-                        }
-
-                        continue;
-                    }
-
-                    if (!episode.WasDownloaded && !foundWatched){
-                        count++;
-                    } else{
-                        foundWatched = true;
-                        if (!historyAddSpecials){
-                            break;
-                        }
-                    }
-                }
-
-                if (foundWatched && !historyAddSpecials){
-                    break;
-                }
+            if (foundWatched && !historyAddSpecials && !countMissing){
+                break;
             }
         }
 
-
         NewEpisodes = count;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NewEpisodes)));
+    }
+
+    private bool ShouldCountEpisode(HistoryEpisode episode, bool useSonarr, bool countMissing, bool foundWatched){
+        if (useSonarr)
+            return !string.IsNullOrEmpty(episode.SonarrEpisodeId) && !episode.SonarrHasFile;
+
+        return !episode.WasDownloaded && (!foundWatched || countMissing);
     }
 
     public void SetFetchingData(){
@@ -363,104 +333,65 @@ public class HistorySeries : INotifyPropertyChanged{
 
     public async Task AddNewMissingToDownloads(){
         bool foundWatched = false;
-        var historyAddSpecials = CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials;
-        var sonarrEnabled = SeriesType != SeriesType.Artist && CrunchyrollManager.Instance.CrunOptions.SonarrProperties != null && CrunchyrollManager.Instance.CrunOptions.SonarrProperties.SonarrEnabled &&
-                            !string.IsNullOrEmpty(SonarrSeriesId);
+        var options = CrunchyrollManager.Instance.CrunOptions;
 
-        var sonarrSkipUnmonitored = CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored;
+        bool historyAddSpecials = options.HistoryAddSpecials;
+        bool sonarrEnabled = SeriesType != SeriesType.Artist &&
+                             options.SonarrProperties?.SonarrEnabled == true &&
+                             !string.IsNullOrEmpty(SonarrSeriesId);
+        bool skipUnmonitored = options.HistorySkipUnmonitored;
+        bool countMissing = options.HistoryCountMissing;
+        bool useSonarrCounting = options.HistoryCountSonarr;
 
-        if (sonarrEnabled && CrunchyrollManager.Instance.CrunOptions.HistoryCountSonarr){
-            for (int i = Seasons.Count - 1; i >= 0; i--){
-                var season = Seasons[i];
+        for (int i = Seasons.Count - 1; i >= 0; i--){
+            var season = Seasons[i];
+            var episodes = season.EpisodesList;
 
-                if (season.SpecialSeason == true){
-                    if (historyAddSpecials){
-                        var episodes = season.EpisodesList;
-                        for (int j = episodes.Count - 1; j >= 0; j--){
-                            if (sonarrSkipUnmonitored && !episodes[j].SonarrIsMonitored){
-                                continue;
-                            }
+            if (season.SpecialSeason == true){
+                if (historyAddSpecials){
+                    for (int j = episodes.Count - 1; j >= 0; j--){
+                        var ep = episodes[j];
 
-                            if (!string.IsNullOrEmpty(episodes[j].SonarrEpisodeId) && !episodes[j].SonarrHasFile){
-                                await Seasons[i].EpisodesList[j].DownloadEpisode();
-                            }
+                        if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
+                            continue;
                         }
+
+                        if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
+                            await ep.DownloadEpisode();
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            for (int j = episodes.Count - 1; j >= 0; j--){
+                var ep = episodes[j];
+
+                if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
+                    continue;
+                }
+
+                if (ep.SpecialEpisode){
+                    if (historyAddSpecials && ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
+                        await ep.DownloadEpisode();
                     }
 
                     continue;
                 }
 
-                var episodesList = season.EpisodesList;
-                for (int j = episodesList.Count - 1; j >= 0; j--){
-                    var episode = episodesList[j];
-
-                    if (sonarrEnabled && sonarrSkipUnmonitored && !episode.SonarrIsMonitored){
-                        continue;
-                    }
-
-                    if (episode.SpecialEpisode){
-                        if (historyAddSpecials && !episode.SonarrHasFile){
-                            await Seasons[i].EpisodesList[j].DownloadEpisode();
-                        }
-
-                        continue;
-                    }
-
-                    if (!string.IsNullOrEmpty(episode.SonarrEpisodeId) && !episode.SonarrHasFile){
-                        await Seasons[i].EpisodesList[j].DownloadEpisode();
+                if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, foundWatched)){
+                    await ep.DownloadEpisode();
+                } else{
+                    foundWatched = true;
+                    if (!historyAddSpecials && !countMissing){
+                        break;
                     }
                 }
             }
-        } else{
-            for (int i = Seasons.Count - 1; i >= 0; i--){
-                var season = Seasons[i];
 
-                if (season.SpecialSeason == true){
-                    if (historyAddSpecials){
-                        var episodes = season.EpisodesList;
-                        for (int j = episodes.Count - 1; j >= 0; j--){
-                            if (sonarrSkipUnmonitored && !episodes[j].SonarrIsMonitored){
-                                continue;
-                            }
-
-                            if (!episodes[j].WasDownloaded){
-                                await Seasons[i].EpisodesList[j].DownloadEpisode();
-                            }
-                        }
-                    }
-
-                    continue;
-                }
-
-                var episodesList = season.EpisodesList;
-                for (int j = episodesList.Count - 1; j >= 0; j--){
-                    var episode = episodesList[j];
-
-                    if (sonarrEnabled && sonarrSkipUnmonitored && !episode.SonarrIsMonitored){
-                        continue;
-                    }
-
-                    if (episode.SpecialEpisode){
-                        if (historyAddSpecials && !episode.WasDownloaded){
-                            await Seasons[i].EpisodesList[j].DownloadEpisode();
-                        }
-
-                        continue;
-                    }
-
-                    if (!episode.WasDownloaded && !foundWatched){
-                        await Seasons[i].EpisodesList[j].DownloadEpisode();
-                    } else{
-                        foundWatched = true;
-                        if (!historyAddSpecials){
-                            break;
-                        }
-                    }
-                }
-
-                if (foundWatched && !historyAddSpecials){
-                    break;
-                }
+            if (foundWatched && !historyAddSpecials && !countMissing){
+                break;
             }
         }
     }
@@ -470,7 +401,7 @@ public class HistorySeries : INotifyPropertyChanged{
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
         var isOk = true;
-        
+
         switch (SeriesType){
             case SeriesType.Artist:
                 try{
@@ -503,7 +434,7 @@ public class HistorySeries : INotifyPropertyChanged{
         UpdateNewEpisodes();
         FetchingData = false;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-        
+
         return isOk;
     }
 
@@ -536,7 +467,7 @@ public class HistorySeries : INotifyPropertyChanged{
                 break;
         }
     }
-    
+
     public void UpdateSeriesFolderPath(){
         var season = Seasons.FirstOrDefault(season => !string.IsNullOrEmpty(season.SeasonDownloadPath));
 
@@ -587,8 +518,7 @@ public class HistorySeries : INotifyPropertyChanged{
                 SeriesFolderPathExists = true;
             }
         }
-        
+
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));
     }
-    
 }

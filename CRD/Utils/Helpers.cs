@@ -240,7 +240,7 @@ public class Helpers{
                         if (e.Data.StartsWith("Error:")){
                             Console.Error.WriteLine(e.Data);
                         } else{
-                            Console.WriteLine(e.Data); 
+                            Console.WriteLine(e.Data);
                         }
                     }
                 };
@@ -604,29 +604,29 @@ public class Helpers{
     public static Dictionary<string, List<DownloadedMedia>> GroupByLanguageWithSubtitles(List<DownloadedMedia> allMedia){
         //Group by language
         var languageGroups = allMedia
-            .Where(media =>
-                !string.IsNullOrEmpty(media.Lang.CrLocale) ||
-                (media.Type == DownloadMediaType.Subtitle && media.RelatedVideoDownloadMedia != null &&
-                 !string.IsNullOrEmpty(media.RelatedVideoDownloadMedia.Lang.CrLocale))
+            .Where(media => media.Type != DownloadMediaType.Description &&
+                            (!string.IsNullOrEmpty(media.Lang?.CrLocale) ||
+                             (media is{ Type: DownloadMediaType.Subtitle, RelatedVideoDownloadMedia: not null } &&
+                              !string.IsNullOrEmpty(media.RelatedVideoDownloadMedia.Lang?.CrLocale)))
             )
             .GroupBy(media => {
-                if (media.Type == DownloadMediaType.Subtitle && media.RelatedVideoDownloadMedia != null){
-                    return media.RelatedVideoDownloadMedia.Lang.CrLocale;
+                if (media is{ Type: DownloadMediaType.Subtitle, RelatedVideoDownloadMedia: not null }){
+                    return media.RelatedVideoDownloadMedia.Lang?.CrLocale ?? "und";
                 }
 
-                return media.Lang.CrLocale;
+                return media.Lang?.CrLocale ?? "und";
             })
             .ToDictionary(group => group.Key, group => group.ToList());
 
         //Find and add Description media to each group
         var descriptionMedia = allMedia.Where(media => media.Type == DownloadMediaType.Description).ToList();
 
-        foreach (var description in descriptionMedia){
+        if (descriptionMedia.Count > 0){
             foreach (var group in languageGroups.Values){
-                group.Add(description);
+                group.Add(descriptionMedia[0]);
             }
         }
-
+        
         return languageGroups;
     }
 

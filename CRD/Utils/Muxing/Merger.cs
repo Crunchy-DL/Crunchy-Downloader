@@ -361,6 +361,10 @@ public class Merger{
                 case < 0.1:
                     return startOffset;
                 case > 1:
+                    Console.Error.WriteLine($"Couldn't sync dub:");
+                    Console.Error.WriteLine($"\tStart offset: {startOffset} seconds");
+                    Console.Error.WriteLine($"\tEnd offset: {endOffset} seconds");
+                    Console.Error.WriteLine($"\tVideo length difference: {lengthDiff} seconds");
                     return -100;
                 default:
                     return endOffset;

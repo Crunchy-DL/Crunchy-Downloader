@@ -41,10 +41,10 @@ public class Widevine{
             if (Directory.Exists(CfgManager.PathWIDEVINE_DIR)){
                 foreach (var file in Directory.EnumerateFiles(CfgManager.PathWIDEVINE_DIR)){
                     var fileInfo = new FileInfo(file);
-                    
+
                     if (fileInfo.Length >= 1024 * 8 || fileInfo.Attributes.HasFlag(FileAttributes.Directory))
                         continue;
-                    
+
                     string fileContents = File.ReadAllText(file, Encoding.UTF8);
 
                     if (IsPrivateKey(fileContents)){
@@ -107,7 +107,9 @@ public class Widevine{
             }
 
             var licenceReq = ses.GetLicenseRequest();
-            playbackRequest2.Content = new ByteArrayContent(licenceReq);
+            var content = new ByteArrayContent(licenceReq);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+            playbackRequest2.Content = content;
 
             var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
 

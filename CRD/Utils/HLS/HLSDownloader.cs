@@ -43,7 +43,7 @@ public class HlsDownloader{
                 Offset = options.Offset ?? 0,
                 BaseUrl = options.BaseUrl,
                 SkipInit = options.SkipInit ?? false,
-                Timeout = options.Timeout ?? 60 * 1000,
+                Timeout = options.Timeout ?? 15 * 1000,
                 CheckPartLength = true,
                 IsResume = options.Offset.HasValue && options.Offset.Value > 0,
                 BytesDownloaded = 0,
@@ -449,17 +449,17 @@ public class HlsDownloader{
                     // Log retry attempts
                     string partType = isKey ? "Key" : "Part";
                     int partIndx = partIndex + 1 + segOffset;
-                    Console.WriteLine($"{partType} {partIndx}: Attempt {attempt + 1} to retrieve data failed.");
-                    Console.WriteLine($"\tError: {ex.Message}");
+                    Console.Error.WriteLine($"{partType} {partIndx}: Attempt {attempt + 1} to retrieve data failed.");
+                    Console.Error.WriteLine($"\tError: {ex.Message}");
                     if (attempt == retryCount)
                         throw; // rethrow after last retry
 
                     await Task.Delay(_data.WaitTime);
                 }catch (Exception ex) {
                     
-                    Console.WriteLine($"Unexpected exception at part {partIndex + 1 + segOffset}:");
-                    Console.WriteLine($"\tType: {ex.GetType()}");
-                    Console.WriteLine($"\tMessage: {ex.Message}");
+                    Console.Error.WriteLine($"Unexpected exception at part {partIndex + 1 + segOffset}:");
+                    Console.Error.WriteLine($"\tType: {ex.GetType()}");
+                    Console.Error.WriteLine($"\tMessage: {ex.Message}");
                     throw; 
                 }
             }

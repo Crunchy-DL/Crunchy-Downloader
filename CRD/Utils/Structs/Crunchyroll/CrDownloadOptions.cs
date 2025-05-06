@@ -63,6 +63,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("history")]
     public bool History{ get; set; }
+    
+    [JsonProperty("history_count_missing")]
+    public bool HistoryCountMissing { get; set; }
 
     [JsonProperty("history_include_cr_artists")]
     public bool HistoryIncludeCrArtists{ get; set; }

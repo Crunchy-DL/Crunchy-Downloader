@@ -57,7 +57,17 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <StackPanel Grid.Column="1" Margin="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+            <StackPanel Grid.Column="1" Margin="10" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
+
+                <ToggleButton Width="50" Height="50" BorderThickness="0" Margin="5 0"
+                              VerticalAlignment="Center"
+                              IsChecked="{Binding QuickAddMode}"
+                              IsEnabled="{Binding !IsLoading}">
+                    <StackPanel Orientation="Vertical">
+                        <controls:SymbolIcon Symbol="Add" FontSize="25" />
+                        <TextBlock Text="Fast" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="12"></TextBlock>
+                    </StackPanel>
+                </ToggleButton>
 
                 <StackPanel>
                     <ToggleButton x:Name="DropdownButtonSorting" Width="50" Height="50"
@@ -147,7 +157,7 @@
                         </Grid.ColumnDefinitions>
 
 
-                        <Expander Grid.Column="0" Grid.ColumnSpan="2" ExpandDirection="Right" IsExpanded="{Binding IsExpanded}">
+                        <Expander Grid.Column="0" Grid.ColumnSpan="2" ExpandDirection="Right" IsExpanded="{Binding IsExpanded}" IsVisible="{Binding !$parent[UserControl].((vm:UpcomingPageViewModel)DataContext).QuickAddMode}">
                             <Expander.Styles>
                                 <Style Selector="Expander:not(:expanded) /template/ ToggleButton#ExpanderHeader">
                                     <Setter Property="Background" Value="Transparent" />
@@ -328,6 +338,49 @@
                             </TextBlock>
 
                         </StackPanel>
+
+
+                        <Grid Grid.Column="0" Grid.ColumnSpan="2" IsVisible="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).QuickAddMode}"
+                              Background="#90000000"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+
+                            <Button
+                                Background="Transparent"
+                                IsVisible="{Binding !IsInHistory}"
+                                BorderThickness="0"
+                                FontStyle="Italic"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                Command="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).AddToHistory}"
+                                CommandParameter="{Binding}"
+                                IsEnabled="{Binding HasCrID}">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="Add to history" FontSize="15" />
+                                </ToolTip.Tip>
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:SymbolIcon Symbol="Library" FontSize="32" IsVisible="{Binding HasCrID}" />
+                                    <controls:SymbolIcon Symbol="Add" FontSize="32" IsVisible="{Binding HasCrID}" />
+                                </StackPanel>
+                            </Button>
+
+
+                            <Button
+                                Background="Transparent"
+                                IsVisible="{Binding IsInHistory}"
+                                BorderThickness="0"
+                                FontStyle="Italic"
+                                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                IsEnabled="False">
+                                <ToolTip.Tip>
+                                    <TextBlock Text="Already in history" FontSize="15" />
+                                </ToolTip.Tip>
+                                <StackPanel Orientation="Horizontal">
+                                    <controls:SymbolIcon Symbol="Library" FontSize="32" />
+                                </StackPanel>
+                            </Button>
+
+                        </Grid>
+
 
                     </Grid>
 

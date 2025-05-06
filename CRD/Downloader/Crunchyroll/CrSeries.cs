@@ -343,40 +343,6 @@ public class CrSeries{
         return episodeList;
     }
 
-    public Dictionary<int, Dictionary<string, SeriesSearchItem>> ParseSeriesResult(CrSeriesSearch seasonsList){
-        var ret = new Dictionary<int, Dictionary<string, SeriesSearchItem>>();
-        int i = 0;
-
-        if (seasonsList.Data == null) return ret;
-        
-        foreach (var item in seasonsList.Data){
-            i++;
-            foreach (var lang in Languages.languages){
-                int seasonNumber = item.SeasonNumber;
-                if (item.Versions != null){
-                    seasonNumber = i;
-                }
-
-                if (!ret.ContainsKey(seasonNumber)){
-                    ret[seasonNumber] = new Dictionary<string, SeriesSearchItem>();
-                }
-
-                if (item.Title.Contains($"({lang.Name} Dub)") || item.Title.Contains($"({lang.Name})")){
-                    ret[seasonNumber][lang.Code] = item;
-                } else if (item.IsSubbed && !item.IsDubbed && lang.Code == "jpn"){
-                    ret[seasonNumber][lang.Code] = item;
-                } else if (item.IsDubbed && lang.Code == "eng" && !Languages.languages.Any(a => (item.Title.Contains($"({a.Name})") || item.Title.Contains($"({a.Name} Dub)")))){
-                    // Dubbed with no more infos will be treated as eng dubs
-                    ret[seasonNumber][lang.Code] = item;
-                } else if (item.AudioLocale == lang.CrLocale){
-                    ret[seasonNumber][lang.Code] = item;
-                }
-            }
-        }
-
-        return ret;
-    }
-
     public async Task<CrSeriesSearch?> ParseSeriesById(string id, string? crLocale, bool forced = false){
         await crunInstance.CrAuth.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);

@@ -32,6 +32,12 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="History count Missing" Description="The missing count (orange corner) shows all missing episodes, not just new ones">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding HistoryCountMissing}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="History Include CR Artists" Description="Add Crunchyroll artists (music) to the history">
                     <controls:SettingsExpanderItem.Footer>
@@ -39,7 +45,7 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="History Add Specials" Description="Add specials to the queue if they weren't downloaded before">
+                <controls:SettingsExpanderItem Content="History Add Specials" Description="Add specials to the queue/count if they weren't downloaded before">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryAddSpecials}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>

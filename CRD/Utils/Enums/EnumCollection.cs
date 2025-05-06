@@ -41,7 +41,7 @@ public enum SeriesType{
 public enum Locale{
     [EnumMember(Value = "")]
     DefaulT,
-
+    
     [EnumMember(Value = "un")]
     Unknown,
 

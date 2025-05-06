@@ -82,7 +82,7 @@ public class DownloadResponse{
 
 public class DownloadedMedia : SxItem{
     public DownloadMediaType Type{ get; set; }
-    public LanguageItem Lang{ get; set; }
+    public required LanguageItem Lang{ get; set; }
     public bool IsPrimary{ get; set; }
 
     public bool? Cc{ get; set; }

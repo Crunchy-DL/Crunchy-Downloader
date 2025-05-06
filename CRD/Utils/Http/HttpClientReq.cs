@@ -263,14 +263,22 @@ public static class ApiUrls{
     public static string Cms => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/cms";
     public static string Content => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2";
 
+    public static string Playback => "https://cr-play-service.prd.crunchyrollsvc.com/v2";
+    //https://www.crunchyroll.com/playback/v2
+    //https://cr-play-service.prd.crunchyrollsvc.com/v2
+    
     public static string Subscription => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/subs/v3/subscriptions/";
 
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
     
+    public static readonly string WidevineLicenceUrl = "https://www.crunchyroll.com/license/v1/license/widevine";
+    //https://lic.drmtoday.com/license-proxy-widevine/cenc/
+    //https://lic.staging.drmtoday.com/license-proxy-widevine/cenc/
+    
     public static string authBasicMob = "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=";
 
-    public static readonly string MobileUserAgent = "Crunchyroll/3.79.0 Android/15 okhttp/4.12.0";
+    public static readonly string MobileUserAgent = "Crunchyroll/3.81.8 Android/15 okhttp/4.12.0";
     public static readonly string FirefoxUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0";
 }

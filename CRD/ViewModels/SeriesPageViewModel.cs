@@ -136,32 +136,30 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
     [RelayCommand]
     public async Task DownloadSeasonAll(HistorySeason season){
-        var downloadTasks = season.EpisodesList
-            .Select(episode => episode.DownloadEpisode());
-
-        await Task.WhenAll(downloadTasks);
+        foreach (var episode in season.EpisodesList){
+            await episode.DownloadEpisode();
+        }
     }
 
     [RelayCommand]
     public async Task DownloadSeasonMissing(HistorySeason season){
-        var downloadTasks = season.EpisodesList
-            .Where(episode => !episode.WasDownloaded)
-            .Select(episode => episode.DownloadEpisode()).ToList();
+        var missingEpisodes = season.EpisodesList
+            .Where(episode => !episode.WasDownloaded).ToList();
 
-        if (downloadTasks.Count == 0){
+        if (missingEpisodes.Count == 0){
             MessageBus.Current.SendMessage(new ToastMessage($"There are no missing episodes", ToastType.Error, 3));
         } else{
-            await Task.WhenAll(downloadTasks);
+            foreach (var episode in missingEpisodes){
+                await episode.DownloadEpisode();
+            }
         }
     }
 
     [RelayCommand]
     public async Task DownloadSeasonMissingSonarr(HistorySeason season){
-        var downloadTasks = season.EpisodesList
-            .Where(episode => !episode.SonarrHasFile)
-            .Select(episode => episode.DownloadEpisode());
-
-        await Task.WhenAll(downloadTasks);
+        foreach (var episode in season.EpisodesList.Where(episode => !episode.SonarrHasFile)){
+            await episode.DownloadEpisode();
+        }
     }
 
     [RelayCommand]

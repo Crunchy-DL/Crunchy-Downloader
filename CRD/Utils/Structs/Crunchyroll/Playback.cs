@@ -16,12 +16,26 @@ public class StreamDetails{
     public string? Url{ get; set; }
 
     [JsonProperty("hardsub_lang")]
-    public string? HardsubLang{ get; set; }
+    public required LanguageItem HardsubLang{ get; set; }
+    
+    public bool IsHardsubbed{ get; set; }
 
     [JsonProperty("audio_lang")]
     public string? AudioLang{ get; set; }
 
     public string? Type{ get; set; }
+}
+
+public class StreamDetailsPop{
+    public Locale? HardsubLocale{ get; set; }
+    public string? Url{ get; set; }
+    public required LanguageItem HardsubLang{ get; set; }
+    
+    public bool IsHardsubbed{ get; set; }
+    
+    public required LanguageItem AudioLang{ get; set; }
+    public string? Type{ get; set; }
+    public string? Format{ get; set; }
 }
 
 public class PlaybackMeta{
@@ -33,12 +47,14 @@ public class PlaybackMeta{
     public List<PlaybackVersion>? Versions{ get; set; }
 
     [JsonProperty("audio_locale")]
-    public Locale? AudioLocale{ get; set; }
+    public LanguageItem AudioLocale{ get; set; }
 
     [JsonProperty("closed_captions")]
     public Subtitles? ClosedCaptions{ get; set; }
 
     public Dictionary<string, Caption>? Captions{ get; set; }
+    
+    public string? Token{ get; set; }
 }
 
 public class SubtitleInfo{
@@ -71,11 +87,3 @@ public class PlaybackVersion{
     public string? Variant{ get; set; }
 }
 
-public class StreamDetailsPop{
-    public Locale? HardsubLocale{ get; set; }
-    public string? Url{ get; set; }
-    public string? HardsubLang{ get; set; }
-    public string? AudioLang{ get; set; }
-    public string? Type{ get; set; }
-    public string? Format{ get; set; }
-}

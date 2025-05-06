@@ -270,7 +270,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         ComboBoxItem? descriptionLang = DescriptionLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.DescriptionLang) ?? null;
         SelectedDescriptionLang = descriptionLang ?? DescriptionLangList[0];
 
-        ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == Languages.Locale2language(options.Hslang).CrLocale) ?? null;
+        ComboBoxItem? hsLang = HardSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Hslang) ?? null;
         SelectedHSLang = hsLang ?? HardSubLangList[0];
 
         ComboBoxItem? defaultDubLang = DefaultDubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.DefaultAudio ?? "")) ?? null;
@@ -416,10 +416,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         string descLang = SelectedDescriptionLang.Content + "";
 
         CrunchyrollManager.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : CrunchyrollManager.Instance.DefaultLocale;
-
-        string hslang = SelectedHSLang.Content + "";
-
-        CrunchyrollManager.Instance.CrunOptions.Hslang = hslang != "none" ? Languages.FindLang(hslang).Locale : hslang;
+        
+        CrunchyrollManager.Instance.CrunOptions.Hslang = SelectedHSLang.Content + "";
 
         CrunchyrollManager.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
         CrunchyrollManager.Instance.CrunOptions.DefaultSub = SelectedDefaultSubLang.Content + "";

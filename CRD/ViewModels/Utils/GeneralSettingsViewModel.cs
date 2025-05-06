@@ -35,6 +35,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _history;
+    
+    [ObservableProperty]
+    private bool _historyCountMissing;
 
     [ObservableProperty]
     private bool _historyIncludeCrArtists;
@@ -259,6 +262,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         ProxyUsername = options.ProxyUsername ?? "";
         ProxyPassword = options.ProxyPassword ?? "";
         ProxyPort = options.ProxyPort;
+        HistoryCountMissing = options.HistoryCountMissing;
         HistoryIncludeCrArtists = options.HistoryIncludeCrArtists;
         HistoryAddSpecials = options.HistoryAddSpecials;
         HistorySkipUnmonitored = options.HistorySkipUnmonitored;
@@ -287,42 +291,45 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             return;
         }
 
-        CrunchyrollManager.Instance.CrunOptions.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
-
-        CrunchyrollManager.Instance.CrunOptions.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
-        CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);
+        var settings = CrunchyrollManager.Instance.CrunOptions;
         
-        CrunchyrollManager.Instance.CrunOptions.RetryAttempts = Math.Clamp((int)(RetryAttempts ?? 0), 1, 10);
-        CrunchyrollManager.Instance.CrunOptions.RetryDelay = Math.Clamp((int)(RetryDelay ?? 0), 1, 30);
+        settings.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
 
-        CrunchyrollManager.Instance.CrunOptions.DownloadToTempFolder = DownloadToTempFolder;
-        CrunchyrollManager.Instance.CrunOptions.HistoryAddSpecials = HistoryAddSpecials;
-        CrunchyrollManager.Instance.CrunOptions.HistoryIncludeCrArtists = HistoryIncludeCrArtists;
-        CrunchyrollManager.Instance.CrunOptions.HistorySkipUnmonitored = HistorySkipUnmonitored;
-        CrunchyrollManager.Instance.CrunOptions.HistoryCountSonarr = HistoryCountSonarr;
-        CrunchyrollManager.Instance.CrunOptions.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
-        CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
+        settings.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
+        settings.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);
+        
+        settings.RetryAttempts = Math.Clamp((int)(RetryAttempts ?? 0), 1, 10);
+        settings.RetryDelay = Math.Clamp((int)(RetryDelay ?? 0), 1, 30);
 
-        CrunchyrollManager.Instance.CrunOptions.ProxyEnabled = ProxyEnabled;
-        CrunchyrollManager.Instance.CrunOptions.ProxySocks = ProxySocks;
-        CrunchyrollManager.Instance.CrunOptions.ProxyHost = ProxyHost;
-        CrunchyrollManager.Instance.CrunOptions.ProxyPort = Math.Clamp((int)(ProxyPort ?? 0), 0, 65535);
-        CrunchyrollManager.Instance.CrunOptions.ProxyUsername = ProxyUsername;
-        CrunchyrollManager.Instance.CrunOptions.ProxyPassword = ProxyPassword;
+        settings.DownloadToTempFolder = DownloadToTempFolder;
+        settings.HistoryCountMissing = HistoryCountMissing;
+        settings.HistoryAddSpecials = HistoryAddSpecials;
+        settings.HistoryIncludeCrArtists = HistoryIncludeCrArtists;
+        settings.HistorySkipUnmonitored = HistorySkipUnmonitored;
+        settings.HistoryCountSonarr = HistoryCountSonarr;
+        settings.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
+        settings.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
+
+        settings.ProxyEnabled = ProxyEnabled;
+        settings.ProxySocks = ProxySocks;
+        settings.ProxyHost = ProxyHost;
+        settings.ProxyPort = Math.Clamp((int)(ProxyPort ?? 0), 0, 65535);
+        settings.ProxyUsername = ProxyUsername;
+        settings.ProxyPassword = ProxyPassword;
 
         string historyLang = SelectedHistoryLang.Content + "";
 
-        CrunchyrollManager.Instance.CrunOptions.HistoryLang = historyLang != "default" ? historyLang : CrunchyrollManager.Instance.DefaultLocale;
+        settings.HistoryLang = historyLang != "default" ? historyLang : CrunchyrollManager.Instance.DefaultLocale;
 
-        CrunchyrollManager.Instance.CrunOptions.Theme = CurrentAppTheme?.Content + "";
+        settings.Theme = CurrentAppTheme?.Content + "";
 
         if (_faTheme.CustomAccentColor != (Application.Current?.PlatformSettings?.GetColorValues().AccentColor1)){
-            CrunchyrollManager.Instance.CrunOptions.AccentColor = _faTheme.CustomAccentColor.ToString();
+            settings.AccentColor = _faTheme.CustomAccentColor.ToString();
         } else{
-            CrunchyrollManager.Instance.CrunOptions.AccentColor = string.Empty;
+            settings.AccentColor = string.Empty;
         }
 
-        CrunchyrollManager.Instance.CrunOptions.History = History;
+        settings.History = History;
 
         var props = new SonarrProperties();
 
@@ -339,9 +346,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         props.ApiKey = SonarrApiKey;
 
 
-        CrunchyrollManager.Instance.CrunOptions.SonarrProperties = props;
+        settings.SonarrProperties = props;
 
-        CrunchyrollManager.Instance.CrunOptions.LogMode = LogMode;
+        settings.LogMode = LogMode;
 
         CfgManager.WriteCrSettings();
     }

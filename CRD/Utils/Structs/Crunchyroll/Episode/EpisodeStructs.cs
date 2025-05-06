@@ -402,6 +402,16 @@ public class CrunchyEpMetaData{
     public List<EpisodeVersion>? Versions{ get; set; }
     public bool IsSubbed{ get; set; }
     public bool IsDubbed{ get; set; }
+    
+    public (string? seasonID, string? guid) GetOriginalIds(){
+        var version = Versions?.FirstOrDefault(a => a.Original);
+        if (version != null && !string.IsNullOrEmpty(version.Guid) && !string.IsNullOrEmpty(version.SeasonGuid)){
+            return (version.SeasonGuid, version.Guid);
+        }
+
+        return (null, null);
+    }
+    
 }
 
 public class CrunchyRollEpisodeData{
