@@ -65,8 +65,8 @@ public class CalendarManager{
             return forDate;
         }
 
-        var request = calendarLanguage.ContainsKey(CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage ?? "de")
-            ? HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage ?? "de"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null)
+        var request = calendarLanguage.ContainsKey(CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage ?? "en-us")
+            ? HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage ?? "en-us"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null)
             : HttpClientReq.CreateRequestMessage($"{calendarLanguage["en-us"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false, false, null);
 
 

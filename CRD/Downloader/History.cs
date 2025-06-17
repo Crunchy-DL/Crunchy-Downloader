@@ -614,7 +614,7 @@ public class History{
 
     private static readonly object _lock = new object();
 
-    public async Task MatchHistoryEpisodesWithSonarr(bool updateAll, HistorySeries historySeries){
+    public async Task MatchHistoryEpisodesWithSonarr(bool rematchAll, HistorySeries historySeries){
         if (crunInstance.CrunOptions.SonarrProperties is{ SonarrEnabled: false }){
             return;
         }
@@ -630,22 +630,38 @@ public class History{
                 allHistoryEpisodes.AddRange(historySeriesSeason.EpisodesList);
             }
 
+            if (!rematchAll){
+                var historyEpisodesWithSonarrIds = allHistoryEpisodes
+                    .Where(e => !string.IsNullOrEmpty(e.SonarrEpisodeId))
+                    .ToList();
+                
+                Parallel.ForEach(historyEpisodesWithSonarrIds, historyEpisode => {
+                    var sonarrEpisode = episodes.FirstOrDefault(e => e.Id.ToString().Equals(historyEpisode.SonarrEpisodeId));
+
+                    if (sonarrEpisode != null){
+                        historyEpisode.AssignSonarrEpisodeData(sonarrEpisode);
+                    }
+                });
+
+                var historyEpisodeIds = new HashSet<string>(historyEpisodesWithSonarrIds.Select(e => e.SonarrEpisodeId!));
+                
+                episodes.RemoveAll(e => historyEpisodeIds.Contains(e.Id.ToString()));
+                
+                allHistoryEpisodes = allHistoryEpisodes
+                    .Where(e => string.IsNullOrEmpty(e.SonarrEpisodeId))
+                    .ToList();
+            }
+
             List<HistoryEpisode> failedEpisodes =[];
 
             Parallel.ForEach(allHistoryEpisodes, historyEpisode => {
-                if (updateAll || string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){
+                if (string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){
                     // Create a copy of the episodes list for each thread
                     var episodesCopy = new List<SonarrEpisode>(episodes);
 
                     var episode = FindClosestMatchEpisodes(episodesCopy, historyEpisode.EpisodeTitle ?? string.Empty);
                     if (episode != null){
-                        historyEpisode.SonarrEpisodeId = episode.Id + "";
-                        historyEpisode.SonarrEpisodeNumber = episode.EpisodeNumber + "";
-                        historyEpisode.SonarrHasFile = episode.HasFile;
-                        historyEpisode.SonarrIsMonitored = episode.Monitored;
-                        historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
-                        historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
-
+                        historyEpisode.AssignSonarrEpisodeData(episode);
                         lock (_lock){
                             episodes.Remove(episode);
                         }
@@ -669,12 +685,8 @@ public class History{
                     return episodeNumberStr == historyEpisode.Episode && seasonNumberStr == historyEpisode.EpisodeSeasonNum;
                 });
                 if (episode != null){
-                    historyEpisode.SonarrEpisodeId = episode.Id + "";
-                    historyEpisode.SonarrEpisodeNumber = episode.EpisodeNumber + "";
-                    historyEpisode.SonarrHasFile = episode.HasFile;
-                    historyEpisode.SonarrIsMonitored = episode.Monitored;
-                    historyEpisode.SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber + "";
-                    historyEpisode.SonarrSeasonNumber = episode.SeasonNumber + "";
+                    historyEpisode.AssignSonarrEpisodeData(episode);
+
                     lock (_lock){
                         episodes.Remove(episode);
                     }
@@ -688,12 +700,8 @@ public class History{
                     });
 
                     if (episode1 != null){
-                        historyEpisode.SonarrEpisodeId = episode1.Id + "";
-                        historyEpisode.SonarrEpisodeNumber = episode1.EpisodeNumber + "";
-                        historyEpisode.SonarrHasFile = episode1.HasFile;
-                        historyEpisode.SonarrIsMonitored = episode1.Monitored;
-                        historyEpisode.SonarrAbsolutNumber = episode1.AbsoluteEpisodeNumber + "";
-                        historyEpisode.SonarrSeasonNumber = episode1.SeasonNumber + "";
+                        historyEpisode.AssignSonarrEpisodeData(episode1);
+
                         lock (_lock){
                             episodes.Remove(episode1);
                         }
@@ -706,12 +714,8 @@ public class History{
                             return ele.AbsoluteEpisodeNumber + "" == historyEpisode.Episode;
                         });
                         if (episode2 != null){
-                            historyEpisode.SonarrEpisodeId = episode2.Id + "";
-                            historyEpisode.SonarrEpisodeNumber = episode2.EpisodeNumber + "";
-                            historyEpisode.SonarrHasFile = episode2.HasFile;
-                            historyEpisode.SonarrIsMonitored = episode2.Monitored;
-                            historyEpisode.SonarrAbsolutNumber = episode2.AbsoluteEpisodeNumber + "";
-                            historyEpisode.SonarrSeasonNumber = episode2.SeasonNumber + "";
+                            historyEpisode.AssignSonarrEpisodeData(episode2);
+
                             lock (_lock){
                                 episodes.Remove(episode2);
                             }

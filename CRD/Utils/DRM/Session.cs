@@ -80,12 +80,15 @@ public class Session{
     public byte[] GetLicenseRequest(){
         dynamic licenseRequest;
 
+        var random = new Random();
+        uint keyControlNonceId = (uint)(random.NextDouble() * Math.Pow(2, 31));
+        
         if (InitData is WidevineCencHeader){
             licenseRequest = new SignedLicenseRequest{
                 Type = SignedLicenseRequest.MessageType.LicenseRequest,
                 Msg = new LicenseRequest{
                     Type = LicenseRequest.RequestType.New,
-                    KeyControlNonce = 1093602366,
+                    KeyControlNonce = keyControlNonceId,
                     ProtocolVersion = ProtocolVersion.Current,
                     RequestTime = uint.Parse((DateTime.Now - DateTime.UnixEpoch).TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture).Split('.')[0]),
                     ContentId = new LicenseRequest.ContentIdentification{
@@ -102,7 +105,7 @@ public class Session{
                 Type = SignedLicenseRequestRaw.MessageType.LicenseRequest,
                 Msg = new LicenseRequestRaw{
                     Type = LicenseRequestRaw.RequestType.New,
-                    KeyControlNonce = 1093602366,
+                    KeyControlNonce = keyControlNonceId,
                     ProtocolVersion = ProtocolVersion.Current,
                     RequestTime = uint.Parse((DateTime.Now - DateTime.UnixEpoch).TotalSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture).Split('.')[0]),
                     ContentId = new LicenseRequestRaw.ContentIdentification{

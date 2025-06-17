@@ -20,6 +20,7 @@
     <Application.Styles>
         <sty:FluentAvaloniaTheme PreferSystemTheme="True" PreferUserAccentColor="True"/>
         <StyleInclude Source="avares://CRD/Styling/ControlsGalleryStyles.axaml" />
+        <StyleInclude Source="avares://CRD/Styling/ContentDialogCustomStyle.axaml" />
         <StyleInclude Source="avares://CRD/Assets/Icons.axaml"></StyleInclude>
     </Application.Styles>
 </Application>

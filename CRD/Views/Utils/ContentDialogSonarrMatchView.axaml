@@ -6,8 +6,8 @@
                         xmlns:asyncImageLoader="clr-namespace:AsyncImageLoader;assembly=AsyncImageLoader.Avalonia"
                         x:DataType="vm:ContentDialogSonarrMatchViewModel"
                         x:Class="CRD.Views.Utils.ContentDialogSonarrMatchView">
-    
-    <Grid HorizontalAlignment="Stretch" MaxHeight="500" >
+
+    <Grid HorizontalAlignment="Stretch" MaxHeight="600">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -18,7 +18,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        
+
         <Border Grid.Column="0" Grid.Row="1" CornerRadius="10" Background="{DynamicResource ButtonBackground}">
             <Grid Margin="10" VerticalAlignment="Top">
                 <Grid.ColumnDefinitions>
@@ -27,7 +27,7 @@
                 </Grid.ColumnDefinitions>
                 <!-- Image -->
                 <Image Grid.Column="0" Margin="10" asyncImageLoader:ImageLoader.Source="{Binding CurrentSonarrSeries.ImageUrl}" MaxWidth="120" MaxHeight="180"></Image>
-                
+
                 <Grid Grid.Column="1" Margin="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" /> <!-- Takes up most space for the title -->
@@ -37,62 +37,64 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding CurrentSonarrSeries.Title}" FontWeight="Bold"
                                FontSize="16"
                                TextWrapping="Wrap" VerticalAlignment="Center" />
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding CurrentSonarrSeries.Year}" FontStyle="Italic"
                                HorizontalAlignment="Right" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
+                    <TextBlock Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" MaxHeight="150"
                                Text="{Binding CurrentSonarrSeries.Overview}"
                                FontStyle="Italic" Opacity="0.8" TextWrapping="Wrap" />
-                    
+
                     <TextBlock Grid.Row="0" Grid.Column="0" FontSize="1" Text=" " Width="1500" Opacity="0" />
                 </Grid>
             </Grid>
         </Border>
-        
+
         <!-- <Rectangle Grid.Row="2" Width="1500" Height="0" Fill="Gray" Margin="10,0" /> -->
         <!-- <TextBlock Grid.Column="0" Grid.Row="2" Text="Series"></TextBlock> -->
-        
+
         <ListBox Grid.Row="3" SelectedItem="{Binding SelectedItem}" ItemsSource="{Binding SonarrSeriesList}">
 
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="{x:Type models:SonarrSeries}">
-                    <StackPanel>
+                    <StackPanel Height="220">
                         <Border Padding="10" Margin="5" BorderThickness="1">
-                            <Grid Margin="10" VerticalAlignment="Top">
+                            <Grid VerticalAlignment="Top">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <!-- Image -->
+
                                 <asyncImageLoader:AdvancedImage Grid.Column="0" MaxWidth="120" MaxHeight="180" Source="{Binding ImageUrl}"
                                                                 Stretch="Fill" />
 
                                 <!-- Text Content -->
                                 <Grid Grid.Column="1" Margin="10" VerticalAlignment="Top">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" /> <!-- Takes up most space for the title -->
+                                        <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
-                                        <!-- Takes up space as needed for the time -->
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="*" />
+                                        <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <TextBlock Grid.Column="0" Text="{Binding Title}" FontWeight="Bold"
                                                FontSize="16"
                                                TextWrapping="Wrap" />
                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Year}" FontStyle="Italic"
                                                HorizontalAlignment="Right" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2"
+                                    <TextBlock Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" MaxHeight="150"
                                                Text="{Binding Overview}"
                                                FontStyle="Italic" Opacity="0.8" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" FontSize="1" Text=" " Width="1500" Opacity="0" />
                                 </Grid>
                             </Grid>
                         </Border>
-                        <Border Background="LightGray" Height="1" Margin="0,5" HorizontalAlignment="Stretch" />
+                        <Border Background="LightGray" Height="1" Margin="0,5" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" />
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>

@@ -1,0 +1,167 @@
+﻿<ui:CustomContentDialog xmlns="https://github.com/avaloniaui"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        xmlns:vm="clr-namespace:CRD.ViewModels.Utils"
+                        xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+                        xmlns:ui="clr-namespace:CRD.Utils.UI"
+                        x:DataType="vm:ContentDialogSonarrMatchEpisodeViewModel"
+                        x:Class="CRD.Views.Utils.ContentDialogSonarrMatchEpisodeView">
+
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Grid.Row="1" CornerRadius="10" Background="{DynamicResource ButtonBackground}">
+            <Grid Margin="10" VerticalAlignment="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Grid Grid.Column="1" Margin="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" /> <!-- Takes up most space for the title -->
+                        <ColumnDefinition Width="Auto" />
+                        <!-- Takes up space as needed for the time -->
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" FontSize="16" FontWeight="Bold" Text="History Episode:" />
+
+                    <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="S"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentHistoryEpisode.EpisodeSeasonNum}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="E"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentHistoryEpisode.Episode}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text=" - "
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentHistoryEpisode.EpisodeTitle}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CurrentHistoryEpisode.EpisodeCrPremiumAirDate}" FontStyle="Italic"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" FontSize="16" FontWeight="Bold" Text="Sonarr Episode:" />
+
+                    <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock Text="S"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentSonarrEpisode.SeasonNumber}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="E"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentSonarrEpisode.EpisodeNumber}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text=" ("
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentSonarrEpisode.AbsoluteEpisodeNumber}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text=") - "
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding CurrentSonarrEpisode.Title}"
+                                   FontSize="16"
+                                   TextWrapping="Wrap" VerticalAlignment="Center" />
+
+                    </StackPanel>
+
+
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CurrentSonarrEpisode.AirDateUtc}" FontStyle="Italic"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" />
+
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" FontSize="1" Text=" " Width="1500" Opacity="0" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding SonarrSeasonList}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <controls:SettingsExpander
+                            Header="{Binding SeasonName}"
+                            ItemsSource="{Binding Episodes}"
+                            IsExpanded="{Binding IsExpanded}">
+                            <controls:SettingsExpander.ItemTemplate>
+                                <DataTemplate>
+
+                                    <Grid VerticalAlignment="Center">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                                            <TextBlock Text="E" />
+                                            <TextBlock Text="{Binding EpisodeNumber}" />
+                                            <TextBlock Text=" (" />
+                                            <TextBlock Text="{Binding AbsoluteEpisodeNumber}" />
+                                            <TextBlock Text=") - " />
+                                            <TextBlock Text="{Binding Title}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding AirDateUtc}"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="15"
+                                                       Opacity="0.8"
+                                                       Margin="0 0 20 0" />
+
+                                            <Button Margin="0 0 10 0"
+                                                    Command="{Binding $parent[ScrollViewer].((vm:ContentDialogSonarrMatchEpisodeViewModel)DataContext).SetSonarrEpisodeMatch}"
+                                                    CommandParameter="{Binding}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <controls:SymbolIcon Symbol="Accept" FontSize="18" />
+                                                </StackPanel>
+                                                <ToolTip.Tip>
+                                                    <TextBlock Text="Set Sonarr Episode" FontSize="15" />
+                                                </ToolTip.Tip>
+                                            </Button>
+
+                                        </StackPanel>
+                                    </Grid>
+
+
+                                </DataTemplate>
+                            </controls:SettingsExpander.ItemTemplate>
+
+                        </controls:SettingsExpander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+    </Grid>
+
+
+</ui:CustomContentDialog>

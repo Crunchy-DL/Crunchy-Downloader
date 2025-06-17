@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.IsolatedStorage;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -111,7 +112,28 @@ public class Widevine{
             content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
             playbackRequest2.Content = content;
 
-            var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
+            // var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
+
+            var response = (IsOk: false, ResponseContent: "", error: "");
+            for (var attempt = 0; attempt < 3 + 1; attempt++){
+                using (var request = Helpers.CloneHttpRequestMessage(playbackRequest2)){
+                    response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+                    if (response.IsOk){
+                        break;
+                    }
+
+                    if (response.error.Contains("System.Net.Sockets.SocketException (10054)")){
+                        Console.Error.WriteLine($"Key Request Attempt {attempt + 1} failed.");
+                        if (attempt == 3)
+                            break;
+
+                        await Task.Delay(1000);
+                    } else{
+                        break;
+                    }
+                }
+            }
 
             if (!response.IsOk){
                 Console.Error.WriteLine("Failed to get Keys!");

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -11,7 +10,6 @@ using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
-using CRD.Utils.CustomList;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;

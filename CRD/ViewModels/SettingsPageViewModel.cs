@@ -10,8 +10,6 @@ using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
 using Image = Avalonia.Controls.Image;
 
-// ReSharper disable InconsistentNaming
-
 namespace CRD.ViewModels;
 
 public class SettingsPageViewModel : ViewModelBase{

@@ -147,64 +147,7 @@ public class CrunchyrollManager{
 
         options.History = true;
 
-        if (Path.Exists(CfgManager.PathCrDownloadOptionsOld)){
-            var optionsYaml = new CrDownloadOptionsYaml();
-
-            optionsYaml.UseCrBetaApi = true;
-            optionsYaml.AutoDownload = false;
-            optionsYaml.RemoveFinishedDownload = false;
-            optionsYaml.Chapters = true;
-            optionsYaml.Hslang = "none";
-            optionsYaml.Force = "Y";
-            optionsYaml.FileName = "${seriesTitle} - S${season}E${episode} [${height}p]";
-            optionsYaml.Partsize = 10;
-            optionsYaml.DlSubs = new List<string>{ "en-US" };
-            optionsYaml.SkipMuxing = false;
-            optionsYaml.MkvmergeOptions = new List<string>{ "--no-date", "--disable-track-statistics-tags", "--engage no_variable_data" };
-            optionsYaml.FfmpegOptions = new();
-            optionsYaml.DefaultAudio = "ja-JP";
-            optionsYaml.DefaultSub = "en-US";
-            optionsYaml.QualityAudio = "best";
-            optionsYaml.QualityVideo = "best";
-            optionsYaml.CcTag = "CC";
-            optionsYaml.CcSubsFont = "Trebuchet MS";
-            optionsYaml.FsRetryTime = 5;
-            optionsYaml.Numbers = 2;
-            optionsYaml.Timeout = 15000;
-            optionsYaml.DubLang = new List<string>(){ "ja-JP" };
-            optionsYaml.SimultaneousDownloads = 2;
-            // options.AccentColor = Colors.SlateBlue.ToString();
-            optionsYaml.Theme = "System";
-            optionsYaml.SelectedCalendarLanguage = "en-us";
-            optionsYaml.CalendarDubFilter = "none";
-            optionsYaml.CustomCalendar = true;
-            optionsYaml.DlVideoOnce = true;
-            optionsYaml.StreamEndpoint = "web/firefox";
-            optionsYaml.SubsAddScaledBorder = ScaledBorderAndShadowSelection.DontAdd;
-            optionsYaml.HistoryLang = DefaultLocale;
-
-            optionsYaml.BackgroundImageOpacity = 0.5;
-            optionsYaml.BackgroundImageBlurRadius = 10;
-
-            optionsYaml.HistoryPageProperties = new HistoryPageProperties{
-                SelectedView = HistoryViewType.Posters,
-                SelectedSorting = SortingType.SeriesTitle,
-                SelectedFilter = FilterType.All,
-                ScaleValue = 0.73,
-                Ascending = false,
-                ShowSeries = true,
-                ShowArtists = true
-            };
-
-            optionsYaml.History = true;
-
-            CfgManager.UpdateSettingsFromFileYAML(optionsYaml);
-
-            options = Helpers.MigrateSettings(optionsYaml);
-        } else{
-            CfgManager.UpdateSettingsFromFile(options, CfgManager.PathCrDownloadOptions);
-        }
-
+        CfgManager.UpdateSettingsFromFile(options, CfgManager.PathCrDownloadOptions);
 
         return options;
     }
@@ -226,11 +169,6 @@ public class CrunchyrollManager{
             PreferredContentSubtitleLanguage = DefaultLocale,
             HasPremium = false,
         };
-
-        if (Path.Exists(CfgManager.PathCrDownloadOptionsOld)){
-            CfgManager.WriteCrSettings();
-            Helpers.DeleteFile(CfgManager.PathCrDownloadOptionsOld);
-        }
     }
 
     public static async Task<string> GetBase64EncodedTokenAsync(){
@@ -290,9 +228,6 @@ public class CrunchyrollManager{
         if (CfgManager.CheckIfFileExists(CfgManager.PathCrToken)){
             Token = CfgManager.ReadJsonFromFile<CrToken>(CfgManager.PathCrToken);
             await CrAuth.LoginWithToken();
-            if (Path.Exists(CfgManager.PathCrTokenOld)){
-                Helpers.DeleteFile(CfgManager.PathCrTokenOld);
-            }
         } else{
             await CrAuth.AuthAnonymous();
         }
@@ -391,7 +326,6 @@ public class CrunchyrollManager{
                 ? Path.Combine(res.TempFolderPath ?? string.Empty, res.FileName ?? string.Empty)
                 : Path.Combine(res.FolderPath ?? string.Empty, res.FileName ?? string.Empty);
             if (options is{ DlVideoOnce: false, KeepDubsSeperate: true }){
-                
                 var groupByDub = Helpers.GroupByLanguageWithSubtitles(res.Data);
                 var mergers = new List<Merger>();
                 foreach (var keyValue in groupByDub){
@@ -999,9 +933,12 @@ public class CrunchyrollManager{
                 }
 
                 #endregion
-
-
-                var fetchPlaybackData = await FetchPlaybackData(options, mediaId, mediaGuid, data.Music);
+                
+                var fetchPlaybackData = await FetchPlaybackData(options.StreamEndpoint ?? "web/firefox", mediaId, mediaGuid, data.Music);
+                (bool IsOk, PlaybackData pbData, string error) fetchPlaybackData2 = default;
+                if (!string.IsNullOrEmpty(options.StreamEndpointSecondary) && !(options.StreamEndpoint ?? "web/firefox").Equals(options.StreamEndpointSecondary)){
+                    fetchPlaybackData2 = await FetchPlaybackData(options.StreamEndpointSecondary, mediaId, mediaGuid, data.Music);
+                }
 
                 if (!fetchPlaybackData.IsOk){
                     var errorJson = fetchPlaybackData.error;
@@ -1047,6 +984,21 @@ public class CrunchyrollManager{
                         FileName = "./unknown",
                         ErrorText = "Playback data not found"
                     };
+                }
+                
+                if (fetchPlaybackData2.IsOk){
+                    if (fetchPlaybackData.pbData.Data != null)
+                        foreach (var keyValuePair in fetchPlaybackData.pbData.Data){
+                            var value = fetchPlaybackData2.pbData?.Data?[keyValuePair.Key];
+                            var url = value?.Url.First() ?? "";
+
+                            var match = Regex.Match(url, @"(.*\.urlset\/)");
+                            var shortendUrl = match.Success ? match.Value : url;
+
+                            if (!keyValuePair.Value.Url.Any(arrayUrl => arrayUrl != null && arrayUrl.Contains(shortendUrl))){
+                                keyValuePair.Value.Url.Add(url);
+                            }
+                        }
                 }
 
 
@@ -1106,7 +1058,7 @@ public class CrunchyrollManager{
                     streams = streams.Select(s => {
                         s.AudioLang = audDub;
                         s.HardsubLang = s.HardsubLang;
-                        s.Type = $"{s.Format}/{s.AudioLang}/{s.HardsubLang}";
+                        s.Type = $"{s.Format}/{s.AudioLang.CrLocale}/{s.HardsubLang.CrLocale}";
                         return s;
                     }).ToList();
 
@@ -1209,35 +1161,76 @@ public class CrunchyrollManager{
                     var videoDownloadMedia = new DownloadedMedia(){ Lang = Languages.DEFAULT_lang };
 
                     if (!dlFailed && curStream != null && options is not{ Novids: true, Noaudio: true }){
-                        var streamPlaylistsReq = HttpClientReq.CreateRequestMessage(curStream.Url ?? string.Empty, HttpMethod.Get, true, true, null);
+                        
+                        
+                        Dictionary<string, string> streamPlaylistsReqResponseList =[];
 
-                        var streamPlaylistsReqResponse = await HttpClientReq.Instance.SendHttpRequest(streamPlaylistsReq);
+                        foreach (var streamUrl in curStream.Url){
+                            var streamPlaylistsReq = HttpClientReq.CreateRequestMessage(streamUrl ?? string.Empty, HttpMethod.Get, true, true, null);
+                            var streamPlaylistsReqResponse = await HttpClientReq.Instance.SendHttpRequest(streamPlaylistsReq);
+                            
+                            if (!streamPlaylistsReqResponse.IsOk){
+                                dlFailed = true;
+                                return new DownloadResponse{
+                                    Data = new List<DownloadedMedia>(),
+                                    Error = dlFailed,
+                                    FileName = "./unknown",
+                                    ErrorText = "Playlist fetch problem"
+                                };
+                            }
 
-                        if (!streamPlaylistsReqResponse.IsOk){
-                            dlFailed = true;
-                            return new DownloadResponse{
-                                Data = new List<DownloadedMedia>(),
-                                Error = dlFailed,
-                                FileName = "./unknown",
-                                ErrorText = "Playlist fetch problem"
-                            };
+                            if (streamPlaylistsReqResponse.ResponseContent.Contains("MPD")){
+                                streamPlaylistsReqResponseList[streamUrl ?? ""] = streamPlaylistsReqResponse.ResponseContent;
+                            } 
                         }
+                            
+                        //Use again when cr has all endpoints with new encoding
+                        // var streamPlaylistsReq = HttpClientReq.CreateRequestMessage(curStream.Url ?? string.Empty, HttpMethod.Get, true, true, null);
+                        //
+                        // var streamPlaylistsReqResponse = await HttpClientReq.Instance.SendHttpRequest(streamPlaylistsReq);
+                        //
+                        // if (!streamPlaylistsReqResponse.IsOk){
+                        //     dlFailed = true;
+                        //     return new DownloadResponse{
+                        //         Data = new List<DownloadedMedia>(),
+                        //         Error = dlFailed,
+                        //         FileName = "./unknown",
+                        //         ErrorText = "Playlist fetch problem"
+                        //     };
+                        // }
 
                         if (dlFailed){
                             Console.WriteLine($"CAN\'T FETCH VIDEO PLAYLISTS!");
                         } else{
-                            if (streamPlaylistsReqResponse.ResponseContent.Contains("MPD")){
-                                var match = Regex.Match(curStream.Url ?? string.Empty, @"(.*\.urlset\/)");
-                                var matchedUrl = match.Success ? match.Value : null;
-                                //Parse MPD Playlists
-                                var crLocal = "";
-                                if (pbData.Meta != null){
-                                    crLocal = pbData.Meta.AudioLocale.CrLocale;
+                            // if (streamPlaylistsReqResponse.ResponseContent.Contains("MPD")){
+                            //     var match = Regex.Match(curStream.Url ?? string.Empty, @"(.*\.urlset\/)");
+                            //     var matchedUrl = match.Success ? match.Value : null;
+                            //     //Parse MPD Playlists
+                            //     var crLocal = "";
+                            //     if (pbData.Meta != null){
+                            //         crLocal = pbData.Meta.AudioLocale.CrLocale;
+                            //     }
+                            //
+                            //     MPDParsed streamPlaylists = MPDParser.Parse(streamPlaylistsReqResponse.ResponseContent, Languages.FindLang(crLocal), matchedUrl);
+                            //
+                            //     List<string> streamServers = new List<string>(streamPlaylists.Data.Keys);
+                            if (streamPlaylistsReqResponseList.Count > 0){
+                                HashSet<string> streamServers =[];
+                                Dictionary<string, ServerData> playListData = new Dictionary<string, ServerData>();
+
+                                foreach (var curStreams in streamPlaylistsReqResponseList){
+                                    var match = Regex.Match(curStreams.Key ?? string.Empty, @"(.*\.urlset\/)");
+                                    var matchedUrl = match.Success ? match.Value : null;
+                                    //Parse MPD Playlists
+                                    var crLocal = "";
+                                    if (pbData.Meta != null){
+                                        crLocal = pbData.Meta.AudioLocale.CrLocale;
+                                    }
+                                    MPDParsed streamPlaylists = MPDParser.Parse(curStreams.Value, Languages.FindLang(crLocal), matchedUrl);
+                                    streamServers.UnionWith(streamPlaylists.Data.Keys);
+                                    Helpers.MergePlaylistData(playListData, streamPlaylists.Data);
                                 }
-
-                                MPDParsed streamPlaylists = MPDParser.Parse(streamPlaylistsReqResponse.ResponseContent, Languages.FindLang(crLocal), matchedUrl);
-
-                                List<string> streamServers = new List<string>(streamPlaylists.Data.Keys);
+                                
                                 options.StreamServer = options.StreamServer > streamServers.Count ? 1 : options.StreamServer;
 
                                 if (streamServers.Count == 0){
@@ -1253,8 +1246,11 @@ public class CrunchyrollManager{
                                     options.StreamServer = 1;
                                 }
 
-                                string selectedServer = streamServers[options.StreamServer - 1];
-                                ServerData selectedList = streamPlaylists.Data[selectedServer];
+                                // string selectedServer = streamServers[options.StreamServer - 1];
+                                // ServerData selectedList = streamPlaylists.Data[selectedServer];
+                                
+                                string selectedServer = streamServers.ToList()[options.StreamServer - 1];
+                                ServerData selectedList = playListData[selectedServer];
 
                                 var videos = selectedList.video.Select(item => new VideoItem{
                                     segments = item.segments,
@@ -1273,8 +1269,20 @@ public class CrunchyrollManager{
                                     resolutionText = $"{Math.Round(item.bandwidth / 1000.0)}kB/s"
                                 }).ToList();
 
-                                videos.Sort((a, b) => a.quality.width.CompareTo(b.quality.width));
-                                audios.Sort((a, b) => a.bandwidth.CompareTo(b.bandwidth));
+                                // Video: Remove duplicates by resolution (width, height), keep highest bandwidth, then sort
+                                videos = videos
+                                    .GroupBy(v => new{ v.quality.width, v.quality.height })
+                                    .Select(g => g.OrderByDescending(v => v.bandwidth).First())
+                                    .OrderBy(v => v.quality.width)
+                                    .ThenBy(v => v.bandwidth)
+                                    .ToList();
+
+                                // Audio: Remove duplicates, then sort by bandwidth
+                                audios = audios
+                                    .GroupBy(a => new{ a.bandwidth, a.language }) // Add more properties if needed
+                                    .Select(g => g.First())
+                                    .OrderBy(a => a.bandwidth)
+                                    .ToList();
 
                                 if (string.IsNullOrEmpty(data.VideoQuality)){
                                     Console.Error.WriteLine("Warning: VideoQuality is null or empty. Defaulting to 'best' quality.");
@@ -1478,9 +1486,11 @@ public class CrunchyrollManager{
                                         };
                                     }
 
+                                    await CrAuth.RefreshToken(true);
+
                                     Dictionary<string, string> authDataDict = new Dictionary<string, string>
-                                        { { "authorization", "Bearer " + Token?.access_token },{"x-cr-content-id", mediaGuid},{"x-cr-video-token", pbData.Meta?.Token ?? string.Empty} };
-                                    
+                                        { { "authorization", "Bearer " + Token?.access_token },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
+
                                     var encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
 
                                     if (encryptionKeys.Count == 0){
@@ -1494,25 +1504,46 @@ public class CrunchyrollManager{
                                         };
                                     }
 
-                                    if (Path.Exists(CfgManager.PathMP4Decrypt) || Path.Exists(CfgManager.PathShakaPackager)){
-                                        var keyId = BitConverter.ToString(encryptionKeys[0].KeyID).Replace("-", "").ToLower();
-                                        var key = BitConverter.ToString(encryptionKeys[0].Bytes).Replace("-", "").ToLower();
+                                    List<ContentKey> encryptionKeysAudio =[];
+                                    if (!string.IsNullOrEmpty(chosenVideoSegments.pssh) && !chosenVideoSegments.pssh.Equals(chosenAudioSegments.pssh)){
+                                        Console.WriteLine("Video and Audio PSSH different requesting Audio encryption keys");
+                                        encryptionKeysAudio = await _widevine.getKeys(chosenAudioSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+                                        if (encryptionKeysAudio.Count == 0){
+                                            Console.Error.WriteLine("Failed to get audio encryption keys");
+                                            dlFailed = true;
+                                            return new DownloadResponse{
+                                                Data = files,
+                                                Error = dlFailed,
+                                                FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
+                                                ErrorText = "Couldn't get DRM audio encryption keys"
+                                            };
+                                        }
+                                    }
 
-                                        //mp4decrypt
-                                        var commandBase = $"--show-progress --key {keyId}:{key}";
+                                    if (Path.Exists(CfgManager.PathMP4Decrypt) || Path.Exists(CfgManager.PathShakaPackager)){
                                         var tempTsFileName = Path.GetFileName(tempTsFile);
                                         var tempTsFileWorkDir = Path.GetDirectoryName(tempTsFile) ?? CfgManager.PathVIDEOS_DIR;
-                                        var commandVideo = commandBase + $" \"{tempTsFileName}.video.enc.m4s\" \"{tempTsFileName}.video.m4s\"";
-                                        var commandAudio = commandBase + $" \"{tempTsFileName}.audio.enc.m4s\" \"{tempTsFileName}.audio.m4s\"";
+
+                                        // Use audio keys if available, otherwise fallback to video keys
+                                        var audioKeysToUse = encryptionKeysAudio.Count > 0 ? encryptionKeysAudio : encryptionKeys;
+
+                                        // === mp4decrypt command ===
+                                        var videoKey = encryptionKeys[0];
+                                        var videoKeyParam = BuildMp4DecryptKeyParam(videoKey.KeyID, videoKey.Bytes);
+                                        var commandVideo = $"--show-progress {videoKeyParam} \"{tempTsFileName}.video.enc.m4s\" \"{tempTsFileName}.video.m4s\"";
+
+                                        var audioKey = audioKeysToUse[0];
+                                        var audioKeyParam = BuildMp4DecryptKeyParam(audioKey.KeyID, audioKey.Bytes);
+                                        var commandAudio = $"--show-progress {audioKeyParam} \"{tempTsFileName}.audio.enc.m4s\" \"{tempTsFileName}.audio.m4s\"";
 
                                         bool shaka = Path.Exists(CfgManager.PathShakaPackager);
                                         if (shaka){
-                                            commandBase = " --enable_raw_key_decryption " +
-                                                          string.Join(" ",
-                                                              encryptionKeys.Select(kb =>
-                                                                  $"--keys key_id={BitConverter.ToString(kb.KeyID).Replace("-", "").ToLower()}:key={BitConverter.ToString(kb.Bytes).Replace("-", "").ToLower()}"));
-                                            commandVideo = $"input=\"{tempTsFileName}.video.enc.m4s\",stream=video,output=\"{tempTsFileName}.video.m4s\"" + commandBase;
-                                            commandAudio = $"input=\"{tempTsFileName}.audio.enc.m4s\",stream=audio,output=\"{tempTsFileName}.audio.m4s\"" + commandBase;
+                                            // === shaka-packager command ===
+                                            var shakaVideoKeys = BuildShakaKeysParam(encryptionKeys);
+                                            commandVideo = $"input=\"{tempTsFileName}.video.enc.m4s\",stream=video,output=\"{tempTsFileName}.video.m4s\" {shakaVideoKeys}";
+
+                                            var shakaAudioKeys = BuildShakaKeysParam(audioKeysToUse);
+                                            commandAudio = $"input=\"{tempTsFileName}.audio.enc.m4s\",stream=audio,output=\"{tempTsFileName}.audio.m4s\" {shakaAudioKeys}";
                                         }
 
                                         if (videoDownloaded){
@@ -2085,13 +2116,13 @@ public class CrunchyrollManager{
 
     #region Fetch Playback Data
 
-    private async Task<(bool IsOk, PlaybackData pbData, string error)> FetchPlaybackData(CrDownloadOptions options, string mediaId, string mediaGuidId, bool music){
+    private async Task<(bool IsOk, PlaybackData pbData, string error)> FetchPlaybackData(string streamEndpoint, string mediaId, string mediaGuidId, bool music){
         var temppbData = new PlaybackData{
             Total = 0,
             Data = new Dictionary<string, StreamDetails>()
         };
 
-        var playbackEndpoint = $"{ApiUrls.Playback}/{(music ? "music/" : "")}{mediaGuidId}/{options.StreamEndpoint}/play";
+        var playbackEndpoint = $"{ApiUrls.Playback}/{(music ? "music/" : "")}{mediaGuidId}/{streamEndpoint}/play";
         var playbackRequestResponse = await SendPlaybackRequestAsync(playbackEndpoint);
 
         if (!playbackRequestResponse.IsOk){
@@ -2119,12 +2150,12 @@ public class CrunchyrollManager{
         return (playbackRequestResponse.IsOk, pbData: temppbData, error: playbackRequestResponse.IsOk ? "" : playbackRequestResponse.ResponseContent);
     }
 
-    private async Task<(bool IsOk, string ResponseContent)> SendPlaybackRequestAsync(string endpoint){
+    private async Task<(bool IsOk, string ResponseContent, string error)> SendPlaybackRequestAsync(string endpoint){
         var request = HttpClientReq.CreateRequestMessage(endpoint, HttpMethod.Get, true, false, null);
         return await HttpClientReq.Instance.SendHttpRequest(request);
     }
 
-    private async Task<(bool IsOk, string ResponseContent)> HandleStreamErrorsAsync((bool IsOk, string ResponseContent) response, string endpoint){
+    private async Task<(bool IsOk, string ResponseContent, string error)> HandleStreamErrorsAsync((bool IsOk, string ResponseContent, string error) response, string endpoint){
         if (response.IsOk || string.IsNullOrEmpty(response.ResponseContent)) return response;
 
         var error = StreamError.FromJson(response.ResponseContent);
@@ -2158,7 +2189,7 @@ public class CrunchyrollManager{
             foreach (var hardsub in playStream.HardSubs){
                 var stream = hardsub.Value;
                 derivedPlayCrunchyStreams[hardsub.Key] = new StreamDetails{
-                    Url = stream.Url,
+                    Url = [stream.Url],
                     IsHardsubbed = true,
                     HardsubLocale = stream.Hlang,
                     HardsubLang = Languages.FixAndFindCrLc((stream.Hlang ?? Locale.DefaulT).GetEnumMemberValue())
@@ -2167,7 +2198,7 @@ public class CrunchyrollManager{
         }
 
         derivedPlayCrunchyStreams[""] = new StreamDetails{
-            Url = playStream.Url,
+            Url = [playStream.Url],
             IsHardsubbed = false,
             HardsubLocale = Locale.DefaulT,
             HardsubLang = Languages.DEFAULT_lang
@@ -2322,4 +2353,14 @@ public class CrunchyrollManager{
             Console.Error.WriteLine("Chapter request failed");
         }
     }
+
+    private static string FormatKey(byte[] keyBytes) =>
+        BitConverter.ToString(keyBytes).Replace("-", "").ToLower();
+
+    private static string BuildMp4DecryptKeyParam(byte[] keyId, byte[] key) =>
+        $"--key {FormatKey(keyId)}:{FormatKey(key)}";
+
+    private static string BuildShakaKeysParam(List<ContentKey> keys) =>
+        "--enable_raw_key_decryption " + string.Join(" ",
+            keys.Select(k => $"--keys key_id={FormatKey(k.KeyID)}:key={FormatKey(k.Bytes)}"));
 }

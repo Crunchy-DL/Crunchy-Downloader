@@ -233,8 +233,16 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-
-
+                
+                <controls:SettingsExpanderItem Content="Stream Endpoint Secondary">
+                    <controls:SettingsExpanderItem.Footer>
+                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                  ItemsSource="{Binding StreamEndpointsSecondary}"
+                                  SelectedItem="{Binding SelectedStreamEndpointSecondary}">
+                        </ComboBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
                 <controls:SettingsExpanderItem Content="Video">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadVideo}"> </CheckBox>

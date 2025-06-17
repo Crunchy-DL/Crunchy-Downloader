@@ -285,8 +285,11 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private (string locale, string id)? ExtractLocaleAndIdFromUrl(){
-        var match = Regex.Match(UrlInput, "/([^/]+)/(?:artist|watch|series)(?:/(?:musicvideo|concert))?/([^/]+)/?");
-        return match.Success ? (match.Groups[1].Value, match.Groups[2].Value) : null;
+        var match = Regex.Match(UrlInput, @"^(?:https?:\/\/[^/]+)?(?:\/([a-z]{2}))?\/(?:[^/]+\/)?(artist|watch|series)(?:\/(musicvideo|concert))?\/([^/]+)(?:\/[^/]*)?$");
+
+        return match.Success
+            ? (match.Groups[1].Value ?? "", match.Groups[4].Value)
+            : null;
     }
 
     private CrunchyUrlType GetUrlType(){
@@ -341,12 +344,11 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
         if (CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic){
             var musicList = await CrunchyrollManager.Instance.CrMusic.ParseFeaturedMusicVideoByIdAsync(id, DetermineLocale(locale), true);
-            
+
             if (musicList != null){
                 currentMusicVideoList = musicList;
                 PopulateItemsFromMusicVideoList();
             }
-            
         }
 
         SetLoadingState(false);
@@ -477,7 +479,6 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void OnSelectedItemsChanged(object? sender, NotifyCollectionChangedEventArgs e){
-
         CurrentSeasonFullySelected = Items.All(item => SelectedItems.Contains(item));
 
         if (CurrentSeasonFullySelected){
@@ -581,18 +582,17 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 episodesBySeason[seasonKey].Add(episodeModel);
             }
         }
-        
+
         if (CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic){
             var locale = string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang)
                 ? CrunchyrollManager.Instance.DefaultLocale
                 : CrunchyrollManager.Instance.CrunOptions.HistoryLang;
             var musicList = await CrunchyrollManager.Instance.CrMusic.ParseFeaturedMusicVideoByIdAsync(seriesId, DetermineLocale(locale), true);
-            
+
             if (musicList != null){
                 currentMusicVideoList = musicList;
                 PopulateItemsFromMusicVideoList();
             }
-            
         }
 
         CurrentSelectedSeason = SeasonList.First();

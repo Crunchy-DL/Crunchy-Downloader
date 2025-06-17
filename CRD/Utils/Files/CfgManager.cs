@@ -16,10 +16,7 @@ namespace CRD.Utils.Files;
 
 public class CfgManager{
     private static string workingDirectory = AppContext.BaseDirectory;
-
-    public static readonly string PathCrTokenOld = Path.Combine(workingDirectory, "config", "cr_token.yml");
-    public static readonly string PathCrDownloadOptionsOld = Path.Combine(workingDirectory, "config", "settings.yml");
-
+    
     public static readonly string PathCrToken = Path.Combine(workingDirectory, "config", "cr_token.json");
     public static readonly string PathCrDownloadOptions = Path.Combine(workingDirectory, "config", "settings.json");
 
@@ -181,73 +178,6 @@ public class CfgManager{
 
         return properties;
     }
-
-
-    #region YAML OLD
-
-    public static void UpdateSettingsFromFileYAML(CrDownloadOptionsYaml options){
-        string dirPath = Path.GetDirectoryName(PathCrDownloadOptionsOld) ?? string.Empty;
-
-        if (!Directory.Exists(dirPath)){
-            Directory.CreateDirectory(dirPath);
-        }
-
-        if (!File.Exists(PathCrDownloadOptionsOld)){
-            using (var fileStream = File.Create(PathCrDownloadOptionsOld)){
-            }
-
-            return;
-        }
-
-        var input = File.ReadAllText(PathCrDownloadOptionsOld);
-
-        if (input.Length <= 0){
-            return;
-        }
-
-        var deserializer = new DeserializerBuilder()
-            .WithNamingConvention(UnderscoredNamingConvention.Instance)
-            .IgnoreUnmatchedProperties()
-            .Build();
-        
-        var propertiesPresentInYaml = GetTopLevelPropertiesInYaml(input);
-        var loadedOptions = deserializer.Deserialize<CrDownloadOptionsYaml>(new StringReader(input));
-        var instanceOptions = options;
-
-        foreach (PropertyInfo property in typeof(CrDownloadOptionsYaml).GetProperties()){
-            var yamlMemberAttribute = property.GetCustomAttribute<YamlMemberAttribute>();
-            // var jsonMemberAttribute = property.GetCustomAttribute<JsonPropertyAttribute>();
-            string yamlPropertyName = yamlMemberAttribute?.Alias ??  property.Name;
-
-            if (propertiesPresentInYaml.Contains(yamlPropertyName)){
-                PropertyInfo? instanceProperty = instanceOptions.GetType().GetProperty(property.Name);
-                if (instanceProperty != null && instanceProperty.CanWrite){
-                    instanceProperty.SetValue(instanceOptions, property.GetValue(loadedOptions));
-                }
-            }
-        }
-    }
-
-    private static HashSet<string> GetTopLevelPropertiesInYaml(string yamlContent){
-        var reader = new StringReader(yamlContent);
-        var yamlStream = new YamlStream();
-        yamlStream.Load(reader);
-
-        var properties = new HashSet<string>();
-
-        if (yamlStream.Documents.Count > 0 && yamlStream.Documents[0].RootNode is YamlMappingNode rootNode){
-            foreach (var entry in rootNode.Children){
-                if (entry.Key is YamlScalarNode scalarKey){
-                    properties.Add(scalarKey.Value);
-                }
-            }
-        }
-
-        return properties;
-    }
-
-    #endregion
-
 
     public static void UpdateHistoryFile(){
         if (!CrunchyrollManager.Instance.CrunOptions.History){

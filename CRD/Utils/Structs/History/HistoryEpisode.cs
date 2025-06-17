@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
+using CRD.Utils.Sonarr.Models;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs.History;
@@ -58,6 +59,18 @@ public class HistoryEpisode : INotifyPropertyChanged{
     [JsonProperty("sonarr_absolut_number")]
     public string? SonarrAbsolutNumber{ get; set; }
 
+    [JsonIgnore]
+    public string SonarrSeasonEpisodeText{
+        get{
+            if (int.TryParse(SonarrSeasonNumber, out int season) &&
+                int.TryParse(SonarrEpisodeNumber, out int episode)){
+                return $"S{season:D2}E{episode:D2}";
+            }
+
+            return $"S{SonarrSeasonNumber}E{SonarrEpisodeNumber}";
+        }
+    }
+    
     [JsonProperty("history_episode_available_soft_subs")]
     public List<string> HistoryEpisodeAvailableSoftSubs{ get; set; } =[];
 
@@ -118,7 +131,16 @@ public class HistoryEpisode : INotifyPropertyChanged{
                     CrunchyrollManager.Instance.CrunOptions.DubLang, false, onlySubs);
                 break;
         }
+    }
+    
+    public void AssignSonarrEpisodeData(SonarrEpisode episode) {
+        SonarrEpisodeId = episode.Id.ToString();
+        SonarrEpisodeNumber = episode.EpisodeNumber.ToString();
+        SonarrHasFile = episode.HasFile;
+        SonarrIsMonitored = episode.Monitored;
+        SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber.ToString();
+        SonarrSeasonNumber = episode.SeasonNumber.ToString();
         
-        
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SonarrSeasonEpisodeText)));
     }
 }

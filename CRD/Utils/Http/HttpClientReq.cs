@@ -163,7 +163,7 @@ public class HttpClientReq{
         cookieStore[domain].Add(cookie);
     }
 
-    public async Task<(bool IsOk, string ResponseContent)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false){
+    public async Task<(bool IsOk, string ResponseContent,string error)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false){
         string content = string.Empty;
         try{
             AttachCookies(request);
@@ -178,14 +178,14 @@ public class HttpClientReq{
 
             response.EnsureSuccessStatusCode();
 
-            return (IsOk: true, ResponseContent: content);
+            return (IsOk: true, ResponseContent: content,error:"");
         } catch (Exception e){
             // Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             if (!suppressError){
                 Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             }
 
-            return (IsOk: false, ResponseContent: content);
+            return (IsOk: false, ResponseContent: content,error: e.Message);
         }
     }
 

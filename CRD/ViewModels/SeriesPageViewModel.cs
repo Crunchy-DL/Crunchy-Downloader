@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Platform.Storage;
@@ -8,10 +7,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
+using CRD.Utils.UI;
 using CRD.ViewModels.Utils;
 using CRD.Views;
 using CRD.Views.Utils;
@@ -133,6 +132,42 @@ public partial class SeriesPageViewModel : ViewModelBase{
         }
     }
 
+    [RelayCommand]
+    public async Task MatchSonarrEpisode_Button(HistoryEpisode episode){
+        var dialog = new CustomContentDialog(){
+            Name = "CustomDialog",
+            Title = "Sonarr Episode Matching",
+            PrimaryButtonText = "Save",
+            CloseButtonText = "Close",
+            FullSizeDesired = true,
+        };
+
+        var viewModel = new ContentDialogSonarrMatchEpisodeViewModel(dialog, SelectedSeries, episode);
+        dialog.Content = new ContentDialogSonarrMatchEpisodeView(){
+            DataContext = viewModel
+        };
+
+        var dialogResult = await dialog.ShowAsync();
+
+        if (dialogResult == ContentDialogResult.Primary){
+            var sonarrEpisode = viewModel.CurrentSonarrEpisode;
+            
+            foreach (var selectedSeriesSeason in SelectedSeries.Seasons){
+                foreach (var historyEpisode in selectedSeriesSeason.EpisodesList.Where(historyEpisode => historyEpisode.SonarrEpisodeId == sonarrEpisode.Id.ToString())){
+                    historyEpisode.SonarrEpisodeId = string.Empty;
+                    historyEpisode.SonarrAbsolutNumber = string.Empty;
+                    historyEpisode.SonarrSeasonNumber = string.Empty;
+                    historyEpisode.SonarrEpisodeNumber = string.Empty;
+                    historyEpisode.SonarrHasFile = false;
+                    historyEpisode.SonarrIsMonitored = false;
+                }
+            }
+            
+            episode.AssignSonarrEpisodeData(sonarrEpisode);
+            CfgManager.UpdateHistoryFile();
+        }
+    }
+
 
     [RelayCommand]
     public async Task DownloadSeasonAll(HistorySeason season){
@@ -171,6 +206,12 @@ public partial class SeriesPageViewModel : ViewModelBase{
                 season.UpdateDownloaded(historyEpisode.EpisodeId);
             }
         }
+    }
+
+    [RelayCommand]
+    public async Task RefreshSonarrEpisodeMatch(){
+        await CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
+        CfgManager.UpdateHistoryFile();
     }
 
     [RelayCommand]

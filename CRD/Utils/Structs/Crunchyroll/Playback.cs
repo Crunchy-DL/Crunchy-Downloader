@@ -13,7 +13,7 @@ public class StreamDetails{
     [JsonProperty("hardsub_locale")]
     public Locale? HardsubLocale{ get; set; }
 
-    public string? Url{ get; set; }
+    public List<string?> Url{ get; set; }
 
     [JsonProperty("hardsub_lang")]
     public required LanguageItem HardsubLang{ get; set; }
@@ -28,7 +28,7 @@ public class StreamDetails{
 
 public class StreamDetailsPop{
     public Locale? HardsubLocale{ get; set; }
-    public string? Url{ get; set; }
+    public List<string?> Url{ get; set; }
     public required LanguageItem HardsubLang{ get; set; }
     
     public bool IsHardsubbed{ get; set; }

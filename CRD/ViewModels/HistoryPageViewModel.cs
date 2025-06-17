@@ -114,6 +114,8 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private static string _progressText;
+    
+    public Vector LastScrollOffset { get; set; } = Vector.Zero;
 
     public HistoryPageViewModel(){
         ProgramManager = ProgramManager.Instance;
@@ -343,7 +345,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         NavToSeries();
 
         if (!string.IsNullOrEmpty(value.SonarrSeriesId) && CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true }){
-            if (SelectedSeries != null) _ = CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(true, SelectedSeries);
+            if (SelectedSeries != null) _ = CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, SelectedSeries);
             CfgManager.UpdateHistoryFile();
         }
 

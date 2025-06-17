@@ -126,6 +126,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedStreamEndpoint;
+    
+    [ObservableProperty]
+    private ComboBoxItem _selectedStreamEndpointSecondary;
 
     [ObservableProperty]
     private ComboBoxItem _selectedDefaultDubLang;
@@ -202,13 +205,28 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "console/ps5" },
         new(){ Content = "console/xbox_one" },
         new(){ Content = "web/edge" },
-        // new (){ Content = "web/safari" },
         new(){ Content = "web/chrome" },
         new(){ Content = "web/fallback" },
-        // new (){ Content = "ios/iphone" },
-        // new (){ Content = "ios/ipad" },
         new(){ Content = "android/phone" },
-        new(){ Content = "tv/samsung" }
+        new(){ Content = "android/tablet" },
+        new(){ Content = "tv/samsung" },
+        new(){ Content = "tv/vidaa" }
+    ];
+    
+    public ObservableCollection<ComboBoxItem> StreamEndpointsSecondary{ get; } =[
+        new(){ Content = "" },
+        new(){ Content = "web/firefox" },
+        new(){ Content = "console/switch" },
+        new(){ Content = "console/ps4" },
+        new(){ Content = "console/ps5" },
+        new(){ Content = "console/xbox_one" },
+        new(){ Content = "web/edge" },
+        new(){ Content = "web/chrome" },
+        new(){ Content = "web/fallback" },
+        new(){ Content = "android/phone" },
+        new(){ Content = "android/tablet" },
+        new(){ Content = "tv/samsung" },
+        new(){ Content = "tv/vidaa" }
     ];
 
     public ObservableCollection<StringItemWithDisplayName> FFmpegHWAccel{ get; } =[];
@@ -282,6 +300,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         ComboBoxItem? streamEndpoint = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpoint ?? "")) ?? null;
         SelectedStreamEndpoint = streamEndpoint ?? StreamEndpoints[0];
 
+        ComboBoxItem? streamEndpointSecondary = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpointSecondary ?? "")) ?? null;
+        SelectedStreamEndpointSecondary = streamEndpointSecondary ?? StreamEndpointsSecondary[0];
+        
         FFmpegHWAccel.AddRange(GetAvailableHWAccelOptions());
 
         StringItemWithDisplayName? hwAccellFlag = FFmpegHWAccel.FirstOrDefault(a => a.value == options.FfmpegHwAccelFlag) ?? null;
@@ -424,6 +445,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
 
         CrunchyrollManager.Instance.CrunOptions.StreamEndpoint = SelectedStreamEndpoint.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.StreamEndpointSecondary = SelectedStreamEndpointSecondary.Content + "";
 
         List<string> dubLangs = new List<string>();
         foreach (var listBoxItem in SelectedDubLang){

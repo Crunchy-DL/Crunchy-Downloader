@@ -7,7 +7,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using DynamicData;

@@ -9,7 +9,9 @@
              xmlns:structs="clr-namespace:CRD.Utils.Structs"
              x:DataType="vm:HistoryPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="CRD.Views.HistoryPageView">
+             x:Class="CRD.Views.HistoryPageView"
+             Unloaded="OnUnloaded"
+             Loaded="Control_OnLoaded">
 
     <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
@@ -235,7 +237,7 @@
         </StackPanel>
 
 
-        <ListBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding FilteredItems}"
+        <ListBox x:Name="SeriesListBox" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" ItemsSource="{Binding FilteredItems}"
                  SelectedItem="{Binding SelectedSeries}"
                  Margin="5" IsVisible="{Binding IsPosterViewSelected}">
 

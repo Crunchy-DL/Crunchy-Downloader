@@ -1,0 +1,202 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="clr-namespace:CRD.Utils.UI">
+    <Design.PreviewWith>
+        <Border Padding="20">
+            <!-- Add Controls for Previewer Here -->
+        </Border>
+    </Design.PreviewWith>
+
+    <Style Selector="ui|CustomContentDialog">
+        <Setter Property="Foreground" Value="{DynamicResource ContentDialogForeground}" />
+        <Setter Property="Background" Value="{DynamicResource ContentDialogBackground}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ContentDialogBorderBrush}" />
+        <Setter Property="BorderThickness" Value="{DynamicResource ContentDialogBorderWidth}" />
+        <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}" />
+        <Setter Property="BackgroundSizing" Value="InnerBorderEdge" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="Container">
+                    <Panel Name="LayoutRoot" Background="{DynamicResource ContentDialogSmokeFill}">
+                        <Border Name="BackgroundElement"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="{StaticResource ContentDialogBorderWidth}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                MinWidth="{DynamicResource ContentDialogMinWidth}"
+                                MaxWidth="{DynamicResource ContentDialogMaxWidth}"
+                                MinHeight="{DynamicResource ContentDialogMinHeight}"
+                                MaxHeight="{DynamicResource ContentDialogMaxHeight}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" Margin="100"
+                                Effect="drop-shadow(0 8 32 #66000000)"
+                                BackgroundSizing="{TemplateBinding BackgroundSizing}">
+
+                            <Border ClipToBounds="True"
+                                    CornerRadius="{TemplateBinding CornerRadius}">
+                                <Grid Name="DialogSpace" ClipToBounds="True"
+                                      RowDefinitions="*,Auto">
+
+                                    <Grid>
+
+                                        <Rectangle Fill="{TemplateBinding Background}" HorizontalAlignment="Stretch"
+                                                   VerticalAlignment="Stretch" />
+
+                                        <Image x:Name="BackgroundImageElement"
+                                               Source="{TemplateBinding BackgroundImage}"
+                                               Stretch="UniformToFill"
+                                               Opacity="{TemplateBinding BackgroundImageOpacity}"
+                                               IsHitTestVisible="False"
+                                               HorizontalAlignment="Stretch"
+                                               VerticalAlignment="Stretch">
+                                        </Image>
+
+
+                                        <Border Background="{DynamicResource ContentDialogTopOverlay}"
+                                                Padding="{DynamicResource ContentDialogPadding}"
+                                                BorderThickness="{StaticResource ContentDialogSeparatorThickness}"
+                                                BorderBrush="{DynamicResource ContentDialogSeparatorBorderBrush}">
+                                            <Grid RowDefinitions="Auto,*">
+                                                <Grid.Styles>
+                                                    <!--Make sure text wrapping is on-->
+                                                    <Style Selector="TextBlock">
+                                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                                    </Style>
+                                                </Grid.Styles>
+                                                <ContentControl Name="Title"
+                                                                Margin="{StaticResource ContentDialogTitleMargin}"
+                                                                Content="{TemplateBinding Title}"
+                                                                ContentTemplate="{TemplateBinding TitleTemplate}"
+                                                                FontSize="20"
+                                                                FontFamily="Default"
+                                                                FontWeight="SemiBold"
+                                                                Foreground="{TemplateBinding Foreground}"
+                                                                HorizontalAlignment="Left"
+                                                                VerticalAlignment="Top">
+                                                    <ContentControl.Template>
+                                                        <ControlTemplate>
+                                                            <ContentPresenter Content="{TemplateBinding Content}"
+                                                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                              Margin="{TemplateBinding Padding}"
+                                                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                                        </ControlTemplate>
+                                                    </ContentControl.Template>
+                                                </ContentControl>
+
+                                                <!-- <ScrollViewer Grid.Row="1" Name="ContentScrollViewer" -->
+                                                <!--               HorizontalScrollBarVisibility="Disabled" -->
+                                                <!--               VerticalScrollBarVisibility="Auto"> -->
+
+                                                <ContentPresenter Name="Content"
+                                                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                                  Content="{TemplateBinding Content}"
+                                                                  FontSize="{StaticResource ControlContentThemeFontSize}"
+                                                                  FontFamily="{StaticResource ContentControlThemeFontFamily}"
+                                                                  Foreground="{TemplateBinding Foreground}"
+                                                                  Grid.Row="1" />
+
+                                                <!-- </ScrollViewer> -->
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+
+
+                                    <Border Padding="{StaticResource ContentDialogPadding}"
+                                            Grid.Row="1"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Bottom"
+                                            Background="{TemplateBinding Background}">
+                                        <Grid Name="CommandSpace">
+                                            <!--
+                                            B/C we can't target Row/Column defs in Styles like WinUI
+                                            this still uses the old Col defs, but it works the same
+                                            way in the end...
+                                            -->
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="0.5*" />
+                                                <ColumnDefinition Width="0.5*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button Name="PrimaryButton"
+                                                    Content="{TemplateBinding PrimaryButtonText}"
+                                                    IsEnabled="{TemplateBinding IsPrimaryButtonEnabled}"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    IsVisible="False" />
+
+                                            <Button Name="SecondaryButton"
+                                                    Content="{TemplateBinding SecondaryButtonText}"
+                                                    IsEnabled="{TemplateBinding IsSecondaryButtonEnabled}"
+                                                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    IsVisible="False" />
+
+                                            <Button Name="CloseButton"
+                                                    Content="{TemplateBinding CloseButtonText}"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    IsVisible="False" />
+                                        </Grid>
+                                    </Border>
+
+                                </Grid>
+                            </Border>
+                        </Border>
+                    </Panel>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- Primary Only -->
+    <Style Selector="ui|CustomContentDialog:primary /template/ Button#PrimaryButton">
+        <Setter Property="IsVisible" Value="True" />
+        <Setter Property="Grid.Column" Value="2" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+    </Style>
+
+    <!-- Primary + Secondary -->
+    <Style Selector="ui|CustomContentDialog:primary:secondary /template/ Button#PrimaryButton">
+        <Setter Property="IsVisible" Value="True" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+        <Setter Property="Margin" Value="0 0 4 0" />
+    </Style>
+
+    <Style Selector="ui|CustomContentDialog:primary:secondary /template/ Button#SecondaryButton">
+        <Setter Property="IsVisible" Value="True" />
+        <Setter Property="Grid.Column" Value="2" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+        <Setter Property="Margin" Value="4 0 0 0" />
+    </Style>
+
+    <!-- Primary + Close -->
+    <Style Selector="ui|CustomContentDialog:primary:close /template/ Button#PrimaryButton">
+        <Setter Property="IsVisible" Value="True" />
+        <Setter Property="Grid.Column" Value="0" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+        <Setter Property="Margin" Value="0 0 4 0" />
+    </Style>
+
+    <Style Selector="ui|CustomContentDialog:primary:close /template/ Button#CloseButton">
+        <Setter Property="IsVisible" Value="True" />
+        <Setter Property="Grid.Column" Value="2" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+        <Setter Property="Margin" Value="4 0 0 0" />
+    </Style>
+
+    <!-- Close Only -->
+    <Style Selector="ui|CustomContentDialog:close /template/ Button#CloseButton">
+        <Setter Property="IsVisible" Value="True" />
+        <Setter Property="Grid.Column" Value="2" />
+        <Setter Property="Grid.ColumnSpan" Value="2" />
+    </Style>
+
+</Styles>

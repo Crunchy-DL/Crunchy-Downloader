@@ -152,7 +152,8 @@
 
                                     <ToggleButton Margin="0 0 5 10" FontStyle="Italic"
                                                   VerticalAlignment="Center"
-                                                  IsChecked="{Binding SelectedSeries.IsInactive}" Command="{Binding ToggleInactive}">
+                                                  IsChecked="{Binding SelectedSeries.IsInactive}"
+                                                  Command="{Binding ToggleInactive}">
                                         <ToolTip.Tip>
                                             <StackPanel Orientation="Vertical">
                                                 <TextBlock Text="Set Active"
@@ -323,12 +324,33 @@
                                     </StackPanel>
 
                                     <StackPanel IsVisible="{Binding EditMode}">
-                                        <Button Width="30" Height="30" Margin="0 0 10 0"
+                                        <Button Width="30" Height="30" Margin="0 0 5 0"
                                                 BorderThickness="0"
                                                 IsVisible="{Binding SonarrConnected}"
                                                 Command="{Binding MatchSonarrSeries_Button}">
                                             <Grid>
                                                 <controls:ImageIcon Source="../Assets/sonarr.png" Width="25" Height="25" />
+                                                <ToolTip.Tip>
+                                                    <TextBlock Text="Match Sonarr Series" FontSize="15" />
+                                                </ToolTip.Tip>
+                                            </Grid>
+                                        </Button>
+                                    </StackPanel>
+                                    
+                                    <StackPanel IsVisible="{Binding EditMode}">
+                                        <Button Height="30" Margin="0 0 10 0"
+                                                BorderThickness="0"
+                                                IsVisible="{Binding SonarrConnected}"
+                                                Command="{Binding RefreshSonarrEpisodeMatch}">
+                                            <Grid>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <controls:ImageIcon Source="../Assets/sonarr.png" Width="25" Height="25"  />
+                                                    <TextBlock Margin="5 0 0 0" Text="Rematch Episodes"></TextBlock>
+                                                </StackPanel>
+                                                
+                                                <ToolTip.Tip>
+                                                    <TextBlock Text="Rematch all Sonarr Episodes" FontSize="15" />
+                                                </ToolTip.Tip>
                                             </Grid>
                                         </Button>
                                     </StackPanel>
@@ -366,20 +388,21 @@
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
 
-                                                <controls:SymbolIcon Grid.Column="0" IsVisible="{Binding !IsEpisodeAvailableOnStreamingService}" 
-                                                                     Margin="0 0 5 0 " 
-                                                                     Symbol="AlertOn" 
-                                                                     FontSize="18" 
+                                                <controls:SymbolIcon Grid.Column="0" IsVisible="{Binding !IsEpisodeAvailableOnStreamingService}"
+                                                                     Margin="0 0 5 0 "
+                                                                     Symbol="AlertOn"
+                                                                     FontSize="18"
                                                                      HorizontalAlignment="Center"
                                                                      VerticalAlignment="Center">
                                                     <ToolTip.Tip>
-                                                        <TextBlock Text="Episode unavailable — it might not be available on the streaming service" FontSize="15" />
+                                                        <TextBlock Text="Episode unavailable — it might not be available on the streaming service or got moved to a different season" FontSize="15" />
                                                     </ToolTip.Tip>
 
                                                 </controls:SymbolIcon>
-                                                
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left">
-                                                    
+
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+
+
                                                     <ui:EpisodeHighlightTextBlock
                                                         Series="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SelectedSeries}"
                                                         Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
@@ -425,9 +448,13 @@
 
                                                     <TextBlock Text="{Binding ReleaseDateFormated}" VerticalAlignment="Center" FontSize="15" Opacity="0.8" Margin="0 0 20  0"></TextBlock>
 
+                                                    
+                                                    
                                                     <StackPanel VerticalAlignment="Center" Margin="0 0 5 0" Orientation="Horizontal"
                                                                 IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).SonarrAvailable}">
-
+                                                        
+                                                        <TextBlock Text="{Binding SonarrSeasonEpisodeText}" VerticalAlignment="Center" FontSize="15" Opacity="0.8" Margin="0 0 20  0"></TextBlock>
+                                                      
 
                                                         <StackPanel IsVisible="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).ShowMonitoredBookmark}"
                                                                     HorizontalAlignment="Center"
@@ -449,13 +476,21 @@
                                                             </controls:SymbolIcon>
                                                         </StackPanel>
 
-                                                        <controls:ImageIcon IsVisible="{Binding SonarrHasFile}"
-                                                                            Source="../Assets/sonarr.png" Width="25"
-                                                                            Height="25" />
+                                                        <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                                                BorderThickness="0" CornerRadius="50"
+                                                                Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).MatchSonarrEpisode_Button}"
+                                                                CommandParameter="{Binding }">
+                                                            <StackPanel>
+                                                                <controls:ImageIcon IsVisible="{Binding SonarrHasFile}"
+                                                                                    Source="../Assets/sonarr.png" Width="25"
+                                                                                    Height="25" />
 
-                                                        <controls:ImageIcon IsVisible="{Binding !SonarrHasFile}"
-                                                                            Source="../Assets/sonarr_inactive.png" Width="25"
-                                                                            Height="25" />
+                                                                <controls:ImageIcon IsVisible="{Binding !SonarrHasFile}"
+                                                                                    Source="../Assets/sonarr_inactive.png" Width="25"
+                                                                                    Height="25" />
+                                                                
+                                                            </StackPanel>
+                                                        </Button>
 
 
                                                     </StackPanel>

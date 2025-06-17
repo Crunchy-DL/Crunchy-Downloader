@@ -59,8 +59,8 @@ public class MPDParsed{
 }
 
 public class ServerData{
-    public List<AudioPlaylist> audio{ get; set; }
-    public List<VideoPlaylist> video{ get; set; }
+    public List<AudioPlaylist> audio{ get; set; } =[];
+    public List<VideoPlaylist> video{ get; set; } =[];
 }
 
 public static class MPDParser{
