@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using CRD.Utils.Structs.History;
 using Newtonsoft.Json;
 
@@ -169,6 +170,14 @@ public class CrunchyMusicVideo : IHistorySource{
 
     public EpisodeType GetEpisodeType(){
         return EpisodeType;
+    }
+    
+    public string GetImageUrl(){
+        if (Images != null){
+            return Images.Thumbnail.First().Source ?? string.Empty;
+        }
+
+        return string.Empty;
     }
 
     #endregion

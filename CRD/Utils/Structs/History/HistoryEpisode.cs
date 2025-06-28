@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using Avalonia.Media.Imaging;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
@@ -34,19 +35,22 @@ public class HistoryEpisode : INotifyPropertyChanged{
 
     [JsonProperty("episode_special_episode")]
     public bool SpecialEpisode{ get; set; }
-    
+
     [JsonProperty("episode_available_on_streaming_service")]
     public bool IsEpisodeAvailableOnStreamingService{ get; set; }
-    
+
     [JsonProperty("episode_type")]
     public EpisodeType EpisodeType{ get; set; } = EpisodeType.Unknown;
+
+    [JsonProperty("episode_thumbnail_url")]
+    public string? ThumbnailImageUrl{ get; set; }
 
     [JsonProperty("sonarr_episode_id")]
     public string? SonarrEpisodeId{ get; set; }
 
     [JsonProperty("sonarr_has_file")]
     public bool SonarrHasFile{ get; set; }
-    
+
     [JsonProperty("sonarr_is_monitored")]
     public bool SonarrIsMonitored{ get; set; }
 
@@ -70,12 +74,32 @@ public class HistoryEpisode : INotifyPropertyChanged{
             return $"S{SonarrSeasonNumber}E{SonarrEpisodeNumber}";
         }
     }
-    
+
     [JsonProperty("history_episode_available_soft_subs")]
     public List<string> HistoryEpisodeAvailableSoftSubs{ get; set; } =[];
 
     [JsonProperty("history_episode_available_dub_lang")]
     public List<string> HistoryEpisodeAvailableDubLang{ get; set; } =[];
+    
+    [JsonIgnore]
+    public Bitmap? ThumbnailImage{ get; set; }
+
+    [JsonIgnore]
+    public bool IsImageLoaded{ get; private set; } = false;
+
+    public async Task LoadImage(){
+        if (IsImageLoaded || string.IsNullOrEmpty(ThumbnailImageUrl))
+            return;
+
+        try{
+            ThumbnailImage = await Helpers.LoadImage(ThumbnailImageUrl);
+            IsImageLoaded = true;
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ThumbnailImage)));
+        } catch (Exception ex){
+            Console.Error.WriteLine("Failed to load image: " + ex.Message);
+        }
+    }
 
     [JsonIgnore]
     public string ReleaseDateFormated{
@@ -92,7 +116,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
             return string.Format("{0:00}.{1}.{2}", EpisodeCrPremiumAirDate.Value.Day, monthAbbreviation, EpisodeCrPremiumAirDate.Value.Year);
         }
     }
-    
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public void ToggleWasDownloaded(){
@@ -115,7 +139,11 @@ public class HistoryEpisode : INotifyPropertyChanged{
         CfgManager.UpdateHistoryFile();
     }
 
-    public async Task DownloadEpisode(bool onlySubs = false){
+    public async Task DownloadEpisodeDefault(){
+        await DownloadEpisode();
+    }
+
+    public async Task DownloadEpisode(EpisodeDownloadMode episodeDownloadMode = EpisodeDownloadMode.Default){
         switch (EpisodeType){
             case EpisodeType.MusicVideo:
                 await QueueManager.Instance.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty);
@@ -128,19 +156,19 @@ public class HistoryEpisode : INotifyPropertyChanged{
             default:
                 await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId ?? string.Empty,
                     string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
-                    CrunchyrollManager.Instance.CrunOptions.DubLang, false, onlySubs);
+                    CrunchyrollManager.Instance.CrunOptions.DubLang, false, episodeDownloadMode);
                 break;
         }
     }
-    
-    public void AssignSonarrEpisodeData(SonarrEpisode episode) {
+
+    public void AssignSonarrEpisodeData(SonarrEpisode episode){
         SonarrEpisodeId = episode.Id.ToString();
         SonarrEpisodeNumber = episode.EpisodeNumber.ToString();
         SonarrHasFile = episode.HasFile;
         SonarrIsMonitored = episode.Monitored;
         SonarrAbsolutNumber = episode.AbsoluteEpisodeNumber.ToString();
         SonarrSeasonNumber = episode.SeasonNumber.ToString();
-        
+
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SonarrSeasonEpisodeText)));
     }
 }

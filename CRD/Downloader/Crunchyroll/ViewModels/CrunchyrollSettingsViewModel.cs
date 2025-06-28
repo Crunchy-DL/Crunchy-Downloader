@@ -60,6 +60,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
+    
+    [ObservableProperty]
+    private bool _muxToMp3;
 
     [ObservableProperty]
     private bool _muxFonts;
@@ -93,6 +96,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _fileName = "";
+    
+    [ObservableProperty]
+    private string _fileNameWhitespaceSubstitute = "";
 
     [ObservableProperty]
     private string _fileTitle = "";
@@ -347,11 +353,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         KeepDubsSeparate = options.KeepDubsSeperate;
         DownloadChapters = options.Chapters;
         MuxToMp4 = options.Mp4;
+        MuxToMp3 = options.AudioOnlyToMp3;
         MuxFonts = options.MuxFonts;
         SyncTimings = options.SyncTiming;
         SkipSubMux = options.SkipSubsMux;
         LeadingNumbers = options.Numbers;
         FileName = options.FileName;
+        FileNameWhitespaceSubstitute = options.FileNameWhitespaceSubstitute;
         SearchFetchFeaturedMusic = options.SearchFetchFeaturedMusic;
 
         ComboBoxItem? qualityAudio = AudioQualityList.FirstOrDefault(a => a.Content != null && (string)a.Content == options.QualityAudio) ?? null;
@@ -413,11 +421,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.Chapters = DownloadChapters;
         CrunchyrollManager.Instance.CrunOptions.SkipMuxing = SkipMuxing;
         CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
+        CrunchyrollManager.Instance.CrunOptions.AudioOnlyToMp3 = MuxToMp3;
         CrunchyrollManager.Instance.CrunOptions.MuxFonts = MuxFonts;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
         CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
         CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0), 0, 10);
         CrunchyrollManager.Instance.CrunOptions.FileName = FileName;
+        CrunchyrollManager.Instance.CrunOptions.FileNameWhitespaceSubstitute = FileNameWhitespaceSubstitute;
         CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs;
         CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs;
         CrunchyrollManager.Instance.CrunOptions.Partsize = Math.Clamp((int)(PartSize ?? 1), 1, 10000);

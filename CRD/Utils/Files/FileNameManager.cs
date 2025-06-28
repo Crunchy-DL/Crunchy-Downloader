@@ -9,7 +9,7 @@ using CRD.Utils.Structs;
 namespace CRD.Utils.Files;
 
 public class FileNameManager{
-    public static List<string> ParseFileName(string input, List<Variable> variables, int numbers, List<string> @override){
+    public static List<string> ParseFileName(string input, List<Variable> variables, int numbers,string whiteSpaceReplace, List<string> @override){
         Regex varRegex = new Regex(@"\${[A-Za-z1-9]+}");
         var matches = varRegex.Matches(input).Cast<Match>().Select(m => m.Value).ToList();
         var overriddenVars = ParseOverride(variables, @override);
@@ -27,7 +27,7 @@ public class FileNameManager{
                 continue;
             }
 
-            string replacement = variable.ReplaceWith.ToString();
+            string replacement = variable.ReplaceWith.ToString() ?? string.Empty;
             if (variable.Type == "int32"){
                 int len = replacement.Length;
                 replacement = len < numbers ? new string('0', numbers - len) + replacement : replacement;
@@ -38,6 +38,9 @@ public class FileNameManager{
                 replacement = replacement.Replace(",", ".");
             } else if (variable.Sanitize){
                 replacement = CleanupFilename(replacement);
+                if (variable.Type == "string" && !string.IsNullOrEmpty(whiteSpaceReplace)){
+                    replacement = replacement.Replace(" ",whiteSpaceReplace);
+                }
             }
 
             input = input.Replace(match, replacement);

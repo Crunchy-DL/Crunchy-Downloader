@@ -208,6 +208,11 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                     QueueManager.Instance.CrAddMusicMetaToQueue(meta);
                 }
             }
+        } else if (AddAllEpisodes){
+            var musicClass = CrunchyrollManager.Instance.CrMusic;
+            foreach (var meta in currentMusicVideoList.Data.Select(crunchyMusicVideo => musicClass.EpisodeMeta(crunchyMusicVideo))){
+                QueueManager.Instance.CrAddMusicMetaToQueue(meta);
+            }
         }
     }
 
@@ -363,7 +368,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void PopulateItemsFromMusicVideoList(){
-        if (currentMusicVideoList?.Data != null){
+        if (currentMusicVideoList?.Data is{ Count: > 0 }){
             foreach (var episode in currentMusicVideoList.Data){
                 string seasonKey;
                 switch (episode.EpisodeType){
@@ -394,7 +399,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
                 }
             }
 
-            CurrentSelectedSeason = SeasonList.First();
+            if (SeasonList.Count > 0){
+                CurrentSelectedSeason = SeasonList.First();
+            }
         }
     }
 

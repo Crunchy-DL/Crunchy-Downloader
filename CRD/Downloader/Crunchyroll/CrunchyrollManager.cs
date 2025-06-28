@@ -337,6 +337,7 @@ public class CrunchyrollManager{
                             SkipSubMux = options.SkipSubsMux,
                             Output = fileNameAndPath + $".{keyValue.Value.First().Lang.Locale}",
                             Mp4 = options.Mp4,
+                            Mp3 = options.AudioOnlyToMp3,
                             MuxFonts = options.MuxFonts,
                             VideoTitle = res.VideoTitle,
                             Novids = options.Novids,
@@ -402,6 +403,7 @@ public class CrunchyrollManager{
                         SkipSubMux = options.SkipSubsMux,
                         Output = fileNameAndPath,
                         Mp4 = options.Mp4,
+                        Mp3 = options.AudioOnlyToMp3,
                         MuxFonts = options.MuxFonts,
                         VideoTitle = res.VideoTitle,
                         Novids = options.Novids,
@@ -599,8 +601,10 @@ public class CrunchyrollManager{
 
         if (options.Novids == true || data.FindAll(a => a.Type == DownloadMediaType.Video).Count == 0){
             if (data.FindAll(a => a.Type == DownloadMediaType.Audio).Count > 0){
-                Console.WriteLine("Mux to MP3");
-                muxToMp3 = true;
+                if (options.Mp3){
+                    Console.WriteLine("Mux to MP3");
+                    muxToMp3 = true; 
+                }
             } else{
                 Console.WriteLine("Skip muxing since no videos are downloaded");
                 return (null, false, false, "");
@@ -643,9 +647,9 @@ public class CrunchyrollManager{
         var merger = new Merger(new MergerOptions{
             DubLangList = options.DubLangList,
             SubLangList = options.SubLangList,
-            OnlyVid = data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
+            OnlyVid = data.Where(a => a.Type == DownloadMediaType.Video).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty ,Bitrate = a.bitrate}).ToList(),
             SkipSubMux = options.SkipSubMux,
-            OnlyAudio = data.Where(a => a.Type == DownloadMediaType.Audio).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty }).ToList(),
+            OnlyAudio = data.Where(a => a.Type == DownloadMediaType.Audio).Select(a => new MergerInput{ Language = a.Lang, Path = a.Path ?? string.Empty ,Bitrate = a.bitrate}).ToList(),
             Output = $"{filename}.{(muxToMp3 ? "mp3" : options.Mp4 ? "mp4" : "mkv")}",
             Subtitles = data.Where(a => a.Type == DownloadMediaType.Subtitle).Select(a => new SubtitleInput
                 { File = a.Path ?? string.Empty, Language = a.Language, ClosedCaption = a.Cc ?? false, Signs = a.Signs ?? false, RelatedVideoDownloadMedia = a.RelatedVideoDownloadMedia }).ToList(),
@@ -682,7 +686,7 @@ public class CrunchyrollManager{
         List<string> notSyncedDubs =[];
 
 
-        if (options is{ SyncTiming: true, DlVideoOnce: true }){
+        if (options is{ SyncTiming: true, DlVideoOnce: true } && merger.options.OnlyVid.Count > 0 && merger.options.OnlyAudio.Count > 0){
             crunchyEpMeta.DownloadProgress = new DownloadProgress(){
                 IsDownloading = true,
                 Percent = 100,
@@ -916,7 +920,7 @@ public class CrunchyrollManager{
                 if (mediaGuid.Contains(':')){
                     mediaGuid = mediaGuid.Split(':')[1];
                 }
-
+                
                 Console.WriteLine("MediaGuid: " + mediaId);
 
                 #region Chapters
@@ -1154,7 +1158,7 @@ public class CrunchyrollManager{
                         Console.WriteLine("Downloading video...");
                         curStream = streams[options.Kstream - 1];
 
-                        Console.WriteLine($"Playlists URL: {curStream.Url} ({curStream.Type})");
+                        Console.WriteLine($"Playlists URL: {string.Join(", ",curStream.Url)} ({curStream.Type})");
                     }
 
                     string tsFile = "";
@@ -1376,7 +1380,7 @@ public class CrunchyrollManager{
                                 Console.WriteLine("Stream URL:" + chosenVideoSegments.segments[0].uri.Split(new[]{ ",.urlset" }, StringSplitOptions.None)[0]);
 
 
-                                fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
+                                fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).ToArray());
 
                                 string onlyFileName = Path.GetFileName(fileName);
                                 int maxLength = 220;
@@ -1391,7 +1395,7 @@ public class CrunchyrollManager{
 
                                             if (excessLength > 0 && ((string)titleVariable.ReplaceWith).Length > excessLength){
                                                 titleVariable.ReplaceWith = ((string)titleVariable.ReplaceWith).Substring(0, ((string)titleVariable.ReplaceWith).Length - excessLength);
-                                                fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
+                                                fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).ToArray());
                                                 onlyFileName = Path.GetFileName(fileName);
 
                                                 if (onlyFileName.Length > maxLength){
@@ -1410,7 +1414,7 @@ public class CrunchyrollManager{
                                 string outFile = fileName + "." + (epMeta.Lang?.CrLocale ?? lang.CrLocale);
 
                                 string tempFile = Path.Combine(FileNameManager
-                                    .ParseFileName($"temp-{(!string.IsNullOrEmpty(currentVersion.Guid) ? currentVersion.Guid : currentMediaId)}", variables, options.Numbers, options.Override)
+                                    .ParseFileName($"temp-{(!string.IsNullOrEmpty(currentVersion.Guid) ? currentVersion.Guid : currentMediaId)}", variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override)
                                     .ToArray());
                                 string tempTsFile = Path.IsPathRooted(tempFile) ? tempFile : Path.Combine(fileDir, tempFile);
 
@@ -1608,7 +1612,8 @@ public class CrunchyrollManager{
                                                 Path = $"{tsFile}.video.m4s",
                                                 Lang = lang,
                                                 Language = lang,
-                                                IsPrimary = isPrimary
+                                                IsPrimary = isPrimary,
+                                                bitrate = chosenVideoSegments.bandwidth / 1024
                                             };
                                             files.Add(videoDownloadMedia);
                                             data.downloadedFiles.Add($"{tsFile}.video.m4s");
@@ -1676,7 +1681,8 @@ public class CrunchyrollManager{
                                                 Type = DownloadMediaType.Audio,
                                                 Path = $"{tsFile}.audio.m4s",
                                                 Lang = lang,
-                                                IsPrimary = isPrimary
+                                                IsPrimary = isPrimary,
+                                                bitrate = chosenAudioSegments.bandwidth / 1000
                                             });
                                             data.downloadedFiles.Add($"{tsFile}.audio.m4s");
                                         } else{
@@ -1693,7 +1699,8 @@ public class CrunchyrollManager{
                                             Path = $"{tsFile}.video.m4s",
                                             Lang = lang,
                                             Language = lang,
-                                            IsPrimary = isPrimary
+                                            IsPrimary = isPrimary,
+                                            bitrate = chosenVideoSegments.bandwidth / 1024
                                         };
                                         files.Add(videoDownloadMedia);
                                         data.downloadedFiles.Add($"{tsFile}.video.m4s");
@@ -1704,13 +1711,14 @@ public class CrunchyrollManager{
                                             Type = DownloadMediaType.Audio,
                                             Path = $"{tsFile}.audio.m4s",
                                             Lang = lang,
-                                            IsPrimary = isPrimary
+                                            IsPrimary = isPrimary,
+                                            bitrate = chosenAudioSegments.bandwidth / 1000
                                         });
                                         data.downloadedFiles.Add($"{tsFile}.audio.m4s");
                                     }
                                 }
                             } else if (options.Novids){
-                                fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
+                                fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).ToArray());
                                 Console.WriteLine("Downloading skipped!");
                             }
                         }
@@ -1718,14 +1726,14 @@ public class CrunchyrollManager{
                         variables.Add(new Variable("height", 360, false));
                         variables.Add(new Variable("width", 640, false));
 
-                        fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
+                        fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).ToArray());
                     }
 
                     if (compiledChapters.Count > 0 && options is not{ Novids: true, Noaudio: true }){
                         try{
                             // Parsing and constructing the file names
-                            fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.Override).ToArray());
-                            var outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale), variables, options.Numbers, options.Override).ToArray());
+                            fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).ToArray());
+                            var outFile = Path.Combine(FileNameManager.ParseFileName(options.FileName + "." + (epMeta.Lang?.CrLocale), variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).ToArray());
                             if (Path.IsPathRooted(outFile)){
                                 tsFile = outFile;
                             } else{
@@ -1847,7 +1855,7 @@ public class CrunchyrollManager{
             Error = dlFailed,
             FileName = fileName.Length > 0 ? fileName : "unknown - " + Guid.NewGuid(),
             ErrorText = "",
-            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle ?? "", variables, options.Numbers, options.Override).Last(),
+            VideoTitle = FileNameManager.ParseFileName(options.VideoTitle ?? "", variables, options.Numbers,options.FileNameWhitespaceSubstitute, options.Override).Last(),
             FolderPath = fileDir,
             TempFolderPath = tempFolderPath
         };

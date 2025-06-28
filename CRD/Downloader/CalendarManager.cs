@@ -11,8 +11,10 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
+using CRD.Views;
 using HtmlAgilityPack;
 using Newtonsoft.Json;
+using ReactiveUI;
 
 namespace CRD.Downloader;
 
@@ -74,6 +76,20 @@ public class CalendarManager{
         request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
+
+        if (!response.IsOk){
+            if (response.ResponseContent.Contains("<title>Just a moment...</title>") || 
+                response.ResponseContent.Contains("<title>Access denied</title>") || 
+                response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") || 
+                response.ResponseContent.Trim().Equals("error code: 1020") || 
+                response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
+                MessageBus.Current.SendMessage(new ToastMessage("Blocked by Cloudflare. Use the custom calendar.", ToastType.Error, 5));
+                Console.Error.WriteLine($"Blocked by Cloudflare. Use the custom calendar.");
+            } else{
+                Console.Error.WriteLine($"Calendar request failed");
+            }
+            return new CalendarWeek();
+        }
 
         CalendarWeek week = new CalendarWeek();
         week.CalendarDays = new List<CalendarDay>();
@@ -314,8 +330,8 @@ public class CalendarManager{
                         if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(calendarDay.DateTime.ToString("yyyy-MM-dd"))){
                             var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
 
-                            foreach (var calendarEpisode in list.Where(calendarEpisode => calendarDay.DateTime.Date == calendarEpisode.DateTime.Date)
-                                         .Where(calendarEpisode => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisode.CrSeriesID))){
+                            foreach (var calendarEpisode in list.Where(calendarEpisode => calendarDay.DateTime.Date.Day == calendarEpisode.DateTime.Date.Day)
+                                         .Where(calendarEpisode => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisode.CrSeriesID && ele.SeasonName != calendarEpisode.SeasonName))){
                                 calendarDay.CalendarEpisodes.Add(calendarEpisode);
                             }
                         }

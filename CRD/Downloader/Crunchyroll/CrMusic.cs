@@ -17,7 +17,7 @@ public class CrMusic{
     public async Task<CrunchyMusicVideoList?> ParseFeaturedMusicVideoByIdAsync(string seriesId, string crLocale, bool forcedLang = false, bool updateHistory = false){
         var musicVideos = await FetchMediaListAsync($"{ApiUrls.Content}/music/featured/{seriesId}", crLocale, forcedLang);
 
-        if (musicVideos.Data is{ Count: > 0 } && updateHistory){
+        if (musicVideos.Data is{ Count: > 0 } && updateHistory && crunInstance.CrunOptions.HistoryIncludeCrArtists){
             await crunInstance.History.UpdateWithMusicEpisodeList(musicVideos.Data);
         }
 
@@ -27,7 +27,7 @@ public class CrMusic{
     public async Task<CrunchyMusicVideo?> ParseMusicVideoByIdAsync(string id, string crLocale, bool forcedLang = false, bool updateHistory = false){
         var musicVideo = await ParseMediaByIdAsync(id, crLocale, forcedLang, "music/music_videos");
 
-        if (musicVideo != null && updateHistory){
+        if (musicVideo != null && updateHistory && crunInstance.CrunOptions.HistoryIncludeCrArtists){
             await crunInstance.History.UpdateWithMusicEpisodeList([musicVideo]);
         }
 
@@ -39,7 +39,7 @@ public class CrMusic{
 
         if (concert != null){
             concert.EpisodeType = EpisodeType.Concert;
-            if (updateHistory){
+            if (updateHistory && crunInstance.CrunOptions.HistoryIncludeCrArtists){
                 await crunInstance.History.UpdateWithMusicEpisodeList([concert]);
             }
         }
@@ -50,7 +50,7 @@ public class CrMusic{
     public async Task<CrunchyMusicVideoList?> ParseArtistMusicVideosByIdAsync(string artistId, string crLocale, bool forcedLang = false, bool updateHistory = false){
         var musicVideos = await FetchMediaListAsync($"{ApiUrls.Content}/music/artists/{artistId}/music_videos", crLocale, forcedLang);
 
-        if (updateHistory){
+        if (updateHistory && crunInstance.CrunOptions.HistoryIncludeCrArtists){
             await crunInstance.History.UpdateWithMusicEpisodeList(musicVideos.Data);
         }
 
@@ -66,7 +66,7 @@ public class CrMusic{
             }
         }
 
-        if (updateHistory){
+        if (updateHistory && crunInstance.CrunOptions.HistoryIncludeCrArtists){
             await crunInstance.History.UpdateWithMusicEpisodeList(concerts.Data);
         }
 
@@ -97,7 +97,7 @@ public class CrMusic{
             musicVideos.Data.AddRange(concerts.Data);
         }
 
-        if (updateHistory){
+        if (updateHistory && crunInstance.CrunOptions.HistoryIncludeCrArtists){
             await crunInstance.History.UpdateWithMusicEpisodeList(musicVideos.Data);
         }
 

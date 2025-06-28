@@ -155,6 +155,9 @@ public class CrDownloadOptions{
     [JsonProperty("quality_audio")]
     public string QualityAudio{ get; set; } = "";
 
+    [JsonProperty("file_name_whitespace_substitute")]
+    public string FileNameWhitespaceSubstitute{ get; set; } = "";
+    
     [JsonProperty("file_name")]
     public string FileName{ get; set; } = "";
 
@@ -193,6 +196,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_mp4")]
     public bool Mp4{ get; set; }
+    
+    [JsonProperty("mux_audio_only_to_mp3")]
+    public bool AudioOnlyToMp3 { get; set; }
     
     [JsonProperty("mux_fonts")]
     public bool MuxFonts{ get; set; }

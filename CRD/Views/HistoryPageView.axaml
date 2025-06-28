@@ -13,12 +13,13 @@
              Unloaded="OnUnloaded"
              Loaded="Control_OnLoaded">
 
-    <UserControl.Resources>
+     <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
         <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
         <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
         <ui:UiListHasElementsConverter x:Key="UiListHasElementsConverter" />
         <ui:UiSeriesSeasonConverter x:Key="UiSeriesSeasonConverter" />
+        <ui:UiEnumToBoolConverter x:Key="EnumToBoolConverter" />
     </UserControl.Resources>
 
 
@@ -406,6 +407,7 @@
                                                     <TextBlock Grid.Row="1" FontSize="15" Margin="0 0 0 5" TextWrapping="Wrap"
                                                                Text="{Binding SeriesDescription}" MinWidth="200">
                                                     </TextBlock>
+
                                                     <StackPanel Grid.Row="3" Orientation="Horizontal" VerticalAlignment="Center"
                                                                 IsVisible="{Binding HistorySeriesAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
                                                         <TextBlock FontSize="15" Opacity="0.8" TextWrapping="Wrap" Text="Available Dubs: "></TextBlock>
@@ -419,7 +421,8 @@
                                                             FontSize="15"
                                                             Opacity="0.8"
                                                             TextWrapping="Wrap" />
-                                                        
+
+
                                                     </StackPanel>
 
                                                     <StackPanel Grid.Row="4" Orientation="Horizontal" VerticalAlignment="Center"
@@ -435,7 +438,8 @@
                                                             FontSize="15"
                                                             Opacity="0.8"
                                                             TextWrapping="Wrap" />
-                                                        
+
+
                                                     </StackPanel>
 
 
@@ -516,7 +520,7 @@
 
                                                             <ToggleButton Margin="0 0 5 10" FontStyle="Italic"
                                                                           VerticalAlignment="Center"
-                                                                          IsChecked="{Binding IsInactive}" 
+                                                                          IsChecked="{Binding IsInactive}"
                                                                           Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).ToggleInactive}">
                                                                 <ToolTip.Tip>
                                                                     <StackPanel Orientation="Vertical">
@@ -717,27 +721,41 @@
                                                                     <Grid VerticalAlignment="Center">
 
                                                                         <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="Auto" />
                                                                             <ColumnDefinition Width="*" />
                                                                             <ColumnDefinition Width="Auto" />
                                                                         </Grid.ColumnDefinitions>
 
-                                                                        <StackPanel VerticalAlignment="Center">
-                                                                                <ui:EpisodeHighlightTextBlock
-                                                                                    Series="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}"
-                                                                                    Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
-                                                                                    Episode="{Binding .}"
-                                                                                    StreamingService="Crunchyroll" 
-                                                                                    MinWidth="50"
-                                                                                    TextWrapping="NoWrap"
-                                                                                    TextTrimming="CharacterEllipsis"/>
-                                                                            
+                                                                        <controls:SymbolIcon Grid.Column="0" IsVisible="{Binding !IsEpisodeAvailableOnStreamingService}"
+                                                                                             Margin="0 0 5 0 "
+                                                                                             Symbol="AlertOn"
+                                                                                             FontSize="18"
+                                                                                             HorizontalAlignment="Center"
+                                                                                             VerticalAlignment="Center">
+                                                                            <ToolTip.Tip>
+                                                                                <TextBlock Text="Episode unavailable — it might not be available on the streaming service or got moved to a different season" FontSize="15" />
+                                                                            </ToolTip.Tip>
+
+                                                                        </controls:SymbolIcon>
+
+                                                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+
+                                                                            <ui:EpisodeHighlightTextBlock
+                                                                                Series="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}"
+                                                                                Season="{Binding $parent[controls:SettingsExpander].((history:HistorySeason)DataContext)}"
+                                                                                Episode="{Binding .}"
+                                                                                StreamingService="Crunchyroll"
+                                                                                MinWidth="50"
+                                                                                TextWrapping="NoWrap"
+                                                                                TextTrimming="CharacterEllipsis" />
+
                                                                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
                                                                                         IsVisible="{Binding HistoryEpisodeAvailableDubLang, Converter={StaticResource UiListHasElementsConverter}}">
                                                                                 <TextBlock FontStyle="Italic"
                                                                                            FontSize="12"
                                                                                            Opacity="0.8" Text="Dubs: ">
                                                                                 </TextBlock>
-                                                                                
+
                                                                                 <ui:HighlightingTextBlock
                                                                                     Items="{Binding HistoryEpisodeAvailableDubLang}"
                                                                                     Series="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext)}"
@@ -747,19 +765,20 @@
                                                                                     FontSize="12"
                                                                                     Opacity="0.8"
                                                                                     FontStyle="Italic" />
-                                                                                
+
                                                                             </StackPanel>
                                                                         </StackPanel>
 
-                                                                        <StackPanel Grid.Column="1"
+                                                                        <StackPanel Grid.Column="2"
                                                                                     Orientation="Horizontal"
                                                                                     VerticalAlignment="Center">
+
                                                                             <TextBlock Text="{Binding ReleaseDateFormated}" VerticalAlignment="Center" FontSize="15" Opacity="0.8" Margin="0 0 20  0"></TextBlock>
 
                                                                             <StackPanel VerticalAlignment="Center"
                                                                                         Margin="0 0 5 0"
                                                                                         IsVisible="{Binding $parent[ScrollViewer].((history:HistorySeries)DataContext).SonarrSeriesId, Converter={StaticResource UiSonarrIdToVisibilityConverter}}">
-                                                                                
+
                                                                                 <controls:ImageIcon
                                                                                     IsVisible="{Binding SonarrHasFile}"
                                                                                     Source="../Assets/sonarr.png"
@@ -806,8 +825,7 @@
                                                                             <Button Margin="0 0 5 0" FontStyle="Italic"
                                                                                     HorizontalAlignment="Right"
                                                                                     VerticalAlignment="Center"
-                                                                                    Command="{Binding DownloadEpisode}"
-                                                                                    CommandParameter="false">
+                                                                                    Command="{Binding DownloadEpisodeDefault}">
                                                                                 <StackPanel Orientation="Horizontal">
                                                                                     <controls:SymbolIcon Symbol="Download"
                                                                                                          FontSize="18" />
@@ -817,13 +835,14 @@
                                                                             <Button Margin="0 0 5 0" FontStyle="Italic" HorizontalAlignment="Right"
                                                                                     VerticalAlignment="Center"
                                                                                     IsEnabled="{Binding HistoryEpisodeAvailableSoftSubs, Converter={StaticResource UiListHasElementsConverter}}"
-                                                                                    Command="{Binding DownloadEpisode}"
-                                                                                    CommandParameter="true">
+                                                                                    Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).DownloadEpisodeOnlyOptions}"
+                                                                                    CommandParameter="{Binding .}">
                                                                                 <StackPanel Orientation="Horizontal">
-                                                                                    <controls:SymbolIcon Symbol="ClosedCaption" FontSize="18" />
+                                                                                    <controls:SymbolIcon Symbol="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SelectedDownloadIcon}" FontSize="18" />
+
                                                                                 </StackPanel>
                                                                                 <ToolTip.Tip>
-                                                                                    <TextBlock Text="Download Subs" FontSize="15" />
+                                                                                    <TextBlock Text="Download Only" FontSize="15" />
                                                                                 </ToolTip.Tip>
                                                                             </Button>
 
@@ -932,6 +951,69 @@
                                                                                                  FontSize="18" />
                                                                         </StackPanel>
                                                                     </Button>
+
+                                                                    <StackPanel>
+                                                                        <ToggleButton x:Name="DropdownButtonOnlyDownload"
+                                                                                      Margin="10 0 0 0" FontStyle="Italic" HorizontalAlignment="Right"
+                                                                                      VerticalAlignment="Center">
+                                                                            <StackPanel Orientation="Vertical">
+                                                                                <controls:SymbolIcon Symbol="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SelectedDownloadIcon}" FontSize="18" />
+                                                                            </StackPanel>
+                                                                        </ToggleButton>
+                                                                        <Popup IsLightDismissEnabled="True"
+                                                                               IsOpen="{Binding IsChecked, ElementName=DropdownButtonOnlyDownload, Mode=TwoWay}"
+                                                                               Placement="BottomEdgeAlignedRight"
+                                                                               PlacementTarget="{Binding ElementName=DropdownButtonOnlyDownload}">
+                                                                            <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                                                                                <StackPanel Orientation="Vertical">
+
+                                                                                    <Button Margin="10 5"
+                                                                                            VerticalAlignment="Center"
+                                                                                            HorizontalAlignment="Stretch"
+                                                                                            Content="Download All"
+                                                                                            Command="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).DownloadSeasonAllOnlyOptions}"
+                                                                                            CommandParameter="{Binding }">
+                                                                                    </Button>
+
+
+                                                                                    <Rectangle Height="1" Fill="Gray" Margin="0,8,0,8" />
+
+                                                                                    <Grid Margin="8 0 5 0">
+                                                                                        <Grid.ColumnDefinitions>
+                                                                                            <ColumnDefinition Width="*" />
+                                                                                            <ColumnDefinition Width="Auto" />
+                                                                                        </Grid.ColumnDefinitions>
+
+                                                                                        <TextBlock Text="Video" Grid.Column="0" VerticalAlignment="Center" />
+                                                                                        <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SelectedDownloadMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=OnlyVideo}" VerticalAlignment="Center" />
+                                                                                    </Grid>
+
+                                                                                    <Grid Margin="8 0 5 0">
+                                                                                        <Grid.ColumnDefinitions>
+                                                                                            <ColumnDefinition Width="*" />
+                                                                                            <ColumnDefinition Width="Auto" />
+                                                                                        </Grid.ColumnDefinitions>
+
+                                                                                        <TextBlock Text="Audio" Grid.Column="0" VerticalAlignment="Center" />
+                                                                                        <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SelectedDownloadMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=OnlyAudio}" VerticalAlignment="Center" />
+                                                                                    </Grid>
+
+                                                                                    <Grid Margin="8 0 5 0">
+                                                                                        <Grid.ColumnDefinitions>
+                                                                                            <ColumnDefinition Width="*" />
+                                                                                            <ColumnDefinition Width="Auto" />
+                                                                                        </Grid.ColumnDefinitions>
+
+                                                                                        <TextBlock Text="Sub" Grid.Column="0" VerticalAlignment="Center" />
+                                                                                        <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding $parent[UserControl].((vm:HistoryPageViewModel)DataContext).SelectedDownloadMode, Converter={StaticResource EnumToBoolConverter}, ConverterParameter=OnlySubs}" VerticalAlignment="Center" />
+                                                                                    </Grid>
+
+
+                                                                                </StackPanel>
+
+                                                                            </Border>
+                                                                        </Popup>
+                                                                    </StackPanel>
 
 
                                                                     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">

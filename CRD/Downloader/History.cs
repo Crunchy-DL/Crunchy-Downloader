@@ -37,8 +37,12 @@ public class History{
                     }
                 }
             } else{
-                foreach (var historyEpisode in historySeries.Seasons.First(historySeason => historySeason.SeasonId == seasonId).EpisodesList){
-                    historyEpisode.IsEpisodeAvailableOnStreamingService = false;
+                var matchingSeason = historySeries.Seasons.FirstOrDefault(historySeason => historySeason.SeasonId == seasonId);
+                
+                if (matchingSeason != null){
+                    foreach (var historyEpisode in matchingSeason.EpisodesList){
+                        historyEpisode.IsEpisodeAvailableOnStreamingService = false;
+                    }
                 }
             }
         }
@@ -165,6 +169,7 @@ public class History{
                                 EpisodeCrPremiumAirDate = historySource.GetAvailableDate(),
                                 EpisodeType = historySource.GetEpisodeType(),
                                 IsEpisodeAvailableOnStreamingService = true,
+                                ThumbnailImageUrl = historySource.GetImageUrl(),
                             };
 
                             historySeason.EpisodesList.Add(newHistoryEpisode);
@@ -179,6 +184,7 @@ public class History{
                             historyEpisode.EpisodeCrPremiumAirDate = historySource.GetAvailableDate();
                             historyEpisode.EpisodeType = historySource.GetEpisodeType();
                             historyEpisode.IsEpisodeAvailableOnStreamingService = true;
+                            historyEpisode.ThumbnailImageUrl = historySource.GetImageUrl();
 
                             historyEpisode.HistoryEpisodeAvailableDubLang = historySource.GetEpisodeAvailableDubLang();
                             historyEpisode.HistoryEpisodeAvailableSoftSubs = historySource.GetEpisodeAvailableSoftSubs();
@@ -577,7 +583,8 @@ public class History{
                 HistoryEpisodeAvailableSoftSubs = historySource.GetEpisodeAvailableSoftSubs(),
                 EpisodeCrPremiumAirDate = historySource.GetAvailableDate(),
                 EpisodeType = historySource.GetEpisodeType(),
-                IsEpisodeAvailableOnStreamingService = true
+                IsEpisodeAvailableOnStreamingService = true,
+                ThumbnailImageUrl = historySource.GetImageUrl(),
             };
 
             newSeason.EpisodesList.Add(newHistoryEpisode);
@@ -634,7 +641,7 @@ public class History{
                 var historyEpisodesWithSonarrIds = allHistoryEpisodes
                     .Where(e => !string.IsNullOrEmpty(e.SonarrEpisodeId))
                     .ToList();
-                
+
                 Parallel.ForEach(historyEpisodesWithSonarrIds, historyEpisode => {
                     var sonarrEpisode = episodes.FirstOrDefault(e => e.Id.ToString().Equals(historyEpisode.SonarrEpisodeId));
 
@@ -644,9 +651,9 @@ public class History{
                 });
 
                 var historyEpisodeIds = new HashSet<string>(historyEpisodesWithSonarrIds.Select(e => e.SonarrEpisodeId!));
-                
+
                 episodes.RemoveAll(e => historyEpisodeIds.Contains(e.Id.ToString()));
-                
+
                 allHistoryEpisodes = allHistoryEpisodes
                     .Where(e => string.IsNullOrEmpty(e.SonarrEpisodeId))
                     .ToList();

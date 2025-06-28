@@ -251,6 +251,13 @@ public enum CrunchyUrlType{
     Unknown
 }
 
+public enum EpisodeDownloadMode{
+    Default,
+    OnlyVideo,
+    OnlyAudio,
+    OnlySubs,
+}
+
 public enum SonarrCoverType{
     Banner,
     FanArt,

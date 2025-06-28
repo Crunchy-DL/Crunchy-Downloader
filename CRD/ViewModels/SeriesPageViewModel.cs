@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
@@ -33,7 +34,16 @@ public partial class SeriesPageViewModel : ViewModelBase{
     public static bool _showMonitoredBookmark;
 
     [ObservableProperty]
+    public static bool _showFeaturedMusicButton;
+
+    [ObservableProperty]
     public static bool _sonarrConnected;
+
+    [ObservableProperty]
+    private static EpisodeDownloadMode _selectedDownloadMode = EpisodeDownloadMode.OnlySubs;
+
+    [ObservableProperty]
+    public Symbol _selectedDownloadIcon = Symbol.ClosedCaption;
 
     private IStorageProvider? _storageProvider;
 
@@ -63,6 +73,10 @@ public partial class SeriesPageViewModel : ViewModelBase{
         }
 
         SelectedSeries.UpdateSeriesFolderPath();
+
+        if (SelectedSeries.SeriesStreamingService == StreamingService.Crunchyroll && SelectedSeries.SeriesType != SeriesType.Artist){
+            ShowFeaturedMusicButton = true;
+        }
     }
 
 
@@ -93,6 +107,33 @@ public partial class SeriesPageViewModel : ViewModelBase{
         }
 
         SelectedSeries.UpdateSeriesFolderPath();
+    }
+
+    [RelayCommand]
+    public async Task OpenFeaturedMusicDialog(){
+        if (SelectedSeries.SeriesStreamingService != StreamingService.Crunchyroll || SelectedSeries.SeriesType == SeriesType.Artist){
+            return;
+        }
+        
+        var musicList = await CrunchyrollManager.Instance.CrMusic.ParseFeaturedMusicVideoByIdAsync(SelectedSeries.SeriesId ?? string.Empty,
+            CrunchyrollManager.Instance.CrunOptions.HistoryLang ?? CrunchyrollManager.Instance.DefaultLocale, true, true);
+
+        if (musicList is{ Data.Count: > 0 }){
+            var dialog = new CustomContentDialog(){
+                Title = "Featured Music",
+                CloseButtonText = "Close",
+                FullSizeDesired = true
+            };
+
+            var viewModel = new ContentDialogFeaturedMusicViewModel(dialog, musicList, CrunchyrollManager.Instance.CrunOptions.HistoryIncludeCrArtists);
+            dialog.Content = new ContentDialogFeaturedMusicView(){
+                DataContext = viewModel
+            };
+
+            var dialogResult = await dialog.ShowAsync();
+        } else{
+            MessageBus.Current.SendMessage(new ToastMessage($"No featured music found", ToastType.Warning, 3));
+        }
     }
 
     [RelayCommand]
@@ -151,7 +192,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         if (dialogResult == ContentDialogResult.Primary){
             var sonarrEpisode = viewModel.CurrentSonarrEpisode;
-            
+
             foreach (var selectedSeriesSeason in SelectedSeries.Seasons){
                 foreach (var historyEpisode in selectedSeriesSeason.EpisodesList.Where(historyEpisode => historyEpisode.SonarrEpisodeId == sonarrEpisode.Id.ToString())){
                     historyEpisode.SonarrEpisodeId = string.Empty;
@@ -162,7 +203,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
                     historyEpisode.SonarrIsMonitored = false;
                 }
             }
-            
+
             episode.AssignSonarrEpisodeData(sonarrEpisode);
             CfgManager.UpdateHistoryFile();
         }
@@ -186,6 +227,26 @@ public partial class SeriesPageViewModel : ViewModelBase{
         } else{
             foreach (var episode in missingEpisodes){
                 await episode.DownloadEpisode();
+            }
+        }
+    }
+
+    [RelayCommand]
+    public async Task DownloadEpisodeOnlyOptions(HistoryEpisode episode){
+        var downloadMode = SelectedDownloadMode;
+
+        if (downloadMode != EpisodeDownloadMode.Default){
+            await episode.DownloadEpisode(downloadMode);
+        }
+    }
+
+    [RelayCommand]
+    public async Task DownloadSeasonAllOnlyOptions(HistorySeason season){
+        var downloadMode = SelectedDownloadMode;
+
+        if (downloadMode != EpisodeDownloadMode.Default){
+            foreach (var episode in season.EpisodesList){
+                await episode.DownloadEpisode(downloadMode);
             }
         }
     }
@@ -262,5 +323,15 @@ public partial class SeriesPageViewModel : ViewModelBase{
         } catch (Exception ex){
             Console.Error.WriteLine($"An error occurred while opening the folder: {ex.Message}");
         }
+    }
+
+
+    partial void OnSelectedDownloadModeChanged(EpisodeDownloadMode value){
+        SelectedDownloadIcon = SelectedDownloadMode switch{
+            EpisodeDownloadMode.OnlyVideo => Symbol.Video,
+            EpisodeDownloadMode.OnlyAudio => Symbol.Audio,
+            EpisodeDownloadMode.OnlySubs => Symbol.ClosedCaption,
+            _ => Symbol.ClosedCaption
+        };
     }
 }

@@ -20,6 +20,7 @@ using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;
 using DynamicData;
+using FluentAvalonia.UI.Controls;
 using ReactiveUI;
 
 namespace CRD.ViewModels;
@@ -114,6 +115,16 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private static string _progressText;
+    
+    #region Table Mode
+
+    [ObservableProperty]
+    private static EpisodeDownloadMode _selectedDownloadMode = EpisodeDownloadMode.OnlySubs;
+
+    [ObservableProperty]
+    public Symbol _selectedDownloadIcon = Symbol.ClosedCaption;
+
+    #endregion
     
     public Vector LastScrollOffset { get; set; } = Vector.Zero;
 
@@ -528,6 +539,26 @@ public partial class HistoryPageViewModel : ViewModelBase{
             await episode.DownloadEpisode();
         }
     }
+    
+    [RelayCommand]
+    public async Task DownloadEpisodeOnlyOptions(HistoryEpisode episode){
+        var downloadMode = SelectedDownloadMode;
+
+        if (downloadMode != EpisodeDownloadMode.Default){
+            await episode.DownloadEpisode(downloadMode);
+        }
+    }
+
+    [RelayCommand]
+    public async Task DownloadSeasonAllOnlyOptions(HistorySeason season){
+        var downloadMode = SelectedDownloadMode;
+
+        if (downloadMode != EpisodeDownloadMode.Default){
+            foreach (var episode in season.EpisodesList){
+                await episode.DownloadEpisode(downloadMode);
+            }
+        }
+    }
 
     [RelayCommand]
     public void ToggleDownloadedMark(SeasonDialogArgs seriesArgs){
@@ -574,6 +605,15 @@ public partial class HistoryPageViewModel : ViewModelBase{
     [RelayCommand]
     public void ToggleInactive(){
         CfgManager.UpdateHistoryFile();
+    }
+    
+    partial void OnSelectedDownloadModeChanged(EpisodeDownloadMode value){
+        SelectedDownloadIcon = SelectedDownloadMode switch{
+            EpisodeDownloadMode.OnlyVideo => Symbol.Video,
+            EpisodeDownloadMode.OnlyAudio => Symbol.Audio,
+            EpisodeDownloadMode.OnlySubs => Symbol.ClosedCaption,
+            _ => Symbol.ClosedCaption
+        };
     }
 }
 

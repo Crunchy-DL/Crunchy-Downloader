@@ -131,15 +131,14 @@ public class Merger{
         }
 
 
-        foreach (var aud in options.OnlyAudio){
-            args.Add($"-i \"{aud.Path}\"");
-            metaData.Add($"-map {index}");
-            metaData.Add($"-metadata:s:a:{audioIndex} language={aud.Language.Code}");
-            index++;
-            audioIndex++;
+        if (options.OnlyAudio.Count > 1){
+            Console.Error.WriteLine("Multiple audio files detected. Only one audio file can be converted to MP3 at a time.");
         }
 
-        args.Add("-c:a copy");
+        var audio = options.OnlyAudio.First();
+        
+        args.Add($"-i \"{audio.Path}\"");
+        args.Add("-c:a libmp3lame" + (audio.Bitrate > 0 ? $" -b:a {audio.Bitrate}k" : "") );
         args.Add($"\"{options.Output}\"");
         return string.Join(" ", args);
     }
@@ -443,6 +442,7 @@ public class MergerInput{
     public int? Duration{ get; set; }
     public int? Delay{ get; set; }
     public bool? IsPrimary{ get; set; }
+    public int? Bitrate{ get; set; }
 }
 
 public class SubtitleInput{
@@ -469,6 +469,7 @@ public class CrunchyMuxOptions{
     public bool? KeepAllVideos{ get; set; }
     public bool? Novids{ get; set; }
     public bool Mp4{ get; set; }
+    public bool Mp3{ get; set; }
     public bool MuxFonts{ get; set; }
     public bool MuxDescription{ get; set; }
     public string ForceMuxer{ get; set; }

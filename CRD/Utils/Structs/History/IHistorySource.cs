@@ -10,6 +10,8 @@ public interface IHistorySource{
     string GetSeasonNum();
     string GetSeasonId();
     
+    string GetImageUrl();
+    
     string GetEpisodeId();
     string GetEpisodeNumber();
     string GetEpisodeTitle();

@@ -289,6 +289,14 @@ public class CrunchyEpisode : IHistorySource{
     public EpisodeType GetEpisodeType(){
         return EpisodeType;
     }
+    
+    public string GetImageUrl(){
+        if (Images != null){
+            return Images.Thumbnail?.First().First().Source ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
 
     #endregion
 }

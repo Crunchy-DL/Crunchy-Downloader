@@ -319,6 +319,14 @@
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="FileName Whitespace Substitute"
+                                               Description="Character used to replace whitespace in file name variables like ${seriesTitle}">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="50"
+                                 Text="{Binding FileNameWhitespaceSubstitute}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Filename"
                                                Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs} - Folder with \\">
@@ -345,9 +353,15 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="MP4" Description="Outputs a mp4 instead of a mkv - not recommended to use this option">
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="MP4" Description="Outputs an MP4 instead of an MKV — not recommended to use this option">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="MP3" Description="Outputs an MP3 instead of an MKV/MP4 if only audio streams were downloaded">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MuxToMp3}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 

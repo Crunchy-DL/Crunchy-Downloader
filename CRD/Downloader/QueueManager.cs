@@ -95,7 +95,7 @@ public partial class QueueManager : ObservableObject{
     }
 
 
-    public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false, bool onlySubs = false){
+    public async Task CrAddEpisodeToQueue(string epId, string crLocale, List<string> dubLang, bool updateHistory = false, EpisodeDownloadMode episodeDownloadMode = EpisodeDownloadMode.Default){
         if (string.IsNullOrEmpty(epId)){
             return;
         }
@@ -158,7 +158,7 @@ public partial class QueueManager : ObservableObject{
 
                 selected.DownloadSubs = historyEpisode.sublist.Count > 0 ? historyEpisode.sublist : CrunchyrollManager.Instance.CrunOptions.DlSubs;
 
-                selected.OnlySubs = onlySubs;
+                selected.OnlySubs = episodeDownloadMode == EpisodeDownloadMode.OnlySubs;
 
                 if (CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub && selected.Data.Count > 1){
                     var sortedMetaData = selected.Data
@@ -178,9 +178,24 @@ public partial class QueueManager : ObservableObject{
 
                 var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
 
-                if (selected.OnlySubs){
-                    newOptions.Novids = true;
-                    newOptions.Noaudio = true;
+                switch (episodeDownloadMode){
+                    case EpisodeDownloadMode.OnlyVideo:
+                        newOptions.Novids = false;
+                        newOptions.Noaudio = true;
+                        selected.DownloadSubs = ["none"];
+                        break;
+                    case EpisodeDownloadMode.OnlyAudio:
+                        newOptions.Novids = true;
+                        newOptions.Noaudio = false;
+                        selected.DownloadSubs = ["none"];
+                        break;
+                    case EpisodeDownloadMode.OnlySubs:
+                        newOptions.Novids = true;
+                        newOptions.Noaudio = true;
+                        break;
+                    case EpisodeDownloadMode.Default:
+                    default:
+                        break;
                 }
 
                 newOptions.DubLang = dubLang;
@@ -227,13 +242,28 @@ public partial class QueueManager : ObservableObject{
 
             if (movieMeta != null){
                 movieMeta.DownloadSubs = CrunchyrollManager.Instance.CrunOptions.DlSubs;
-                movieMeta.OnlySubs = onlySubs;
+                movieMeta.OnlySubs = episodeDownloadMode == EpisodeDownloadMode.OnlySubs;
 
                 var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
 
-                if (movieMeta.OnlySubs){
-                    newOptions.Novids = true;
-                    newOptions.Noaudio = true;
+                switch (episodeDownloadMode){
+                    case EpisodeDownloadMode.OnlyVideo:
+                        newOptions.Novids = false;
+                        newOptions.Noaudio = true;
+                        movieMeta.DownloadSubs = ["none"];
+                        break;
+                    case EpisodeDownloadMode.OnlyAudio:
+                        newOptions.Novids = true;
+                        newOptions.Noaudio = false;
+                        movieMeta.DownloadSubs = ["none"];
+                        break;
+                    case EpisodeDownloadMode.OnlySubs:
+                        newOptions.Novids = true;
+                        newOptions.Noaudio = true;
+                        break;
+                    case EpisodeDownloadMode.Default:
+                    default:
+                        break;
                 }
 
                 newOptions.DubLang = dubLang;

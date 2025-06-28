@@ -217,7 +217,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
         }
         
         var refreshDate = DateTime.Now;
-        if (currentWeek?.FirstDayOfWeek != null){
+        if (currentWeek?.FirstDayOfWeek != null && currentWeek.FirstDayOfWeek != DateTime.MinValue){
             refreshDate = currentWeek.FirstDayOfWeek.AddDays(-1);
         }
 
@@ -239,7 +239,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
         }
         
         var refreshDate = DateTime.Now;
-        if (currentWeek?.FirstDayOfWeek != null){
+        if (currentWeek?.FirstDayOfWeek != null && currentWeek.FirstDayOfWeek != DateTime.MinValue){
             refreshDate = currentWeek.FirstDayOfWeek.AddDays(13);
         }
 

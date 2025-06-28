@@ -1,0 +1,99 @@
+﻿<ui:CustomContentDialog xmlns="https://github.com/avaloniaui"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        xmlns:vm="clr-namespace:CRD.ViewModels.Utils"
+                        xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+                        xmlns:ui="clr-namespace:CRD.Utils.UI"
+                        x:DataType="vm:ContentDialogFeaturedMusicViewModel"
+                        x:Class="CRD.Views.Utils.ContentDialogFeaturedMusicView">
+
+   <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding FeaturedMusicList}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Margin="10">
+                            <Grid>
+
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+
+                                <Grid Grid.Row="0" x:Name="RootGrid">
+                                    <Image Width="320" Height="180" Stretch="Fill" HorizontalAlignment="Center" Source="/Assets/coming_soon_ep.jpg" />
+                                    <Image Width="320" Height="180" Source="{Binding ThumbnailImage}" Stretch="UniformToFill" />
+
+                                    <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding $parent[UserControl].((vm:ContentDialogFeaturedMusicViewModel)DataContext).MusicInHistory}">
+
+                                        <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                                BorderThickness="0" CornerRadius="50"
+                                                Padding="5"
+                                                IsVisible="{Binding !WasDownloaded}">
+                                            <Grid>
+                                                <Ellipse Width="25" Height="25" Fill="Gray" />
+                                                <controls:SymbolIcon Symbol="Checkmark" FontSize="18" />
+                                            </Grid>
+                                        </Button>
+
+                                        <Button Width="34" Height="34" Margin="0 0 10 0" Background="Transparent"
+                                                BorderThickness="0" CornerRadius="50"
+                                                Padding="5"
+                                                IsVisible="{Binding WasDownloaded}">
+                                            <Grid>
+                                                <Ellipse Width="25" Height="25" Fill="#21a556" />
+                                                <controls:SymbolIcon Symbol="Checkmark" FontSize="18" />
+                                            </Grid>
+                                        </Button>
+
+                                    </StackPanel>
+
+
+                                    <Border Grid.Row="0" Background="#80000000"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            IsVisible="{Binding #RootGrid.IsPointerOver}">
+                                        <Button FontStyle="Italic"
+                                                Background="Transparent"
+                                                HorizontalAlignment="Stretch"
+                                                VerticalAlignment="Stretch"
+                                                Command="{Binding $parent[UserControl].((vm:ContentDialogFeaturedMusicViewModel)DataContext).DownloadEpisode}"
+                                                CommandParameter="{Binding .}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <controls:SymbolIcon Symbol="Download" FontSize="24" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Border>
+                                </Grid>
+
+
+                                <!-- 320 180 -->
+
+                                <TextBlock Grid.Row="1" HorizontalAlignment="Center" TextAlignment="Center"
+                                           Text="{Binding EpisodeTitle}"
+                                           TextWrapping="Wrap"
+                                           Width="310"
+                                           FontSize="14"
+                                           Height="35"
+                                           Margin="4,0,4,0">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="{Binding EpisodeTitle}" FontSize="15" />
+                                    </ToolTip.Tip>
+                                </TextBlock>
+
+
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </Grid>
+
+
+</ui:CustomContentDialog>

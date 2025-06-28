@@ -42,6 +42,24 @@ public class CrEpisode(){
             return null;
         }
 
+        if (epsidoe is{ Total: 1, Data: not null } &&
+            (epsidoe.Data.First().Versions ?? [])
+            .GroupBy(v => v.AudioLocale)
+            .Any(g => g.Count() > 1)){
+            Console.Error.WriteLine("Episode has Duplicate Audio Locales");
+            var list = (epsidoe.Data.First().Versions ?? []).GroupBy(v => v.AudioLocale).Where(g => g.Count() > 1).ToList();
+            //guid for episode id
+            foreach (var episodeVersionse in list){
+                foreach (var version in episodeVersionse){
+                    var checkRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{version.Guid}", HttpMethod.Get, true, true, query);
+                    var checkResponse = await HttpClientReq.Instance.SendHttpRequest(checkRequest,true);
+                    if (!checkResponse.IsOk){
+                        epsidoe.Data.First().Versions?.Remove(version);
+                    }
+                }
+            }
+        }
+
         if (epsidoe.Total == 1 && epsidoe.Data != null){
             return epsidoe.Data.First();
         }
