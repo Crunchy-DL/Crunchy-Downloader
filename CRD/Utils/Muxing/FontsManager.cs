@@ -52,6 +52,7 @@ public class FontsManager{
         { "Times New Roman", new List<string>{ "times.ttf", "timesbd.ttf", "timesbi.ttf", "timesi.ttf" } },
         { "Trebuchet MS", new List<string>{ "trebuc.ttf", "trebucbd.ttf", "trebucbi.ttf", "trebucit.ttf" } },
         { "Verdana", new List<string>{ "verdana.ttf", "verdanab.ttf", "verdanai.ttf", "verdanaz.ttf" } },
+        { "Vrinda", new List<string>{ "vrinda.ttf", "vrindab.ttf"} },
         { "Webdings", new List<string>{ "webdings.ttf" } },
     };
 

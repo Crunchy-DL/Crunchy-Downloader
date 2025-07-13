@@ -378,7 +378,7 @@ public class ToM3u8Class{
             var language = ObjectUtilities.GetMemberValue(playlist.attributes, "lang") ?? string.Empty;
 
             var label = ObjectUtilities.GetMemberValue(playlist.attributes, "label") ?? "main";
-            if (!string.IsNullOrEmpty(language) && string.IsNullOrEmpty(playlist.attributes.label)){
+            if (!string.IsNullOrEmpty(language) && string.IsNullOrEmpty(label)){
                 var roleLabel = !string.IsNullOrEmpty(role) ? $" ({role})" : string.Empty;
                 label = $"{language}{roleLabel}";
             }

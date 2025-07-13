@@ -105,6 +105,12 @@
                     </StackPanel>
                 </controls:SettingsExpander.Footer>
 
+                <controls:SettingsExpanderItem Content="Download Duplicate" Description="Download subtitles from all dubs where they're available">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding SubsDownloadDuplicate}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
                 <controls:SettingsExpanderItem Content="Add ScaledBorderAndShadow ">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel Orientation="Horizontal">

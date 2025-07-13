@@ -54,7 +54,7 @@ public class SonarrClient{
             CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(true);
             
             foreach (var historySeries in CrunchyrollManager.Instance.HistoryList){
-                if (historySeries.SonarrSeriesId != null){
+                if (!string.IsNullOrEmpty(historySeries.SonarrSeriesId)){
                     List<SonarrEpisode>? episodes = await GetEpisodes(int.Parse(historySeries.SonarrSeriesId));
                     historySeries.SonarrNextAirDate = CrunchyrollManager.Instance.History.GetNextAirDate(episodes);
                 }

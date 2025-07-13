@@ -9,6 +9,9 @@ namespace CRD.Utils.Structs.Crunchyroll;
 public class CrDownloadOptions{
     #region General Settings
 
+    [JsonProperty("shutdown_when_queue_empty")]
+    public bool ShutdownWhenQueueEmpty{ get; set; }
+    
     [JsonProperty("auto_download")]
     public bool AutoDownload{ get; set; }
 
@@ -179,6 +182,9 @@ public class CrDownloadOptions{
     [JsonProperty("subs_add_scaled_border")]
     public ScaledBorderAndShadowSelection SubsAddScaledBorder{ get; set; }
 
+    [JsonProperty("subs_download_duplicate")]
+    public bool SubsDownloadDuplicate{ get; set; }
+    
     [JsonProperty("include_signs_subs")]
     public bool IncludeSignsSubs{ get; set; }
 

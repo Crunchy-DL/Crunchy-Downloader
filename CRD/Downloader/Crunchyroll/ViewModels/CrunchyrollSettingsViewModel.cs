@@ -40,7 +40,10 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _addScaledBorderAndShadow;
-
+    
+    [ObservableProperty]
+    private bool _subsDownloadDuplicate;
+    
     [ObservableProperty]
     private bool _includeSignSubs;
 
@@ -332,6 +335,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        SubsDownloadDuplicate = options.SubsDownloadDuplicate;
         MarkAsWatched = options.MarkAsWatched;
         DownloadFirstAvailableDub = options.DownloadFirstAvailableDub;
         UseCrBetaApi = options.UseCrBetaApi;
@@ -402,6 +406,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
             return;
         }
 
+        CrunchyrollManager.Instance.CrunOptions.SubsDownloadDuplicate = SubsDownloadDuplicate;
         CrunchyrollManager.Instance.CrunOptions.MarkAsWatched = MarkAsWatched;
         CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub = DownloadFirstAvailableDub;
         CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi = UseCrBetaApi;

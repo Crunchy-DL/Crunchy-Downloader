@@ -90,10 +90,14 @@ public class Languages{
         return FindLang(str);
     }
 
-    public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem, bool isCC, string ccTag, bool? isSigns = false, string? format = "ass", bool addIndexAndLangCode = true){
+    public static string SubsFile(string fnOutput, string subsIndex, LanguageItem langItem,string insert, bool isCC, string ccTag, bool? isSigns = false, string? format = "ass", bool addIndexAndLangCode = true){
         subsIndex = (int.Parse(subsIndex) + 1).ToString().PadLeft(2, '0');
         string fileName = $"{fnOutput}";
 
+        if (!string.IsNullOrEmpty(insert)){
+            fileName += $".{insert}";
+        }
+        
         if (addIndexAndLangCode){
             fileName += $".{langItem.Locale}"; //.{subsIndex}
         }

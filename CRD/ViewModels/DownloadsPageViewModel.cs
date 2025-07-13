@@ -20,6 +20,9 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     public ObservableCollection<DownloadItemModel> Items{ get; }
 
     [ObservableProperty]
+    private bool _shutdownWhenQueueEmpty;
+    
+    [ObservableProperty]
     private bool _autoDownload;
 
     [ObservableProperty]
@@ -34,6 +37,7 @@ public partial class DownloadsPageViewModel : ViewModelBase{
         Items = QueueManagerIns.DownloadItemModels;
         AutoDownload = CrunchyrollManager.Instance.CrunOptions.AutoDownload;
         RemoveFinished = CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload;
+        ShutdownWhenQueueEmpty = CrunchyrollManager.Instance.CrunOptions.ShutdownWhenQueueEmpty;
     }
     
 
@@ -48,6 +52,11 @@ public partial class DownloadsPageViewModel : ViewModelBase{
 
     partial void OnRemoveFinishedChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload = value;
+        CfgManager.WriteCrSettings();
+    }
+
+    partial void OnShutdownWhenQueueEmptyChanged(bool value){
+        CrunchyrollManager.Instance.CrunOptions.ShutdownWhenQueueEmpty = value;
         CfgManager.WriteCrSettings();
     }
 

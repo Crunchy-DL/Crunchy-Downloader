@@ -23,6 +23,11 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding RemoveFinished}" OffContent="Remove Finished" OnContent="Remove Finished"></ToggleSwitch>
             <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding AutoDownload}" OffContent="Auto Download" OnContent="Auto Download"></ToggleSwitch>
+            <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding ShutdownWhenQueueEmpty}" OffContent="Shutdown PC" OnContent="Shutdown PC">
+                <ToolTip.Tip>
+                    <TextBlock Text="Automatically shut down the PC when the queue is empty" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
+                </ToolTip.Tip>
+            </ToggleSwitch>
             
             <Button BorderThickness="0"
                     HorizontalAlignment="Right"

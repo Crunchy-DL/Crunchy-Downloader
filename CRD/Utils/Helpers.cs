@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -21,6 +22,7 @@ using CRD.Utils.HLS;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
+using FluentAvalonia.UI.Controls;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -805,5 +807,57 @@ public class Helpers{
                 };
             }
         }
+    }
+
+    private static readonly SemaphoreSlim ShutdownLock = new(1, 1);
+
+    public static async Task ShutdownComputer(){
+        if (!await ShutdownLock.WaitAsync(0))
+            return;
+        try{
+            var timer = new System.Timers.Timer(30000); // 30 seconds
+            timer.Elapsed += (sender, e) => { PerformShutdown(); };
+            timer.AutoReset = false;
+            timer.Start();
+
+            var dialog = new ContentDialog{
+                Title = "Shutdown Pending",
+                Content = "The PC will shut down in 30 seconds.\nClick 'Cancel' to abort.",
+                PrimaryButtonText = "Cancel Shutdown",
+                CloseButtonText = "Close",
+                DefaultButton = ContentDialogButton.Primary
+            };
+
+            var result = await dialog.ShowAsync();
+
+            if (result == ContentDialogResult.Primary){
+                timer.Stop();
+            }
+        } finally{
+            ShutdownLock.Release();
+        }
+    }
+
+    private static void PerformShutdown(){
+        string shutdownCmd;
+        string shutdownArgs;
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)){
+            shutdownCmd = "shutdown";
+            shutdownArgs = "/s /t 0";
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+                   RuntimeInformation.IsOSPlatform(OSPlatform.OSX)){
+            shutdownCmd = "shutdown";
+            shutdownArgs = "-h now";
+        } else{
+            throw new PlatformNotSupportedException();
+        }
+
+        Process.Start(new ProcessStartInfo{
+            FileName = shutdownCmd,
+            Arguments = shutdownArgs,
+            CreateNoWindow = true,
+            UseShellExecute = false
+        });
     }
 }
