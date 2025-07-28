@@ -97,7 +97,7 @@ public class SxItem{
     public string? Path{ get; set; }
     public string? File{ get; set; }
     public string? Title{ get; set; }
-    public Dictionary<string, List<string>>? Fonts{ get; set; }
+    public Dictionary<string, string>? Fonts{ get; set; }
 }
 
 public class FrameData{

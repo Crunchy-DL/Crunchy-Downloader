@@ -4,6 +4,7 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using CRD.Downloader;
 using CRD.Utils.Parser.Utils;
@@ -18,8 +19,9 @@ public class HlsDownloader{
     private CrunchyEpMeta _currentEpMeta;
     private bool _isVideo;
     private bool _isAudio;
+    private bool _newDownloadMethode;
 
-    public HlsDownloader(HlsOptions options, CrunchyEpMeta meta, bool isVideo, bool isAudio){
+    public HlsDownloader(HlsOptions options, CrunchyEpMeta meta, bool isVideo, bool isAudio, bool newDownloadMethode){
         if (options == null || options.M3U8Json == null || options.M3U8Json.Segments == null){
             throw new Exception("Playlist is empty");
         }
@@ -28,6 +30,8 @@ public class HlsDownloader{
 
         _isVideo = isVideo;
         _isAudio = isAudio;
+
+        _newDownloadMethode = newDownloadMethode;
 
         if (options?.M3U8Json != null)
             _data = new Data{
@@ -152,6 +156,11 @@ public class HlsDownloader{
                 _data.Parts.Completed = _data.Offset;
             }
 
+
+            if (_newDownloadMethode){
+                return await DownloadSegmentsBufferedResumeAsync(segments, fn);
+            }
+
             for (int p = 0; p < Math.Ceiling((double)segments.Count / _data.Threads); p++){
                 // Start time
                 _data.DateStart = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -271,6 +280,7 @@ public class HlsDownloader{
                                     File.Delete(downloadItemDownloadedFile);
                                 }
                             } catch (Exception e){
+                                Console.Error.WriteLine(e.Message);
                             }
                         }
                     }
@@ -292,24 +302,182 @@ public class HlsDownloader{
         return (Ok: true, _data.Parts);
     }
 
-    public static Info GetDownloadInfo(long dateStartUnix, int partsDownloaded, int partsTotal, long downloadedBytes, long totalDownloadedBytes){
-        // Convert Unix timestamp to DateTime
-        DateTime dateStart = DateTimeOffset.FromUnixTimeMilliseconds(dateStartUnix).UtcDateTime;
-        double dateElapsed = (DateTime.UtcNow - dateStart).TotalMilliseconds;
+    private static readonly object _resumeLock = new object();
 
-        // Calculate percentage
-        int percentFixed = (int)((double)partsDownloaded / partsTotal * 100);
-        int percent = percentFixed < 100 ? percentFixed : (partsTotal == partsDownloaded ? 100 : 99);
+    public async Task<(bool Ok, PartsData Parts)> DownloadSegmentsBufferedResumeAsync(List<dynamic> segments, string fn){
+        var totalSeg = _data.Parts.Total;
+        string sessionId = Path.GetFileNameWithoutExtension(fn);
+        string tempDir = Path.Combine(Path.GetDirectoryName(fn), $"{sessionId}_temp");
 
-        double downloadSpeed = downloadedBytes / (dateElapsed / 1000);
+        Directory.CreateDirectory(tempDir);
 
-        int partsLeft = partsTotal - partsDownloaded;
-        double remainingTime = (partsLeft * ((double)totalDownloadedBytes / partsDownloaded)) / downloadSpeed;
+        string resumeFile = $"{fn}.new.resume";
+        int downloadedParts = 0;
+        int mergedParts = 0;
+
+        if (File.Exists(resumeFile)){
+            try{
+                var resumeData = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(resumeFile));
+                downloadedParts = (int?)resumeData?.DownloadedParts ?? 0;
+                mergedParts = (int?)resumeData?.MergedParts ?? 0;
+            } catch{
+            }
+        }
+
+        if (downloadedParts > totalSeg) downloadedParts = totalSeg;
+        if (mergedParts > downloadedParts) mergedParts = downloadedParts;
+
+        var semaphore = new SemaphoreSlim(_data.Threads);
+        var downloadTasks = new List<Task>();
+        bool errorOccurred = false;
+
+        var _lastUiUpdate = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+        for (int i = 0; i < segments.Count; i++){
+            if (File.Exists(Path.Combine(tempDir, $"part_{i:D6}.tmp")))
+                continue;
+
+            int index = i;
+            await semaphore.WaitAsync();
+
+            downloadTasks.Add(Task.Run(async () => {
+                try{
+                    var segment = new Segment{
+                        Uri = ObjectUtilities.GetMemberValue(segments[index], "uri"),
+                        Key = ObjectUtilities.GetMemberValue(segments[index], "key"),
+                        ByteRange = ObjectUtilities.GetMemberValue(segments[index], "byteRange")
+                    };
+
+                    var data = await DownloadPart(segment, index, _data.Offset);
+
+                    string tempFile = Path.Combine(tempDir, $"part_{index:D6}.tmp");
+                    await File.WriteAllBytesAsync(tempFile, data);
+
+                    int currentDownloaded = Directory.GetFiles(tempDir, "part_*.tmp").Length;
+                    lock (_resumeLock){
+                        File.WriteAllText(resumeFile, JsonConvert.SerializeObject(new{
+                            DownloadedParts = currentDownloaded,
+                            MergedParts = mergedParts,
+                            Total = totalSeg
+                        }));
+                    }
+
+                    if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - _lastUiUpdate > 500){
+                        var dataLog = GetDownloadInfo(
+                            _lastUiUpdate,
+                            currentDownloaded,
+                            totalSeg,
+                            _data.BytesDownloaded,
+                            _data.TotalBytes
+                        );
+
+                        _data.BytesDownloaded = 0;
+                        _lastUiUpdate = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+                        Console.WriteLine($"{currentDownloaded}/{totalSeg} [{dataLog.Percent}%] Speed: {dataLog.DownloadSpeed / 1000000.0:F2} MB/s ETA: {FormatTime(dataLog.Time)}");
+
+                        _currentEpMeta.DownloadProgress = new DownloadProgress{
+                            IsDownloading = true,
+                            Percent = dataLog.Percent,
+                            Time = dataLog.Time,
+                            DownloadSpeed = dataLog.DownloadSpeed,
+                            Doing = _isAudio ? "Downloading Audio" : (_isVideo ? "Downloading Video" : "")
+                        };
+                    }
+
+                    if (!QueueManager.Instance.Queue.Contains(_currentEpMeta))
+                        return;
+
+                    QueueManager.Instance.Queue.Refresh();
+
+                    while (_currentEpMeta.Paused){
+                        await Task.Delay(500);
+                        if (!QueueManager.Instance.Queue.Contains(_currentEpMeta))
+                            return;
+                    }
+                } catch (Exception ex){
+                    Console.Error.WriteLine($"Error downloading part {index}: {ex.Message}");
+                    errorOccurred = true;
+                } finally{
+                    semaphore.Release();
+                }
+            }));
+        }
+
+        await Task.WhenAll(downloadTasks);
+
+        if (errorOccurred)
+            return (false, _data.Parts);
+
+        using (var output = new FileStream(fn, FileMode.Append, FileAccess.Write, FileShare.None)){
+            for (int i = mergedParts; i < segments.Count; i++){
+                string tempFile = Path.Combine(tempDir, $"part_{i:D6}.tmp");
+                if (!File.Exists(tempFile)){
+                    Console.Error.WriteLine($"Missing temp file for part {i}, aborting merge.");
+                    return (false, _data.Parts);
+                }
+
+                byte[] data = await File.ReadAllBytesAsync(tempFile);
+                await output.WriteAsync(data, 0, data.Length);
+
+                mergedParts++;
+
+                File.WriteAllText(resumeFile, JsonConvert.SerializeObject(new{
+                    DownloadedParts = totalSeg,
+                    MergedParts = mergedParts,
+                    Total = totalSeg
+                }));
+
+                var dataLog = GetDownloadInfo(_data.DateStart, mergedParts, totalSeg, _data.BytesDownloaded, _data.TotalBytes);
+                Console.WriteLine($"{mergedParts}/{totalSeg} parts merged [{dataLog.Percent}%]");
+
+                _currentEpMeta.DownloadProgress = new DownloadProgress{
+                    IsDownloading = true,
+                    Percent = dataLog.Percent,
+                    Time = dataLog.Time,
+                    DownloadSpeed = dataLog.DownloadSpeed,
+                    Doing = _isAudio ? "Merging Audio" : (_isVideo ? "Merging Video" : "")
+                };
+
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta))
+                    return (false, _data.Parts);
+                
+            }
+        }
+
+        // Cleanup temp files
+        Directory.Delete(tempDir, true);
+        File.Delete(resumeFile);
+
+        return (true, _data.Parts);
+    }
+
+
+    public static Info GetDownloadInfo(long dateStartUnix, int partsDownloaded, int partsTotal, long incrementalBytes, long totalDownloadedBytes){
+        DateTime lastStart = DateTimeOffset.FromUnixTimeMilliseconds(dateStartUnix).UtcDateTime;
+        double elapsedMs = (DateTime.UtcNow - lastStart).TotalMilliseconds;
+        if (elapsedMs <= 0) elapsedMs = 1;
+
+        double speed = incrementalBytes / (elapsedMs / 1000);
+        if (speed < 1) speed = 1;
+
+        int percent = (int)((double)partsDownloaded / partsTotal * 100);
+        if (percent > 100) percent = 100;
+
+        double etaSec = 0;
+        if (partsDownloaded > 0){
+            double avgPartSize = (double)totalDownloadedBytes / partsDownloaded;
+            double remainingBytes = avgPartSize * (partsTotal - partsDownloaded);
+            etaSec = remainingBytes / speed;
+        }
+
+        if (etaSec > TimeSpan.MaxValue.TotalSeconds)
+            etaSec = TimeSpan.MaxValue.TotalSeconds;
 
         return new Info{
             Percent = percent,
-            Time = remainingTime,
-            DownloadSpeed = downloadSpeed
+            Time = etaSec,
+            DownloadSpeed = speed
         };
     }
 
@@ -333,15 +501,15 @@ public class HlsDownloader{
                 }
 
                 if (dec != null){
-                    _data.BytesDownloaded += dec.Length;
-                    _data.TotalBytes += dec.Length;
+                    Interlocked.Add(ref _data.BytesDownloaded, dec.Length);
+                    Interlocked.Add(ref _data.TotalBytes, dec.Length);
                 }
             } else{
                 part = await GetData(p, sUri, seg.ByteRange != null ? seg.ByteRange.ToDictionary() : new Dictionary<string, string>(), segOffset, false, _data.Timeout, _data.Retries);
                 dec = part;
                 if (dec != null){
-                    _data.BytesDownloaded += dec.Length;
-                    _data.TotalBytes += dec.Length;
+                    Interlocked.Add(ref _data.BytesDownloaded, dec.Length);
+                    Interlocked.Add(ref _data.TotalBytes, dec.Length);
                 }
             }
         } catch (Exception ex){
@@ -455,12 +623,11 @@ public class HlsDownloader{
                         throw; // rethrow after last retry
 
                     await Task.Delay(_data.WaitTime);
-                }catch (Exception ex) {
-                    
+                } catch (Exception ex){
                     Console.Error.WriteLine($"Unexpected exception at part {partIndex + 1 + segOffset}:");
                     Console.Error.WriteLine($"\tType: {ex.GetType()}");
                     Console.Error.WriteLine($"\tMessage: {ex.Message}");
-                    throw; 
+                    throw;
                 }
             }
         }
@@ -591,11 +758,12 @@ public class Data{
     public int Timeout{ get; set; }
     public bool CheckPartLength{ get; set; }
     public bool IsResume{ get; set; }
-    public long BytesDownloaded{ get; set; }
     public int WaitTime{ get; set; }
     public string? Override{ get; set; }
     public long DateStart{ get; set; }
-    public long TotalBytes{ get; set; }
+
+    public long BytesDownloaded;
+    public long TotalBytes;
 }
 
 public class PartsData{

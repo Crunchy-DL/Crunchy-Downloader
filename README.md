@@ -49,7 +49,7 @@ For detailed information on each feature, please refer to the [GitHub Wiki](http
 
 Place one of the following tools in the `./lib/` directory:
 
-- **mp4decrypt:** Available at [Bento4](http://www.bento4.com/)
+- **mp4decrypt:** Available at [Bento4](https://www.bento4.com/downloads/)
 - **shaka-packager:** Available at [Shaka Packager Releases](https://github.com/shaka-project/shaka-packager/releases/latest)
 
 ### 2. Acquire Widevine CDM Files

@@ -182,6 +182,9 @@ public enum DownloadMediaType{
 
     [EnumMember(Value = "Description")]
     Description,
+    
+    [EnumMember(Value = "Cover")]
+    Cover,
 }
 
 [JsonConverter(typeof(StringEnumConverter))]

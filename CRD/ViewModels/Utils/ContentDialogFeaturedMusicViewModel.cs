@@ -4,7 +4,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs.Crunchyroll.Music;
 using CRD.Utils.Structs.History;

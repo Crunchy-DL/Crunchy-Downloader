@@ -61,7 +61,7 @@ public class CrMovies{
             return null;
         }
 
-        var images = (episodeP.Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
+        var images = (episodeP.Images?.Thumbnail ??[new List<Image>(){ new(){ Source = "/notFound.jpg" } }]);
 
         var epMeta = new CrunchyEpMeta();
         epMeta.Data = new List<CrunchyEpMetaData>{ new(){ MediaId = episodeP.Id, Versions = null, IsSubbed = episodeP.IsSubbed, IsDubbed = episodeP.IsDubbed } };
@@ -74,6 +74,7 @@ public class CrMovies{
         epMeta.SeriesId = "";
         epMeta.AbsolutEpisodeNumberE = "";
         epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source;
+        epMeta.ImageBig = images[images.Count / 2].LastOrDefault()?.Source;
         epMeta.DownloadProgress = new DownloadProgress(){
             IsDownloading = false,
             Done = false,

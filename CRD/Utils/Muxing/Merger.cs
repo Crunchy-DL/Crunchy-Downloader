@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 
@@ -264,6 +262,14 @@ public class Merger{
         if (options.Description is{ Count: > 0 }){
             args.Add($"--global-tags \"{Helpers.AddUncPrefixIfNeeded(options.Description[0].Path)}\"");
         }
+        
+        if (options.Cover.Count > 0){
+            if (File.Exists(options.Cover.First().Path)){
+                args.Add($"--attach-file \"{options.Cover.First().Path}\"");
+                args.Add($"--attachment-mime-type image/png");
+                args.Add($"--attachment-name cover.png");
+            }
+        }
 
 
         return string.Join(" ", args);
@@ -425,8 +431,11 @@ public class Merger{
             .ToList();
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path));
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".resume"));
+        allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".new.resume"));
 
         options.Description?.ForEach(description => Helpers.DeleteFile(description.Path));
+        
+        options.Cover?.ForEach(cover => Helpers.DeleteFile(cover.Path));
 
         // Delete chapter files if any
         options.Chapters?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
@@ -471,6 +480,7 @@ public class CrunchyMuxOptions{
     public bool Mp4{ get; set; }
     public bool Mp3{ get; set; }
     public bool MuxFonts{ get; set; }
+    public bool MuxCover{ get; set; }
     public bool MuxDescription{ get; set; }
     public string ForceMuxer{ get; set; }
     public bool? NoCleanup{ get; set; }
@@ -511,6 +521,7 @@ public class MergerOptions{
     public bool CcSubsMuxingFlag{ get; set; }
     public bool SignsSubsAsForced{ get; set; }
     public List<MergerInput> Description{ get; set; } = new List<MergerInput>();
+    public List<MergerInput> Cover{ get; set; } =[];
 }
 
 public class MuxOptions{

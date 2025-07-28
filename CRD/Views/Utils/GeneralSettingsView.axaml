@@ -32,7 +32,7 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="History count Missing" Description="The missing count (orange corner) shows all missing episodes, not just new ones">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryCountMissing}"> </CheckBox>
@@ -69,6 +69,12 @@
                                        IconSource="Download"
                                        Description="Adjust download settings"
                                        IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Enable New Download Method" Description="Enables the updated download handling logic. This may improve performance and stability.">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadMethodeNew}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Max Download Speed"
                                                Description="Download in Kb/s - 0 is full speed">
@@ -595,13 +601,7 @@
                                            VerticalAlignment="Center"
                                            DockPanel.Dock="Left" />
 
-                                <controls:ColorPickerButton Color="{Binding CustomAccentColor}"
-                                                            IsMoreButtonVisible="True"
-                                                            UseSpectrum="True"
-                                                            UseColorWheel="False"
-                                                            UseColorTriangle="False"
-                                                            UseColorPalette="False"
-                                                            IsCompact="True" ShowAcceptDismissButtons="True"
+                                <ColorPicker Color="{Binding CustomAccentColor}"
                                                             DockPanel.Dock="Right" />
                             </DockPanel>
                         </StackPanel>

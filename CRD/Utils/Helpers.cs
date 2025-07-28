@@ -21,7 +21,6 @@ using CRD.Utils.Files;
 using CRD.Utils.HLS;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Structs;
-using CRD.Utils.Structs.Crunchyroll;
 using FluentAvalonia.UI.Controls;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -852,12 +851,43 @@ public class Helpers{
         } else{
             throw new PlatformNotSupportedException();
         }
+        
+        try{
+            using (var process = new Process()){
+                process.StartInfo.FileName = shutdownCmd;
+                process.StartInfo.Arguments = shutdownArgs;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.RedirectStandardError = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
 
-        Process.Start(new ProcessStartInfo{
-            FileName = shutdownCmd,
-            Arguments = shutdownArgs,
-            CreateNoWindow = true,
-            UseShellExecute = false
-        });
+                process.ErrorDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                        Console.Error.WriteLine($"{e.Data}");
+                    }
+                };
+                
+                process.OutputDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data)){
+                            Console.Error.WriteLine(e.Data);
+                    }
+                };
+                
+                process.Start();
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                process.WaitForExit();
+
+                if (process.ExitCode != 0){
+                    Console.Error.WriteLine($"Shutdown failed with exit code {process.ExitCode}");
+                }
+                
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Failed to start shutdown process: {ex.Message}");
+        }
+        
     }
 }

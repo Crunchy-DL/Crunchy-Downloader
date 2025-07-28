@@ -411,6 +411,12 @@
                         <CheckBox IsChecked="{Binding MuxFonts}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Include episode thumbnail" Description="Embeds the episode thumbnail into the MKV as cover">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MuxCover}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="File title"
                                                Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs}">

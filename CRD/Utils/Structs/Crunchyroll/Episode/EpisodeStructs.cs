@@ -54,7 +54,7 @@ public class CrunchyEpisode : IHistorySource{
     [JsonProperty("availability_starts")]
     public DateTime AvailabilityStarts{ get; set; }
 
-    public Images? Images{ get; set; }
+    public Images Images{ get; set; } = new();
 
     [JsonProperty("season_id")]
     public string SeasonId{ get; set; }
@@ -289,7 +289,7 @@ public class CrunchyEpisode : IHistorySource{
     public EpisodeType GetEpisodeType(){
         return EpisodeType;
     }
-    
+
     public string GetImageUrl(){
         if (Images != null){
             return Images.Thumbnail?.First().First().Source ?? string.Empty;
@@ -303,15 +303,15 @@ public class CrunchyEpisode : IHistorySource{
 
 public class Images{
     [JsonProperty("poster_tall")]
-    public List<List<Image>>? PosterTall{ get; set; }
+    public List<List<Image>> PosterTall{ get; set; } =[];
 
     [JsonProperty("poster_wide")]
-    public List<List<Image>>? PosterWide{ get; set; }
+    public List<List<Image>> PosterWide{ get; set; } =[];
 
     [JsonProperty("promo_image")]
-    public List<List<Image>>? PromoImage{ get; set; }
+    public List<List<Image>> PromoImage{ get; set; } =[];
 
-    public List<List<Image>>? Thumbnail{ get; set; }
+    public List<List<Image>> Thumbnail{ get; set; } =[];
 }
 
 public class Image{
@@ -368,6 +368,7 @@ public class CrunchyEpMeta{
     public string? SeriesId{ get; set; }
     public string? AbsolutEpisodeNumberE{ get; set; }
     public string? Image{ get; set; }
+    public string? ImageBig{ get; set; }
     public bool Paused{ get; set; }
     public DownloadProgress DownloadProgress{ get; set; } = new();
 
@@ -389,7 +390,6 @@ public class CrunchyEpMeta{
     public bool OnlySubs{ get; set; }
 
     public CrDownloadOptions? DownloadSettings;
-
 }
 
 public class DownloadProgress{
@@ -410,7 +410,7 @@ public class CrunchyEpMetaData{
     public List<EpisodeVersion>? Versions{ get; set; }
     public bool IsSubbed{ get; set; }
     public bool IsDubbed{ get; set; }
-    
+
     public (string? seasonID, string? guid) GetOriginalIds(){
         var version = Versions?.FirstOrDefault(a => a.Original);
         if (version != null && !string.IsNullOrEmpty(version.Guid) && !string.IsNullOrEmpty(version.SeasonGuid)){
@@ -419,7 +419,6 @@ public class CrunchyEpMetaData{
 
         return (null, null);
     }
-    
 }
 
 public class CrunchyRollEpisodeData{

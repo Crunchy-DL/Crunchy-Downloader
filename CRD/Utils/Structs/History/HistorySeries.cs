@@ -10,9 +10,7 @@ using Avalonia.Media.Imaging;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.CustomList;
 using CRD.Utils.Files;
-using CRD.Views;
 using Newtonsoft.Json;
-using ReactiveUI;
 
 namespace CRD.Utils.Structs.History;
 

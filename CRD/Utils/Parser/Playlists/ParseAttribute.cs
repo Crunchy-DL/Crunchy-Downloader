@@ -18,6 +18,7 @@ public class ParseAttribute{
         { "width", Width },
         { "height", Height },
         { "bandwidth", Bandwidth },
+        { "audioSamplingRate", AudioSamplingRate },
         { "frameRate", FrameRate },
         { "startNumber", StartNumber },
         { "timescale", Timescale },
@@ -40,6 +41,7 @@ public class ParseAttribute{
     public static object Width(string value) => int.Parse(value);
     public static object Height(string value) => int.Parse(value);
     public static object Bandwidth(string value) => int.Parse(value);
+    public static object AudioSamplingRate(string value) => int.Parse(value);
     public static object FrameRate(string value) => DivisionValueParser.ParseDivisionValue(value);
     public static object StartNumber(string value) => int.Parse(value);
     public static object Timescale(string value) => int.Parse(value);

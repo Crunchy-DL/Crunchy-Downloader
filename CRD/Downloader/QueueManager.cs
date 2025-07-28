@@ -9,7 +9,6 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.CustomList;
 using CRD.Utils.Structs;
-using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
 using CRD.ViewModels;
 using CRD.Views;
@@ -182,12 +181,12 @@ public partial class QueueManager : ObservableObject{
                     case EpisodeDownloadMode.OnlyVideo:
                         newOptions.Novids = false;
                         newOptions.Noaudio = true;
-                        selected.DownloadSubs = ["none"];
+                        selected.DownloadSubs =["none"];
                         break;
                     case EpisodeDownloadMode.OnlyAudio:
                         newOptions.Novids = true;
                         newOptions.Noaudio = false;
-                        selected.DownloadSubs = ["none"];
+                        selected.DownloadSubs =["none"];
                         break;
                     case EpisodeDownloadMode.OnlySubs:
                         newOptions.Novids = true;
@@ -250,12 +249,12 @@ public partial class QueueManager : ObservableObject{
                     case EpisodeDownloadMode.OnlyVideo:
                         newOptions.Novids = false;
                         newOptions.Noaudio = true;
-                        movieMeta.DownloadSubs = ["none"];
+                        movieMeta.DownloadSubs =["none"];
                         break;
                     case EpisodeDownloadMode.OnlyAudio:
                         newOptions.Novids = true;
                         newOptions.Noaudio = false;
-                        movieMeta.DownloadSubs = ["none"];
+                        movieMeta.DownloadSubs =["none"];
                         break;
                     case EpisodeDownloadMode.OnlySubs:
                         newOptions.Novids = true;
@@ -345,7 +344,9 @@ public partial class QueueManager : ObservableObject{
     public async Task CrAddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
         var selected = CrunchyrollManager.Instance.CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
 
-        bool failed = false;
+        var failed = false;
+        var partialAdd = false;
+
 
         foreach (var crunchyEpMeta in selected.Values.ToList()){
             if (crunchyEpMeta.Data?.First() != null){
@@ -411,15 +412,30 @@ public partial class QueueManager : ObservableObject{
 
 
                 Queue.Add(crunchyEpMeta);
+
+                if (crunchyEpMeta.Data.Count < data.DubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub){
+                    Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
+                    Console.Error.WriteLine("Added Episode to Queue but couldn't find all selected dubs - Available dubs/subs: ");
+
+                    partialAdd = true;
+
+                    var languages = (crunchyEpMeta.Data.First().Versions ??[]).Select(version => $"{(version.IsPremiumOnly ? "+ " : "")}{version.AudioLocale}").ToArray();
+
+                    Console.Error.WriteLine(
+                        $"{crunchyEpMeta.SeasonTitle} - Season {crunchyEpMeta.Season} - {crunchyEpMeta.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", crunchyEpMeta.AvailableSubs ??[])}]");
+                    MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
+                }
             } else{
                 failed = true;
             }
         }
 
-        if (failed){
+        if (failed && !partialAdd){
             MainWindow.Instance.ShowError("Not all episodes could be added – make sure that you are signed in with an account that has an active premium subscription?");
-        } else{
+        } else if (selected.Values.Count > 0 && !partialAdd){
             MessageBus.Current.SendMessage(new ToastMessage($"Added episodes to the queue", ToastType.Information, 1));
+        } else if (!partialAdd){
+            MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode(s) to the queue with current dub settings", ToastType.Error, 2));
         }
     }
 }

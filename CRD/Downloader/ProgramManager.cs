@@ -15,7 +15,6 @@ using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Utils.Updater;
-using ExtendedXmlSerializer.Core.Sources;
 using FluentAvalonia.Styling;
 
 namespace CRD.Downloader;

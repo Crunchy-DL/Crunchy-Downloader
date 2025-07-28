@@ -35,7 +35,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _history;
-    
+
     [ObservableProperty]
     private bool _historyCountMissing;
 
@@ -55,11 +55,14 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     private double? _simultaneousDownloads;
 
     [ObservableProperty]
+    private bool _downloadMethodeNew;
+
+    [ObservableProperty]
     private double? _downloadSpeed;
-    
+
     [ObservableProperty]
     private double? _retryAttempts;
-    
+
     [ObservableProperty]
     private double? _retryDelay;
 
@@ -268,8 +271,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         HistorySkipUnmonitored = options.HistorySkipUnmonitored;
         HistoryCountSonarr = options.HistoryCountSonarr;
         DownloadSpeed = options.DownloadSpeedLimit;
-        RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10); 
-        RetryDelay =  Math.Clamp((options.RetryDelay), 1, 30); 
+        DownloadMethodeNew = options.DownloadMethodeNew;
+        RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10);
+        RetryDelay = Math.Clamp((options.RetryDelay), 1, 30);
         DownloadToTempFolder = options.DownloadToTempFolder;
         SimultaneousDownloads = options.SimultaneousDownloads;
         LogMode = options.LogMode;
@@ -292,12 +296,14 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         }
 
         var settings = CrunchyrollManager.Instance.CrunOptions;
-        
+
         settings.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
+
+        settings.DownloadMethodeNew = DownloadMethodeNew;
 
         settings.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
         settings.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);
-        
+
         settings.RetryAttempts = Math.Clamp((int)(RetryAttempts ?? 0), 1, 10);
         settings.RetryDelay = Math.Clamp((int)(RetryDelay ?? 0), 1, 30);
 

@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
@@ -108,8 +106,8 @@ public class CrunchyrollManager{
         options.Partsize = 10;
         options.DlSubs = new List<string>{ "en-US" };
         options.SkipMuxing = false;
-        options.MkvmergeOptions = new List<string>{ "--no-date", "--disable-track-statistics-tags", "--engage no_variable_data" };
-        options.FfmpegOptions = new();
+        options.MkvmergeOptions =[];
+        options.FfmpegOptions =[];
         options.DefaultAudio = "ja-JP";
         options.DefaultSub = "en-US";
         options.QualityAudio = "best";
@@ -339,6 +337,7 @@ public class CrunchyrollManager{
                             Mp4 = options.Mp4,
                             Mp3 = options.AudioOnlyToMp3,
                             MuxFonts = options.MuxFonts,
+                            MuxCover = options.MuxCover,
                             VideoTitle = res.VideoTitle,
                             Novids = options.Novids,
                             NoCleanup = options.Nocleanup,
@@ -405,6 +404,7 @@ public class CrunchyrollManager{
                         Mp4 = options.Mp4,
                         Mp3 = options.AudioOnlyToMp3,
                         MuxFonts = options.MuxFonts,
+                        MuxCover = options.MuxCover,
                         VideoTitle = res.VideoTitle,
                         Novids = options.Novids,
                         NoCleanup = options.Nocleanup,
@@ -520,8 +520,6 @@ public class CrunchyrollManager{
             if (CrunOptions.ShutdownWhenQueueEmpty){
                 Helpers.ShutdownComputer();
             }
-            
-            
         }
 
         return true;
@@ -678,6 +676,7 @@ public class CrunchyrollManager{
             CcSubsMuxingFlag = options.CcSubsMuxingFlag,
             SignsSubsAsForced = options.SignsSubsAsForced,
             Description = muxDesc ? data.Where(a => a.Type == DownloadMediaType.Description).Select(a => new MergerInput{ Path = a.Path ?? string.Empty }).ToList() :[],
+            Cover = options.MuxCover ? data.Where(a => a.Type == DownloadMediaType.Cover).Select(a => new MergerInput{ Path = a.Path ?? string.Empty }).ToList() : [],
         });
 
         if (!File.Exists(CfgManager.PathFFMPEG)){
@@ -1291,6 +1290,7 @@ public class CrunchyrollManager{
                                     pssh = item.pssh,
                                     language = item.language,
                                     bandwidth = item.bandwidth,
+                                    audioSamplingRate = item.audioSamplingRate,
                                     resolutionText = $"{Math.Round(item.bandwidth / 1000.0)}kB/s"
                                 }).ToList();
 
@@ -1307,6 +1307,7 @@ public class CrunchyrollManager{
                                     .GroupBy(a => new{ a.bandwidth, a.language }) // Add more properties if needed
                                     .Select(g => g.First())
                                     .OrderBy(a => a.bandwidth)
+                                    .ThenBy(a => a.audioSamplingRate)
                                     .ToList();
 
                                 if (string.IsNullOrEmpty(data.VideoQuality)){
@@ -1375,7 +1376,7 @@ public class CrunchyrollManager{
 
                                 Console.WriteLine("Available Audio Qualities:");
                                 for (int i = 0; i < audios.Count; i++){
-                                    Console.WriteLine($"\t[{i + 1}] {audios[i].resolutionText}");
+                                    Console.WriteLine($"\t[{i + 1}] {audios[i].resolutionText} / {audios[i].audioSamplingRate}");
                                 }
 
                                 variables.Add(new Variable("height", chosenVideoSegments.quality.height, false));
@@ -1396,7 +1397,7 @@ public class CrunchyrollManager{
 
                                 Console.WriteLine($"Selected quality:");
                                 Console.WriteLine($"\tVideo: {chosenVideoSegments.resolutionText}");
-                                Console.WriteLine($"\tAudio: {chosenAudioSegments.resolutionText}");
+                                Console.WriteLine($"\tAudio: {chosenAudioSegments.resolutionText} / {chosenAudioSegments.audioSamplingRate}");
                                 Console.WriteLine($"\tServer: {selectedServer}");
                                 Console.WriteLine("Stream URL:" + chosenVideoSegments.segments[0].uri.Split(new[]{ ",.urlset" }, StringSplitOptions.None)[0]);
 
@@ -1448,6 +1449,20 @@ public class CrunchyrollManager{
                                 } else if (options.Novids){
                                     Console.WriteLine("Skipping video download...");
                                 } else{
+                                    await CrAuth.RefreshToken(true);
+
+                                    Dictionary<string, string> authDataDict = new Dictionary<string, string>
+                                        { { "authorization", "Bearer " + Token?.access_token },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
+
+                                    chosenVideoSegments.encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+
+                                    if (!string.IsNullOrEmpty(chosenVideoSegments.pssh) && !chosenVideoSegments.pssh.Equals(chosenAudioSegments.pssh)){
+                                        if (chosenAudioSegments.segments.Count > 0 && !options.Noaudio && !dlFailed){
+                                            Console.WriteLine("Video and Audio PSSH different requesting Audio encryption keys");
+                                            chosenAudioSegments.encryptionKeys = await _widevine.getKeys(chosenAudioSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+                                        }
+                                    }
+
                                     var videoDownloadResult = await DownloadVideo(chosenVideoSegments, options, outFile, tempTsFile, data, fileDir);
 
                                     tsFile = videoDownloadResult.tsFile;
@@ -1467,6 +1482,20 @@ public class CrunchyrollManager{
 
 
                                 if (chosenAudioSegments.segments.Count > 0 && !options.Noaudio && !dlFailed){
+                                    await CrAuth.RefreshToken(true);
+
+                                    if (chosenVideoSegments.encryptionKeys.Count == 0){
+                                        Dictionary<string, string> authDataDict = new Dictionary<string, string>
+                                            { { "authorization", "Bearer " + Token?.access_token },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
+
+                                        chosenVideoSegments.encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+
+                                        if (!string.IsNullOrEmpty(chosenVideoSegments.pssh) && !chosenVideoSegments.pssh.Equals(chosenAudioSegments.pssh)){
+                                            Console.WriteLine("Video and Audio PSSH different requesting Audio encryption keys");
+                                            chosenAudioSegments.encryptionKeys = await _widevine.getKeys(chosenAudioSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+                                        }
+                                    }
+
                                     var audioDownloadResult = await DownloadAudio(chosenAudioSegments, options, outFile, tempTsFile, data, fileDir);
 
                                     tsFile = audioDownloadResult.tsFile;
@@ -1517,20 +1546,25 @@ public class CrunchyrollManager{
                                     Dictionary<string, string> authDataDict = new Dictionary<string, string>
                                         { { "authorization", "Bearer " + Token?.access_token },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
 
-                                    var encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+                                    var encryptionKeys = chosenVideoSegments.encryptionKeys;
 
                                     if (encryptionKeys.Count == 0){
-                                        Console.Error.WriteLine("Failed to get encryption keys");
-                                        dlFailed = true;
-                                        return new DownloadResponse{
-                                            Data = files,
-                                            Error = dlFailed,
-                                            FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
-                                            ErrorText = "Couldn't get DRM encryption keys"
-                                        };
+                                        encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
+
+                                        if (encryptionKeys.Count == 0){
+                                            Console.Error.WriteLine("Failed to get encryption keys");
+                                            dlFailed = true;
+                                            return new DownloadResponse{
+                                                Data = files,
+                                                Error = dlFailed,
+                                                FileName = fileName.Length > 0 ? (Path.IsPathRooted(fileName) ? fileName : Path.Combine(fileDir, fileName)) : "./unknown",
+                                                ErrorText = "Couldn't get DRM encryption keys"
+                                            };
+                                        }
                                     }
 
-                                    List<ContentKey> encryptionKeysAudio =[];
+
+                                    List<ContentKey> encryptionKeysAudio = chosenAudioSegments.encryptionKeys;
                                     if (!string.IsNullOrEmpty(chosenVideoSegments.pssh) && !chosenVideoSegments.pssh.Equals(chosenAudioSegments.pssh)){
                                         Console.WriteLine("Video and Audio PSSH different requesting Audio encryption keys");
                                         encryptionKeysAudio = await _widevine.getKeys(chosenAudioSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
@@ -1861,6 +1895,27 @@ public class CrunchyrollManager{
 
             Console.WriteLine($"{fileName}.xml has been created with the description.");
         }
+        
+        if (options.MuxCover){
+            if (!string.IsNullOrEmpty(data.ImageBig) && !File.Exists(fileDir + "cover.png")){
+                var bitmap = await Helpers.LoadImage(data.ImageBig);
+                if (bitmap != null){
+                    string coverPath = Path.Combine(fileDir, "cover.png");
+                    Helpers.EnsureDirectoriesExist(coverPath);
+                    await using (var fs = File.OpenWrite(coverPath)){
+                        bitmap.Save(fs); // always saves PNG
+                    }
+                    bitmap.Dispose();
+                            
+                    files.Add(new DownloadedMedia{
+                        Type = DownloadMediaType.Cover,
+                        Lang = Languages.DEFAULT_lang,
+                        Path = coverPath
+                    });
+                            
+                }
+            }
+        }
 
         var tempFolderPath = "";
         if (options.DownloadToTempFolder){
@@ -1928,7 +1983,6 @@ public class CrunchyrollManager{
                 var isCc = subsItem.isCC;
                 var isDuplicate = false;
 
-                
 
                 if ((!options.IncludeSignsSubs && isSigns) || (!options.IncludeCcSubs && isCc)){
                     continue;
@@ -1945,8 +1999,9 @@ public class CrunchyrollManager{
                         continue;
                     }
                 }
-                
-                sxData.File = Languages.SubsFile(fileName, index + "", langItem, isDuplicate ? videoDownloadMedia.Lang.CrLocale : "",isCc, options.CcTag, isSigns, subsItem.format, !(data.DownloadSubs.Count == 1 && !data.DownloadSubs.Contains("all")));
+
+                sxData.File = Languages.SubsFile(fileName, index + "", langItem, isDuplicate ? videoDownloadMedia.Lang.CrLocale : "", isCc, options.CcTag, isSigns, subsItem.format,
+                    !(data.DownloadSubs.Count == 1 && !data.DownloadSubs.Contains("all")));
                 sxData.Path = Path.Combine(fileDir, sxData.File);
 
                 Helpers.EnsureDirectoriesExist(sxData.Path);
@@ -1962,7 +2017,6 @@ public class CrunchyrollManager{
 
                     if (subsAssReqResponse.IsOk){
                         if (subsItem.format == "ass"){
-                            subsAssReqResponse.ResponseContent = '\ufeff' + subsAssReqResponse.ResponseContent;
                             var sBodySplit = subsAssReqResponse.ResponseContent.Split(new[]{ "\r\n" }, StringSplitOptions.None).ToList();
 
                             if (sBodySplit.Count > 2){
@@ -1999,12 +2053,12 @@ public class CrunchyrollManager{
 
                             assBuilder.AppendLine();
                             assBuilder.AppendLine("[V4+ Styles]");
-                            assBuilder.AppendLine("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
-                                                  + "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding");
+                            assBuilder.AppendLine("Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,"
+                                                  + "Underline,Strikeout,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding");
                             assBuilder.AppendLine($"Style: Default,{options.CcSubsFont ?? "Trebuchet MS"},24,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,1,2,0010,0010,0018,1");
                             assBuilder.AppendLine();
                             assBuilder.AppendLine("[Events]");
-                            assBuilder.AppendLine("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text");
+                            assBuilder.AppendLine("Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text");
 
                             // Parse the VTT content
                             string normalizedContent = subsAssReqResponse.ResponseContent.Replace("\r\n", "\n").Replace("\r", "\n");
@@ -2100,10 +2154,22 @@ public class CrunchyrollManager{
             FsRetryTime = options.RetryDelay * 1000,
             Retries = options.RetryAttempts,
             Override = options.Force,
-        }, data, true, false);
+        }, data, true, false, options.DownloadMethodeNew);
 
+        var defParts = new PartsData{
+            First = 0,
+            Total = 0,
+            Completed = 0,
+        };
 
-        var videoDownloadResult = await videoDownloader.Download();
+        var videoDownloadResult = (Ok: false, Parts: defParts);
+
+        try{
+            videoDownloadResult = await videoDownloader.Download();
+        } catch (Exception e){
+            Console.WriteLine(e);
+        }
+
 
         return (videoDownloadResult.Ok, videoDownloadResult.Parts, tsFile);
     }
@@ -2158,10 +2224,21 @@ public class CrunchyrollManager{
             FsRetryTime = options.RetryDelay * 1000,
             Retries = options.RetryAttempts,
             Override = options.Force,
-        }, data, false, true);
+        }, data, false, true, options.DownloadMethodeNew);
 
-        var audioDownloadResult = await audioDownloader.Download();
+        var defParts = new PartsData{
+            First = 0,
+            Total = 0,
+            Completed = 0,
+        };
 
+        var audioDownloadResult = (Ok: false, Parts: defParts);
+
+        try{
+            audioDownloadResult = await audioDownloader.Download();
+        } catch (Exception e){
+            Console.WriteLine(e);
+        }
 
         return (audioDownloadResult.Ok, audioDownloadResult.Parts, tsFile);
     }

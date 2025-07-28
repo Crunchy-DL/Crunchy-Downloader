@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
+using CRD.Utils.DRM;
 using CRD.Utils.HLS;
 using CRD.Utils.Parser;
 using CRD.Utils.Parser.Utils;
@@ -28,12 +29,15 @@ public class Map{
 
 public class PlaylistItem{
     public string? pssh{ get; set; }
+    public List<ContentKey> encryptionKeys{ get; set; } =[];
     public int bandwidth{ get; set; }
     public List<Segment> segments{ get; set; }
 }
 
 public class AudioPlaylist : PlaylistItem{
     public LanguageItem? language{ get; set; }
+    
+    public int audioSamplingRate{ get; set; }
     public bool @default{ get; set; }
 }
 
@@ -92,6 +96,7 @@ public static class MPDParser{
 
                 var pItem = new AudioPlaylist{
                     bandwidth = playlist.attributes.BANDWIDTH,
+                    audioSamplingRate = ObjectUtilities.GetMemberValue(playlist.attributes ,"AUDIOSAMPLINGRATE") ?? 0,
                     language = audioLang,
                     @default = item.@default,
                     segments = segments.Select(segment => new Segment{

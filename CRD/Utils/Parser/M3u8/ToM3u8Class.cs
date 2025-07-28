@@ -179,6 +179,7 @@ public class ToM3u8Class{
         playlist.attributes = new ExpandoObject();
         playlist.attributes.NAME = item.attributes.id;
         playlist.attributes.BANDWIDTH = item.attributes.bandwidth;
+        playlist.attributes.AUDIOSAMPLINGRATE = item.attributes.audioSamplingRate;
         playlist.attributes.CODECS = item.attributes.codecs;
         playlist.uri = string.Empty;
         playlist.endList = item.attributes.type == "static";

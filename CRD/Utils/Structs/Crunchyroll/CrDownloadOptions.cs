@@ -2,7 +2,6 @@
 using CRD.Utils.Sonarr;
 using CRD.ViewModels;
 using Newtonsoft.Json;
-using YamlDotNet.Serialization;
 
 namespace CRD.Utils.Structs.Crunchyroll;
 
@@ -29,6 +28,9 @@ public class CrDownloadOptions{
 
     [JsonIgnore]
     public string Force{ get; set; } = "";
+    
+    [JsonProperty("download_methode_new")]
+    public bool DownloadMethodeNew{ get; set; }
 
     [JsonProperty("simultaneous_downloads")]
     public int SimultaneousDownloads{ get; set; }
@@ -208,6 +210,9 @@ public class CrDownloadOptions{
     
     [JsonProperty("mux_fonts")]
     public bool MuxFonts{ get; set; }
+    
+    [JsonProperty("mux_cover")]
+    public bool MuxCover{ get; set; }
 
     [JsonProperty("mux_video_title")]
     public string? VideoTitle{ get; set; }

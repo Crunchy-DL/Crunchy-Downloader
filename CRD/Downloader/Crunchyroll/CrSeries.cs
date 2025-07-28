@@ -56,7 +56,7 @@ public class CrSeries{
                 }
 
                 var epNum = key.StartsWith('E') ? key[1..] : key;
-                var images = (item.Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
+                var images = (item.Images?.Thumbnail ??[new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
 
                 Regex dubPattern = new Regex(@"\(\w+ Dub\)");
 
@@ -71,6 +71,7 @@ public class CrSeries{
                 epMeta.SeriesId = item.SeriesId;
                 epMeta.AbsolutEpisodeNumberE = epNum;
                 epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source ?? "";
+                epMeta.ImageBig = images[images.Count / 2].LastOrDefault()?.Source;
                 epMeta.DownloadProgress = new DownloadProgress(){
                     IsDownloading = false,
                     Done = false,
@@ -265,7 +266,7 @@ public class CrSeries{
         crunchySeriesList.List = sortedEpisodes.Select(kvp => {
             var key = kvp.Key;
             var value = kvp.Value;
-            var images = (value.Items[0].Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
+            var images = (value.Items[0].Images?.Thumbnail ??[new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
             var seconds = (int)Math.Floor(value.Items[0].DurationMs / 1000.0);
             var langList = value.Langs.Select(a => a.CrLocale).ToList();
             Languages.SortListByLangList(langList);

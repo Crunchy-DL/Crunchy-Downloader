@@ -1,7 +1,5 @@
-﻿using System.Linq;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.VisualTree;
 using CRD.Utils.Sonarr;
 using CRD.ViewModels;
 

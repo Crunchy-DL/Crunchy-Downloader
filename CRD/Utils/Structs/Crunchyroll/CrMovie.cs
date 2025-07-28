@@ -85,7 +85,7 @@ public class CrunchyMovie{
 
     public string Description{ get; set; }
 
-    public Images? Images{ get; set; }
+    public Images Images{ get; set; } = new();
 
     [JsonProperty("media_type")]
     public string? MediaType{ get; set; }

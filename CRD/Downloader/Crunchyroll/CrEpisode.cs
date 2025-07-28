@@ -173,7 +173,7 @@ public class CrEpisode(){
             }
 
             var epNum = episodeP.Key.StartsWith('E') ? episodeP.Key[1..] : episodeP.Key;
-            var images = (item.Images?.Thumbnail ?? new List<List<Image>>{ new List<Image>{ new Image{ Source = "/notFound.png" } } });
+            var images = (item.Images?.Thumbnail ??[new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
 
             Regex dubPattern = new Regex(@"\(\w+ Dub\)");
 
@@ -190,6 +190,7 @@ public class CrEpisode(){
             epMeta.SeriesId = item.SeriesId;
             epMeta.AbsolutEpisodeNumberE = epNum;
             epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source;
+            epMeta.ImageBig = images[images.Count / 2].LastOrDefault()?.Source;
             epMeta.DownloadProgress = new DownloadProgress(){
                 IsDownloading = false,
                 Done = false,

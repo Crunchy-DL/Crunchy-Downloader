@@ -1,7 +1,4 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
-using CRD.Utils.UI;
+﻿using Avalonia.Controls;
 
 namespace CRD.Views.Utils;
 

@@ -69,6 +69,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxFonts;
+    
+    [ObservableProperty]
+    private bool _muxCover;
 
     [ObservableProperty]
     private bool _syncTimings;
@@ -359,6 +362,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         MuxToMp4 = options.Mp4;
         MuxToMp3 = options.AudioOnlyToMp3;
         MuxFonts = options.MuxFonts;
+        MuxCover = options.MuxCover;
         SyncTimings = options.SyncTiming;
         SkipSubMux = options.SkipSubsMux;
         LeadingNumbers = options.Numbers;
@@ -428,6 +432,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
         CrunchyrollManager.Instance.CrunOptions.AudioOnlyToMp3 = MuxToMp3;
         CrunchyrollManager.Instance.CrunOptions.MuxFonts = MuxFonts;
+        CrunchyrollManager.Instance.CrunOptions.MuxCover = MuxCover;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
         CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
         CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0), 0, 10);

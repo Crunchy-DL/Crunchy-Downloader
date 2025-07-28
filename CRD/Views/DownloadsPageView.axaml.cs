@@ -1,6 +1,4 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Interactivity;
-using CRD.ViewModels;
 
 namespace CRD.Views;
 

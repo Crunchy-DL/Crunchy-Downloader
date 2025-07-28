@@ -4,13 +4,8 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
-using CRD.Utils.Structs.Crunchyroll;
 using Newtonsoft.Json;
-using YamlDotNet.RepresentationModel;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace CRD.Utils.Files;
 
