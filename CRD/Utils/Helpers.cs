@@ -623,7 +623,7 @@ public class Helpers{
     public static Dictionary<string, List<DownloadedMedia>> GroupByLanguageWithSubtitles(List<DownloadedMedia> allMedia){
         //Group by language
         var languageGroups = allMedia
-            .Where(media => media.Type != DownloadMediaType.Description &&
+            .Where(media => media.Type != DownloadMediaType.Description && media.Type != DownloadMediaType.Cover &&
                             (!string.IsNullOrEmpty(media.Lang?.CrLocale) ||
                              (media is{ Type: DownloadMediaType.Subtitle, RelatedVideoDownloadMedia: not null } &&
                               !string.IsNullOrEmpty(media.RelatedVideoDownloadMedia.Lang?.CrLocale)))
@@ -643,6 +643,15 @@ public class Helpers{
         if (descriptionMedia.Count > 0){
             foreach (var group in languageGroups.Values){
                 group.Add(descriptionMedia[0]);
+            }
+        }
+        
+        //Find and add Cover media to each group
+        var coverMedia = allMedia.Where(media => media.Type == DownloadMediaType.Cover).ToList();
+        
+        if (coverMedia.Count > 0){
+            foreach (var group in languageGroups.Values){
+                group.Add(coverMedia[0]);
             }
         }
 

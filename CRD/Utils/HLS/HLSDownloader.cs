@@ -333,15 +333,27 @@ public class HlsDownloader{
 
         var _lastUiUpdate = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
+        var cts = new CancellationTokenSource();
+        var token = cts.Token;
+
         for (int i = 0; i < segments.Count; i++){
-            if (File.Exists(Path.Combine(tempDir, $"part_{i:D6}.tmp")))
+            try{
+                await semaphore.WaitAsync(token);
+            } catch (OperationCanceledException){
+                break;
+            }
+
+            if (File.Exists(Path.Combine(tempDir, $"part_{i:D6}.tmp"))){
+                semaphore.Release();
                 continue;
+            }
 
             int index = i;
-            await semaphore.WaitAsync();
+
 
             downloadTasks.Add(Task.Run(async () => {
                 try{
+                    token.ThrowIfCancellationRequested();
                     var segment = new Segment{
                         Uri = ObjectUtilities.GetMemberValue(segments[index], "uri"),
                         Key = ObjectUtilities.GetMemberValue(segments[index], "key"),
@@ -385,32 +397,53 @@ public class HlsDownloader{
                         };
                     }
 
-                    if (!QueueManager.Instance.Queue.Contains(_currentEpMeta))
+                    if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                        cts.Cancel();
                         return;
+                    }
+
 
                     QueueManager.Instance.Queue.Refresh();
 
                     while (_currentEpMeta.Paused){
                         await Task.Delay(500);
-                        if (!QueueManager.Instance.Queue.Contains(_currentEpMeta))
+                        if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                            cts.Cancel();
                             return;
+                        }
                     }
                 } catch (Exception ex){
                     Console.Error.WriteLine($"Error downloading part {index}: {ex.Message}");
                     errorOccurred = true;
+                    cts.Cancel();
                 } finally{
                     semaphore.Release();
                 }
-            }));
+            }, token));
         }
 
-        await Task.WhenAll(downloadTasks);
+        try{
+            await Task.WhenAll(downloadTasks);
+        } catch (OperationCanceledException){
+            if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                if (!_currentEpMeta.DownloadProgress.Done){
+                    CleanupNewDownloadMethod(tempDir, resumeFile, true);
+                }
+            } else{
+                Console.Error.WriteLine("Download cancelled due to error.");
+            }
+
+            return (false, _data.Parts);
+        }
 
         if (errorOccurred)
             return (false, _data.Parts);
 
         using (var output = new FileStream(fn, FileMode.Append, FileAccess.Write, FileShare.None)){
             for (int i = mergedParts; i < segments.Count; i++){
+                if (token.IsCancellationRequested)
+                    return (false, _data.Parts);
+
                 string tempFile = Path.Combine(tempDir, $"part_{i:D6}.tmp");
                 if (!File.Exists(tempFile)){
                     Console.Error.WriteLine($"Missing temp file for part {i}, aborting merge.");
@@ -439,17 +472,49 @@ public class HlsDownloader{
                     Doing = _isAudio ? "Merging Audio" : (_isVideo ? "Merging Video" : "")
                 };
 
-                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta))
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    if (!_currentEpMeta.DownloadProgress.Done){
+                        CleanupNewDownloadMethod(tempDir, resumeFile, true);
+                    }
+
                     return (false, _data.Parts);
-                
+                }
             }
         }
 
         // Cleanup temp files
-        Directory.Delete(tempDir, true);
-        File.Delete(resumeFile);
+        CleanupNewDownloadMethod(tempDir, resumeFile);
 
         return (true, _data.Parts);
+    }
+
+    private void CleanupNewDownloadMethod(string tempDir, string resumeFile, bool cleanAll = false){
+        if (cleanAll){
+            // Delete downloaded files
+            foreach (var file in _currentEpMeta.downloadedFiles){
+                try{
+                    File.Delete(file); // Safe: File.Delete does nothing if file doesn't exist
+                } catch (Exception ex){
+                    Console.Error.WriteLine($"Failed to delete file '{file}': {ex.Message}");
+                }
+            }
+        }
+        
+        // Delete temp directory
+        try{
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Failed to delete temp dir '{tempDir}': {ex.Message}");
+        }
+
+        // Delete resume file
+        try{
+            if (File.Exists(resumeFile))
+                File.Delete(resumeFile);
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Failed to delete resume file '{resumeFile}': {ex.Message}");
+        }
     }
 
 

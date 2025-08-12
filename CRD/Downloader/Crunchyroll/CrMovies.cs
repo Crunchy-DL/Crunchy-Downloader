@@ -73,8 +73,8 @@ public class CrMovies{
         epMeta.Season = "";
         epMeta.SeriesId = "";
         epMeta.AbsolutEpisodeNumberE = "";
-        epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source;
-        epMeta.ImageBig = images[images.Count / 2].LastOrDefault()?.Source;
+        epMeta.Image = images.FirstOrDefault()?.FirstOrDefault()?.Source;
+        epMeta.ImageBig = images.FirstOrDefault()?.LastOrDefault()?.Source;
         epMeta.DownloadProgress = new DownloadProgress(){
             IsDownloading = false,
             Done = false,

@@ -178,8 +178,8 @@ public class CrMusic{
         epMeta.Season = "";
         epMeta.SeriesId = episodeP.GetSeriesId();
         epMeta.AbsolutEpisodeNumberE = "";
-        epMeta.Image = images[images.Count / 2].Source;
-        epMeta.ImageBig = images[images.Count / 2].Source;
+        epMeta.Image = images.FirstOrDefault()?.Source ?? string.Empty;
+        epMeta.ImageBig = images.FirstOrDefault()?.Source ?? string.Empty;
         epMeta.DownloadProgress = new DownloadProgress(){
             IsDownloading = false,
             Done = false,

@@ -43,16 +43,16 @@ public class CrEpisode(){
         }
 
         if (epsidoe is{ Total: 1, Data: not null } &&
-            (epsidoe.Data.First().Versions ?? [])
+            (epsidoe.Data.First().Versions ??[])
             .GroupBy(v => v.AudioLocale)
             .Any(g => g.Count() > 1)){
             Console.Error.WriteLine("Episode has Duplicate Audio Locales");
-            var list = (epsidoe.Data.First().Versions ?? []).GroupBy(v => v.AudioLocale).Where(g => g.Count() > 1).ToList();
+            var list = (epsidoe.Data.First().Versions ??[]).GroupBy(v => v.AudioLocale).Where(g => g.Count() > 1).ToList();
             //guid for episode id
             foreach (var episodeVersionse in list){
                 foreach (var version in episodeVersionse){
                     var checkRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{version.Guid}", HttpMethod.Get, true, true, query);
-                    var checkResponse = await HttpClientReq.Instance.SendHttpRequest(checkRequest,true);
+                    var checkResponse = await HttpClientReq.Instance.SendHttpRequest(checkRequest, true);
                     if (!checkResponse.IsOk){
                         epsidoe.Data.First().Versions?.Remove(version);
                     }
@@ -189,8 +189,8 @@ public class CrEpisode(){
             epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + "";
             epMeta.SeriesId = item.SeriesId;
             epMeta.AbsolutEpisodeNumberE = epNum;
-            epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source;
-            epMeta.ImageBig = images[images.Count / 2].LastOrDefault()?.Source;
+            epMeta.Image = images.FirstOrDefault()?.FirstOrDefault()?.Source ?? string.Empty;
+            epMeta.ImageBig = images.FirstOrDefault()?.LastOrDefault()?.Source ?? string.Empty;
             epMeta.DownloadProgress = new DownloadProgress(){
                 IsDownloading = false,
                 Done = false,
@@ -288,18 +288,14 @@ public class CrEpisode(){
 
         return complete;
     }
-    
+
     public async Task MarkAsWatched(string episodeId){
-        
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true,false,null);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true, false, null);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
         if (!response.IsOk){
             Console.Error.WriteLine($"Mark as watched for {episodeId} failed");
         }
-        
     }
-    
-    
 }

@@ -291,11 +291,10 @@ public class CrunchyEpisode : IHistorySource{
     }
 
     public string GetImageUrl(){
-        if (Images != null){
-            return Images.Thumbnail?.First().First().Source ?? string.Empty;
-        }
-
-        return string.Empty;
+        return Images?.Thumbnail?
+            .FirstOrDefault()?
+            .FirstOrDefault()?
+            .Source ?? string.Empty;
     }
 
     #endregion

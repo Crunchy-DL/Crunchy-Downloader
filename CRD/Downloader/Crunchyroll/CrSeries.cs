@@ -70,8 +70,8 @@ public class CrSeries{
                 epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + "";
                 epMeta.SeriesId = item.SeriesId;
                 epMeta.AbsolutEpisodeNumberE = epNum;
-                epMeta.Image = images[images.Count / 2].FirstOrDefault()?.Source ?? "";
-                epMeta.ImageBig = images[images.Count / 2].LastOrDefault()?.Source;
+                epMeta.Image = images.FirstOrDefault()?.FirstOrDefault()?.Source ?? string.Empty;
+                epMeta.ImageBig = images.FirstOrDefault()?.LastOrDefault()?.Source ?? string.Empty;
                 epMeta.DownloadProgress = new DownloadProgress(){
                     IsDownloading = false,
                     Done = false,
@@ -266,22 +266,22 @@ public class CrSeries{
         crunchySeriesList.List = sortedEpisodes.Select(kvp => {
             var key = kvp.Key;
             var value = kvp.Value;
-            var images = (value.Items[0].Images?.Thumbnail ??[new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
-            var seconds = (int)Math.Floor(value.Items[0].DurationMs / 1000.0);
+            var images = (value.Items.FirstOrDefault()?.Images?.Thumbnail ??[new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
+            var seconds = (int)Math.Floor((value.Items.FirstOrDefault()?.DurationMs ?? 0) / 1000.0);
             var langList = value.Langs.Select(a => a.CrLocale).ToList();
             Languages.SortListByLangList(langList);
 
             return new Episode{
                 E = key.StartsWith("E") ? key.Substring(1) : key,
                 Lang = langList,
-                Name = value.Items[0].Title,
-                Season = Helpers.ExtractNumberAfterS(value.Items[0].Identifier) ?? value.Items[0].SeasonNumber.ToString(),
-                SeriesTitle = Regex.Replace(value.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd(),
-                SeasonTitle = Regex.Replace(value.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd(),
-                EpisodeNum = key.StartsWith("SP") ? key : value.Items[0].EpisodeNumber?.ToString() ?? value.Items[0].Episode ?? "?",
-                Id = value.Items[0].SeasonId,
-                Img = images[images.Count / 2].FirstOrDefault()?.Source ?? "",
-                Description = value.Items[0].Description,
+                Name = value.Items.FirstOrDefault()?.Title ?? string.Empty,
+                Season = (Helpers.ExtractNumberAfterS(value.Items.FirstOrDefault()?.Identifier?? string.Empty) ?? value.Items.FirstOrDefault()?.SeasonNumber.ToString()) ?? string.Empty,
+                SeriesTitle = Regex.Replace(value.Items.FirstOrDefault()?.SeriesTitle?? string.Empty, @"\(\w+ Dub\)", "").TrimEnd(),
+                SeasonTitle = Regex.Replace(value.Items.FirstOrDefault()?.SeasonTitle?? string.Empty, @"\(\w+ Dub\)", "").TrimEnd(),
+                EpisodeNum = key.StartsWith("SP") ? key : value.Items.FirstOrDefault()?.EpisodeNumber?.ToString() ?? value.Items.FirstOrDefault()?.Episode ?? "?",
+                Id = value.Items.FirstOrDefault()?.SeasonId ?? string.Empty,
+                Img = images.FirstOrDefault()?.FirstOrDefault()?.Source ?? string.Empty,
+                Description = value.Items.FirstOrDefault()?.Description ?? string.Empty,
                 EpisodeType = EpisodeType.Episode,
                 Time = $"{seconds / 60}:{seconds % 60:D2}" // Ensures two digits for seconds.
             };
