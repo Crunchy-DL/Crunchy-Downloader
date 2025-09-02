@@ -12,7 +12,7 @@
              x:Class="CRD.Views.SeriesPageView">
 
     <UserControl.Resources>
-        <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
+        <ui:UiEmptyToDefaultConverter x:Key="EmptyToDefault" />
         <ui:UiListHasElementsConverter x:Key="UiListHasElementsConverter" />
         <ui:UiEnumToBoolConverter x:Key="EnumToBoolConverter" />
     </UserControl.Resources>
@@ -139,7 +139,7 @@
 
                                 <StackPanel Orientation="Horizontal">
                                     <Button Command="{Binding UpdateData}" Margin="0 0 5  10">Refresh Series</Button>
-                                    
+
                                     <Button Margin="0 0 5 10" FontStyle="Italic"
                                             IsVisible="{Binding ShowFeaturedMusicButton}"
                                             VerticalAlignment="Center"
@@ -151,14 +151,16 @@
                                             <controls:SymbolIcon Symbol="Audio" FontSize="18" />
                                         </StackPanel>
                                     </Button>
-                                    
+
                                     <ToggleButton IsChecked="{Binding EditMode}" Margin="0 0 5  10">Edit</ToggleButton>
 
                                     <Button Margin="0 0 5 10" FontStyle="Italic"
                                             VerticalAlignment="Center"
                                             Command="{Binding OpenFolderDialogAsync}">
                                         <ToolTip.Tip>
-                                            <TextBlock Text="{Binding SelectedSeries.SeriesDownloadPath}" FontSize="15" />
+                                            <TextBlock Text="{Binding SelectedSeries.SeriesDownloadPath,
+                                            Converter={StaticResource EmptyToDefault},
+                                            ConverterParameter='No series path set'}" FontSize="15" />
                                         </ToolTip.Tip>
                                         <StackPanel Orientation="Horizontal">
                                             <controls:SymbolIcon Symbol="Folder" FontSize="18" />
@@ -636,7 +638,9 @@
                                                     Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).OpenFolderDialogAsync}"
                                                     CommandParameter="{Binding .}">
                                                 <ToolTip.Tip>
-                                                    <TextBlock Text="{Binding SeasonDownloadPath}" FontSize="15" />
+                                                    <TextBlock Text="{Binding SeasonDownloadPath,
+                                                    Converter={StaticResource EmptyToDefault},
+                                                    ConverterParameter='No season path set'}" FontSize="15" />
                                                 </ToolTip.Tip>
                                                 <StackPanel Orientation="Horizontal">
                                                     <controls:SymbolIcon Symbol="Folder" FontSize="18" />

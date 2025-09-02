@@ -83,9 +83,9 @@ public class HttpClientReq{
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.9.0 Nintendo Switch/18.1.0.0 UE4/4.27");
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/3.60.0 Android/9 okhttp/4.12.0");
 
-        client.DefaultRequestHeaders.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        client.DefaultRequestHeaders.Accept.ParseAdd("*/*");
         client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br");
-        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.5");
+        // client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.5");
         client.DefaultRequestHeaders.Connection.ParseAdd("keep-alive");
     }
 
@@ -277,8 +277,9 @@ public static class ApiUrls{
     //https://lic.drmtoday.com/license-proxy-widevine/cenc/
     //https://lic.staging.drmtoday.com/license-proxy-widevine/cenc/
     
-    public static string authBasicMob = "Basic eHVuaWh2ZWRidDNtYmlzdWhldnQ6MWtJUzVkeVR2akUwX3JxYUEzWWVBaDBiVVhVbXhXMTE=";
+    // public static string authBasicMob = "Basic djV3YnNsdGJueG5oeXk3cDN4ZmI6cFdKWkZMaHVTM0I2NFhPbk81bWVlWXpiTlBtZWsyRVU=";
+    public static string authBasicMob = "Basic Ym1icmt4eXgzZDd1NmpzZnlsYTQ6QUlONEQ1VkVfY3Awd1Z6Zk5vUDBZcUhVcllGcDloU2c=";
 
-    public static readonly string MobileUserAgent = "Crunchyroll/3.81.8 Android/15 okhttp/4.12.0";
+    public static readonly string MobileUserAgent = "Crunchyroll/3.81.6 Android/16";
     public static readonly string FirefoxUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0";
 }

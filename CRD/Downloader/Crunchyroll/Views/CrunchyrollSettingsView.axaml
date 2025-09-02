@@ -231,7 +231,7 @@
                 </controls:SettingsExpanderItem>
 
 
-                <controls:SettingsExpanderItem Content="Stream Endpoint ">
+                <controls:SettingsExpanderItem Content="Stream Endpoint " IsEnabled="False">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                                   ItemsSource="{Binding StreamEndpoints}"
@@ -240,7 +240,7 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
                 
-                <controls:SettingsExpanderItem Content="Stream Endpoint Secondary">
+                <controls:SettingsExpanderItem Content="Stream Endpoint Secondary" IsEnabled="False" IsVisible="False">
                     <controls:SettingsExpanderItem.Footer>
                         <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                                   ItemsSource="{Binding StreamEndpointsSecondary}"

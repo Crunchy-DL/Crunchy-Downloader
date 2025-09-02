@@ -199,11 +199,15 @@ public class CrunchyrollManager{
             CfgManager.DisableLogMode();
         }
 
-        var token = await GetBase64EncodedTokenAsync();
-
-        if (!string.IsNullOrEmpty(token)){
-            ApiUrls.authBasicMob = "Basic " + token;
-        }
+        CrunOptions.StreamEndpoint = "tv/android_tv";
+        CrunOptions.StreamEndpointSecondary = "";
+        CfgManager.WriteCrSettings();
+        
+        // var token = await GetBase64EncodedTokenAsync();
+        //
+        // if (!string.IsNullOrEmpty(token)){
+        //     ApiUrls.authBasicMob = "Basic " + token;
+        // }
 
         var jsonFiles = Directory.Exists(CfgManager.PathENCODING_PRESETS_DIR) ? Directory.GetFiles(CfgManager.PathENCODING_PRESETS_DIR, "*.json") :[];
 
@@ -1995,12 +1999,12 @@ public class CrunchyrollManager{
 
                 if (matchingSubs.Count > 0){
                     isDuplicate = true;
-                    if (!options.SubsDownloadDuplicate || matchingSubs.Any(a => a.RelatedVideoDownloadMedia?.Lang == videoDownloadMedia.Lang)){
+                    if (options is not{ KeepDubsSeperate: true, DlVideoOnce: false } || !options.SubsDownloadDuplicate || matchingSubs.Any(a => a.RelatedVideoDownloadMedia?.Lang == videoDownloadMedia.Lang)){
                         continue;
                     }
                 }
 
-                sxData.File = Languages.SubsFile(fileName, index + "", langItem, isDuplicate ? videoDownloadMedia.Lang.CrLocale : "", isCc, options.CcTag, isSigns, subsItem.format,
+                sxData.File = Languages.SubsFile(fileName, index + "", langItem, (isDuplicate || options is{ KeepDubsSeperate: true, DlVideoOnce: false }) ? videoDownloadMedia.Lang.CrLocale : "", isCc, options.CcTag, isSigns, subsItem.format,
                     !(data.DownloadSubs.Count == 1 && !data.DownloadSubs.Contains("all")));
                 sxData.Path = Path.Combine(fileDir, sxData.File);
 
@@ -2281,6 +2285,7 @@ public class CrunchyrollManager{
 
     private async Task<(bool IsOk, string ResponseContent, string error)> SendPlaybackRequestAsync(string endpoint){
         var request = HttpClientReq.CreateRequestMessage(endpoint, HttpMethod.Get, true, false, null);
+        request.Headers.UserAgent.ParseAdd("ANDROIDTV/3.42.1_22267 Android/16");
         return await HttpClientReq.Instance.SendHttpRequest(request);
     }
 

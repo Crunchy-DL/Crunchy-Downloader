@@ -222,7 +222,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "android/phone" },
         new(){ Content = "android/tablet" },
         new(){ Content = "tv/samsung" },
-        new(){ Content = "tv/vidaa" }
+        new(){ Content = "tv/vidaa" },
+        new(){ Content = "tv/android_tv" },
     ];
     
     public ObservableCollection<ComboBoxItem> StreamEndpointsSecondary{ get; } =[
@@ -238,7 +239,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "android/phone" },
         new(){ Content = "android/tablet" },
         new(){ Content = "tv/samsung" },
-        new(){ Content = "tv/vidaa" }
+        new(){ Content = "tv/vidaa" },
+        new(){ Content = "tv/android_tv" },
     ];
 
     public ObservableCollection<StringItemWithDisplayName> FFmpegHWAccel{ get; } =[];
@@ -321,15 +323,21 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         SelectedFFmpegHWAccel = hwAccellFlag ?? FFmpegHWAccel[0];
 
 
-        var softSubLang = SubLangList.Where(a => options.DlSubs.Contains(a.Content)).ToList();
-
+        var softSubLang = SubLangList
+            .Where(a => options.DlSubs.Contains(a.Content))
+            .OrderBy(a => options.DlSubs.IndexOf(a.Content))
+            .ToList();
+        
         SelectedSubLang.Clear();
         foreach (var listBoxItem in softSubLang){
             SelectedSubLang.Add(listBoxItem);
         }
 
-        var dubLang = DubLangList.Where(a => options.DubLang.Contains(a.Content)).ToList();
-
+        var dubLang = DubLangList
+            .Where(a => options.DubLang.Contains(a.Content))
+            .OrderBy(a => options.DubLang.IndexOf(a.Content))
+            .ToList();
+        
         SelectedDubLang.Clear();
         foreach (var listBoxItem in dubLang){
             SelectedDubLang.Add(listBoxItem);
