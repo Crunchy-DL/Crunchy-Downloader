@@ -292,8 +292,8 @@ public class CrDownloadOptions{
     [JsonProperty("stream_endpoint")]
     public string? StreamEndpoint{ get; set; }
     
-    [JsonProperty("stream_endpoint_secondary")]
-    public string? StreamEndpointSecondary { get; set; }
+    [JsonProperty("stream_endpoint_secondary_settings")]
+    public CrAuthSettings? StreamEndpointSecondSettings { get; set; }
 
     [JsonProperty("search_fetch_featured_music")]
     public bool SearchFetchFeaturedMusic{ get; set; }

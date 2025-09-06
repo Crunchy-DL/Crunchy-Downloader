@@ -25,7 +25,7 @@ public class History{
             return false;
         }
 
-        await crunInstance.CrAuth.RefreshToken(true);
+        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
 
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 

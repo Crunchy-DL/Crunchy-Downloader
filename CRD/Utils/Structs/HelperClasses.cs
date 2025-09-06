@@ -12,6 +12,14 @@ public class AuthData{
     public string Password{ get; set; }
 }
 
+public class CrAuthSettings{
+    public string Endpoint{ get; set; }
+    public string Authorization{ get; set; }
+    public string UserAgent{ get; set; }
+    public string Device_type{ get; set; }
+    public string Device_name{ get; set; }
+}
+
 public class DrmAuthData{
     [JsonProperty("custom_data")]
     public string? CustomData{ get; set; }

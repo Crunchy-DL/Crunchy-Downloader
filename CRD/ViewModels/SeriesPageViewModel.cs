@@ -324,6 +324,30 @@ public partial class SeriesPageViewModel : ViewModelBase{
             Console.Error.WriteLine($"An error occurred while opening the folder: {ex.Message}");
         }
     }
+    
+    [RelayCommand]
+    public async Task OpenSeriesDetails(){
+        CrSeriesBase? parsedSeries = await CrunchyrollManager.Instance.CrSeries.SeriesById(SelectedSeries.SeriesId ?? string.Empty, CrunchyrollManager.Instance.CrunOptions.HistoryLang, true);
+        
+        if (parsedSeries is{ Data.Length: > 0 }){
+            var dialog = new CustomContentDialog(){
+                Title = "Series",
+                CloseButtonText = "Close",
+                FullSizeDesired = true
+            };
+
+            var viewModel = new ContentDialogSeriesDetailsViewModel(dialog, parsedSeries,SelectedSeries.SeriesFolderPath);
+            dialog.Content = new ContentDialogSeriesDetailsView(){
+                DataContext = viewModel
+            };
+
+            var dialogResult = await dialog.ShowAsync();
+        } else{
+            MessageBus.Current.SendMessage(new ToastMessage($"Failed to get series details", ToastType.Warning, 3));
+        }
+        
+            
+    }
 
 
     partial void OnSelectedDownloadModeChanged(EpisodeDownloadMode value){

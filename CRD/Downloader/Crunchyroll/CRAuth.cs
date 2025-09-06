@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using CRD.Utils;
@@ -13,13 +14,60 @@ using ReactiveUI;
 
 namespace CRD.Downloader.Crunchyroll;
 
-public class CrAuth{
-    private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
+public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings){
+    
+    public CrToken? Token;
+    public CrProfile Profile = new();
 
-    private readonly string authorization = ApiUrls.authBasicMob;
-    private readonly string userAgent = ApiUrls.MobileUserAgent;
-    private readonly string deviceType = "OnePlus CPH2449";
-    private readonly string deviceName = "CPH2449";
+    public CrAuthSettings AuthSettings = authSettings;
+    
+    public Dictionary<string, CookieCollection> cookieStore = new();
+
+    public void Init(){
+        
+        Profile = new CrProfile{
+            Username = "???",
+            Avatar = "crbrand_avatars_logo_marks_mangagirl_taupe.png",
+            PreferredContentAudioLanguage = "ja-JP",
+            PreferredContentSubtitleLanguage = crunInstance.DefaultLocale,
+            HasPremium = false,
+        };
+        
+    }
+
+    private string GetTokenFilePath(){
+        switch (AuthSettings.Endpoint){
+            case "tv/samsung":
+            case "tv/vidaa":
+            case "tv/android_tv":
+                return CfgManager.PathCrToken.Replace(".json", "_tv.json");
+            case "android/phone":
+            case "android/tablet":
+                return CfgManager.PathCrToken.Replace(".json", "_android.json");
+            case "console/switch":
+            case "console/ps4":
+            case "console/ps5":
+            case "console/xbox_one":
+                return CfgManager.PathCrToken.Replace(".json", "_console.json");
+            default:
+                return CfgManager.PathCrToken;
+       
+        }
+    }
+
+    public async Task Auth(){
+        if (CfgManager.CheckIfFileExists(GetTokenFilePath())){
+            Token = CfgManager.ReadJsonFromFile<CrToken>(GetTokenFilePath());
+            await LoginWithToken();
+        } else{
+            await AuthAnonymous();
+        }
+    }
+    
+    public void SetETPCookie(string refreshToken){
+        HttpClientReq.Instance.AddCookie(".crunchyroll.com", new Cookie("etp_rt", refreshToken),cookieStore);
+        HttpClientReq.Instance.AddCookie(".crunchyroll.com", new Cookie("c_locale", "en-US"),cookieStore);
+    }
 
     public async Task AuthAnonymous(){
         string uuid = Guid.NewGuid().ToString();
@@ -28,18 +76,18 @@ public class CrAuth{
             { "grant_type", "client_id" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", deviceType },
+            { "device_type", AuthSettings.Device_type },
         };
 
-        if (!string.IsNullOrEmpty(deviceName)){
-            formData.Add("device_name", deviceName);
+        if (!string.IsNullOrEmpty(AuthSettings.Device_name)){
+            formData.Add("device_name", AuthSettings.Device_name);
         }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", authorization },
-            { "User-Agent", userAgent }
+            { "Authorization", AuthSettings.Authorization },
+            { "User-Agent", AuthSettings.UserAgent }
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
@@ -58,7 +106,7 @@ public class CrAuth{
             Console.Error.WriteLine("Anonymous login failed");
         }
 
-        crunInstance.Profile = new CrProfile{
+        Profile = new CrProfile{
             Username = "???",
             Avatar = "crbrand_avatars_logo_marks_mangagirl_taupe.png",
             PreferredContentAudioLanguage = "ja-JP",
@@ -67,13 +115,13 @@ public class CrAuth{
     }
 
     private void JsonTokenToFileAndVariable(string content, string deviceId){
-        crunInstance.Token = Helpers.Deserialize<CrToken>(content, crunInstance.SettingsJsonSerializerSettings);
+        Token = Helpers.Deserialize<CrToken>(content, crunInstance.SettingsJsonSerializerSettings);
 
-        if (crunInstance.Token is{ expires_in: not null }){
-            crunInstance.Token.device_id = deviceId;
-            crunInstance.Token.expires = DateTime.Now.AddSeconds((double)crunInstance.Token.expires_in);
+        if (Token is{ expires_in: not null }){
+            Token.device_id = deviceId;
+            Token.expires = DateTime.Now.AddSeconds((double)Token.expires_in);
 
-            CfgManager.WriteJsonToFile(CfgManager.PathCrToken, crunInstance.Token);
+            CfgManager.WriteJsonToFile(GetTokenFilePath(), Token);
         }
     }
 
@@ -86,18 +134,18 @@ public class CrAuth{
             { "grant_type", "password" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", deviceType },
+            { "device_type", AuthSettings.Device_type },
         };
 
-        if (!string.IsNullOrEmpty(deviceName)){
-            formData.Add("device_name", deviceName);
+        if (!string.IsNullOrEmpty(AuthSettings.Device_name)){
+            formData.Add("device_name", AuthSettings.Device_name);
         }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", authorization },
-            { "User-Agent", userAgent }
+            { "Authorization", AuthSettings.Authorization },
+            { "User-Agent", AuthSettings.UserAgent }
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
@@ -128,20 +176,20 @@ public class CrAuth{
             }
         }
 
-        if (crunInstance.Token?.refresh_token != null){
-            HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
+        if (Token?.refresh_token != null){
+            SetETPCookie(Token.refresh_token);
 
             await GetProfile();
         }
     }
 
     public async Task GetProfile(){
-        if (crunInstance.Token?.access_token == null){
+        if (Token?.access_token == null){
             Console.Error.WriteLine("Missing Access Token");
             return;
         }
 
-        var request = HttpClientReq.CreateRequestMessage(ApiUrls.Profile, HttpMethod.Get, true, true, null);
+        var request = HttpClientReq.CreateRequestMessage(ApiUrls.Profile, HttpMethod.Get, true, Token.access_token, null);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -149,42 +197,42 @@ public class CrAuth{
             var profileTemp = Helpers.Deserialize<CrProfile>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
 
             if (profileTemp != null){
-                crunInstance.Profile = profileTemp;
+                Profile = profileTemp;
 
-                var requestSubs = HttpClientReq.CreateRequestMessage(ApiUrls.Subscription + crunInstance.Token.account_id, HttpMethod.Get, true, false, null);
+                var requestSubs = HttpClientReq.CreateRequestMessage(ApiUrls.Subscription + Token.account_id, HttpMethod.Get, true, Token.access_token, null);
 
                 var responseSubs = await HttpClientReq.Instance.SendHttpRequest(requestSubs);
 
                 if (responseSubs.IsOk){
                     var subsc = Helpers.Deserialize<Subscription>(responseSubs.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
-                    crunInstance.Profile.Subscription = subsc;
+                    Profile.Subscription = subsc;
                     if (subsc is{ SubscriptionProducts:{ Count: 0 }, ThirdPartySubscriptionProducts.Count: > 0 }){
                         var thirdPartySub = subsc.ThirdPartySubscriptionProducts.First();
                         var expiration = thirdPartySub.InGrace ? thirdPartySub.InGraceExpirationDate : thirdPartySub.ExpirationDate;
                         var remaining = expiration - DateTime.Now;
-                        crunInstance.Profile.HasPremium = true;
-                        if (crunInstance.Profile.Subscription != null){
-                            crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
-                            crunInstance.Profile.Subscription.NextRenewalDate = expiration;
+                        Profile.HasPremium = true;
+                        if (Profile.Subscription != null){
+                            Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
+                            Profile.Subscription.NextRenewalDate = expiration;
                         }
                     } else if (subsc is{ SubscriptionProducts:{ Count: 0 }, NonrecurringSubscriptionProducts.Count: > 0 }){
                         var nonRecurringSub = subsc.NonrecurringSubscriptionProducts.First();
                         var remaining = nonRecurringSub.EndDate - DateTime.Now;
-                        crunInstance.Profile.HasPremium = true;
-                        if (crunInstance.Profile.Subscription != null){
-                            crunInstance.Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
-                            crunInstance.Profile.Subscription.NextRenewalDate = nonRecurringSub.EndDate;
+                        Profile.HasPremium = true;
+                        if (Profile.Subscription != null){
+                            Profile.Subscription.IsActive = remaining > TimeSpan.Zero;
+                            Profile.Subscription.NextRenewalDate = nonRecurringSub.EndDate;
                         }
                     } else if (subsc is{ SubscriptionProducts:{ Count: 0 }, FunimationSubscriptions.Count: > 0 }){
-                        crunInstance.Profile.HasPremium = true;
+                        Profile.HasPremium = true;
                     } else if (subsc is{ SubscriptionProducts.Count: > 0 }){
-                        crunInstance.Profile.HasPremium = true;
+                        Profile.HasPremium = true;
                     } else{
-                        crunInstance.Profile.HasPremium = false;
+                        Profile.HasPremium = false;
                         Console.Error.WriteLine($"No subscription available:\n {JsonConvert.SerializeObject(subsc, Formatting.Indented)} ");
                     }
                 } else{
-                    crunInstance.Profile.HasPremium = false;
+                    Profile.HasPremium = false;
                     Console.Error.WriteLine("Failed to check premium subscription status");
                 }
             }
@@ -192,31 +240,31 @@ public class CrAuth{
     }
 
     public async Task LoginWithToken(){
-        if (crunInstance.Token?.refresh_token == null){
+        if (Token?.refresh_token == null){
             Console.Error.WriteLine("Missing Refresh Token");
             await AuthAnonymous();
             return;
         }
 
-        string uuid = string.IsNullOrEmpty(crunInstance.Token.device_id) ? Guid.NewGuid().ToString() : crunInstance.Token.device_id;
+        string uuid = string.IsNullOrEmpty(Token.device_id) ? Guid.NewGuid().ToString() : Token.device_id;
 
         var formData = new Dictionary<string, string>{
-            { "refresh_token", crunInstance.Token.refresh_token },
+            { "refresh_token", Token.refresh_token },
             { "scope", "offline_access" },
             { "device_id", uuid },
             { "grant_type", "refresh_token" },
-            { "device_type", deviceType },
+            { "device_type", AuthSettings.Device_type },
         };
 
-        if (!string.IsNullOrEmpty(deviceName)){
-            formData.Add("device_name", deviceName);
+        if (!string.IsNullOrEmpty(AuthSettings.Device_name)){
+            formData.Add("device_name", AuthSettings.Device_name);
         }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", authorization },
-            { "User-Agent", userAgent }
+            { "Authorization", AuthSettings.Authorization },
+            { "User-Agent", AuthSettings.UserAgent }
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
@@ -227,7 +275,7 @@ public class CrAuth{
             request.Headers.Add(header.Key, header.Value);
         }
 
-        HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
+        SetETPCookie(Token.refresh_token);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -243,8 +291,8 @@ public class CrAuth{
         if (response.IsOk){
             JsonTokenToFileAndVariable(response.ResponseContent, uuid);
 
-            if (crunInstance.Token?.refresh_token != null){
-                HttpClientReq.Instance.SetETPCookie(crunInstance.Token.refresh_token);
+            if (Token?.refresh_token != null){
+                SetETPCookie(Token.refresh_token);
 
                 await GetProfile();
             }
@@ -258,38 +306,38 @@ public class CrAuth{
     }
 
     public async Task RefreshToken(bool needsToken){
-        if (crunInstance.Token?.access_token == null && crunInstance.Token?.refresh_token == null ||
-            crunInstance.Token.access_token != null && crunInstance.Token.refresh_token == null){
+        if (Token?.access_token == null && Token?.refresh_token == null ||
+            Token.access_token != null && Token.refresh_token == null){
             await AuthAnonymous();
         } else{
-            if (!(DateTime.Now > crunInstance.Token.expires) && needsToken){
+            if (!(DateTime.Now > Token.expires) && needsToken){
                 return;
             }
         }
 
-        if (crunInstance.Profile.Username == "???"){
+        if (Profile.Username == "???"){
             return;
         }
 
-        string uuid = string.IsNullOrEmpty(crunInstance.Token?.device_id) ? Guid.NewGuid().ToString() : crunInstance.Token.device_id;
+        string uuid = string.IsNullOrEmpty(Token?.device_id) ? Guid.NewGuid().ToString() : Token.device_id;
 
         var formData = new Dictionary<string, string>{
-            { "refresh_token", crunInstance.Token?.refresh_token ?? "" },
+            { "refresh_token", Token?.refresh_token ?? "" },
             { "grant_type", "refresh_token" },
             { "scope", "offline_access" },
             { "device_id", uuid },
-            { "device_type", deviceType },
+            { "device_type", AuthSettings.Device_type },
         };
 
-        if (!string.IsNullOrEmpty(deviceName)){
-            formData.Add("device_name", deviceName);
+        if (!string.IsNullOrEmpty(AuthSettings.Device_name)){
+            formData.Add("device_name", AuthSettings.Device_name);
         }
 
         var requestContent = new FormUrlEncodedContent(formData);
 
         var crunchyAuthHeaders = new Dictionary<string, string>{
-            { "Authorization", authorization },
-            { "User-Agent", userAgent }
+            { "Authorization", AuthSettings.Authorization },
+            { "User-Agent", AuthSettings.UserAgent }
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Auth){
@@ -300,7 +348,7 @@ public class CrAuth{
             request.Headers.Add(header.Key, header.Value);
         }
 
-        HttpClientReq.Instance.SetETPCookie(crunInstance.Token?.refresh_token ?? string.Empty);
+        SetETPCookie(Token?.refresh_token ?? string.Empty);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

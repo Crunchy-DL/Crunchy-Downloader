@@ -33,16 +33,10 @@ public class HttpClientReq{
     }
 
     #endregion
-
-
+    
     private HttpClient client;
-    private Dictionary<string, CookieCollection> cookieStore;
-
-    private HttpClientHandler handler;
-
+    
     public HttpClientReq(){
-        cookieStore = new Dictionary<string, CookieCollection>();
-
         IWebProxy systemProxy = WebRequest.DefaultWebProxy;
 
         HttpClientHandler handler = new HttpClientHandler();
@@ -130,43 +124,10 @@ public class HttpClientReq{
         return handler;
     }
 
-
-    public void SetETPCookie(string refreshToken){
-        // var cookie = new Cookie("etp_rt", refreshToken){
-        //     Domain = "crunchyroll.com",
-        //     Path = "/",
-        // };
-        //
-        // var cookie2 = new Cookie("c_locale", "en-US"){
-        //     Domain = "crunchyroll.com",
-        //     Path = "/",
-        // };
-        //
-        // handler.CookieContainer.Add(cookie);
-        // handler.CookieContainer.Add(cookie2);
-
-        AddCookie(".crunchyroll.com", new Cookie("etp_rt", refreshToken));
-        AddCookie(".crunchyroll.com", new Cookie("c_locale", "en-US"));
-    }
-
-    private void AddCookie(string domain, Cookie cookie){
-        if (!cookieStore.ContainsKey(domain)){
-            cookieStore[domain] = new CookieCollection();
-        }
-
-        var existingCookie = cookieStore[domain].FirstOrDefault(c => c.Name == cookie.Name);
-
-        if (existingCookie != null){
-            cookieStore[domain].Remove(existingCookie);
-        }
-
-        cookieStore[domain].Add(cookie);
-    }
-
-    public async Task<(bool IsOk, string ResponseContent,string error)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false){
+    public async Task<(bool IsOk, string ResponseContent, string error)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false, Dictionary<string, CookieCollection>? cookieStore = null){
         string content = string.Empty;
         try{
-            AttachCookies(request);
+            AttachCookies(request, cookieStore);
 
             HttpResponseMessage response = await client.SendAsync(request);
 
@@ -178,18 +139,22 @@ public class HttpClientReq{
 
             response.EnsureSuccessStatusCode();
 
-            return (IsOk: true, ResponseContent: content,error:"");
+            return (IsOk: true, ResponseContent: content, error: "");
         } catch (Exception e){
             // Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             if (!suppressError){
                 Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             }
 
-            return (IsOk: false, ResponseContent: content,error: e.Message);
+            return (IsOk: false, ResponseContent: content, error: e.Message);
         }
     }
 
-    private void AttachCookies(HttpRequestMessage request){
+    private void AttachCookies(HttpRequestMessage request, Dictionary<string, CookieCollection>? cookieStore){
+        if (cookieStore == null){
+            return;
+        }
+
         var cookieHeader = new StringBuilder();
 
         if (request.Headers.TryGetValues("Cookie", out var existingCookies)){
@@ -214,13 +179,31 @@ public class HttpClientReq{
         }
     }
 
+    public void AddCookie(string domain, Cookie cookie, Dictionary<string, CookieCollection>? cookieStore){
+        if (cookieStore == null){
+            return;
+        }
 
-    public static HttpRequestMessage CreateRequestMessage(string uri, HttpMethod requestMethod, bool authHeader, bool disableDrmHeader, NameValueCollection? query){
+        if (!cookieStore.ContainsKey(domain)){
+            cookieStore[domain] = new CookieCollection();
+        }
+
+        var existingCookie = cookieStore[domain].FirstOrDefault(c => c.Name == cookie.Name);
+
+        if (existingCookie != null){
+            cookieStore[domain].Remove(existingCookie);
+        }
+
+        cookieStore[domain].Add(cookie);
+    }
+
+
+    public static HttpRequestMessage CreateRequestMessage(string uri, HttpMethod requestMethod, bool authHeader, string? accessToken = "", NameValueCollection? query = null){
         if (string.IsNullOrEmpty(uri)){
             Console.Error.WriteLine($" Request URI is empty");
             return new HttpRequestMessage(HttpMethod.Get, "about:blank");
         }
-        
+
         UriBuilder uriBuilder = new UriBuilder(uri);
 
         if (query != null){
@@ -230,20 +213,13 @@ public class HttpClientReq{
         var request = new HttpRequestMessage(requestMethod, uriBuilder.ToString());
 
         if (authHeader){
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", CrunchyrollManager.Instance.Token?.access_token);
-        }
-
-        if (disableDrmHeader){
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         }
 
 
         return request;
     }
 
-    public static async Task DeAuthVideo(string currentMediaId, string token){
-        var deauthVideoToken = HttpClientReq.CreateRequestMessage($"https://cr-play-service.prd.crunchyrollsvc.com/v1/token/{currentMediaId}/{token}/inactive", HttpMethod.Patch, true, false, null);
-        var deauthVideoTokenResponse = await HttpClientReq.Instance.SendHttpRequest(deauthVideoToken);
-    }
 
     public HttpClient GetHttpClient(){
         return client;
@@ -266,17 +242,17 @@ public static class ApiUrls{
     public static string Playback => "https://cr-play-service.prd.crunchyrollsvc.com/v2";
     //https://www.crunchyroll.com/playback/v2
     //https://cr-play-service.prd.crunchyrollsvc.com/v2
-    
+
     public static string Subscription => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/subs/v3/subscriptions/";
 
     public static readonly string BetaBrowse = ApiBeta + "/content/v1/browse";
     public static readonly string BetaCms = ApiBeta + "/cms/v2";
     public static readonly string DRM = ApiBeta + "/drm/v1/auth";
-    
+
     public static readonly string WidevineLicenceUrl = "https://www.crunchyroll.com/license/v1/license/widevine";
     //https://lic.drmtoday.com/license-proxy-widevine/cenc/
     //https://lic.staging.drmtoday.com/license-proxy-widevine/cenc/
-    
+
     // public static string authBasicMob = "Basic djV3YnNsdGJueG5oeXk3cDN4ZmI6cFdKWkZMaHVTM0I2NFhPbk81bWVlWXpiTlBtZWsyRVU=";
     public static string authBasicMob = "Basic Ym1icmt4eXgzZDd1NmpzZnlsYTQ6QUlONEQ1VkVfY3Awd1Z6Zk5vUDBZcUhVcllGcDloU2c=";
 

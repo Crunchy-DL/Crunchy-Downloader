@@ -99,13 +99,13 @@ public partial class QueueManager : ObservableObject{
             return;
         }
 
-        await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
+        await CrunchyrollManager.Instance.CrAuthEndpoint1.RefreshToken(true);
 
         var episodeL = await CrunchyrollManager.Instance.CrEpisode.ParseEpisodeById(epId, crLocale);
 
 
         if (episodeL != null){
-            if (episodeL.IsPremiumOnly && !CrunchyrollManager.Instance.Profile.HasPremium){
+            if (episodeL.IsPremiumOnly && !CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.HasPremium){
                 MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
                 return;
             }
@@ -195,6 +195,12 @@ public partial class QueueManager : ObservableObject{
                     case EpisodeDownloadMode.Default:
                     default:
                         break;
+                }
+
+                if (!selected.DownloadSubs.Contains("none") && selected.DownloadSubs.All(item => (selected.AvailableSubs ??[]).Contains(item))){
+                    if (!(selected.Data.Count < dubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub)){
+                        selected.HighlightAllAvailable = true;
+                    }
                 }
 
                 newOptions.DubLang = dubLang;
@@ -293,7 +299,7 @@ public partial class QueueManager : ObservableObject{
     }
 
     public async Task CrAddMusicVideoToQueue(string epId){
-        await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
+        await CrunchyrollManager.Instance.CrAuthEndpoint1.RefreshToken(true);
 
         var musicVideo = await CrunchyrollManager.Instance.CrMusic.ParseMusicVideoByIdAsync(epId, "");
 
@@ -317,7 +323,7 @@ public partial class QueueManager : ObservableObject{
     }
 
     public async Task CrAddConcertToQueue(string epId){
-        await CrunchyrollManager.Instance.CrAuth.RefreshToken(true);
+        await CrunchyrollManager.Instance.CrAuthEndpoint1.RefreshToken(true);
 
         var concert = await CrunchyrollManager.Instance.CrMusic.ParseConcertByIdAsync(epId, "");
 
@@ -410,6 +416,12 @@ public partial class QueueManager : ObservableObject{
 
                 crunchyEpMeta.DownloadSettings = newOptions;
 
+                if (!crunchyEpMeta.DownloadSubs.Contains("none") && crunchyEpMeta.DownloadSubs.All(item => (crunchyEpMeta.AvailableSubs ??[]).Contains(item))){
+                    if (!(crunchyEpMeta.Data.Count < data.DubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub)){
+                        crunchyEpMeta.HighlightAllAvailable = true;
+                    }
+                }
+                
 
                 Queue.Add(crunchyEpMeta);
 

@@ -110,7 +110,7 @@
                         <CheckBox IsChecked="{Binding SubsDownloadDuplicate}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Add ScaledBorderAndShadow ">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel Orientation="Horizontal">
@@ -239,16 +239,73 @@
                         </ComboBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                <controls:SettingsExpanderItem Content="Stream Endpoint Secondary" IsEnabled="False" IsVisible="False">
+
+                <controls:SettingsExpanderItem Content="Stream Endpoint Secondary" Description="Changes to these settings require you to log in again.">
                     <controls:SettingsExpanderItem.Footer>
-                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
-                                  ItemsSource="{Binding StreamEndpointsSecondary}"
-                                  SelectedItem="{Binding SelectedStreamEndpointSecondary}">
-                        </ComboBox>
+                        <StackPanel>
+                            <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                      ItemsSource="{Binding StreamEndpointsSecondary}"
+                                      SelectedItem="{Binding SelectedStreamEndpointSecondary}">
+                            </ComboBox>
+
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="Authorization" />
+                                <TextBox Name="AuthorizationTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding EndpointAuthorization}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="User Agent" />
+                                <TextBox Name="UserAgentTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding EndpointUserAgent}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="Device Type" />
+                                <TextBox Name="DeviceTypeTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding EndpointDeviceType}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5">
+                                <TextBlock Text="Device Name" />
+                                <TextBox Name="DeviceNameTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding EndpointDeviceName}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Margin="5 10" VerticalAlignment="Center"
+                                        Command="{Binding ResetEndpointSettings}">
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                        <TextBlock Text="Reset" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button Margin="5 10" VerticalAlignment="Center"
+                                        Command="{Binding Login}">
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                        <TextBlock Text="Login" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+                                <controls:SymbolIcon Symbol="CloudOff"
+                                                     IsVisible="{Binding EndpointNotSignedWarning}"
+                                                     Foreground="OrangeRed"
+                                                     FontSize="30"
+                                                     VerticalAlignment="Center">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Signin for this endpoint failed. Check logs for more details."
+                                                   TextWrapping="Wrap"
+                                                   MaxWidth="250" />
+                                    </ToolTip.Tip>
+                                </controls:SymbolIcon>
+                            </StackPanel>
+
+
+                        </StackPanel>
+
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Video">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadVideo}"> </CheckBox>
@@ -325,7 +382,7 @@
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="FileName Whitespace Substitute"
                                                Description="Character used to replace whitespace in file name variables like ${seriesTitle}">
                     <controls:SettingsExpanderItem.Footer>
@@ -364,7 +421,7 @@
                         <CheckBox IsChecked="{Binding MuxToMp4}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="MP3" Description="Outputs an MP3 instead of an MKV/MP4 if only audio streams were downloaded">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MuxToMp3}"> </CheckBox>
@@ -411,7 +468,7 @@
                         <CheckBox IsChecked="{Binding MuxFonts}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding !SkipMuxing}" Content="Include episode thumbnail" Description="Embeds the episode thumbnail into the MKV as cover">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MuxCover}"> </CheckBox>
@@ -446,7 +503,7 @@
                         <StackPanel HorizontalAlignment="Right">
                             <CheckBox HorizontalAlignment="Right" IsChecked="{Binding SyncTimings}"> </CheckBox>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" IsVisible="{Binding SyncTimings}">
-                                <TextBlock VerticalAlignment="Center" Text="Video Processing Method" Margin=" 0 0 5 0" ></TextBlock>
+                                <TextBlock VerticalAlignment="Center" Text="Video Processing Method" Margin=" 0 0 5 0"></TextBlock>
                                 <ComboBox HorizontalAlignment="Right"
                                           ItemsSource="{Binding FFmpegHWAccel}"
                                           SelectedItem="{Binding SelectedFFmpegHWAccel}">
@@ -457,7 +514,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ComboBox>
                             </StackPanel>
-                            
+
                         </StackPanel>
 
                     </controls:SettingsExpanderItem.Footer>

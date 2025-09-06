@@ -28,7 +28,7 @@ public class CrSeries{
             for (int index = 0; index < episode.Items.Count; index++){
                 var item = episode.Items[index];
 
-                if (item.IsPremiumOnly && !crunInstance.Profile.HasPremium){
+                if (item.IsPremiumOnly && !crunInstance.CrAuthEndpoint1.Profile.HasPremium){
                     MessageBus.Current.SendMessage(new ToastMessage($"Episode is a premium episode – make sure that you are signed in with an account that has an active premium subscription", ToastType.Error, 3));
                     continue;
                 }
@@ -120,7 +120,7 @@ public class CrSeries{
 
 
     public async Task<CrunchySeriesList?> ListSeriesId(string id, string crLocale, CrunchyMultiDownload? data, bool forcedLocale = false){
-        await crunInstance.CrAuth.RefreshToken(true);
+        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
 
         bool serieshasversions = true;
 
@@ -305,7 +305,7 @@ public class CrSeries{
                 }
             }
 
-            var showRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonId}", HttpMethod.Get, true, true, query);
+            var showRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonId}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(showRequest);
 
@@ -326,7 +326,7 @@ public class CrSeries{
             }
         }
 
-        var episodeRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonId}/episodes", HttpMethod.Get, true, true, query);
+        var episodeRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/seasons/{seasonId}/episodes", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var episodeRequestResponse = await HttpClientReq.Instance.SendHttpRequest(episodeRequest);
 
@@ -345,7 +345,7 @@ public class CrSeries{
     }
 
     public async Task<CrSeriesSearch?> ParseSeriesById(string id, string? crLocale, bool forced = false){
-        await crunInstance.CrAuth.RefreshToken(true);
+        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";
@@ -357,7 +357,7 @@ public class CrSeries{
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/series/{id}/seasons", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/series/{id}/seasons", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -377,7 +377,7 @@ public class CrSeries{
     }
 
     public async Task<CrSeriesBase?> SeriesById(string id, string? crLocale, bool forced = false){
-        await crunInstance.CrAuth.RefreshToken(true);
+        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";
@@ -388,7 +388,7 @@ public class CrSeries{
             }
         }
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/series/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/series/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -409,7 +409,7 @@ public class CrSeries{
 
 
     public async Task<CrSearchSeriesBase?> Search(string searchString, string? crLocale, bool forced = false){
-        await crunInstance.CrAuth.RefreshToken(true);
+        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         if (!string.IsNullOrEmpty(crLocale)){
@@ -423,7 +423,7 @@ public class CrSeries{
         query["n"] = "6";
         query["type"] = "series";
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Search}", HttpMethod.Get, true, false, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Search}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -468,7 +468,7 @@ public class CrSeries{
             query["n"] = "50";
             query["sort_by"] = "alphabetical";
 
-            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, false, query);
+            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -503,7 +503,7 @@ public class CrSeries{
         query["seasonal_tag"] = season.ToLower() + "-" + year;
         query["n"] = "100";
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, false, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

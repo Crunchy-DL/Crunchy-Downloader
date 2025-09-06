@@ -608,7 +608,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [RelayCommand]
     public async void CheckIp(){
-        var result = await HttpClientReq.Instance.SendHttpRequest(HttpClientReq.CreateRequestMessage("https://icanhazip.com", HttpMethod.Get, false, false, null));
+        var result = await HttpClientReq.Instance.SendHttpRequest(HttpClientReq.CreateRequestMessage("https://icanhazip.com", HttpMethod.Get, false));
         Console.Error.WriteLine("Your IP: " + result.ResponseContent);
         if (result.IsOk){
             CurrentIp = result.ResponseContent;

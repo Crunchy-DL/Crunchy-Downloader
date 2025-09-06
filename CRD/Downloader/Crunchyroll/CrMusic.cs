@@ -106,7 +106,7 @@ public class CrMusic{
 
     public async Task<CrArtist> ParseArtistByIdAsync(string id, string crLocale, bool forcedLang = false){
         var query = CreateQueryParameters(crLocale, forcedLang);
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/music/artists/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/music/artists/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -136,7 +136,7 @@ public class CrMusic{
 
     private async Task<CrunchyMusicVideoList> FetchMediaListAsync(string url, string crLocale, bool forcedLang){
         var query = CreateQueryParameters(crLocale, forcedLang);
-        var request = HttpClientReq.CreateRequestMessage(url, HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage(url, HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

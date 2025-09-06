@@ -25,7 +25,7 @@ public class CrMovies{
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/objects/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/objects/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

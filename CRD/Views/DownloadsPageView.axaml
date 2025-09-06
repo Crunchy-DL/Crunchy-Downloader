@@ -10,14 +10,14 @@
              xmlns:ui="clr-namespace:CRD.Utils.UI">
 
     <UserControl.Resources>
-        <ui:UiValueConverter x:Key="UiValueConverter"/>
+        <ui:UiValueConverter x:Key="UiValueConverter" />
     </UserControl.Resources>
-    
-    
+
+
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /> 
-            <RowDefinition Height="*" /> 
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -28,7 +28,7 @@
                     <TextBlock Text="Automatically shut down the PC when the queue is empty" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
                 </ToolTip.Tip>
             </ToggleSwitch>
-            
+
             <Button BorderThickness="0"
                     HorizontalAlignment="Right"
                     Margin="0 0 10 0 "
@@ -42,20 +42,20 @@
                     <TextBlock Text="Retry failed" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
                 </ToolTip.Tip>
             </Button>
-            
-            <Button  BorderThickness="0" 
-                     HorizontalAlignment="Right" 
-                     Margin="0 0 10 0 "
-                     VerticalAlignment="Center"
-                     Command="{Binding ClearQueue}">
+
+            <Button BorderThickness="0"
+                    HorizontalAlignment="Right"
+                    Margin="0 0 10 0 "
+                    VerticalAlignment="Center"
+                    Command="{Binding ClearQueue}">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <controls:SymbolIcon Symbol="Delete" FontSize="22" />
                 </StackPanel>
                 <ToolTip.Tip>
-                    <TextBlock Text="Clear Queue" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" ></TextBlock>
+                    <TextBlock Text="Clear Queue" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
                 </ToolTip.Tip>
             </Button>
-            
+
         </StackPanel>
 
 
@@ -69,16 +69,16 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                
+
                                 <Grid>
                                     <Image HorizontalAlignment="Center" Width="208" Height="117" Source="../Assets/coming_soon_ep.jpg" />
                                     <Image Grid.Column="0" Width="208" Height="117" Source="{Binding ImageBitmap}"
                                            Stretch="Fill" />
                                 </Grid>
-                                
+
 
                                 <!-- Text Content -->
-                                <Grid Grid.Column="1" Margin="10" >
+                                <Grid Grid.Column="1" Margin="10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" /> <!-- Takes up most space for the title -->
                                         <ColumnDefinition Width="Auto" />
@@ -90,13 +90,16 @@
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
-                                    
-                                    <TextBlock Grid.Row="0" Grid.Column="0"    MaxHeight="117" Text="{Binding Title}" FontWeight="Bold" FontSize="16"
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" IsVisible="{Binding !epMeta.HighlightAllAvailable}" MaxHeight="117" Text="{Binding Title}" FontWeight="Bold" FontSize="16"
                                                TextWrapping="Wrap" VerticalAlignment="Top" />
-                                    
-                                    <TextBlock Grid.Row="1" Grid.Column="0"    MaxHeight="117" Text="{Binding InfoText}" Opacity="0.8"
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Foreground="Orange" IsVisible="{Binding epMeta.HighlightAllAvailable}" MaxHeight="117" Text="{Binding Title}" FontWeight="Bold" FontSize="16"
+                                               TextWrapping="Wrap" VerticalAlignment="Top" />
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" MaxHeight="117" Text="{Binding InfoText}" Opacity="0.8"
                                                TextWrapping="Wrap" VerticalAlignment="Center" />
-                                    
+
                                     <Button Grid.Row="0" Grid.Column="1" Margin="0 0 5 0" IsVisible="{Binding !Error}" Command="{Binding ToggleIsDownloading}" FontStyle="Italic"
                                             HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
@@ -104,8 +107,8 @@
                                             !Paused, Converter={StaticResource UiValueConverter}}" FontSize="18" />
                                         </StackPanel>
                                     </Button>
-                                    
-                                    <Button Grid.Row="0" Grid.Column="1" Margin="0 0 5 0" IsVisible="{Binding Error}"  Command="{Binding ToggleIsDownloading}" FontStyle="Italic"
+
+                                    <Button Grid.Row="0" Grid.Column="1" Margin="0 0 5 0" IsVisible="{Binding Error}" Command="{Binding ToggleIsDownloading}" FontStyle="Italic"
                                             HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
                                             <controls:SymbolIcon Symbol="Refresh" FontSize="18" />
@@ -118,12 +121,12 @@
                                             <controls:SymbolIcon Symbol="Delete" FontSize="18" />
                                         </StackPanel>
                                     </Button>
-                                    
-                                    
-                                    <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom"  Margin="0 0 0 10" Height="5" Value="{Binding Percent}"></ProgressBar>
-                                    
-                                    
-                                    <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom"  >
+
+
+                                    <ProgressBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Margin="0 0 0 10" Height="5" Value="{Binding Percent}"></ProgressBar>
+
+
+                                    <Grid Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" VerticalAlignment="Bottom">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
@@ -132,15 +135,15 @@
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="Auto" />
                                         </Grid.RowDefinitions>
-                                    
-                                    <TextBlock Grid.Row="0"  Grid.Column="0" VerticalAlignment="Bottom"  Text="{Binding  DoingWhat}"
-                                                Opacity="1" TextWrapping="NoWrap" />
-                                    
-                                    <TextBlock Grid.Row="0"  Grid.Column="1" VerticalAlignment="Bottom" Margin="0 0 10 0"  Text="{Binding  Time}"
-                                                Opacity="0.8" TextWrapping="Wrap" />
-                                    
-                                    <TextBlock Grid.Row="0"  Grid.Column="2" VerticalAlignment="Bottom"  Text="{Binding  DownloadSpeed}"
-                                                Opacity="0.8" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Bottom" Text="{Binding  DoingWhat}"
+                                                   Opacity="1" TextWrapping="NoWrap" />
+
+                                        <TextBlock Grid.Row="0" Grid.Column="1" VerticalAlignment="Bottom" Margin="0 0 10 0" Text="{Binding  Time}"
+                                                   Opacity="0.8" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Bottom" Text="{Binding  DownloadSpeed}"
+                                                   Opacity="0.8" TextWrapping="Wrap" />
                                     </Grid>
                                 </Grid>
                             </Grid>

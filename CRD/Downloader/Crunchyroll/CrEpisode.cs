@@ -27,7 +27,7 @@ public class CrEpisode(){
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{id}", HttpMethod.Get, true, true, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -51,7 +51,7 @@ public class CrEpisode(){
             //guid for episode id
             foreach (var episodeVersionse in list){
                 foreach (var version in episodeVersionse){
-                    var checkRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{version.Guid}", HttpMethod.Get, true, true, query);
+                    var checkRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{version.Guid}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
                     var checkResponse = await HttpClientReq.Instance.SendHttpRequest(checkRequest, true);
                     if (!checkResponse.IsOk){
                         epsidoe.Data.First().Versions?.Remove(version);
@@ -236,7 +236,7 @@ public class CrEpisode(){
     }
 
     public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount, DateTime? firstWeekDay = null, bool forcedLang = false){
-        await crunInstance.CrAuth.RefreshToken(true);
+        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
         CrBrowseEpisodeBase? complete = new CrBrowseEpisodeBase();
         complete.Data =[];
 
@@ -257,7 +257,7 @@ public class CrEpisode(){
             query["sort_by"] = "newly_added";
             query["type"] = "episode";
 
-            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, false, query);
+            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
             var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -290,7 +290,7 @@ public class CrEpisode(){
     }
 
     public async Task MarkAsWatched(string episodeId){
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true, false, null);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.CrAuthEndpoint1.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true, crunInstance.CrAuthEndpoint1.Token?.access_token, null);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

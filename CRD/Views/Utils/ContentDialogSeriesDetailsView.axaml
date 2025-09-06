@@ -1,0 +1,205 @@
+﻿<ui:CustomContentDialog xmlns="https://github.com/avaloniaui"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        xmlns:vm="clr-namespace:CRD.ViewModels.Utils"
+                        xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+                        xmlns:ui="clr-namespace:CRD.Utils.UI"
+                        x:DataType="vm:ContentDialogSeriesDetailsViewModel"
+                        x:Class="CRD.Views.Utils.ContentDialogSeriesDetailsView">
+
+
+    <!-- Local styles for headers & cards -->
+    <ui:CustomContentDialog.Styles>
+        <!-- Section header text -->
+        <Style Selector="TextBlock.sectionHeader">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,16,0,8" />
+        </Style>
+
+        <!-- Image card border -->
+        <Style Selector="Border.imageCard">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderBrush" Value="#22000000" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="8" />
+        </Style>
+    </ui:CustomContentDialog.Styles>
+
+    <Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="12">
+
+                <!-- Poster Tall -->
+                <TextBlock
+                    Classes="sectionHeader"
+                    Text="{Binding ImagesListPosterTall.Count,
+                                   StringFormat='Poster Tall ({0})'}" />
+
+                <ItemsControl ItemsSource="{Binding ImagesListPosterTall}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <!-- Left align, add spacing between items -->
+                            <WrapPanel Orientation="Horizontal"
+                                       HorizontalAlignment="Left" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Classes="imageCard">
+                                <Grid Width="240" Height="360" x:Name="RootGrid">
+                                    <!-- Placeholder -->
+                                    <Image Source="/Assets/coming_soon_ep.jpg"
+                                           Stretch="Fill" />
+                                    <!-- Actual preview -->
+                                    <Image Source="{Binding imagePreview}"
+                                           Stretch="UniformToFill" />
+
+                                    <Border Background="#80000000"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            IsVisible="{Binding #RootGrid.IsPointerOver}">
+                                        <Grid>
+                                            <Button x:Name="DownloadToggleTall"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    Command="{Binding $parent[UserControl].((vm:ContentDialogSeriesDetailsViewModel)DataContext).ToggleButtonTallCommand}">
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="8">
+                                                    <controls:SymbolIcon Symbol="Download" FontSize="24" />
+                                                    <TextBlock Text="Choose resolution" />
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Popup PlacementTarget="{Binding #DownloadToggleTall}"
+                                                   Placement="Center"
+                                                   IsOpen="{Binding $parent[UserControl].((vm:ContentDialogSeriesDetailsViewModel)DataContext).IsResolutionPopupOpenTall, ElementName=DownloadToggleTall, Mode=TwoWay}"
+                                                   IsLightDismissEnabled="True">
+
+                                                <Border Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="6">
+                                                    <ListBox ItemsSource="{Binding images}"
+                                                             MinWidth="180"
+                                                             MaxHeight="240"
+                                                             PointerWheelChanged="ListBox_PointerWheelChanged"
+                                                             SelectionChanged="ImageSelectionChanged"
+                                                             SelectedItem="{Binding $parent[UserControl].((vm:ContentDialogSeriesDetailsViewModel)DataContext).SelectedImage}">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <controls:SymbolIcon Symbol="Image" FontSize="16" />
+                                                                    <TextBlock Text="{Binding Width}" />
+                                                                    <TextBlock Text="×" />
+                                                                    <TextBlock Text="{Binding Height}" />
+                                                                </StackPanel>
+
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Border>
+                                            </Popup>
+                                        </Grid>
+
+                                    </Border>
+                                </Grid>
+
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Separator Margin="0,12" />
+
+                <!-- Poster Wide -->
+                <TextBlock
+                    Classes="sectionHeader"
+                    Text="{Binding ImagesListPosterWide.Count,
+                                   StringFormat='Poster Wide ({0})'}" />
+
+                <ItemsControl ItemsSource="{Binding ImagesListPosterWide}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal"
+                                       HorizontalAlignment="Left" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Classes="imageCard">
+                                <Grid Width="640" Height="360" x:Name="RootGrid">
+                                    <Image Source="/Assets/coming_soon_ep.jpg" Stretch="Fill" />
+                                    <Image Source="{Binding imagePreview}" Stretch="UniformToFill" />
+
+                                    <Border Background="#80000000"
+                                            HorizontalAlignment="Stretch"
+                                            VerticalAlignment="Stretch"
+                                            IsVisible="{Binding #RootGrid.IsPointerOver}">
+                                        <Grid>
+                                            <Button x:Name="DownloadToggleWide"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    HorizontalAlignment="Stretch"
+                                                    VerticalAlignment="Stretch"
+                                                    Command="{Binding $parent[UserControl].((vm:ContentDialogSeriesDetailsViewModel)DataContext).ToggleButtonWideCommand}">
+                                                <StackPanel Orientation="Horizontal"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Spacing="8">
+                                                    <controls:SymbolIcon Symbol="Download" FontSize="24" />
+                                                    <TextBlock Text="Choose resolution" />
+                                                </StackPanel>
+                                            </Button>
+
+                                            <Popup PlacementTarget="{Binding #DownloadToggleWide}"
+                                                   Placement="Center"
+                                                   IsOpen="{Binding $parent[UserControl].((vm:ContentDialogSeriesDetailsViewModel)DataContext).IsResolutionPopupOpenWide, ElementName=DownloadToggleWide, Mode=TwoWay}"
+                                                   IsLightDismissEnabled="True">
+
+                                                <Border Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="6">
+                                                    <ListBox ItemsSource="{Binding images}"
+                                                             MinWidth="180"
+                                                             MaxHeight="240"
+                                                             PointerWheelChanged="ListBox_PointerWheelChanged"
+                                                             SelectionChanged="ImageSelectionChanged"
+                                                             SelectedItem="{Binding $parent[UserControl].((vm:ContentDialogSeriesDetailsViewModel)DataContext).SelectedImage}">
+                                                        <ListBox.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <controls:SymbolIcon Symbol="Image" FontSize="16" />
+                                                                    <TextBlock Text="{Binding Width}" />
+                                                                    <TextBlock Text="×" />
+                                                                    <TextBlock Text="{Binding Height}" />
+                                                                </StackPanel>
+
+                                                            </DataTemplate>
+                                                        </ListBox.ItemTemplate>
+                                                    </ListBox>
+                                                </Border>
+                                            </Popup>
+                                        </Grid>
+
+                                    </Border>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+
+
+</ui:CustomContentDialog>

@@ -17,7 +17,7 @@ public partial class ContentDialogInputLoginViewModel : ViewModelBase{
 
     private AccountPageViewModel accountPageViewModel;
 
-    public ContentDialogInputLoginViewModel(ContentDialog dialog, AccountPageViewModel accountPageViewModel){
+    public ContentDialogInputLoginViewModel(ContentDialog dialog, AccountPageViewModel accountPageViewModel = null){
         if (dialog is null){
             throw new ArgumentNullException(nameof(dialog));
         }
@@ -30,8 +30,15 @@ public partial class ContentDialogInputLoginViewModel : ViewModelBase{
 
     private async void LoginButton(ContentDialog sender, ContentDialogButtonClickEventArgs args){
         dialog.PrimaryButtonClick -= LoginButton;
-        await CrunchyrollManager.Instance.CrAuth.Auth(new AuthData{Password = Password,Username = Email});
-        accountPageViewModel.UpdatetProfile();
+        await CrunchyrollManager.Instance.CrAuthEndpoint1.Auth(new AuthData{Password = Password,Username = Email});
+        if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrAuthEndpoint2.AuthSettings.Endpoint)){
+            await CrunchyrollManager.Instance.CrAuthEndpoint2.Auth(new AuthData{Password = Password,Username = Email});
+        }
+
+        if (accountPageViewModel != null){
+            accountPageViewModel.UpdatetProfile();
+        }
+      
     }
 
     private void DialogOnClosed(ContentDialog sender, ContentDialogClosedEventArgs args){
