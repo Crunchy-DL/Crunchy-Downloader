@@ -691,9 +691,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
         _ = await dialog.ShowAsync();
 
-        if (CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???"){
-            EndpointNotSignedWarning = true;
-        }
+        EndpointNotSignedWarning = CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???";
         
     }
 

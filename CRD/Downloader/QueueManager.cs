@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
@@ -21,7 +22,9 @@ public partial class QueueManager : ObservableObject{
 
     public RefreshableObservableCollection<CrunchyEpMeta> Queue = new RefreshableObservableCollection<CrunchyEpMeta>();
     public ObservableCollection<DownloadItemModel> DownloadItemModels = new ObservableCollection<DownloadItemModel>();
-    public int ActiveDownloads;
+    private int activeDownloads;
+
+    public int ActiveDownloads => Volatile.Read(ref activeDownloads);
 
     #endregion
 
@@ -53,6 +56,20 @@ public partial class QueueManager : ObservableObject{
         Queue.CollectionChanged += UpdateItemListOnRemove;
     }
 
+    public void IncrementDownloads(){
+        Interlocked.Increment(ref activeDownloads);
+    }
+
+    public void DecrementDownloads(){
+        while (true){
+            int current = Volatile.Read(ref activeDownloads);
+            if (current == 0) return;
+
+            if (Interlocked.CompareExchange(ref activeDownloads, current - 1, current) == current)
+                return;
+        }
+    }
+    
 
     private void UpdateItemListOnRemove(object? sender, NotifyCollectionChangedEventArgs e){
         if (e.Action == NotifyCollectionChangedAction.Remove){

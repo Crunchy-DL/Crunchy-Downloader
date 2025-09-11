@@ -75,6 +75,12 @@
                         <CheckBox IsChecked="{Binding DownloadMethodeNew}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Allow early start of next download" Description="When enabled, the next download starts as soon as the previous file has finished downloading, even if it is still being finalized (muxed/moved).">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadAllowEarlyStart}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Max Download Speed"
                                                Description="Download in Kb/s - 0 is full speed">

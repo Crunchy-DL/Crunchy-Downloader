@@ -384,6 +384,8 @@ public class CrunchyEpMeta{
     public bool Music{ get; set; }
 
     public string Resolution{ get; set; }
+    
+    public string AvailableQualities{ get; set; }
 
     public List<string> downloadedFiles{ get; set; } =[];
 

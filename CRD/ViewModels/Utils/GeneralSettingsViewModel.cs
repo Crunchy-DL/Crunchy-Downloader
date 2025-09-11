@@ -56,6 +56,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _downloadMethodeNew;
+    
+    [ObservableProperty]
+    private bool _downloadAllowEarlyStart;
 
     [ObservableProperty]
     private double? _downloadSpeed;
@@ -272,6 +275,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         HistoryCountSonarr = options.HistoryCountSonarr;
         DownloadSpeed = options.DownloadSpeedLimit;
         DownloadMethodeNew = options.DownloadMethodeNew;
+        DownloadAllowEarlyStart = options.DownloadAllowEarlyStart;
         RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10);
         RetryDelay = Math.Clamp((options.RetryDelay), 1, 30);
         DownloadToTempFolder = options.DownloadToTempFolder;
@@ -300,6 +304,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
 
         settings.DownloadMethodeNew = DownloadMethodeNew;
+        settings.DownloadAllowEarlyStart = DownloadAllowEarlyStart;
 
         settings.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
         settings.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);

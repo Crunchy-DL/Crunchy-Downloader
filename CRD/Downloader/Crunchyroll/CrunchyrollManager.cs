@@ -197,8 +197,8 @@ public class CrunchyrollManager{
         CrunOptions.StreamEndpoint = "tv/android_tv";
         CrAuthEndpoint1.AuthSettings = new CrAuthSettings(){
             Endpoint = "tv/android_tv",
-            Authorization = "Basic Ym1icmt4eXgzZDd1NmpzZnlsYTQ6QUlONEQ1VkVfY3Awd1Z6Zk5vUDBZcUhVcllGcDloU2c=",
-            UserAgent = "ANDROIDTV/3.42.1_22267 Android/16",
+            Authorization = "Basic Y2I5bnpybWh0MzJ2Z3RleHlna286S1V3bU1qSlh4eHVyc0hJVGQxenZsMkMyeVFhUW84TjQ=",
+            UserAgent = "ANDROIDTV/3.42.1_22273 Android/16",
             Device_name = "Android TV",
             Device_type = "Android TV"
         };
@@ -213,14 +213,14 @@ public class CrunchyrollManager{
                 Device_type = "OnePlus CPH2449"
             };
         }
-        
+
         CrAuthEndpoint2.AuthSettings = CrunOptions.StreamEndpointSecondSettings;
 
         await CrAuthEndpoint1.Auth();
         if (!string.IsNullOrEmpty(CrAuthEndpoint2.AuthSettings.Endpoint)){
             await CrAuthEndpoint2.Auth();
         }
-        
+
         CfgManager.WriteCrSettings();
 
         // var token = await GetBase64EncodedTokenAsync();
@@ -281,17 +281,11 @@ public class CrunchyrollManager{
 
             await SonarrClient.Instance.RefreshSonarr();
         }
-
-        //Fix hslang - can be removed in a future version
-        var lang = Languages.Locale2language(CrunOptions.Hslang);
-        if (lang != Languages.DEFAULT_lang){
-            CrunOptions.Hslang = lang.CrLocale;
-        }
     }
 
 
     public async Task<bool> DownloadEpisode(CrunchyEpMeta data, CrDownloadOptions options){
-        QueueManager.Instance.ActiveDownloads++;
+        QueueManager.Instance.IncrementDownloads();
 
         data.DownloadProgress = new DownloadProgress(){
             IsDownloading = true,
@@ -305,7 +299,7 @@ public class CrunchyrollManager{
         var res = await DownloadMediaList(data, options);
 
         if (res.Error){
-            QueueManager.Instance.ActiveDownloads--;
+            QueueManager.Instance.DecrementDownloads();
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = false,
                 Error = true,
@@ -316,6 +310,10 @@ public class CrunchyrollManager{
             };
             QueueManager.Instance.Queue.Refresh();
             return false;
+        }
+
+        if (options.DownloadAllowEarlyStart){
+            QueueManager.Instance.DecrementDownloads();
         }
 
         if (options.SkipMuxing == false){
@@ -511,7 +509,10 @@ public class CrunchyrollManager{
         }
 
 
-        QueueManager.Instance.ActiveDownloads--;
+        if (!options.DownloadAllowEarlyStart){
+            QueueManager.Instance.IncrementDownloads();
+        }
+
         QueueManager.Instance.Queue.Refresh();
 
         if (options.History && data.Data is{ Count: > 0 } && (options.HistoryIncludeCrArtists && data.Music || !data.Music)){
@@ -523,7 +524,7 @@ public class CrunchyrollManager{
             _ = CrEpisode.MarkAsWatched(data.Data.First().MediaId);
         }
 
-        if (QueueManager.Instance.Queue.Count == 0){
+        if (QueueManager.Instance.Queue.Count == 0 || QueueManager.Instance.Queue.All(e => e.DownloadProgress.Done)){
             try{
                 var audioPath = CrunOptions.DownloadFinishedSoundPath;
                 if (!string.IsNullOrEmpty(audioPath)){
@@ -1192,7 +1193,7 @@ public class CrunchyrollManager{
                         Console.WriteLine("Downloading video...");
                         curStream = streams[options.Kstream - 1];
 
-                        Console.WriteLine($"Playlists URL: {string.Join(", ", curStream.Url)} ({curStream.Type})");
+                        Console.WriteLine($"Playlists URL: {string.Join(", ", curStream.Url.Select(u => u.Url))} ({curStream.Type})");
                     }
 
                     string tsFile = "";
@@ -1321,8 +1322,8 @@ public class CrunchyrollManager{
 
                                 // Audio: Remove duplicates, then sort by bandwidth
                                 audios = audios
-                                    .GroupBy(a => new{ a.bandwidth, a.language }) // Add more properties if needed
-                                    .Select(g => g.First())
+                                    .GroupBy(a => new{ a.bandwidth, a.language })
+                                    .Select(g => g.OrderByDescending(x => x.audioSamplingRate).First())
                                     .OrderBy(a => a.bandwidth)
                                     .ThenBy(a => a.audioSamplingRate)
                                     .ToList();
@@ -1385,20 +1386,22 @@ public class CrunchyrollManager{
                                 foreach (var server in streamServers){
                                     Console.WriteLine($"\t{server}");
                                 }
-
-                                Console.WriteLine("Available Video Qualities:");
+                                
+                                var sb = new StringBuilder();
+                                sb.AppendLine("Available Video Qualities:");
                                 for (int i = 0; i < videos.Count; i++){
-                                    Console.WriteLine($"\t[{i + 1}] {videos[i].resolutionText}");
+                                    sb.AppendLine($"\t- {videos[i].resolutionText}");
                                 }
 
-                                Console.WriteLine("Available Audio Qualities:");
+                                sb.AppendLine("Available Audio Qualities:");
                                 for (int i = 0; i < audios.Count; i++){
-                                    Console.WriteLine($"\t[{i + 1}] {audios[i].resolutionText} / {audios[i].audioSamplingRate}");
+                                    sb.AppendLine($"\t- {audios[i].resolutionText} / {audios[i].audioSamplingRate}");
                                 }
 
                                 variables.Add(new Variable("height", chosenVideoSegments.quality.height, false));
                                 variables.Add(new Variable("width", chosenVideoSegments.quality.width, false));
                                 if (string.IsNullOrEmpty(data.Resolution)) data.Resolution = chosenVideoSegments.quality.height + "p";
+                             
 
                                 LanguageItem? lang = Languages.languages.FirstOrDefault(a => a.CrLocale == curStream.AudioLang.CrLocale);
                                 if (lang == null){
@@ -1412,11 +1415,18 @@ public class CrunchyrollManager{
                                     };
                                 }
 
-                                Console.WriteLine($"Selected quality:");
-                                Console.WriteLine($"\tVideo: {chosenVideoSegments.resolutionText}");
-                                Console.WriteLine($"\tAudio: {chosenAudioSegments.resolutionText} / {chosenAudioSegments.audioSamplingRate}");
-                                Console.WriteLine($"\tServer: {selectedServer}");
+                                sb.AppendLine($"Selected quality:");
+                                sb.AppendLine($"\tVideo: {chosenVideoSegments.resolutionText}");
+                                sb.AppendLine($"\tAudio: {chosenAudioSegments.resolutionText} / {chosenAudioSegments.audioSamplingRate}");
+                                sb.AppendLine($"\tServer: {selectedServer}");
+
+                                string qualityConsoleLog = sb.ToString();
+                                Console.WriteLine(qualityConsoleLog);
+                                data.AvailableQualities = qualityConsoleLog;
+                                
                                 Console.WriteLine("Stream URL:" + chosenVideoSegments.segments[0].uri.Split(new[]{ ",.urlset" }, StringSplitOptions.None)[0]);
+                                
+                                
 
 
                                 fileName = Path.Combine(FileNameManager.ParseFileName(options.FileName, variables, options.Numbers, options.FileNameWhitespaceSubstitute, options.Override).ToArray());
@@ -2302,7 +2312,7 @@ public class CrunchyrollManager{
     private async Task<(bool IsOk, string ResponseContent, string error)> SendPlaybackRequestAsync(string endpoint, CrAuth authEndpoint){
         var request = HttpClientReq.CreateRequestMessage(endpoint, HttpMethod.Get, true, authEndpoint.Token?.access_token, null);
         request.Headers.UserAgent.ParseAdd(authEndpoint.AuthSettings.UserAgent);
-        return await HttpClientReq.Instance.SendHttpRequest(request,false,authEndpoint.cookieStore);
+        return await HttpClientReq.Instance.SendHttpRequest(request, false, authEndpoint.cookieStore);
     }
 
     private async Task<(bool IsOk, string ResponseContent, string error)> HandleStreamErrorsAsync((bool IsOk, string ResponseContent, string error) response, string endpoint, CrAuth authEndpoint){

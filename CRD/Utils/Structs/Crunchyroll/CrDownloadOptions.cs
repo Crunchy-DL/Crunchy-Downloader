@@ -31,6 +31,9 @@ public class CrDownloadOptions{
     
     [JsonProperty("download_methode_new")]
     public bool DownloadMethodeNew{ get; set; }
+    
+    [JsonProperty("download_allow_early_start")]
+    public bool DownloadAllowEarlyStart{ get; set; }
 
     [JsonProperty("simultaneous_downloads")]
     public int SimultaneousDownloads{ get; set; }

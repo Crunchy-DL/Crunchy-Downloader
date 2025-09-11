@@ -109,6 +109,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     public string DoingWhat{ get; set; }
     public string DownloadSpeed{ get; set; }
     public string InfoText{ get; set; }
+    public string InfoTextHover{ get; set; }
     public CrunchyEpMeta epMeta{ get; set; }
 
 
@@ -137,6 +138,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             GetSubtitleString(),
             epMeta.Resolution
         );
+        InfoTextHover = epMeta.AvailableQualities;
 
         Error = epMeta.DownloadProgress.Error;
     }
@@ -202,7 +204,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             GetSubtitleString(),
             epMeta.Resolution
         );
-
+        InfoTextHover = epMeta.AvailableQualities;
         Error = epMeta.DownloadProgress.Error;
 
 
@@ -214,6 +216,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DoingWhat)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Error)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InfoText)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(InfoTextHover)));
         }
     }
 
