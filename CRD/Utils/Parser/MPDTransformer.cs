@@ -51,6 +51,7 @@ public class  VideoItem: VideoPlaylist{
 
 public class  AudioItem: AudioPlaylist{
     public string resolutionText{ get; set; }
+    public string resolutionTextSnap{ get; set; }
 }
 
 public class Quality{

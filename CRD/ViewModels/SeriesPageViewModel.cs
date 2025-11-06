@@ -125,7 +125,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
                 FullSizeDesired = true
             };
 
-            var viewModel = new ContentDialogFeaturedMusicViewModel(dialog, musicList, CrunchyrollManager.Instance.CrunOptions.HistoryIncludeCrArtists);
+            var viewModel = new ContentDialogFeaturedMusicViewModel(dialog, musicList, CrunchyrollManager.Instance.CrunOptions.HistoryIncludeCrArtists, SelectedSeries.SeriesFolderPathExists ? SelectedSeries.SeriesFolderPath : "");
             dialog.Content = new ContentDialogFeaturedMusicView(){
                 DataContext = viewModel
             };

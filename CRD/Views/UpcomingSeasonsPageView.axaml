@@ -59,6 +59,19 @@
 
             <StackPanel Grid.Column="1" Margin="10" HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
 
+                <ToggleButton Width="50" Height="50" BorderThickness="0" Margin="0 0"
+                              VerticalAlignment="Center"
+                              IsChecked="{Binding ShowCrFetches}"
+                              IsEnabled="{Binding !IsLoading}">
+                    <StackPanel Orientation="Vertical">
+                        <controls:ImageIcon Source="../Assets/crunchy_icon_round.png" Width="25" Height="25" />
+                        <TextBlock Text="CR" TextWrapping="Wrap" HorizontalAlignment="Center" FontSize="12"></TextBlock>
+                        <ToolTip.Tip>
+                            <TextBlock Text="Fetch Crunchyroll shows and append missing entries. This may create duplicates" FontSize="15" />
+                        </ToolTip.Tip>
+                    </StackPanel>
+                </ToggleButton>
+                
                 <ToggleButton Width="50" Height="50" BorderThickness="0" Margin="5 0"
                               VerticalAlignment="Center"
                               IsChecked="{Binding QuickAddMode}"
@@ -149,7 +162,7 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
 
-                    <Grid>
+                    <Grid >
 
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="185" />
@@ -268,7 +281,7 @@
                                     </Grid>
 
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
-                                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Content="Trailer" Margin=" 0 0 5 0"
+                                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" IsVisible="{Binding Trailer}" Content="Trailer" Margin=" 0 0 5 0"
                                                 Command="{Binding $parent[UserControl].((vm:UpcomingPageViewModel)DataContext).OpenTrailer}"
                                                 CommandParameter="{Binding}">
                                         </Button>

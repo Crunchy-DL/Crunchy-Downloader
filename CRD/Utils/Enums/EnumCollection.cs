@@ -173,6 +173,9 @@ public enum DownloadMediaType{
 
     [EnumMember(Value = "Audio")]
     Audio,
+    
+    [EnumMember(Value = "AudioRoleDescription")]
+    AudioRoleDescription,
 
     [EnumMember(Value = "Chapters")]
     Chapters,

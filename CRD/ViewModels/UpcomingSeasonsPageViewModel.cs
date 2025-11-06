@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Avalonia.Collections;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,6 +18,7 @@ using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;
+using FluentAvalonia.UI.Data;
 using Newtonsoft.Json;
 using ReactiveUI;
 
@@ -150,6 +152,9 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     private bool _quickAddMode;
     
     [ObservableProperty]
+    private static bool _showCrFetches;
+    
+    [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
@@ -168,7 +173,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     public ObservableCollection<SeasonViewModel> Seasons{ get; set; } =[];
 
     public ObservableCollection<AnilistSeries> SelectedSeason{ get; set; } =[];
-
+    
     private SeasonViewModel currentSelection;
 
     public UpcomingPageViewModel(){
@@ -198,11 +203,11 @@ public partial class UpcomingPageViewModel : ViewModelBase{
         currentSelection = Seasons.Last();
         currentSelection.IsSelected = true;
 
-        var list = await GetSeriesForSeason(currentSelection.Season, currentSelection.Year, false);
+        var crunchySimul = await CrunchyrollManager.Instance.CrSeries.GetSeasonalSeries(currentSelection.Season, currentSelection.Year + "", "");
+
+        var list = await GetSeriesForSeason(currentSelection.Season, currentSelection.Year, false, crunchySimul);
         SelectedSeason.Clear();
-        
-        var crunchySimul = await CrunchyrollManager.Instance.CrSeries.GetSeasonalSeries(currentSelection.Season, currentSelection.Year + "", "");  
-        
+
         foreach (var anilistSeries in list){
             SelectedSeason.Add(anilistSeries);
             if (!string.IsNullOrEmpty(anilistSeries.CrunchyrollID) && crunchySimul?.Data is{ Count: > 0 }){
@@ -213,6 +218,8 @@ public partial class UpcomingPageViewModel : ViewModelBase{
                 }
             }
         }
+
+        FilterItems();
 
         SortItems();
     }
@@ -223,11 +230,11 @@ public partial class UpcomingPageViewModel : ViewModelBase{
         currentSelection = selectedSeason;
         currentSelection.IsSelected = true;
 
-        var list = await GetSeriesForSeason(currentSelection.Season, currentSelection.Year, false);
+        var crunchySimul = await CrunchyrollManager.Instance.CrSeries.GetSeasonalSeries(currentSelection.Season, currentSelection.Year + "", "");
+
+        var list = await GetSeriesForSeason(currentSelection.Season, currentSelection.Year, false, crunchySimul);
         SelectedSeason.Clear();
-        
-        var crunchySimul = await CrunchyrollManager.Instance.CrSeries.GetSeasonalSeries(currentSelection.Season, currentSelection.Year + "", "");  
-        
+
         foreach (var anilistSeries in list){
             SelectedSeason.Add(anilistSeries);
             if (!string.IsNullOrEmpty(anilistSeries.CrunchyrollID) && crunchySimul?.Data is{ Count: > 0 }){
@@ -238,17 +245,24 @@ public partial class UpcomingPageViewModel : ViewModelBase{
                 }
             }
         }
+        
+        FilterItems();
+
         SortItems();
     }
 
+ 
+
     [RelayCommand]
     public void OpenTrailer(AnilistSeries series){
-        if (series.Trailer.Site.Equals("youtube")){
-            var url = "https://www.youtube.com/watch?v=" + series.Trailer.Id; // Replace with your video URL
-            Process.Start(new ProcessStartInfo{
-                FileName = url,
-                UseShellExecute = true
-            });
+        if (series.Trailer != null){
+            if (series.Trailer.Site.Equals("youtube")){
+                var url = "https://www.youtube.com/watch?v=" + series.Trailer.Id;
+                Process.Start(new ProcessStartInfo{
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
         }
     }
 
@@ -258,7 +272,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             MessageBus.Current.SendMessage(new ToastMessage($"History still loading", ToastType.Warning, 3));
             return;
         }
-        
+
         if (!string.IsNullOrEmpty(series.CrunchyrollID)){
             if (CrunchyrollManager.Instance.CrunOptions.History){
                 series.IsInHistory = true;
@@ -280,42 +294,48 @@ public partial class UpcomingPageViewModel : ViewModelBase{
         }
     }
 
-    private async Task<List<AnilistSeries>> GetSeriesForSeason(string season, int year, bool forceRefresh){
+    private async Task<List<AnilistSeries>> GetSeriesForSeason(string season, int year, bool forceRefresh, CrBrowseSeriesBase? crBrowseSeriesBase){
         if (ProgramManager.Instance.AnilistSeasons.ContainsKey(season + year) && !forceRefresh){
             return ProgramManager.Instance.AnilistSeasons[season + year];
         }
 
         IsLoading = true;
 
-        var variables = new{
-            season,
-            year,
-            format = "TV",
-            page = 1
-        };
+        var allMedia = new List<AnilistSeries>();
+        var page = 1;
+        var maxPage = 10;
+        bool hasNext;
 
-        var payload = new{
-            query,
-            variables
-        };
+        do{
+            var payload = new{
+                query,
+                variables = new{ season, year, page }
+            };
 
-        string jsonPayload = JsonConvert.SerializeObject(payload, Formatting.Indented);
+            var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Anilist);
+            request.Content = new StringContent(JsonConvert.SerializeObject(payload, Formatting.Indented),
+                Encoding.UTF8, "application/json");
 
-        var request = new HttpRequestMessage(HttpMethod.Post, ApiUrls.Anilist);
-        request.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            var response = await HttpClientReq.Instance.SendHttpRequest(request);
+            if (!response.IsOk){
+                Console.Error.WriteLine($"Anilist Request Failed for {season} {year} (page {page})");
+                break;
+            }
 
-        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+            var ani = Helpers.Deserialize<AniListResponse>(
+                response.ResponseContent,
+                CrunchyrollManager.Instance.SettingsJsonSerializerSettings
+            ) ?? new AniListResponse();
 
-        if (!response.IsOk){
-            Console.Error.WriteLine($"Anilist Request Failed for {season} {year}");
-            return[];
-        }
+            var pageNode = ani.Data?.Page;
+            var media = pageNode?.Media ?? new List<AnilistSeries>();
+            allMedia.AddRange(media);
 
-        AniListResponse aniListResponse = Helpers.Deserialize<AniListResponse>(response.ResponseContent, CrunchyrollManager.Instance.SettingsJsonSerializerSettings) ?? new AniListResponse();
-
-        var list = aniListResponse.Data?.Page?.Media ??[];
-
-        list = list.Where(ele => ele.ExternalLinks != null && ele.ExternalLinks.Any(external =>
+            hasNext = pageNode?.PageInfo?.HasNextPage ?? false;
+            page++;
+        } while (hasNext || page <= maxPage);
+        
+        var list = allMedia.Where(ele => ele.ExternalLinks != null && ele.ExternalLinks.Any(external =>
             string.Equals(external.Site, "Crunchyroll", StringComparison.OrdinalIgnoreCase))).ToList();
 
 
@@ -324,6 +344,8 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             anilistEle.Description = anilistEle.Description
                 .Replace("<i>", "")
                 .Replace("</i>", "")
+                .Replace("<b>", "")
+                .Replace("</b>", "")
                 .Replace("<BR>", "")
                 .Replace("<br>", "");
 
@@ -388,6 +410,49 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             }
         }
 
+        var existingIds = list
+            .Where(a => !string.IsNullOrEmpty(a.CrunchyrollID))
+            .Select(a => a.CrunchyrollID!)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var notInList = (crBrowseSeriesBase?.Data ?? Enumerable.Empty<CrBrowseSeries>())
+            .ExceptBy(existingIds, cs => cs.Id, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var crBrowseSeries in notInList){
+            var newAnlistObject = new AnilistSeries();
+            newAnlistObject.Title = new Title();
+            newAnlistObject.Title.English = crBrowseSeries.Title ?? "";
+            newAnlistObject.Description = crBrowseSeries.Description ?? "";
+            newAnlistObject.CoverImage = new CoverImage();
+            int targetW = 240, targetH = 360;
+
+            string posterSrc =
+                crBrowseSeries.Images.PosterTall.FirstOrDefault()?
+                    .OrderBy(i => Math.Abs(i.Width - targetW) + Math.Abs(i.Height - targetH))
+                    .ThenBy(i => Math.Abs((i.Width / (double)i.Height) - (targetW / (double)targetH)))
+                    .Select(i => i.Source)
+                    .FirstOrDefault(s => !string.IsNullOrEmpty(s))
+                ?? crBrowseSeries.Images.PosterTall.FirstOrDefault()?.FirstOrDefault()?.Source
+                ?? string.Empty;
+            newAnlistObject.CoverImage.ExtraLarge = posterSrc;
+            newAnlistObject.ThumbnailImage = await Helpers.LoadImage(newAnlistObject.CoverImage.ExtraLarge, 185, 265);
+            newAnlistObject.ExternalLinks = new List<ExternalLink>();
+            newAnlistObject.ExternalLinks.Add(new ExternalLink(){ Url = $"https://www.crunchyroll.com/series/{crBrowseSeries.Id}/{crBrowseSeries.SlugTitle}" });
+            newAnlistObject.FetchedFromCR = true;
+            newAnlistObject.HasCrID = true;
+            newAnlistObject.CrunchyrollID = crBrowseSeries.Id;
+            if (CrunchyrollManager.Instance.CrunOptions.History){
+                var historyIDs = new HashSet<string>(CrunchyrollManager.Instance.HistoryList.Select(item => item.SeriesId ?? ""));
+
+                if (newAnlistObject.CrunchyrollID != null && historyIDs.Contains(newAnlistObject.CrunchyrollID)){
+                    newAnlistObject.IsInHistory = true;
+                }
+            }
+
+            list.Add(newAnlistObject);
+        }
+
 
         ProgramManager.Instance.AnilistSeasons[season + year] = list;
 
@@ -446,6 +511,11 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
     partial void OnSelectedSeriesChanged(AnilistSeries? value){
         SelectionChangedOfSeries(value);
+    }
+    
+    partial void OnShowCrFetchesChanged(bool value){
+        FilterItems();
+        SortItems();
     }
 
     #region Sorting
@@ -509,6 +579,24 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
         SelectedSeason.Clear();
         foreach (var item in sortedList){
+            SelectedSeason.Add(item);
+        }
+    }
+    
+    private void FilterItems(){
+
+        List<AnilistSeries> filteredList;
+        
+        if (ProgramManager.Instance.AnilistSeasons.ContainsKey(currentSelection.Season + currentSelection.Year)){
+            filteredList = ProgramManager.Instance.AnilistSeasons[currentSelection.Season + currentSelection.Year];
+        } else{
+            return;
+        }
+        
+        filteredList = !ShowCrFetches ? filteredList.Where(e => !e.FetchedFromCR).ToList() : filteredList.ToList();
+        
+        SelectedSeason.Clear();
+        foreach (var item in filteredList){
             SelectedSeason.Add(item);
         }
     }

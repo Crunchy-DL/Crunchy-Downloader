@@ -51,8 +51,9 @@ public class Helpers{
             clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
         }
 
-        foreach (var property in originalRequest.Properties){
-            clone.Properties.Add(property);
+        foreach (var kvp in originalRequest.Options){
+            var key = new HttpRequestOptionsKey<object?>(kvp.Key);
+            clone.Options.Set(key, kvp.Value);
         }
 
         return clone;
@@ -71,15 +72,31 @@ public class Helpers{
         return JsonConvert.DeserializeObject<T>(json);
     }
 
+    public static int ToKbps(int bps) => (int)Math.Round(bps / 1000.0);
+    public static int SnapToAudioBucket(int kbps){
+        int[] buckets ={ 64, 96, 128, 192,256 };
+        return buckets.OrderBy(b => Math.Abs(b - kbps)).First();
+    }
+    public static int WidthBucket(int width, int height){
+        int expected = (int)Math.Round(height * 16 / 9.0);
+        int tol = Math.Max(8, (int)(expected * 0.02)); // ~2% or ≥8 px
+        return Math.Abs(width - expected) <= tol ? expected : width;
+    }
 
-    public static string ConvertTimeFormat(string time){
-        var timeParts = time.Split(':', '.');
-        int hours = int.Parse(timeParts[0]);
-        int minutes = int.Parse(timeParts[1]);
-        int seconds = int.Parse(timeParts[2]);
-        int milliseconds = int.Parse(timeParts[3]);
+    public static string ConvertTimeFormat(string vttTime){
+        if (TimeSpan.TryParseExact(vttTime, @"hh\:mm\:ss\.fff", null, out var ts) ||
+            TimeSpan.TryParseExact(vttTime, @"mm\:ss\.fff", null, out ts)){
+            var totalCentiseconds = (int)Math.Round(ts.TotalMilliseconds / 10.0, MidpointRounding.AwayFromZero);
+            var hours = totalCentiseconds / 360000; // 100 cs * 60 * 60
+            var rem = totalCentiseconds % 360000;
+            var mins = rem / 6000;
+            rem %= 6000;
+            var secs = rem / 100;
+            var cs = rem % 100;
+            return $"{hours}:{mins:00}:{secs:00}.{cs:00}";
+        }
 
-        return $"{hours}:{minutes:D2}:{seconds:D2}.{milliseconds / 10:D2}";
+        return "0:00:00.00";
     }
 
     public static string ConvertVTTStylesToASS(string dialogue){
@@ -391,6 +408,7 @@ public class Helpers{
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.UseShellExecute = false;
                 process.StartInfo.CreateNoWindow = true;
+                process.EnableRaisingEvents = true;
 
                 process.OutputDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
@@ -411,7 +429,28 @@ public class Helpers{
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await process.WaitForExitAsync();
+                using var reg = data?.Cts.Token.Register(() => {
+                    try{
+                        if (!process.HasExited)
+                            process.Kill(true);
+                    } catch{
+                        // ignored
+                    }
+                });
+
+                try{
+                    await process.WaitForExitAsync(data.Cts.Token);
+                } catch (OperationCanceledException){
+                    if (File.Exists(tempOutputFilePath)){
+                        try{
+                            File.Delete(tempOutputFilePath);
+                        } catch{
+                            // ignored
+                        }
+                    }
+
+                    return (IsOk: false, ErrorCode: -2);
+                }
 
                 bool isSuccess = process.ExitCode == 0;
 
@@ -423,7 +462,14 @@ public class Helpers{
                     File.Move(tempOutputFilePath, inputFilePath);
                 } else{
                     // If something went wrong, delete the temporary output file
-                    File.Delete(tempOutputFilePath);
+                    if (File.Exists(tempOutputFilePath)){
+                        try{
+                            File.Delete(tempOutputFilePath);
+                        } catch{
+                            /* ignore */
+                        }
+                    }
+
                     Console.Error.WriteLine("FFmpeg processing failed.");
                     Console.Error.WriteLine($"Command: {ffmpegCommand}");
                 }
@@ -572,6 +618,12 @@ public class Helpers{
             string cNumber = match.Groups[2].Value; // Extract the C number if present
             string pNumber = match.Groups[3].Value; // Extract the P number if present
 
+            if (int.TryParse(sNumber, out int sNumericBig)){
+                // Reject invalid S numbers (>= 1000)
+                if (sNumericBig >= 1000)
+                    return null;
+            }
+
             if (!string.IsNullOrEmpty(cNumber)){
                 // Case for C: Return S + . + C
                 return $"{sNumber}.{cNumber}";
@@ -645,10 +697,10 @@ public class Helpers{
                 group.Add(descriptionMedia[0]);
             }
         }
-        
+
         //Find and add Cover media to each group
         var coverMedia = allMedia.Where(media => media.Type == DownloadMediaType.Cover).ToList();
-        
+
         if (coverMedia.Count > 0){
             foreach (var group in languageGroups.Values){
                 group.Add(coverMedia[0]);
@@ -860,7 +912,7 @@ public class Helpers{
         } else{
             throw new PlatformNotSupportedException();
         }
-        
+
         try{
             using (var process = new Process()){
                 process.StartInfo.FileName = shutdownCmd;
@@ -875,13 +927,13 @@ public class Helpers{
                         Console.Error.WriteLine($"{e.Data}");
                     }
                 };
-                
+
                 process.OutputDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
-                            Console.Error.WriteLine(e.Data);
+                        Console.Error.WriteLine(e.Data);
                     }
                 };
-                
+
                 process.Start();
 
                 process.BeginOutputReadLine();
@@ -892,11 +944,9 @@ public class Helpers{
                 if (process.ExitCode != 0){
                     Console.Error.WriteLine($"Shutdown failed with exit code {process.ExitCode}");
                 }
-                
             }
         } catch (Exception ex){
             Console.Error.WriteLine($"Failed to start shutdown process: {ex.Message}");
         }
-        
     }
 }

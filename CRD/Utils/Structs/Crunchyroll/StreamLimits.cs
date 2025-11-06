@@ -21,7 +21,7 @@ public class StreamError{
     }
 
     public bool IsTooManyActiveStreamsError(){
-        return Error == "TOO_MANY_ACTIVE_STREAMS";
+        return Error is "TOO_MANY_ACTIVE_STREAMS" or "TOO_MANY_CONCURRENT_STREAMS";
     }
 }
 

@@ -14,10 +14,12 @@ public class AuthData{
 
 public class CrAuthSettings{
     public string Endpoint{ get; set; }
+    public string Client_ID{ get; set; }
     public string Authorization{ get; set; }
     public string UserAgent{ get; set; }
     public string Device_type{ get; set; }
     public string Device_name{ get; set; }
+
 }
 
 public class DrmAuthData{

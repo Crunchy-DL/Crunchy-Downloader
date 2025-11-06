@@ -270,6 +270,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         CrunchyEpMeta? downloadItem = QueueManager.Instance.Queue.FirstOrDefault(e => e.Equals(epMeta)) ?? null;
         if (downloadItem != null){
             QueueManager.Instance.Queue.Remove(downloadItem);
+            epMeta.Cts.Cancel();
             if (!Done){
                 foreach (var downloadItemDownloadedFile in downloadItem.downloadedFiles){
                     try{

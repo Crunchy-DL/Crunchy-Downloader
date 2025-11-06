@@ -6,6 +6,7 @@ namespace CRD.Utils.Structs.Crunchyroll;
 public class CrunchyStreamData{
     public string? AssetId{ get; set; }
     public Locale? AudioLocale{ get; set; }
+    public string? AudioRole{ get; set; }
     public string? Bifs{ get; set; }
     public string? BurnedInLocale{ get; set; }
     public Dictionary<string, Caption>? Captions{ get; set; }

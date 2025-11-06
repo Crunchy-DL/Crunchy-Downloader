@@ -10,7 +10,7 @@ public class CrDownloadOptions{
 
     [JsonProperty("shutdown_when_queue_empty")]
     public bool ShutdownWhenQueueEmpty{ get; set; }
-    
+
     [JsonProperty("auto_download")]
     public bool AutoDownload{ get; set; }
 
@@ -22,21 +22,24 @@ public class CrDownloadOptions{
 
     [JsonProperty("retry_delay")]
     public int RetryDelay{ get; set; }
-    
+
     [JsonProperty("retry_attempts")]
     public int RetryAttempts{ get; set; }
 
     [JsonIgnore]
     public string Force{ get; set; } = "";
-    
+
     [JsonProperty("download_methode_new")]
     public bool DownloadMethodeNew{ get; set; }
-    
+
     [JsonProperty("download_allow_early_start")]
     public bool DownloadAllowEarlyStart{ get; set; }
 
     [JsonProperty("simultaneous_downloads")]
     public int SimultaneousDownloads{ get; set; }
+
+    [JsonProperty("simultaneous_processing_jobs")]
+    public int SimultaneousProcessingJobs{ get; set; }
 
     [JsonProperty("theme")]
     public string Theme{ get; set; } = "";
@@ -49,11 +52,11 @@ public class CrDownloadOptions{
 
     [JsonProperty("download_finished_play_sound")]
     public bool DownloadFinishedPlaySound{ get; set; }
-    
+
     [JsonProperty("download_finished_sound_path")]
     public string? DownloadFinishedSoundPath{ get; set; }
-    
-    
+
+
     [JsonProperty("background_image_opacity")]
     public double BackgroundImageOpacity{ get; set; }
 
@@ -71,9 +74,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("history")]
     public bool History{ get; set; }
-    
+
     [JsonProperty("history_count_missing")]
-    public bool HistoryCountMissing { get; set; }
+    public bool HistoryCountMissing{ get; set; }
 
     [JsonProperty("history_include_cr_artists")]
     public bool HistoryIncludeCrArtists{ get; set; }
@@ -136,6 +139,9 @@ public class CrDownloadOptions{
 
     #region Crunchyroll Settings
 
+    [JsonProperty("cr_download_description_audio")]
+    public bool DownloadDescriptionAudio{ get; set; }
+
     [JsonProperty("cr_mark_as_watched")]
     public bool MarkAsWatched{ get; set; }
 
@@ -165,7 +171,7 @@ public class CrDownloadOptions{
 
     [JsonProperty("file_name_whitespace_substitute")]
     public string FileNameWhitespaceSubstitute{ get; set; } = "";
-    
+
     [JsonProperty("file_name")]
     public string FileName{ get; set; } = "";
 
@@ -181,6 +187,9 @@ public class CrDownloadOptions{
     [JsonIgnore]
     public bool SkipSubs{ get; set; }
 
+    [JsonProperty("subs_fix_ccc_subs")]
+    public bool FixCccSubtitles{ get; set; }
+
     [JsonProperty("mux_skip_subs")]
     public bool SkipSubsMux{ get; set; }
 
@@ -189,7 +198,7 @@ public class CrDownloadOptions{
 
     [JsonProperty("subs_download_duplicate")]
     public bool SubsDownloadDuplicate{ get; set; }
-    
+
     [JsonProperty("include_signs_subs")]
     public bool IncludeSignsSubs{ get; set; }
 
@@ -199,6 +208,9 @@ public class CrDownloadOptions{
     [JsonProperty("include_cc_subs")]
     public bool IncludeCcSubs{ get; set; }
 
+    [JsonProperty("convert_cc_vtt_subs_to_ass")]
+    public bool ConvertVtt2Ass{ get; set; }
+
     [JsonProperty("cc_subs_font")]
     public string? CcSubsFont{ get; set; }
 
@@ -207,13 +219,13 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_mp4")]
     public bool Mp4{ get; set; }
-    
+
     [JsonProperty("mux_audio_only_to_mp3")]
-    public bool AudioOnlyToMp3 { get; set; }
-    
+    public bool AudioOnlyToMp3{ get; set; }
+
     [JsonProperty("mux_fonts")]
     public bool MuxFonts{ get; set; }
-    
+
     [JsonProperty("mux_cover")]
     public bool MuxCover{ get; set; }
 
@@ -258,7 +270,7 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_sync_dubs")]
     public bool SyncTiming{ get; set; }
-    
+
     [JsonProperty("mux_sync_hwaccel")]
     public string? FfmpegHwAccelFlag{ get; set; }
 
@@ -294,9 +306,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("stream_endpoint")]
     public string? StreamEndpoint{ get; set; }
-    
+
     [JsonProperty("stream_endpoint_secondary_settings")]
-    public CrAuthSettings? StreamEndpointSecondSettings { get; set; }
+    public CrAuthSettings? StreamEndpointSecondSettings{ get; set; }
 
     [JsonProperty("search_fetch_featured_music")]
     public bool SearchFetchFeaturedMusic{ get; set; }

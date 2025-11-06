@@ -178,10 +178,19 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Simultaneous Downloads">
+                <controls:SettingsExpanderItem Content="Parallel Downloads">
                     <controls:SettingsExpanderItem.Footer>
                         <controls:NumberBox Minimum="0" Maximum="10"
                                             Value="{Binding SimultaneousDownloads}"
+                                            SpinButtonPlacementMode="Inline"
+                                            HorizontalAlignment="Stretch" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding DownloadAllowEarlyStart}" Content="Parallel Processing Jobs" Description="The maximum number of completed downloads that can be processed simultaneously (encoding, muxing, moving)">
+                    <controls:SettingsExpanderItem.Footer>
+                        <controls:NumberBox Minimum="0" Maximum="10"
+                                            Value="{Binding SimultaneousProcessingJobs}"
                                             SpinButtonPlacementMode="Inline"
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>

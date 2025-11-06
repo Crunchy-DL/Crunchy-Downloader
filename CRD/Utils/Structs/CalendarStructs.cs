@@ -39,9 +39,13 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
     public string? SeasonName{ get; set; }
 
     public string? CrSeriesID{ get; set; }
-    
+
     public bool AnilistEpisode{ get; set; }
 
+    public bool FilteredOut{ get; set; }
+    
+    public Locale? AudioLocale{ get; set; }
+    
     public List<CalendarEpisode> CalendarEpisodes{ get; set; } =[];
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -57,13 +61,12 @@ public partial class CalendarEpisode : INotifyPropertyChanged{
                 await QueueManager.Instance.CrAddEpisodeToQueue(id, Languages.Locale2language(locale).CrLocale, CrunchyrollManager.Instance.CrunOptions.DubLang, true);
             }
         }
-        
+
         if (CalendarEpisodes.Count > 0){
             foreach (var calendarEpisode in CalendarEpisodes){
                 calendarEpisode.AddEpisodeToQue();
             }
         }
-        
     }
 
     public async Task LoadImage(int width = 0, int height = 0){

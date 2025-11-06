@@ -26,6 +26,10 @@ public partial class QueueManager : ObservableObject{
 
     public int ActiveDownloads => Volatile.Read(ref activeDownloads);
 
+    public readonly SemaphoreSlim activeProcessingJobs = new SemaphoreSlim(initialCount: CrunchyrollManager.Instance.CrunOptions.SimultaneousProcessingJobs, maxCount: int.MaxValue);
+    private int _limit = CrunchyrollManager.Instance.CrunOptions.SimultaneousProcessingJobs;
+    private int _borrowed = 0;
+
     #endregion
 
     [ObservableProperty]
@@ -60,6 +64,10 @@ public partial class QueueManager : ObservableObject{
         Interlocked.Increment(ref activeDownloads);
     }
 
+    public void ResetDownloads(){
+        Interlocked.Exchange(ref activeDownloads, 0);
+    }
+
     public void DecrementDownloads(){
         while (true){
             int current = Volatile.Read(ref activeDownloads);
@@ -69,7 +77,6 @@ public partial class QueueManager : ObservableObject{
                 return;
         }
     }
-    
 
     private void UpdateItemListOnRemove(object? sender, NotifyCollectionChangedEventArgs e){
         if (e.Action == NotifyCollectionChangedAction.Remove){
@@ -315,7 +322,7 @@ public partial class QueueManager : ObservableObject{
         MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue", ToastType.Information, 1));
     }
 
-    public async Task CrAddMusicVideoToQueue(string epId){
+    public async Task CrAddMusicVideoToQueue(string epId, string overrideDownloadPath = ""){
         await CrunchyrollManager.Instance.CrAuthEndpoint1.RefreshToken(true);
 
         var musicVideo = await CrunchyrollManager.Instance.CrMusic.ParseMusicVideoByIdAsync(epId, "");
@@ -329,6 +336,7 @@ public partial class QueueManager : ObservableObject{
                 historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDubListAndDownloadDir(musicVideoMeta.SeriesId, musicVideoMeta.SeasonId, musicVideoMeta.Data.First().MediaId);
             }
 
+            musicVideoMeta.DownloadPath = !string.IsNullOrEmpty(overrideDownloadPath) ? overrideDownloadPath : (!string.IsNullOrEmpty(historyEpisode.downloadDirPath) ? historyEpisode.downloadDirPath : "");
             musicVideoMeta.VideoQuality = !string.IsNullOrEmpty(historyEpisode.videoQuality) ? historyEpisode.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
 
             var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
@@ -339,7 +347,7 @@ public partial class QueueManager : ObservableObject{
         }
     }
 
-    public async Task CrAddConcertToQueue(string epId){
+    public async Task CrAddConcertToQueue(string epId, string overrideDownloadPath = ""){
         await CrunchyrollManager.Instance.CrAuthEndpoint1.RefreshToken(true);
 
         var concert = await CrunchyrollManager.Instance.CrMusic.ParseConcertByIdAsync(epId, "");
@@ -353,6 +361,7 @@ public partial class QueueManager : ObservableObject{
                 historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDubListAndDownloadDir(concertMeta.SeriesId, concertMeta.SeasonId, concertMeta.Data.First().MediaId);
             }
 
+            concertMeta.DownloadPath = !string.IsNullOrEmpty(overrideDownloadPath) ? overrideDownloadPath : (!string.IsNullOrEmpty(historyEpisode.downloadDirPath) ? historyEpisode.downloadDirPath : "");
             concertMeta.VideoQuality = !string.IsNullOrEmpty(historyEpisode.videoQuality) ? historyEpisode.videoQuality : CrunchyrollManager.Instance.CrunOptions.QualityVideo;
 
             var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
@@ -438,7 +447,7 @@ public partial class QueueManager : ObservableObject{
                         crunchyEpMeta.HighlightAllAvailable = true;
                     }
                 }
-                
+
 
                 Queue.Add(crunchyEpMeta);
 
@@ -465,6 +474,34 @@ public partial class QueueManager : ObservableObject{
             MessageBus.Current.SendMessage(new ToastMessage($"Added episodes to the queue", ToastType.Information, 1));
         } else if (!partialAdd){
             MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode(s) to the queue with current dub settings", ToastType.Error, 2));
+        }
+    }
+
+    public void SetLimit(int newLimit){
+        lock (activeProcessingJobs){
+            if (newLimit == _limit) return;
+
+            if (newLimit > _limit){
+                int giveBack = Math.Min(_borrowed, newLimit - _limit);
+                if (giveBack > 0){
+                    activeProcessingJobs.Release(giveBack);
+                    _borrowed -= giveBack;
+                }
+
+                int more = newLimit - _limit - giveBack;
+                if (more > 0) activeProcessingJobs.Release(more);
+            } else{
+                int toPark = _limit - newLimit;
+
+                for (int i = 0; i < toPark; i++){
+                    _ = Task.Run(async () => {
+                        await activeProcessingJobs.WaitAsync().ConfigureAwait(false);
+                        Interlocked.Increment(ref _borrowed);
+                    });
+                }
+            }
+
+            _limit = newLimit;
         }
     }
 }

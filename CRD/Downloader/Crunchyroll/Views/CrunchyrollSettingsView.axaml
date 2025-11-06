@@ -56,6 +56,12 @@
 
                 </controls:SettingsExpander.Footer>
 
+                <controls:SettingsExpanderItem Content="Download AD for Selected Dubs" Description="Downloads audio description tracks matching the selected dub languages (if available).">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadDescriptionAudio}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
             </controls:SettingsExpander>
 
 
@@ -104,6 +110,12 @@
                         </Popup>
                     </StackPanel>
                 </controls:SettingsExpander.Footer>
+
+                <controls:SettingsExpanderItem Content="Fix Ccc Subtitles" Description="Automatically adjusts subtitle styles that were created with ClosedCaptionConverter">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding FixCccSubtitles}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Download Duplicate" Description="Download subtitles from all dubs where they're available">
                     <controls:SettingsExpanderItem.Footer>
@@ -187,7 +199,13 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem IsVisible="{Binding IncludeCcSubs}" Content="CC Subtitles" Description="Font">
+                <controls:SettingsExpanderItem IsVisible="{Binding IncludeCcSubs}" Content="Convert CC Subtitles to ASS" Description="When enabled, closed-caption WEBVTT subtitles are converted into ASS format">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding ConvertVtt2Ass}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem IsVisible="{Binding ShowVtt2AssSettings}" Content="CC Subtitles" Description="Font">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding CCSubsFont}" />
@@ -255,6 +273,12 @@
                             </StackPanel>
 
                             <StackPanel Margin="0,5">
+                                <TextBlock Text="Client Id" />
+                                <TextBox Name="ClientIdTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                         Text="{Binding EndpointClientId}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5">
                                 <TextBlock Text="User Agent" />
                                 <TextBox Name="UserAgentTextBox" HorizontalAlignment="Left" MinWidth="250"
                                          Text="{Binding EndpointUserAgent}" />
@@ -286,6 +310,12 @@
                                         <TextBlock Text="Login" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12" />
                                     </StackPanel>
                                 </Button>
+
+                                <controls:ProgressRing Width="24" Height="24"
+                                                       Margin="8,0,0,0"
+                                                       IsActive="{Binding IsLoggingIn}"
+                                                       IsVisible="{Binding IsLoggingIn}" />
+
                                 <controls:SymbolIcon Symbol="CloudOff"
                                                      IsVisible="{Binding EndpointNotSignedWarning}"
                                                      Foreground="OrangeRed"

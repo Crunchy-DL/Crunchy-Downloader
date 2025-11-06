@@ -36,19 +36,31 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private bool _downloadAudio = true;
 
     [ObservableProperty]
+    private bool _downloadDescriptionAudio = true;
+
+    [ObservableProperty]
     private bool _downloadChapters = true;
 
     [ObservableProperty]
     private bool _addScaledBorderAndShadow;
-    
+
+    [ObservableProperty]
+    private bool _fixCccSubtitles;
+
     [ObservableProperty]
     private bool _subsDownloadDuplicate;
-    
+
     [ObservableProperty]
     private bool _includeSignSubs;
 
     [ObservableProperty]
     private bool _includeCcSubs;
+
+    [ObservableProperty]
+    private bool _convertVtt2Ass;
+
+    [ObservableProperty]
+    private bool _showVtt2AssSettings;
 
     [ObservableProperty]
     private ComboBoxItem _selectedScaledBorderAndShadow;
@@ -63,13 +75,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _muxToMp4;
-    
+
     [ObservableProperty]
     private bool _muxToMp3;
 
     [ObservableProperty]
     private bool _muxFonts;
-    
+
     [ObservableProperty]
     private bool _muxCover;
 
@@ -102,7 +114,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _fileName = "";
-    
+
     [ObservableProperty]
     private string _fileNameWhitespaceSubstitute = "";
 
@@ -138,22 +150,28 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedStreamEndpoint;
-    
+
     [ObservableProperty]
     private ComboBoxItem _SelectedStreamEndpointSecondary;
-    
+
     [ObservableProperty]
     private string _endpointAuthorization = "";
-    
+
+    [ObservableProperty]
+    private string _endpointClientId = "";
+
     [ObservableProperty]
     private string _endpointUserAgent = "";
-    
+
     [ObservableProperty]
     private string _endpointDeviceName = "";
-    
+
     [ObservableProperty]
     private string _endpointDeviceType = "";
-    
+
+    [ObservableProperty]
+    private bool _isLoggingIn;
+
     [ObservableProperty]
     private bool _endpointNotSignedWarning;
 
@@ -187,6 +205,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     public ObservableCollection<ComboBoxItem> AudioQualityList{ get; } =[
         new(){ Content = "best" },
+        new(){ Content = "192kB/s" },
         new(){ Content = "128kB/s" },
         new(){ Content = "96kB/s" },
         new(){ Content = "64kB/s" },
@@ -240,7 +259,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "tv/vidaa" },
         new(){ Content = "tv/android_tv" },
     ];
-    
+
     public ObservableCollection<ComboBoxItem> StreamEndpointsSecondary{ get; } =[
         new(){ Content = "" },
         // new(){ Content = "web/firefox" },
@@ -331,16 +350,17 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
         ComboBoxItem? streamEndpointSecondar = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpointSecondSettings?.Endpoint ?? "")) ?? null;
         SelectedStreamEndpointSecondary = streamEndpointSecondar ?? StreamEndpointsSecondary[0];
-        
+
         EndpointAuthorization = options.StreamEndpointSecondSettings?.Authorization ?? string.Empty;
+        EndpointClientId = options.StreamEndpointSecondSettings?.Client_ID ?? string.Empty;
         EndpointUserAgent = options.StreamEndpointSecondSettings?.UserAgent ?? string.Empty;
         EndpointDeviceName = options.StreamEndpointSecondSettings?.Device_name ?? string.Empty;
         EndpointDeviceType = options.StreamEndpointSecondSettings?.Device_type ?? string.Empty;
-        
+
         if (CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???"){
             EndpointNotSignedWarning = true;
         }
-        
+
         FFmpegHWAccel.AddRange(GetAvailableHWAccelOptions());
 
         StringItemWithDisplayName? hwAccellFlag = FFmpegHWAccel.FirstOrDefault(a => a.value == options.FfmpegHwAccelFlag) ?? null;
@@ -351,7 +371,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
             .Where(a => options.DlSubs.Contains(a.Content))
             .OrderBy(a => options.DlSubs.IndexOf(a.Content))
             .ToList();
-        
+
         SelectedSubLang.Clear();
         foreach (var listBoxItem in softSubLang){
             SelectedSubLang.Add(listBoxItem);
@@ -361,7 +381,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
             .Where(a => options.DubLang.Contains(a.Content))
             .OrderBy(a => options.DubLang.IndexOf(a.Content))
             .ToList();
-        
+
         SelectedDubLang.Clear();
         foreach (var listBoxItem in dubLang){
             SelectedDubLang.Add(listBoxItem);
@@ -370,6 +390,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        FixCccSubtitles = options.FixCccSubtitles;
+        ConvertVtt2Ass = options.ConvertVtt2Ass;
         SubsDownloadDuplicate = options.SubsDownloadDuplicate;
         MarkAsWatched = options.MarkAsWatched;
         DownloadFirstAvailableDub = options.DownloadFirstAvailableDub;
@@ -388,6 +410,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         IncludeCcSubs = options.IncludeCcSubs;
         DownloadVideo = !options.Novids;
         DownloadAudio = !options.Noaudio;
+        DownloadDescriptionAudio = options.DownloadDescriptionAudio;
         DownloadVideoForEveryDub = !options.DlVideoOnce;
         KeepDubsSeparate = options.KeepDubsSeperate;
         DownloadChapters = options.Chapters;
@@ -428,6 +451,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         var subs = SelectedSubLang.Select(item => item.Content?.ToString());
         SelectedSubs = string.Join(", ", subs) ?? "";
 
+        ShowVtt2AssSettings = IncludeCcSubs && ConvertVtt2Ass;
+
         SelectedSubLang.CollectionChanged += Changes;
         SelectedDubLang.CollectionChanged += Changes;
 
@@ -443,6 +468,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         }
 
         CrunchyrollManager.Instance.CrunOptions.SubsDownloadDuplicate = SubsDownloadDuplicate;
+        CrunchyrollManager.Instance.CrunOptions.ConvertVtt2Ass = ConvertVtt2Ass;
+        CrunchyrollManager.Instance.CrunOptions.FixCccSubtitles = FixCccSubtitles;
         CrunchyrollManager.Instance.CrunOptions.MarkAsWatched = MarkAsWatched;
         CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub = DownloadFirstAvailableDub;
         CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi = UseCrBetaApi;
@@ -457,6 +484,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.VideoTitle = FileTitle;
         CrunchyrollManager.Instance.CrunOptions.Novids = !DownloadVideo;
         CrunchyrollManager.Instance.CrunOptions.Noaudio = !DownloadAudio;
+        CrunchyrollManager.Instance.CrunOptions.DownloadDescriptionAudio = DownloadDescriptionAudio;
         CrunchyrollManager.Instance.CrunOptions.DlVideoOnce = !DownloadVideoForEveryDub;
         CrunchyrollManager.Instance.CrunOptions.KeepDubsSeperate = KeepDubsSeparate;
         CrunchyrollManager.Instance.CrunOptions.Chapters = DownloadChapters;
@@ -489,7 +517,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         string descLang = SelectedDescriptionLang.Content + "";
 
         CrunchyrollManager.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : CrunchyrollManager.Instance.DefaultLocale;
-        
+
         CrunchyrollManager.Instance.CrunOptions.Hslang = SelectedHSLang.Content + "";
 
         CrunchyrollManager.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
@@ -501,12 +529,15 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         var endpointSettings = new CrAuthSettings();
         endpointSettings.Endpoint = SelectedStreamEndpointSecondary.Content + "";
         endpointSettings.Authorization = EndpointAuthorization;
+        endpointSettings.Client_ID = EndpointClientId;
         endpointSettings.UserAgent = EndpointUserAgent;
         endpointSettings.Device_name = EndpointDeviceName;
         endpointSettings.Device_type = EndpointDeviceType;
-        
-        
+
+
         CrunchyrollManager.Instance.CrunOptions.StreamEndpointSecondSettings = endpointSettings;
+        CrunchyrollManager.Instance.CrAuthEndpoint2.AuthSettings = endpointSettings;
+
 
         List<string> dubLangs = new List<string>();
         foreach (var listBoxItem in SelectedDubLang){
@@ -609,6 +640,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         }
 
         UpdateSettings();
+        ShowVtt2AssSettings = IncludeCcSubs && ConvertVtt2Ass;
 
         if (e.PropertyName is nameof(History)){
             if (CrunchyrollManager.Instance.CrunOptions.History){
@@ -669,13 +701,14 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     public void ResetEndpointSettings(){
         ComboBoxItem? streamEndpointSecondar = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == ("android/phone")) ?? null;
         SelectedStreamEndpointSecondary = streamEndpointSecondar ?? StreamEndpointsSecondary[0];
-        
-        EndpointAuthorization = "Basic YmY3MHg2aWhjYzhoZ3p3c2J2eGk6eDJjc3BQZXQzWno1d0pDdEpyVUNPSVM5Ynpad1JDcGM=";
-        EndpointUserAgent = "Crunchyroll/3.90.0 Android/16 okhttp/4.12.0";
-        EndpointDeviceName = "CPH2449";
-        EndpointDeviceType = "OnePlus CPH2449";
+
+        EndpointAuthorization = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Authorization;
+        EndpointClientId = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Client_ID;
+        EndpointUserAgent = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.UserAgent;
+        EndpointDeviceName = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Device_name;
+        EndpointDeviceType = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Device_type;
     }
-    
+
     [RelayCommand]
     public async Task Login(){
         var dialog = new ContentDialog(){
@@ -690,9 +723,10 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         };
 
         _ = await dialog.ShowAsync();
-
+        IsLoggingIn = true;
+        await viewModel.LoginCompleted;
+        IsLoggingIn = false;
         EndpointNotSignedWarning = CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???";
-        
     }
 
     private List<StringItemWithDisplayName> GetAvailableHWAccelOptions(){
@@ -706,7 +740,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
                 process.StartInfo.CreateNoWindow = true;
 
                 string output = string.Empty;
-                
+
                 process.OutputDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)){
                         output += e.Data + Environment.NewLine;
@@ -714,7 +748,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
                 };
 
                 process.Start();
-                
+
                 process.BeginOutputReadLine();
                 // process.BeginErrorReadLine();
 

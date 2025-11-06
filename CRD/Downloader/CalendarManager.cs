@@ -208,6 +208,7 @@ public class CalendarManager{
 
             //EpisodeAirDate
             foreach (var crBrowseEpisode in newEpisodes){
+                bool filtered = false;
                 DateTime episodeAirDate = crBrowseEpisode.EpisodeMetadata.EpisodeAirDate.Kind == DateTimeKind.Utc
                     ? crBrowseEpisode.EpisodeMetadata.EpisodeAirDate.ToLocalTime()
                     : crBrowseEpisode.EpisodeMetadata.EpisodeAirDate;
@@ -257,13 +258,13 @@ public class CalendarManager{
                     (crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Dub)") || crBrowseEpisode.EpisodeMetadata.SeasonTitle.EndsWith("Audio)")) &&
                     (string.IsNullOrEmpty(dubFilter) || dubFilter == "none" || (crBrowseEpisode.EpisodeMetadata.AudioLocale != null && crBrowseEpisode.EpisodeMetadata.AudioLocale.GetEnumMemberValue() != dubFilter))){
                     //|| crBrowseEpisode.EpisodeMetadata.AudioLocale != Locale.JaJp
-                    continue;
+                    filtered = true;
                 }
 
 
                 if (!string.IsNullOrEmpty(dubFilter) && dubFilter != "none"){
                     if (crBrowseEpisode.EpisodeMetadata.AudioLocale != null && crBrowseEpisode.EpisodeMetadata.AudioLocale.GetEnumMemberValue() != dubFilter){
-                        continue;
+                        filtered = true;
                     }
                 }
 
@@ -274,6 +275,12 @@ public class CalendarManager{
                 if (calendarDay != null){
                     CalendarEpisode calEpisode = new CalendarEpisode();
 
+                    string? seasonTitle = string.IsNullOrEmpty(crBrowseEpisode.EpisodeMetadata.SeasonTitle)
+                        ? crBrowseEpisode.EpisodeMetadata.SeriesTitle
+                        : Regex.IsMatch(crBrowseEpisode.EpisodeMetadata.SeasonTitle, @"^Season\s+\d+$", RegexOptions.IgnoreCase)
+                            ? $"{crBrowseEpisode.EpisodeMetadata.SeriesTitle} {crBrowseEpisode.EpisodeMetadata.SeasonTitle}"
+                            : crBrowseEpisode.EpisodeMetadata.SeasonTitle;
+                    
                     calEpisode.DateTime = targetDate;
                     calEpisode.HasPassed = DateTime.Now > targetDate;
                     calEpisode.EpisodeName = crBrowseEpisode.Title;
@@ -282,12 +289,14 @@ public class CalendarManager{
                     calEpisode.ThumbnailUrl = crBrowseEpisode.Images.Thumbnail?.FirstOrDefault()?.FirstOrDefault()?.Source ?? ""; //https://www.crunchyroll.com/i/coming_soon_beta_thumb.jpg
                     calEpisode.IsPremiumOnly = crBrowseEpisode.EpisodeMetadata.IsPremiumOnly;
                     calEpisode.IsPremiere = crBrowseEpisode.EpisodeMetadata.Episode == "1";
-                    calEpisode.SeasonName = crBrowseEpisode.EpisodeMetadata.SeasonTitle;
+                    calEpisode.SeasonName = seasonTitle;
                     calEpisode.EpisodeNumber = crBrowseEpisode.EpisodeMetadata.Episode;
                     calEpisode.CrSeriesID = crBrowseEpisode.EpisodeMetadata.SeriesId;
+                    calEpisode.FilteredOut = filtered;
+                    calEpisode.AudioLocale = crBrowseEpisode.EpisodeMetadata.AudioLocale;
 
                     var existingEpisode = calendarDay.CalendarEpisodes
-                        .FirstOrDefault(e => e.SeasonName == calEpisode.SeasonName);
+                        .FirstOrDefault(e => e.SeasonName == calEpisode.SeasonName && e.AudioLocale == calEpisode.AudioLocale);
 
                     if (existingEpisode != null){
                         if (!int.TryParse(existingEpisode.EpisodeNumber, out _)){
@@ -330,8 +339,8 @@ public class CalendarManager{
                         if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(calendarDay.DateTime.ToString("yyyy-MM-dd"))){
                             var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
 
-                            foreach (var calendarEpisode in list.Where(calendarEpisode => calendarDay.DateTime.Date.Day == calendarEpisode.DateTime.Date.Day)
-                                         .Where(calendarEpisode => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisode.CrSeriesID && ele.SeasonName != calendarEpisode.SeasonName))){
+                            foreach (var calendarEpisode in list.Where(calendarEpisodeAnilist => calendarDay.DateTime.Date.Day == calendarEpisodeAnilist.DateTime.Date.Day)
+                                         .Where(calendarEpisodeAnilist => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisodeAnilist.CrSeriesID && ele.SeasonName != calendarEpisodeAnilist.SeasonName))){
                                 calendarDay.CalendarEpisodes.Add(calendarEpisode);
                             }
                         }
@@ -342,6 +351,7 @@ public class CalendarManager{
             foreach (var weekCalendarDay in week.CalendarDays){
                 if (weekCalendarDay.CalendarEpisodes.Count > 0)
                     weekCalendarDay.CalendarEpisodes = weekCalendarDay.CalendarEpisodes
+                        .Where(e => !e.FilteredOut)
                         .OrderBy(e => e.AnilistEpisode) // False first, then true
                         .ThenBy(e => e.DateTime)
                         .ThenBy(e => e.SeasonName)

@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils;
 using CRD.Utils.Structs.Crunchyroll.Music;
 using CRD.Utils.Structs.History;
 using CRD.Utils.UI;
@@ -23,11 +24,13 @@ public partial class ContentDialogFeaturedMusicViewModel : ViewModelBase{
     private bool _musicInHistory;
 
     private CrunchyMusicVideoList featuredMusic;
+    private string FolderPath = "";
 
-    public ContentDialogFeaturedMusicViewModel(CustomContentDialog contentDialog, CrunchyMusicVideoList featuredMusic, bool crunOptionsHistoryIncludeCrArtists){
+    public ContentDialogFeaturedMusicViewModel(CustomContentDialog contentDialog, CrunchyMusicVideoList featuredMusic, bool crunOptionsHistoryIncludeCrArtists, string overrideDownloadPath = ""){
         ArgumentNullException.ThrowIfNull(contentDialog);
 
         this.featuredMusic = featuredMusic;
+        this.FolderPath = overrideDownloadPath + "/OST";
 
         dialog = contentDialog;
         dialog.Closed += DialogOnClosed;
@@ -78,7 +81,7 @@ public partial class ContentDialogFeaturedMusicViewModel : ViewModelBase{
 
     [RelayCommand]
     public void DownloadEpisode(HistoryEpisode episode){
-        episode.DownloadEpisode();
+        episode.DownloadEpisode(EpisodeDownloadMode.Default, FolderPath);
     }
 
     private void SaveButton(ContentDialog sender, ContentDialogButtonClickEventArgs args){

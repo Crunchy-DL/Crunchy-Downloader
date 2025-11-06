@@ -55,8 +55,11 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     private double? _simultaneousDownloads;
 
     [ObservableProperty]
+    private double? _simultaneousProcessingJobs;
+
+    [ObservableProperty]
     private bool _downloadMethodeNew;
-    
+
     [ObservableProperty]
     private bool _downloadAllowEarlyStart;
 
@@ -280,6 +283,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         RetryDelay = Math.Clamp((options.RetryDelay), 1, 30);
         DownloadToTempFolder = options.DownloadToTempFolder;
         SimultaneousDownloads = options.SimultaneousDownloads;
+        SimultaneousProcessingJobs = options.SimultaneousProcessingJobs;
         LogMode = options.LogMode;
 
         ComboBoxItem? theme = AppThemes.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Theme) ?? null;
@@ -320,6 +324,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.HistoryCountSonarr = HistoryCountSonarr;
         settings.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
         settings.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
+        settings.SimultaneousProcessingJobs = Math.Clamp((int)(SimultaneousProcessingJobs ?? 0), 1, 10);
+
+        QueueManager.Instance.SetLimit(settings.SimultaneousProcessingJobs);
 
         settings.ProxyEnabled = ProxyEnabled;
         settings.ProxySocks = ProxySocks;

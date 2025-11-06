@@ -167,19 +167,31 @@ public class Merger{
             }
         }
 
+        // var sortedAudio = options.OnlyAudio
+        //     .OrderBy(sub => options.DubLangList.IndexOf(sub.Language.CrLocale) != -1 ? options.DubLangList.IndexOf(sub.Language.CrLocale) : int.MaxValue)
+        //     .ToList();
+        
+        var rank = options.DubLangList
+            .Select((val, i) => new{ val, i })
+            .ToDictionary(x => x.val, x => x.i, StringComparer.OrdinalIgnoreCase);
+
         var sortedAudio = options.OnlyAudio
-            .OrderBy(sub => options.DubLangList.IndexOf(sub.Language.CrLocale) != -1 ? options.DubLangList.IndexOf(sub.Language.CrLocale) : int.MaxValue)
+            .OrderBy(m => {
+                var key = m.Language?.CrLocale ?? string.Empty;
+                return rank.TryGetValue(key, out var r) ? r : int.MaxValue; // unknown locales last
+            })
+            .ThenBy(m => m.IsAudioRoleDescription) // false first, then true
             .ToList();
 
         foreach (var aud in sortedAudio){
-            string trackName = aud.Language.Name;
+            string trackName = aud.Language.Name + (aud.IsAudioRoleDescription ? " [AD]" : "");
             args.Add("--audio-tracks 0");
             args.Add("--no-video");
             args.Add($"--track-name 0:\"{trackName}\"");
             args.Add($"--language 0:{aud.Language.Code}");
 
 
-            if (options.Defaults.Audio.Code == aud.Language.Code){
+            if (options.Defaults.Audio.Code == aud.Language.Code && !aud.IsAudioRoleDescription){
                 args.Add("--default-track 0");
             } else{
                 args.Add("--default-track 0:0");
@@ -450,7 +462,7 @@ public class MergerInput{
     public LanguageItem Language{ get; set; }
     public int? Duration{ get; set; }
     public int? Delay{ get; set; }
-    public bool? IsPrimary{ get; set; }
+    public bool IsAudioRoleDescription{ get; set; }
     public int? Bitrate{ get; set; }
 }
 

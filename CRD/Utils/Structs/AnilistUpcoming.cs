@@ -29,7 +29,7 @@ public partial class AnilistSeries : ObservableObject{
     public string BannerImage{ get; set; }
     public bool IsAdult{ get; set; }
     public CoverImage CoverImage{ get; set; }
-    public Trailer Trailer{ get; set; }
+    public Trailer? Trailer{ get; set; }
     public List<ExternalLink>? ExternalLinks{ get; set; }
     public List<Ranking> Rankings{ get; set; }
     public Studios Studios{ get; set; }
@@ -53,6 +53,9 @@ public partial class AnilistSeries : ObservableObject{
         }
     }
 
+    [JsonIgnore]
+    [ObservableProperty]
+    public bool _fetchedFromCR;
 
     [JsonIgnore]
     public string? CrunchyrollID;

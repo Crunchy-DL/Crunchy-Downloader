@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Structs;
@@ -9,15 +10,19 @@ namespace CRD.ViewModels.Utils;
 public partial class ContentDialogInputLoginViewModel : ViewModelBase{
     private readonly ContentDialog dialog;
 
+    private readonly TaskCompletionSource<bool> _loginTcs = new();
+
+    public Task LoginCompleted => _loginTcs.Task;
+
     [ObservableProperty]
     private string _email;
-    
+
     [ObservableProperty]
     private string _password;
 
-    private AccountPageViewModel accountPageViewModel;
+    private AccountPageViewModel? accountPageViewModel;
 
-    public ContentDialogInputLoginViewModel(ContentDialog dialog, AccountPageViewModel accountPageViewModel = null){
+    public ContentDialogInputLoginViewModel(ContentDialog dialog, AccountPageViewModel? accountPageViewModel = null){
         if (dialog is null){
             throw new ArgumentNullException(nameof(dialog));
         }
@@ -30,15 +35,19 @@ public partial class ContentDialogInputLoginViewModel : ViewModelBase{
 
     private async void LoginButton(ContentDialog sender, ContentDialogButtonClickEventArgs args){
         dialog.PrimaryButtonClick -= LoginButton;
-        await CrunchyrollManager.Instance.CrAuthEndpoint1.Auth(new AuthData{Password = Password,Username = Email});
-        if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrAuthEndpoint2.AuthSettings.Endpoint)){
-            await CrunchyrollManager.Instance.CrAuthEndpoint2.Auth(new AuthData{Password = Password,Username = Email});
-        }
+        try{
+            await CrunchyrollManager.Instance.CrAuthEndpoint1.Auth(new AuthData{ Password = Password, Username = Email });
+            if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrAuthEndpoint2.AuthSettings.Endpoint)){
+                await CrunchyrollManager.Instance.CrAuthEndpoint2.Auth(new AuthData{ Password = Password, Username = Email });
+            }
+            
+            accountPageViewModel?.UpdatetProfile();
+            
 
-        if (accountPageViewModel != null){
-            accountPageViewModel.UpdatetProfile();
+            _loginTcs.TrySetResult(true);
+        } catch (Exception ex){
+            _loginTcs.TrySetException(ex);
         }
-      
     }
 
     private void DialogOnClosed(ContentDialog sender, ContentDialogClosedEventArgs args){

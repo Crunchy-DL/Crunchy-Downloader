@@ -33,9 +33,9 @@ public class HttpClientReq{
     }
 
     #endregion
-    
+
     private HttpClient client;
-    
+
     public HttpClientReq(){
         IWebProxy systemProxy = WebRequest.DefaultWebProxy;
 
@@ -137,6 +137,8 @@ public class HttpClientReq{
 
             response.EnsureSuccessStatusCode();
 
+            CaptureResponseCookies(response, request.RequestUri!, cookieStore);
+
             return (IsOk: true, ResponseContent: content, error: "");
         } catch (Exception e){
             // Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
@@ -147,6 +149,30 @@ public class HttpClientReq{
             return (IsOk: false, ResponseContent: content, error: e.Message);
         }
     }
+
+    private void CaptureResponseCookies(HttpResponseMessage response, Uri requestUri, Dictionary<string, CookieCollection>? cookieStore){
+        if (cookieStore == null){
+            return;
+        }
+
+        if (response.Headers.TryGetValues("Set-Cookie", out var cookieHeaders)){
+            string domain = requestUri.Host.StartsWith("www.") ? requestUri.Host.Substring(4) : requestUri.Host;
+
+            foreach (var header in cookieHeaders){
+                var cookies = header.Split(';', StringSplitOptions.RemoveEmptyEntries);
+                var nameValue = cookies[0].Split('=', 2);
+                if (nameValue.Length != 2) continue;
+
+                var cookie = new Cookie(nameValue[0].Trim(), nameValue[1].Trim()){
+                    Domain = domain,
+                    Path = "/"
+                };
+
+                AddCookie(domain, cookie, cookieStore);
+            }
+        }
+    }
+
 
     private void AttachCookies(HttpRequestMessage request, Dictionary<string, CookieCollection>? cookieStore){
         if (cookieStore == null){
@@ -175,6 +201,19 @@ public class HttpClientReq{
             request.Headers.Remove("Cookie");
             request.Headers.Add("Cookie", cookieHeader.ToString());
         }
+    }
+
+    public string? GetCookieValue(string domain, string cookieName, Dictionary<string, CookieCollection>? cookieStore){
+        if (cookieStore == null){
+            return null;
+        }
+
+        if (cookieStore.TryGetValue(domain, out var cookies)){
+            var cookie = cookies.Cast<Cookie>().FirstOrDefault(c => c.Name == cookieName);
+            return cookie?.Value;
+        }
+
+        return null;
     }
 
     public void AddCookie(string domain, Cookie cookie, Dictionary<string, CookieCollection>? cookieStore){
@@ -237,7 +276,7 @@ public static class ApiUrls{
     public static string Cms => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/cms";
     public static string Content => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2";
 
-    public static string Playback => "https://cr-play-service.prd.crunchyrollsvc.com/v2";
+    public static string Playback => "https://cr-play-service.prd.crunchyrollsvc.com/v3";
     //https://www.crunchyroll.com/playback/v2
     //https://cr-play-service.prd.crunchyrollsvc.com/v2
 

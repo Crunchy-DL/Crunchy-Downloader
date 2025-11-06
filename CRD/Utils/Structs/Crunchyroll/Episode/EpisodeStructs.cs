@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using Avalonia.Media.Imaging;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
@@ -338,6 +339,8 @@ public class EpisodeVersion{
     [JsonProperty("season_guid")]
     public string SeasonGuid{ get; set; }
 
+    public string[] roles{ get; set; } =[];
+
     public string Variant{ get; set; }
 }
 
@@ -394,6 +397,8 @@ public class CrunchyEpMeta{
     public CrDownloadOptions? DownloadSettings;
 
     public bool HighlightAllAvailable{ get; set; }
+    
+    public CancellationTokenSource Cts { get; } = new();
 }
 
 public class DownloadProgress{
@@ -415,6 +420,8 @@ public class CrunchyEpMetaData{
     public bool IsSubbed{ get; set; }
     public bool IsDubbed{ get; set; }
 
+    public bool IsAudioRoleDescription{ get; set; }
+    
     public (string? seasonID, string? guid) GetOriginalIds(){
         var version = Versions?.FirstOrDefault(a => a.Original);
         if (version != null && !string.IsNullOrEmpty(version.Guid) && !string.IsNullOrEmpty(version.SeasonGuid)){

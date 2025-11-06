@@ -143,13 +143,13 @@ public class HistoryEpisode : INotifyPropertyChanged{
         await DownloadEpisode();
     }
 
-    public async Task DownloadEpisode(EpisodeDownloadMode episodeDownloadMode = EpisodeDownloadMode.Default){
+    public async Task DownloadEpisode(EpisodeDownloadMode episodeDownloadMode = EpisodeDownloadMode.Default, string overrideDownloadPath = ""){
         switch (EpisodeType){
             case EpisodeType.MusicVideo:
-                await QueueManager.Instance.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty);
+                await QueueManager.Instance.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);
                 break;
             case EpisodeType.Concert:
-                await QueueManager.Instance.CrAddConcertToQueue(EpisodeId ?? string.Empty);
+                await QueueManager.Instance.CrAddConcertToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);
                 break;
             case EpisodeType.Episode:
             case EpisodeType.Unknown:

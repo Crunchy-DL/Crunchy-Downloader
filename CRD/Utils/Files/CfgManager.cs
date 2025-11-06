@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using CRD.Downloader.Crunchyroll;
 using Newtonsoft.Json;
 
@@ -11,7 +16,7 @@ namespace CRD.Utils.Files;
 
 public class CfgManager{
     private static string workingDirectory = AppContext.BaseDirectory;
-    
+
     public static readonly string PathCrToken = Path.Combine(workingDirectory, "config", "cr_token.json");
     public static readonly string PathCrDownloadOptions = Path.Combine(workingDirectory, "config", "settings.json");
 
@@ -182,29 +187,104 @@ public class CfgManager{
         WriteJsonToFileCompressed(PathCrHistory, CrunchyrollManager.Instance.HistoryList);
     }
 
-    private static object fileLock = new object();
+    private static readonly ConcurrentDictionary<string, object> _pathLocks =
+        new(OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal);
 
-    public static void WriteJsonToFileCompressed(string pathToFile, object obj){
-        try{
-            // Check if the directory exists; if not, create it.
-            string directoryPath = Path.GetDirectoryName(pathToFile);
-            if (!Directory.Exists(directoryPath)){
-                Directory.CreateDirectory(directoryPath);
-            }
+    public static void WriteJsonToFileCompressed(string pathToFile, object obj, int keepBackups = 5){
+        string? directoryPath = Path.GetDirectoryName(pathToFile);
+        if (string.IsNullOrEmpty(directoryPath))
+            directoryPath = Environment.CurrentDirectory;
 
-            lock (fileLock){
-                using (var fileStream = new FileStream(pathToFile, FileMode.Create, FileAccess.Write))
-                using (var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal))
-                using (var streamWriter = new StreamWriter(gzipStream))
-                using (var jsonWriter = new JsonTextWriter(streamWriter){ Formatting = Formatting.Indented }){
+        Directory.CreateDirectory(directoryPath);
+
+        string key = Path.GetFullPath(pathToFile);
+        object gate = _pathLocks.GetOrAdd(key, _ => new object());
+
+        lock (gate){
+            string tmp = Path.Combine(
+                directoryPath,
+                "." + Path.GetFileName(pathToFile) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+
+            try{
+                var fso = new FileStreamOptions{
+                    Mode = FileMode.CreateNew,
+                    Access = FileAccess.Write,
+                    Share = FileShare.None,
+                    BufferSize = 64 * 1024,
+                    Options = FileOptions.WriteThrough
+                };
+
+                using (var fs = new FileStream(tmp, fso))
+                using (var gzip = new GZipStream(fs, CompressionLevel.Optimal, leaveOpen: false))
+                using (var sw = new StreamWriter(gzip))
+                using (var jw = new JsonTextWriter(sw){ Formatting = Formatting.Indented }){
                     var serializer = new JsonSerializer();
-                    serializer.Serialize(jsonWriter, obj);
+                    serializer.Serialize(jw, obj);
                 }
+                
+                if (File.Exists(pathToFile)){
+                    string backupPath = GetDailyBackupPath(pathToFile, DateTime.Today);
+                    File.Replace(tmp, pathToFile, backupPath, ignoreMetadataErrors: true);
+                    
+                    PruneBackups(pathToFile, keepBackups);
+                } else{
+                    File.Move(tmp, pathToFile, overwrite: true);
+                }
+            } catch (Exception ex){
+                try{
+                    if (File.Exists(tmp)) File.Delete(tmp);
+                } catch{
+                    /* ignore */
+                }
+
+                Console.Error.WriteLine($"An error occurred writing {pathToFile}: {ex.Message}");
             }
-        } catch (Exception ex){
-            Console.Error.WriteLine($"An error occurred: {ex.Message}");
         }
     }
+
+    private static string GetDailyBackupPath(string pathToFile, DateTime date){
+        string dir = Path.GetDirectoryName(pathToFile)!;
+        string name = Path.GetFileName(pathToFile);
+        string backupName = $".{name}.{date:yyyy-MM-dd}.bak";
+        return Path.Combine(dir, backupName);
+    }
+
+    private static void PruneBackups(string pathToFile, int keep){
+        string dir = Path.GetDirectoryName(pathToFile)!;
+        string name = Path.GetFileName(pathToFile);
+
+        // Backups: .<name>.YYYY-MM-DD.bak
+        string glob = $".{name}.*.bak";
+        var rx = new Regex(@"^\." + Regex.Escape(name) + @"\.(\d{4}-\d{2}-\d{2})\.bak$", RegexOptions.CultureInvariant);
+
+        var datedBackups = new List<(string Path, DateTime Date)>();
+        foreach (var path in Directory.EnumerateFiles(dir, glob, SearchOption.TopDirectoryOnly)){
+            string file = Path.GetFileName(path);
+            var m = rx.Match(file);
+            if (!m.Success) continue;
+
+            if (DateTime.TryParseExact(m.Groups[1].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var d)){
+                datedBackups.Add((path, d));
+            }
+        }
+
+        // Newest first
+        foreach (var old in datedBackups
+                     .OrderByDescending(x => x.Date)
+                     .Skip(Math.Max(keep, 0))){
+            try{
+                File.Delete(old.Path);
+            } catch(Exception ex){
+                Console.Error.WriteLine("[Backup] - Failed to delete old backups: " + ex.Message);
+            }
+        }
+    }
+
+
+    private static object fileLock = new object();
 
     public static void WriteJsonToFile(string pathToFile, object obj){
         try{
@@ -227,38 +307,38 @@ public class CfgManager{
         }
     }
 
-    public static string DecompressJsonFile(string pathToFile){
+    public static string? DecompressJsonFile(string pathToFile){
         try{
-            using (var fileStream = new FileStream(pathToFile, FileMode.Open, FileAccess.Read)){
-                // Check if the file is compressed
-                if (IsFileCompressed(fileStream)){
-                    // Reset the stream position to the beginning
-                    fileStream.Position = 0;
-                    using (var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress))
-                    using (var streamReader = new StreamReader(gzipStream)){
-                        return streamReader.ReadToEnd();
-                    }
-                }
+            var fso = new FileStreamOptions{
+                Mode = FileMode.Open,
+                Access = FileAccess.Read,
+                Share = FileShare.ReadWrite | FileShare.Delete,
+                Options = FileOptions.SequentialScan
+            };
 
-                // If not compressed, read the file as is
-                fileStream.Position = 0;
-                using (var streamReader = new StreamReader(fileStream)){
-                    return streamReader.ReadToEnd();
-                }
+            using var fs = new FileStream(pathToFile, fso);
+
+            Span<byte> hdr = stackalloc byte[2];
+            int read = fs.Read(hdr);
+            fs.Position = 0;
+
+            bool looksGzip = read >= 2 && hdr[0] == 0x1F && hdr[1] == 0x8B;
+
+            if (looksGzip){
+                using var gzip = new GZipStream(fs, CompressionMode.Decompress, leaveOpen: false);
+                using var sr = new StreamReader(gzip, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                return sr.ReadToEnd();
+            } else{
+                using var sr = new StreamReader(fs, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+                return sr.ReadToEnd();
             }
+        } catch (FileNotFoundException){
+            return null;
         } catch (Exception ex){
-            Console.Error.WriteLine($"An error occurred: {ex.Message}");
+            Console.Error.WriteLine($"Read failed for {pathToFile}: {ex.Message}");
             return null;
         }
     }
-
-    private static bool IsFileCompressed(FileStream fileStream){
-        // Check the first two bytes for the GZip header
-        var buffer = new byte[2];
-        fileStream.Read(buffer, 0, 2);
-        return buffer[0] == 0x1F && buffer[1] == 0x8B;
-    }
-
 
     public static bool CheckIfFileExists(string filePath){
         string dirPath = Path.GetDirectoryName(filePath) ?? string.Empty;
@@ -266,14 +346,6 @@ public class CfgManager{
         return Directory.Exists(dirPath) && File.Exists(filePath);
     }
 
-    // public static T DeserializeFromFile<T>(string filePath){
-    //     var deserializer = new DeserializerBuilder()
-    //         .Build();
-    //
-    //     using (var reader = new StreamReader(filePath)){
-    //         return deserializer.Deserialize<T>(reader);
-    //     }
-    // }
 
     public static T? ReadJsonFromFile<T>(string pathToFile) where T : class{
         try{
