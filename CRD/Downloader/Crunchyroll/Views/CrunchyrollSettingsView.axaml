@@ -75,6 +75,12 @@
                     </ComboBox>
                 </controls:SettingsExpander.Footer>
 
+                <controls:SettingsExpanderItem Content="No hardsubs fallback" Description="If no hardsubs are available, automatically download the no-hardsub (raw) video.">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding HsRawFallback}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
             </controls:SettingsExpander>
 
 
@@ -249,12 +255,27 @@
                 </controls:SettingsExpanderItem>
 
 
-                <controls:SettingsExpanderItem Content="Stream Endpoint " IsEnabled="False">
+                <controls:SettingsExpanderItem Content="Stream Endpoint ">
                     <controls:SettingsExpanderItem.Footer>
-                        <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
-                                  ItemsSource="{Binding StreamEndpoints}"
-                                  SelectedItem="{Binding SelectedStreamEndpoint}">
-                        </ComboBox>
+                        <StackPanel>
+                            <ComboBox IsEnabled="False" HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
+                                      ItemsSource="{Binding StreamEndpoints}"
+                                      SelectedItem="{Binding SelectedStreamEndpoint}">
+                            </ComboBox>
+
+                            <StackPanel Margin="0,5" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Video" Margin="0 , 0 , 5 , 0" VerticalAlignment="Center"/>
+                                <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
+                                          IsChecked="{Binding FirstEndpointVideo}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,5" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Audio" Margin="0 , 0 , 5 , 0" VerticalAlignment="Center"/>
+                                <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
+                                          IsChecked="{Binding FirstEndpointAudio}" />
+                            </StackPanel>
+
+                        </StackPanel>
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -266,33 +287,44 @@
                                       SelectedItem="{Binding SelectedStreamEndpointSecondary}">
                             </ComboBox>
 
+                            <StackPanel Margin="0,5" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Video" Margin="0 , 0 , 5 , 0" VerticalAlignment="Center"/>
+                                <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
+                                          IsChecked="{Binding EndpointVideo}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,5" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Audio" Margin="0 , 0 , 5 , 0" VerticalAlignment="Center"/>
+                                <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
+                                          IsChecked="{Binding EndpointAudio}" />
+                            </StackPanel>
+
                             <StackPanel Margin="0,5">
                                 <TextBlock Text="Authorization" />
-                                <TextBox Name="AuthorizationTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                <TextBox Name="AuthorizationTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointAuthorization}" />
                             </StackPanel>
 
                             <StackPanel Margin="0,5">
                                 <TextBlock Text="Client Id" />
-                                <TextBox Name="ClientIdTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                <TextBox Name="ClientIdTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointClientId}" />
                             </StackPanel>
 
                             <StackPanel Margin="0,5">
                                 <TextBlock Text="User Agent" />
-                                <TextBox Name="UserAgentTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                <TextBox Name="UserAgentTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointUserAgent}" />
                             </StackPanel>
 
                             <StackPanel Margin="0,5">
                                 <TextBlock Text="Device Type" />
-                                <TextBox Name="DeviceTypeTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                <TextBox Name="DeviceTypeTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointDeviceType}" />
                             </StackPanel>
 
                             <StackPanel Margin="0,5">
                                 <TextBlock Text="Device Name" />
-                                <TextBox Name="DeviceNameTextBox" HorizontalAlignment="Left" MinWidth="250"
+                                <TextBox Name="DeviceNameTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointDeviceName}" />
                             </StackPanel>
 

@@ -140,6 +140,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private ComboBoxItem _selectedHSLang;
 
     [ObservableProperty]
+    private bool _hsRawFallback;
+
+    [ObservableProperty]
     private ComboBoxItem _selectedDescriptionLang;
 
     [ObservableProperty]
@@ -150,6 +153,12 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedStreamEndpoint;
+    
+    [ObservableProperty]
+    private bool _firstEndpointVideo;
+
+    [ObservableProperty]
+    private bool _firstEndpointAudio;
 
     [ObservableProperty]
     private ComboBoxItem _SelectedStreamEndpointSecondary;
@@ -170,6 +179,12 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private string _endpointDeviceType = "";
 
     [ObservableProperty]
+    private bool _endpointVideo;
+
+    [ObservableProperty]
+    private bool _endpointAudio;
+
+    [ObservableProperty]
     private bool _isLoggingIn;
 
     [ObservableProperty]
@@ -188,7 +203,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private ComboBoxItem? _selectedAudioQuality;
 
     [ObservableProperty]
-    private ObservableCollection<ListBoxItem> _selectedSubLang =[];
+    private ObservableCollection<ListBoxItem> _selectedSubLang = [];
 
     [ObservableProperty]
     private Color _listBoxColor;
@@ -231,12 +246,12 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "ar-SA" }
     ];
 
-    public ObservableCollection<ListBoxItem> DubLangList{ get; } =[];
+    public ObservableCollection<ListBoxItem> DubLangList{ get; } = [];
 
 
-    public ObservableCollection<ComboBoxItem> DefaultDubLangList{ get; } =[];
+    public ObservableCollection<ComboBoxItem> DefaultDubLangList{ get; } = [];
 
-    public ObservableCollection<ComboBoxItem> DefaultSubLangList{ get; } =[];
+    public ObservableCollection<ComboBoxItem> DefaultSubLangList{ get; } = [];
 
 
     public ObservableCollection<ListBoxItem> SubLangList{ get; } =[
@@ -277,7 +292,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         new(){ Content = "tv/android_tv" },
     ];
 
-    public ObservableCollection<StringItemWithDisplayName> FFmpegHWAccel{ get; } =[];
+    public ObservableCollection<StringItemWithDisplayName> FFmpegHWAccel{ get; } = [];
 
     [ObservableProperty]
     private StringItemWithDisplayName _selectedFFmpegHWAccel;
@@ -345,7 +360,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         ComboBoxItem? defaultSubLang = DefaultSubLangList.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.DefaultSub ?? "")) ?? null;
         SelectedDefaultSubLang = defaultSubLang ?? DefaultSubLangList[0];
 
-        ComboBoxItem? streamEndpoint = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpoint ?? "")) ?? null;
+        ComboBoxItem? streamEndpoint = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpoint?.Endpoint ?? "")) ?? null;
         SelectedStreamEndpoint = streamEndpoint ?? StreamEndpoints[0];
 
         ComboBoxItem? streamEndpointSecondar = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == (options.StreamEndpointSecondSettings?.Endpoint ?? "")) ?? null;
@@ -356,6 +371,11 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         EndpointUserAgent = options.StreamEndpointSecondSettings?.UserAgent ?? string.Empty;
         EndpointDeviceName = options.StreamEndpointSecondSettings?.Device_name ?? string.Empty;
         EndpointDeviceType = options.StreamEndpointSecondSettings?.Device_type ?? string.Empty;
+        EndpointVideo = options.StreamEndpointSecondSettings?.Video ?? true;
+        EndpointAudio = options.StreamEndpointSecondSettings?.Audio ?? true;
+        
+        FirstEndpointVideo = options.StreamEndpoint?.Video ?? true;
+        FirstEndpointAudio = options.StreamEndpoint?.Audio ?? true;
 
         if (CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???"){
             EndpointNotSignedWarning = true;
@@ -390,6 +410,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         AddScaledBorderAndShadow = options.SubsAddScaledBorder is ScaledBorderAndShadowSelection.ScaledBorderAndShadowNo or ScaledBorderAndShadowSelection.ScaledBorderAndShadowYes;
         SelectedScaledBorderAndShadow = GetScaledBorderAndShadowFromOptions(options);
 
+        HsRawFallback = options.HsRawFallback;
         FixCccSubtitles = options.FixCccSubtitles;
         ConvertVtt2Ass = options.ConvertVtt2Ass;
         SubsDownloadDuplicate = options.SubsDownloadDuplicate;
@@ -519,12 +540,16 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.DescriptionLang = descLang != "default" ? descLang : CrunchyrollManager.Instance.DefaultLocale;
 
         CrunchyrollManager.Instance.CrunOptions.Hslang = SelectedHSLang.Content + "";
+        CrunchyrollManager.Instance.CrunOptions.HsRawFallback = HsRawFallback;
 
         CrunchyrollManager.Instance.CrunOptions.DefaultAudio = SelectedDefaultDubLang.Content + "";
         CrunchyrollManager.Instance.CrunOptions.DefaultSub = SelectedDefaultSubLang.Content + "";
 
-
-        CrunchyrollManager.Instance.CrunOptions.StreamEndpoint = SelectedStreamEndpoint.Content + "";
+        var endpointSettingsFirst = new CrAuthSettings();
+        endpointSettingsFirst.Endpoint = SelectedStreamEndpoint.Content + "";
+        endpointSettingsFirst.Video = FirstEndpointVideo;
+        endpointSettingsFirst.Audio = FirstEndpointAudio;
+        CrunchyrollManager.Instance.CrunOptions.StreamEndpoint = endpointSettingsFirst;
 
         var endpointSettings = new CrAuthSettings();
         endpointSettings.Endpoint = SelectedStreamEndpointSecondary.Content + "";
@@ -533,6 +558,8 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         endpointSettings.UserAgent = EndpointUserAgent;
         endpointSettings.Device_name = EndpointDeviceName;
         endpointSettings.Device_type = EndpointDeviceType;
+        endpointSettings.Video = EndpointVideo;
+        endpointSettings.Audio = EndpointAudio;
 
 
         CrunchyrollManager.Instance.CrunOptions.StreamEndpointSecondSettings = endpointSettings;
@@ -657,13 +684,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
                             }
                         }
                     } else{
-                        CrunchyrollManager.Instance.HistoryList =[];
+                        CrunchyrollManager.Instance.HistoryList = [];
                     }
                 }
 
                 _ = SonarrClient.Instance.RefreshSonarrLite();
             } else{
-                CrunchyrollManager.Instance.HistoryList =[];
+                CrunchyrollManager.Instance.HistoryList = [];
             }
         }
     }
@@ -763,7 +790,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         }
 
 
-        return[];
+        return [];
     }
 
     private List<StringItemWithDisplayName> MapHWAccelOptions(List<string> accels){

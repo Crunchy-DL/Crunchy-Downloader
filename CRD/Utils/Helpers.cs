@@ -73,10 +73,12 @@ public class Helpers{
     }
 
     public static int ToKbps(int bps) => (int)Math.Round(bps / 1000.0);
+
     public static int SnapToAudioBucket(int kbps){
-        int[] buckets ={ 64, 96, 128, 192,256 };
+        int[] buckets = { 64, 96, 128, 192, 256 };
         return buckets.OrderBy(b => Math.Abs(b - kbps)).First();
     }
+
     public static int WidthBucket(int width, int height){
         int expected = (int)Math.Round(height * 16 / 9.0);
         int tol = Math.Max(8, (int)(expected * 0.02)); // ~2% or ≥8 px
@@ -555,7 +557,7 @@ public class Helpers{
         return CosineSimilarity(vector1, vector2);
     }
 
-    private static readonly char[] Delimiters ={ ' ', ',', '.', ';', ':', '-', '_', '\'' };
+    private static readonly char[] Delimiters = { ' ', ',', '.', ';', ':', '-', '_', '\'' };
 
     public static Dictionary<string, double> ComputeWordFrequency(string text){
         var wordFrequency = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
@@ -718,7 +720,7 @@ public class Helpers{
         bool isValid = !folderName.Any(c => invalidChars.Contains(c));
 
         // Check for reserved names on Windows
-        string[] reservedNames =["CON", "PRN", "AUX", "NUL", "COM1", "LPT1"];
+        string[] reservedNames = ["CON", "PRN", "AUX", "NUL", "COM1", "LPT1"];
         bool isReservedName = reservedNames.Contains(folderName.ToUpperInvariant());
 
         if (isValid && !isReservedName && folderName.Length <= 255){
@@ -847,27 +849,38 @@ public class Helpers{
 
     public static void MergePlaylistData(
         Dictionary<string, ServerData> target,
-        Dictionary<string, ServerData> source){
+        Dictionary<string, ServerData> source,
+        bool mergeAudio,
+        bool mergeVideo){
         foreach (var kvp in source){
-            if (target.TryGetValue(kvp.Key, out var existing)){
-                // Merge audio
-                existing.audio ??=[];
-                if (kvp.Value.audio != null)
-                    existing.audio.AddRange(kvp.Value.audio);
+            var key = kvp.Key;
+            var src = kvp.Value;
 
-                // Merge video
-                existing.video ??=[];
-                if (kvp.Value.video != null)
-                    existing.video.AddRange(kvp.Value.video);
+            if (target.TryGetValue(key, out var existing)){
+                if (mergeAudio){
+                    existing.audio ??= [];
+                    if (src.audio != null)
+                        existing.audio.AddRange(src.audio);
+                }
+                
+                if (mergeVideo){
+                    existing.video ??= [];
+                    if (src.video != null)
+                        existing.video.AddRange(src.video);
+                }
             } else{
-                // Add new entry (clone lists to avoid reference issues)
-                target[kvp.Key] = new ServerData{
-                    audio = kvp.Value.audio != null ? new List<AudioPlaylist>(kvp.Value.audio) : new List<AudioPlaylist>(),
-                    video = kvp.Value.video != null ? new List<VideoPlaylist>(kvp.Value.video) : new List<VideoPlaylist>()
+                target[key] = new ServerData{
+                    audio = (mergeAudio && src.audio != null)
+                        ? new List<AudioPlaylist>(src.audio)
+                        : new List<AudioPlaylist>(),
+                    video = (mergeVideo && src.video != null)
+                        ? new List<VideoPlaylist>(src.video)
+                        : new List<VideoPlaylist>()
                 };
             }
         }
     }
+
 
     private static readonly SemaphoreSlim ShutdownLock = new(1, 1);
 

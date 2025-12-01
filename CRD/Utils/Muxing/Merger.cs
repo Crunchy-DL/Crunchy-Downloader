@@ -16,9 +16,6 @@ public class Merger{
 
     public Merger(MergerOptions options){
         this.options = options;
-        if (this.options.SkipSubMux != null && this.options.SkipSubMux == true){
-            this.options.Subtitles = new();
-        }
 
         if (this.options.VideoTitle != null && this.options.VideoTitle.Length > 0){
             this.options.VideoTitle = this.options.VideoTitle.Replace("\"", "'");
@@ -74,35 +71,39 @@ public class Merger{
                 index++;
             }
 
-            bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
+            if (!options.SkipSubMux){
+                bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
 
-            foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
-                if (sub.value.Delay != null && sub.value.Delay != 0){
-                    double delay = sub.value.Delay / 1000.0 ?? 0;
-                    args.Add($"-itsoffset {delay.ToString(CultureInfo.InvariantCulture)}");
+                foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
+                    if (sub.value.Delay != null && sub.value.Delay != 0){
+                        double delay = sub.value.Delay / 1000.0 ?? 0;
+                        args.Add($"-itsoffset {delay.ToString(CultureInfo.InvariantCulture)}");
+                    }
+
+                    args.Add($"-i \"{sub.value.File}\"");
+                    metaData.Add($"-map {index}:s");
+                    if (options.Defaults.Sub.Code == sub.value.Language.Code &&
+                        (options.DefaultSubSigns == sub.value.Signs || options.DefaultSubSigns && !hasSignsSub)
+                        && sub.value.ClosedCaption == false){
+                        metaData.Add($"-disposition:s:{sub.i} default");
+                    } else{
+                        metaData.Add($"-disposition:s:{sub.i} 0");
+                    }
+
+                    index++;
                 }
-
-                args.Add($"-i \"{sub.value.File}\"");
-                metaData.Add($"-map {index}:s");
-                if (options.Defaults.Sub.Code == sub.value.Language.Code &&
-                    (options.DefaultSubSigns == sub.value.Signs || options.DefaultSubSigns && !hasSignsSub)
-                    && sub.value.ClosedCaption == false){
-                    metaData.Add($"-disposition:s:{sub.i} default");
-                } else{
-                    metaData.Add($"-disposition:s:{sub.i} 0");
-                }
-
-                index++;
             }
+
 
             args.AddRange(metaData);
             // args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
             args.Add("-c:v copy");
             args.Add("-c:a copy");
             args.Add(options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");
-            args.AddRange(options.Subtitles.Select((sub, subindex) =>
-                $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
-
+            if (!options.SkipSubMux){
+                args.AddRange(options.Subtitles.Select((sub, subindex) =>
+                    $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
+            }
 
             if (!string.IsNullOrEmpty(options.VideoTitle)){
                 args.Add($"-metadata title=\"{options.VideoTitle}\"");
@@ -134,9 +135,9 @@ public class Merger{
         }
 
         var audio = options.OnlyAudio.First();
-        
+
         args.Add($"-i \"{audio.Path}\"");
-        args.Add("-c:a libmp3lame" + (audio.Bitrate > 0 ? $" -b:a {audio.Bitrate}k" : "") );
+        args.Add("-c:a libmp3lame" + (audio.Bitrate > 0 ? $" -b:a {audio.Bitrate}k" : ""));
         args.Add($"\"{options.Output}\"");
         return string.Join(" ", args);
     }
@@ -170,7 +171,7 @@ public class Merger{
         // var sortedAudio = options.OnlyAudio
         //     .OrderBy(sub => options.DubLangList.IndexOf(sub.Language.CrLocale) != -1 ? options.DubLangList.IndexOf(sub.Language.CrLocale) : int.MaxValue)
         //     .ToList();
-        
+
         var rank = options.DubLangList
             .Select((val, i) => new{ val, i })
             .ToDictionary(x => x.val, x => x.i, StringComparer.OrdinalIgnoreCase);
@@ -204,7 +205,7 @@ public class Merger{
             args.Add($"\"{Helpers.AddUncPrefixIfNeeded(aud.Path)}\"");
         }
 
-        if (options.Subtitles.Count > 0){
+        if (options.Subtitles.Count > 0 && !options.SkipSubMux){
             bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
 
             var sortedSubtitles = options.Subtitles
@@ -274,7 +275,7 @@ public class Merger{
         if (options.Description is{ Count: > 0 }){
             args.Add($"--global-tags \"{Helpers.AddUncPrefixIfNeeded(options.Description[0].Path)}\"");
         }
-        
+
         if (options.Cover.Count > 0){
             if (File.Exists(options.Cover.First().Path)){
                 args.Add($"--attach-file \"{options.Cover.First().Path}\"");
@@ -446,14 +447,16 @@ public class Merger{
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".new.resume"));
 
         options.Description?.ForEach(description => Helpers.DeleteFile(description.Path));
-        
+
         options.Cover?.ForEach(cover => Helpers.DeleteFile(cover.Path));
 
         // Delete chapter files if any
         options.Chapters?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
 
-        // Delete subtitle files
-        options.Subtitles.ForEach(subtitle => Helpers.DeleteFile(subtitle.File));
+        if (!options.SkipSubMux){
+            // Delete subtitle files
+            options.Subtitles.ForEach(subtitle => Helpers.DeleteFile(subtitle.File));
+        }
     }
 }
 
@@ -486,7 +489,7 @@ public class CrunchyMuxOptions{
     public List<string> DubLangList{ get; set; } = new List<string>();
     public List<string> SubLangList{ get; set; } = new List<string>();
     public string Output{ get; set; }
-    public bool? SkipSubMux{ get; set; }
+    public bool SkipSubMux{ get; set; }
     public bool? KeepAllVideos{ get; set; }
     public bool? Novids{ get; set; }
     public bool Mp4{ get; set; }
@@ -524,7 +527,7 @@ public class MergerOptions{
     public string VideoTitle{ get; set; }
     public bool? KeepAllVideos{ get; set; }
     public List<ParsedFont> Fonts{ get; set; } = new List<ParsedFont>();
-    public bool? SkipSubMux{ get; set; }
+    public bool SkipSubMux{ get; set; }
     public MuxOptions Options{ get; set; }
     public Defaults Defaults{ get; set; }
     public bool mp3{ get; set; }

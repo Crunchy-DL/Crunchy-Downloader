@@ -20,6 +20,14 @@ public class CrAuthSettings{
     public string Device_type{ get; set; }
     public string Device_name{ get; set; }
 
+    public bool Video{ get; set; }
+    public bool Audio{ get; set; }
+}
+
+public class StreamInfo{
+    public string Playlist { get; set; }
+    public bool Audio { get; set; }
+    public bool Video { get; set; }
 }
 
 public class DrmAuthData{

@@ -11,6 +11,9 @@ public class CrProfile{
     [JsonProperty("profile_name")]
     public string? ProfileName{ get; set; }
     
+    [JsonProperty("profile_id")]
+    public string? ProfileId{ get; set; }
+    
     [JsonProperty("preferred_content_audio_language")]
     public string? PreferredContentAudioLanguage{ get; set; }
     

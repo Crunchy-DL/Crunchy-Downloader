@@ -30,6 +30,8 @@ public class StreamDetails{
 public class UrlWithAuth{
     
     public CrAuth? CrAuth{ get; set; }
+    public bool Video{ get; set; }
+    public bool Audio{ get; set; }
 
     public string? Url{ get; set; }
 

@@ -29,7 +29,7 @@ A simple crunchyroll downloader that allows you to download your favorite series
 ## 🛠️ System Requirements
 
 - **Operating System:** Windows 10 or Windows 11
-- **.NET Desktop Runtime:** Version 8.0
+- **.NET Desktop Runtime:** Version 10.0
 - **Visual C++ Redistributable:** 2015–2022
 
 ## 🖥️ Features

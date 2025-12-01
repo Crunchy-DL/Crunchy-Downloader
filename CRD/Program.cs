@@ -1,6 +1,7 @@
 ﻿using System;
 using Avalonia;
 using System.Linq;
+using ReactiveUI.Avalonia;
 
 namespace CRD;
 
@@ -26,7 +27,8 @@ sealed class Program{
         var builder = AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            .UseReactiveUI() ;
 
         if (isHeadless){
             Console.WriteLine("Running in headless mode...");

@@ -150,6 +150,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("hard_sub_lang")]
     public string Hslang{ get; set; } = "";
+    
+    [JsonProperty("hard_sub_raw_fallback")]
+    public bool HsRawFallback{ get; set; }
 
     [JsonIgnore]
     public int Kstream{ get; set; }
@@ -304,8 +307,8 @@ public class CrDownloadOptions{
     [JsonProperty("calendar_show_upcoming_episodes")]
     public bool CalendarShowUpcomingEpisodes{ get; set; }
 
-    [JsonProperty("stream_endpoint")]
-    public string? StreamEndpoint{ get; set; }
+    [JsonProperty("stream_endpoint_settings")]
+    public CrAuthSettings? StreamEndpoint{ get; set; }
 
     [JsonProperty("stream_endpoint_secondary_settings")]
     public CrAuthSettings? StreamEndpointSecondSettings{ get; set; }
