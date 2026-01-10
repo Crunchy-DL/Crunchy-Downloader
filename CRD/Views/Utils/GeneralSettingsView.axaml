@@ -75,7 +75,7 @@
                         <CheckBox IsChecked="{Binding DownloadMethodeNew}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Allow early start of next download" Description="When enabled, the next download starts as soon as the previous file has finished downloading, even if it is still being finalized (muxed/moved).">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadAllowEarlyStart}"> </CheckBox>
@@ -186,7 +186,7 @@
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding DownloadAllowEarlyStart}" Content="Parallel Processing Jobs" Description="The maximum number of completed downloads that can be processed simultaneously (encoding, muxing, moving)">
                     <controls:SettingsExpanderItem.Footer>
                         <controls:NumberBox Minimum="0" Maximum="10"
@@ -382,6 +382,40 @@
 
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="Flare Solverr Settings"
+                                       IconSource="Wifi2"
+                                       Description="FlareSolverr settings (used only for the Calendar)"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Use Flare Solverr">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding UseFlareSolverr}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Host">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding FlareSolverrHost}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Port">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding FlareSolverrPort}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Use SSL">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding FlareSolverrUseSsl}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
 
             </controls:SettingsExpander>
 
@@ -617,7 +651,7 @@
                                            DockPanel.Dock="Left" />
 
                                 <ColorPicker Color="{Binding CustomAccentColor}"
-                                                            DockPanel.Dock="Right" />
+                                             DockPanel.Dock="Right" />
                             </DockPanel>
                         </StackPanel>
                     </controls:SettingsExpanderItem.Footer>

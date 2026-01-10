@@ -96,9 +96,6 @@
                                                   SelectedItem="{Binding CurrentCalendarDubFilter}"
                                                   ItemsSource="{Binding CalendarDubFilter}">
                                         </ComboBox>
-                                        <CheckBox IsChecked="{Binding FilterByAirDate}"
-                                                  Content="Filter by episode air date" Margin="5 5 0 0">
-                                        </CheckBox>
                                         <CheckBox IsChecked="{Binding ShowUpcomingEpisodes}"
                                                   Content="Show Upcoming episodes" Margin="5 5 0 0">
                                         </CheckBox>
@@ -109,11 +106,16 @@
                             </controls:SettingsExpander>
 
 
-                            <controls:SettingsExpander Header="Calendar ">
+                            <controls:SettingsExpander Header="Calendar " IsVisible="{Binding !CustomCalendar}">
                                 <controls:SettingsExpander.Footer>
-                                    <CheckBox IsChecked="{Binding HideDubs}"
-                                              Content="Hide Dubs" Margin="5 0 0 0">
-                                    </CheckBox>
+                                    <StackPanel Orientation="Vertical">
+                                        <CheckBox IsChecked="{Binding HideDubs}"
+                                                  Content="Hide Dubs" Margin="5 0 0 0">
+                                        </CheckBox>
+                                        <CheckBox IsChecked="{Binding ShowUpcomingEpisodes}"
+                                                  Content="Show Upcoming episodes" Margin="5 5 0 0">
+                                        </CheckBox>
+                                    </StackPanel>
                                 </controls:SettingsExpander.Footer>
                             </controls:SettingsExpander>
 
@@ -232,8 +234,7 @@
                                                 <Button HorizontalAlignment="Center" Content="Download"
                                                         IsEnabled="{Binding HasPassed}"
                                                         IsVisible="{Binding HasPassed}"
-                                                        Command="{Binding AddEpisodeToQue}"
-                                                         />
+                                                        Command="{Binding AddEpisodeToQue}" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

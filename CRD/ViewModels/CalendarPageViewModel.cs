@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using DynamicData;
@@ -18,7 +19,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _prevButtonEnabled = true;
-    
+
     [ObservableProperty]
     private bool _nextButtonEnabled = true;
 
@@ -28,9 +29,6 @@ public partial class CalendarPageViewModel : ViewModelBase{
     [ObservableProperty]
     private bool _customCalendar;
 
-    [ObservableProperty]
-    private bool _filterByAirDate;
-    
     [ObservableProperty]
     private bool _showUpcomingEpisodes;
 
@@ -75,7 +73,6 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         CustomCalendar = CrunchyrollManager.Instance.CrunOptions.CustomCalendar;
         HideDubs = CrunchyrollManager.Instance.CrunOptions.CalendarHideDubs;
-        FilterByAirDate = CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate;
         ShowUpcomingEpisodes = CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes;
 
         ComboBoxItem? dubfilter = CalendarDubFilter.FirstOrDefault(a => a.Content != null && (string)a.Content == CrunchyrollManager.Instance.CrunOptions.CalendarDubFilter) ?? null;
@@ -85,7 +82,6 @@ public partial class CalendarPageViewModel : ViewModelBase{
         loading = false;
         LoadCalendar(GetThisWeeksMondayDate(), DateTime.Now, false);
     }
-
 
 
     private string GetThisWeeksMondayDate(){
@@ -104,13 +100,12 @@ public partial class CalendarPageViewModel : ViewModelBase{
         return formattedDate;
     }
 
-    public async void LoadCalendar(string mondayDate,DateTime customCalDate, bool forceUpdate){
+    public async void LoadCalendar(string mondayDate, DateTime customCalDate, bool forceUpdate){
         ShowLoading = true;
-        
+
         CalendarWeek week;
 
         if (CustomCalendar){
-
             if (customCalDate.Date == DateTime.Now.Date){
                 PrevButtonEnabled = false;
                 NextButtonEnabled = true;
@@ -118,7 +113,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
                 PrevButtonEnabled = true;
                 NextButtonEnabled = false;
             }
-            
+
             week = await CalendarManager.Instance.BuildCustomCalendar(customCalDate, forceUpdate);
         } else{
             PrevButtonEnabled = true;
@@ -140,29 +135,24 @@ public partial class CalendarPageViewModel : ViewModelBase{
                 foreach (var calendarDayCalendarEpisode in calendarDay.CalendarEpisodes){
                     if (calendarDayCalendarEpisode.ImageBitmap == null){
                         if (calendarDayCalendarEpisode.AnilistEpisode){
-                            _ = calendarDayCalendarEpisode.LoadImage(100,150);
+                            _ = calendarDayCalendarEpisode.LoadImage(100, 150);
                         } else{
                             _ = calendarDayCalendarEpisode.LoadImage();
                         }
-                        
                     }
                 }
             }
         } else{
             foreach (var calendarDay in CalendarDays){
-                var episodesCopy = new List<CalendarEpisode>(calendarDay.CalendarEpisodes);
-                foreach (var calendarDayCalendarEpisode in episodesCopy){
-                    if (calendarDayCalendarEpisode.SeasonName != null && HideDubs && calendarDayCalendarEpisode.SeasonName.EndsWith("Dub)")){
-                        calendarDay.CalendarEpisodes.Remove(calendarDayCalendarEpisode);
-                        continue;
-                    }
+                if (HideDubs)
+                    calendarDay.CalendarEpisodes.RemoveAll(e => CrSimulcastCalendarFilter.IsDubOrAltLanguageSeason(e.SeasonName));
 
-                    if (calendarDayCalendarEpisode.ImageBitmap == null){
-                        if (calendarDayCalendarEpisode.AnilistEpisode){
-                            _ = calendarDayCalendarEpisode.LoadImage(100,150);
-                        } else{
-                            _ = calendarDayCalendarEpisode.LoadImage();
-                        }
+                foreach (var e in calendarDay.CalendarEpisodes){
+                    if (e.ImageBitmap == null){
+                        if (e.AnilistEpisode)
+                            _ = e.LoadImage(100, 150);
+                        else
+                            _ = e.LoadImage();
                     }
                 }
             }
@@ -199,7 +189,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
             refreshDate = currentWeek.FirstDayOfWeek.AddDays(6);
         }
 
-        LoadCalendar(mondayDate,refreshDate, true);
+        LoadCalendar(mondayDate, refreshDate, true);
     }
 
     [RelayCommand]
@@ -215,13 +205,13 @@ public partial class CalendarPageViewModel : ViewModelBase{
         } else{
             mondayDate = GetThisWeeksMondayDate();
         }
-        
+
         var refreshDate = DateTime.Now;
         if (currentWeek?.FirstDayOfWeek != null && currentWeek.FirstDayOfWeek != DateTime.MinValue){
             refreshDate = currentWeek.FirstDayOfWeek.AddDays(-1);
         }
 
-        LoadCalendar(mondayDate,refreshDate, false);
+        LoadCalendar(mondayDate, refreshDate, false);
     }
 
     [RelayCommand]
@@ -237,15 +227,13 @@ public partial class CalendarPageViewModel : ViewModelBase{
         } else{
             mondayDate = GetThisWeeksMondayDate();
         }
-        
+
         var refreshDate = DateTime.Now;
         if (currentWeek?.FirstDayOfWeek != null && currentWeek.FirstDayOfWeek != DateTime.MinValue){
             refreshDate = currentWeek.FirstDayOfWeek.AddDays(13);
         }
 
-        LoadCalendar(mondayDate,refreshDate, false);
-            
-        
+        LoadCalendar(mondayDate, refreshDate, false);
     }
 
 
@@ -268,7 +256,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
         CrunchyrollManager.Instance.CrunOptions.CustomCalendar = value;
 
-        LoadCalendar(GetThisWeeksMondayDate(),DateTime.Now, true);
+        LoadCalendar(GetThisWeeksMondayDate(), DateTime.Now, true);
 
         CfgManager.WriteCrSettings();
     }
@@ -282,15 +270,6 @@ public partial class CalendarPageViewModel : ViewModelBase{
         CfgManager.WriteCrSettings();
     }
 
-    partial void OnFilterByAirDateChanged(bool value){
-        if (loading){
-            return;
-        }
-
-        CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate = value;
-        CfgManager.WriteCrSettings();
-    }
-    
     partial void OnShowUpcomingEpisodesChanged(bool value){
         if (loading){
             return;
@@ -310,7 +289,4 @@ public partial class CalendarPageViewModel : ViewModelBase{
             CfgManager.WriteCrSettings();
         }
     }
-
-
-
 }

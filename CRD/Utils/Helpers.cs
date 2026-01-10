@@ -847,36 +847,41 @@ public class Helpers{
         }
     }
 
+
     public static void MergePlaylistData(
-        Dictionary<string, ServerData> target,
+        ServerData target,
         Dictionary<string, ServerData> source,
         bool mergeAudio,
         bool mergeVideo){
+        if (target == null) throw new ArgumentNullException(nameof(target));
+        if (source == null) throw new ArgumentNullException(nameof(source));
+        
+        var serverSet = new HashSet<string>(target.servers);
+
+        void AddServer(string s){
+            if (!string.IsNullOrWhiteSpace(s) && serverSet.Add(s))
+                target.servers.Add(s);
+        }
+
         foreach (var kvp in source){
             var key = kvp.Key;
             var src = kvp.Value;
+            
+            if (!src.servers.Contains(key))
+                src.servers.Add(key);
+            
+            AddServer(key);
+            foreach (var s in src.servers)
+                AddServer(s);
+            
+            if (mergeAudio && src.audio != null){
+                target.audio ??= [];
+                target.audio.AddRange(src.audio);
+            }
 
-            if (target.TryGetValue(key, out var existing)){
-                if (mergeAudio){
-                    existing.audio ??= [];
-                    if (src.audio != null)
-                        existing.audio.AddRange(src.audio);
-                }
-                
-                if (mergeVideo){
-                    existing.video ??= [];
-                    if (src.video != null)
-                        existing.video.AddRange(src.video);
-                }
-            } else{
-                target[key] = new ServerData{
-                    audio = (mergeAudio && src.audio != null)
-                        ? new List<AudioPlaylist>(src.audio)
-                        : new List<AudioPlaylist>(),
-                    video = (mergeVideo && src.video != null)
-                        ? new List<VideoPlaylist>(src.video)
-                        : new List<VideoPlaylist>()
-                };
+            if (mergeVideo && src.video != null){
+                target.video ??= [];
+                target.video.AddRange(src.video);
             }
         }
     }

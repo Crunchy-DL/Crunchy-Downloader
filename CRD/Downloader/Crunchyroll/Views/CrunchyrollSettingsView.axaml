@@ -305,12 +305,6 @@
                             </StackPanel>
 
                             <StackPanel Margin="0,5">
-                                <TextBlock Text="Client Id" />
-                                <TextBox Name="ClientIdTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
-                                         Text="{Binding EndpointClientId}" />
-                            </StackPanel>
-
-                            <StackPanel Margin="0,5">
                                 <TextBlock Text="User Agent" />
                                 <TextBox Name="UserAgentTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointUserAgent}" />

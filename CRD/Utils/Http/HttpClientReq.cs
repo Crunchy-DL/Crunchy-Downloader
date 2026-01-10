@@ -36,6 +36,9 @@ public class HttpClientReq{
 
     private HttpClient client;
 
+    public readonly bool useFlareSolverr;
+    private FlareSolverrClient flareSolverrClient;
+
     public HttpClientReq(){
         IWebProxy systemProxy = WebRequest.DefaultWebProxy;
 
@@ -79,6 +82,11 @@ public class HttpClientReq{
         client.DefaultRequestHeaders.AcceptEncoding.ParseAdd("gzip, deflate, br");
         // client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.5");
         client.DefaultRequestHeaders.Connection.ParseAdd("keep-alive");
+
+        if (CrunchyrollManager.Instance.CrunOptions.FlareSolverrProperties != null && CrunchyrollManager.Instance.CrunOptions.FlareSolverrProperties.UseFlareSolverr){
+            useFlareSolverr = true;
+            flareSolverrClient = new FlareSolverrClient();
+        }
     }
 
     private HttpMessageHandler CreateHttpClientHandler(){
@@ -147,6 +155,24 @@ public class HttpClientReq{
             }
 
             return (IsOk: false, ResponseContent: content, error: e.Message);
+        }
+    }
+
+    public async Task<(bool IsOk, string ResponseContent, string error)> SendFlareSolverrHttpRequest(HttpRequestMessage request, bool suppressError = false){
+        string content = string.Empty;
+        try{
+            var flareSolverrResponses = await flareSolverrClient.SendViaFlareSolverrAsync(request, []);
+
+
+            content = flareSolverrResponses.ResponseContent;
+
+            return (IsOk: flareSolverrResponses.IsOk, ResponseContent: content, error: "");
+        } catch (Exception e){
+            if (!suppressError){
+                Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
+            }
+
+            return (IsOk: false, ResponseContent: content, error: "");
         }
     }
 

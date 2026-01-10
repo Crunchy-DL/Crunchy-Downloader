@@ -16,6 +16,8 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll.Music;
+using CRD.Views;
+using ReactiveUI;
 
 // ReSharper disable InconsistentNaming
 
@@ -210,6 +212,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             }
         } else if (AddAllEpisodes){
             var musicClass = CrunchyrollManager.Instance.CrMusic;
+            if (currentMusicVideoList == null) return;
             foreach (var meta in currentMusicVideoList.Data.Select(crunchyMusicVideo => musicClass.EpisodeMeta(crunchyMusicVideo))){
                 QueueManager.Instance.CrAddMusicMetaToQueue(meta);
             }
@@ -421,7 +424,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             }
         }
 
-        CurrentSelectedSeason = SeasonList.First();
+        if (SeasonList.Count > 0){
+            CurrentSelectedSeason = SeasonList.First();
+        }
     }
 
     private string DetermineLocale(string locale){
@@ -525,13 +530,33 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
         var list = await FetchSeriesListAsync(value.Id);
 
-        if (list != null){
+        if (list is{ List.Count: > 0 }){
             currentSeriesList = list;
             await SearchPopulateEpisodesBySeason(value.Id);
             UpdateUiForEpisodeSelection();
         } else{
-            ButtonEnabled = true;
+            ResetSearch();
+            MessageBus.Current.SendMessage(new ToastMessage($"Failed to get Episodes for Series", ToastType.Error, 2));
         }
+    }
+
+    private void ResetSearch(){
+        currentMusicVideoList = null;
+        UrlInput = "";
+        selectedEpisodes.Clear();
+        SelectedItems.Clear();
+        Items.Clear();
+        currentSeriesList = null;
+        SeasonList.Clear();
+        episodesBySeason.Clear();
+        AllButtonEnabled = false;
+        AddAllEpisodes = false;
+        ButtonEnabled = false;
+        SearchVisible = true;
+        SlectSeasonVisible = false;
+        ShowLoading = false;
+        SearchEnabled = false; // disable and enable for button text
+        SearchEnabled = true;
     }
 
     private void UpdateUiForSearchSelection(){
@@ -602,7 +627,9 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
             }
         }
 
-        CurrentSelectedSeason = SeasonList.First();
+        if (SeasonList.Count > 0){
+            CurrentSelectedSeason = SeasonList.First();
+        }
     }
 
     private void UpdateUiForEpisodeSelection(){

@@ -134,6 +134,10 @@ public class CrDownloadOptions{
 
     [JsonProperty("proxy_password")]
     public string? ProxyPassword{ get; set; }
+    
+    [JsonProperty("flare_solverr_properties")]
+    public FlareSolverrProperties? FlareSolverrProperties{ get; set; }
+
 
     #endregion
 
@@ -300,9 +304,6 @@ public class CrDownloadOptions{
 
     [JsonProperty("calendar_hide_dubs")]
     public bool CalendarHideDubs{ get; set; }
-
-    [JsonProperty("calendar_filter_by_air_date")]
-    public bool CalendarFilterByAirDate{ get; set; }
 
     [JsonProperty("calendar_show_upcoming_episodes")]
     public bool CalendarShowUpcomingEpisodes{ get; set; }

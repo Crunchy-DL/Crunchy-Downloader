@@ -43,11 +43,11 @@ public class CrEpisode(){
         }
 
         if (epsidoe is{ Total: 1, Data: not null } &&
-            (epsidoe.Data.First().Versions ??[])
+            (epsidoe.Data.First().Versions ?? [])
             .GroupBy(v => v.AudioLocale)
             .Any(g => g.Count() > 1)){
             Console.Error.WriteLine("Episode has Duplicate Audio Locales");
-            var list = (epsidoe.Data.First().Versions ??[]).GroupBy(v => v.AudioLocale).Where(g => g.Count() > 1).ToList();
+            var list = (epsidoe.Data.First().Versions ?? []).GroupBy(v => v.AudioLocale).Where(g => g.Count() > 1).ToList();
             //guid for episode id
             foreach (var episodeVersionse in list){
                 foreach (var version in episodeVersionse){
@@ -173,7 +173,7 @@ public class CrEpisode(){
             }
 
             var epNum = episodeP.Key.StartsWith('E') ? episodeP.Key[1..] : episodeP.Key;
-            var images = (item.Images?.Thumbnail ??[new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
+            var images = (item.Images?.Thumbnail ?? [new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
 
             Regex dubPattern = new Regex(@"\(\w+ Dub\)");
 
@@ -237,60 +237,45 @@ public class CrEpisode(){
 
     public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount, DateTime? firstWeekDay = null, bool forcedLang = false){
         await crunInstance.CrAuthEndpoint1.RefreshToken(true);
-        CrBrowseEpisodeBase? complete = new CrBrowseEpisodeBase();
-        complete.Data =[];
 
-        var i = 0;
 
-        do{
-            NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+        if (string.IsNullOrEmpty(crLocale)){
+            crLocale = "en-US";
+        }
 
-            if (!string.IsNullOrEmpty(crLocale)){
-                query["locale"] = crLocale;
-                if (forcedLang){
-                    query["force_locale"] = crLocale;
-                }
+        NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
+
+        if (!string.IsNullOrEmpty(crLocale)){
+            query["locale"] = crLocale;
+            if (forcedLang){
+                query["force_locale"] = crLocale;
             }
+        }
 
-            query["start"] = i + "";
-            query["n"] = "50";
-            query["sort_by"] = "newly_added";
-            query["type"] = "episode";
+        query["n"] = requestAmount + "";
+        query["sort_by"] = "newly_added";
+        query["type"] = "episode";
 
-            var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
 
-            var response = await HttpClientReq.Instance.SendHttpRequest(request);
+        var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
-            if (!response.IsOk){
-                Console.Error.WriteLine("Series Request Failed");
-                return null;
-            }
+        if (!response.IsOk){
+            Console.Error.WriteLine("Series Request Failed");
+            return null;
+        }
 
-            CrBrowseEpisodeBase? series = Helpers.Deserialize<CrBrowseEpisodeBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
+        CrBrowseEpisodeBase? series = Helpers.Deserialize<CrBrowseEpisodeBase>(response.ResponseContent, crunInstance.SettingsJsonSerializerSettings);
 
-            if (series != null){
-                complete.Total = series.Total;
-                if (series.Data != null){
-                    complete.Data.AddRange(series.Data);
-                    if (firstWeekDay != null){
-                        if (firstWeekDay.Value.Date <= series.Data.Last().LastPublic && i + 50 == requestAmount){
-                            requestAmount += 50;
-                        }
-                    }
-                }
-            } else{
-                break;
-            }
+        series?.Data?.Sort((a, b) =>
+            b.EpisodeMetadata.PremiumAvailableDate.CompareTo(a.EpisodeMetadata.PremiumAvailableDate));
 
-            i += 50;
-        } while (i < requestAmount && requestAmount < 500);
-
-
-        return complete;
+        return series;
     }
 
     public async Task MarkAsWatched(string episodeId){
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.CrAuthEndpoint1.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true, crunInstance.CrAuthEndpoint1.Token?.access_token, null);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/discover/{crunInstance.CrAuthEndpoint1.Token?.account_id}/mark_as_watched/{episodeId}", HttpMethod.Post, true,
+            crunInstance.CrAuthEndpoint1.Token?.access_token, null);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

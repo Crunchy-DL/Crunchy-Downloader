@@ -207,6 +207,18 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _proxyPassword;
+    
+    [ObservableProperty]
+    private string _flareSolverrHost = "localhost";
+
+    [ObservableProperty]
+    private string _flareSolverrPort = "8191";
+
+    [ObservableProperty]
+    private bool _flareSolverrUseSsl = false;
+
+    [ObservableProperty]
+    private bool _useFlareSolverr = false;
 
     [ObservableProperty]
     private string _tempDownloadDirPath;
@@ -263,6 +275,15 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             SonarrHost = props.Host + "";
             SonarrPort = props.Port + "";
             SonarrApiKey = props.ApiKey + "";
+        }
+        
+        var propsFlareSolverr = options.FlareSolverrProperties;
+
+        if (propsFlareSolverr != null){
+            FlareSolverrUseSsl = propsFlareSolverr.UseSsl;
+            UseFlareSolverr = propsFlareSolverr.UseFlareSolverr;
+            FlareSolverrHost = propsFlareSolverr.Host + "";
+            FlareSolverrPort = propsFlareSolverr.Port + "";
         }
 
         ProxyEnabled = options.ProxyEnabled;
@@ -362,9 +383,22 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         }
 
         props.ApiKey = SonarrApiKey;
-
-
+        
         settings.SonarrProperties = props;
+        
+        var propsFlareSolverr = new FlareSolverrProperties();
+
+        propsFlareSolverr.UseSsl = FlareSolverrUseSsl;
+        propsFlareSolverr.UseFlareSolverr = UseFlareSolverr;
+        propsFlareSolverr.Host = FlareSolverrHost;
+
+        if (int.TryParse(FlareSolverrPort, out var portNumberFlare)){
+            propsFlareSolverr.Port = portNumberFlare;
+        } else{
+            propsFlareSolverr.Port = 8989;
+        }
+
+        settings.FlareSolverrProperties = propsFlareSolverr;
 
         settings.LogMode = LogMode;
 

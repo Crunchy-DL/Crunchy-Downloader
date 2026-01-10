@@ -14,7 +14,6 @@ public class AuthData{
 
 public class CrAuthSettings{
     public string Endpoint{ get; set; }
-    public string Client_ID{ get; set; }
     public string Authorization{ get; set; }
     public string UserAgent{ get; set; }
     public string Device_type{ get; set; }
@@ -66,8 +65,8 @@ public class CrunchyMultiDownload(List<string> dubLang, bool? all = null, bool? 
 }
 
 public class CrunchySeriesList{
-    public List<Episode> List{ get; set; }
-    public Dictionary<string, EpisodeAndLanguage> Data{ get; set; }
+    public List<Episode> List{ get; set; } = []; 
+    public Dictionary<string, EpisodeAndLanguage> Data{ get; set; } = [];
 }
 
 public class Episode{

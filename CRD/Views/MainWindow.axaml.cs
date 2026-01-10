@@ -120,7 +120,10 @@ public partial class MainWindow : AppWindow{
             .Subscribe(message => ShowToast(message.Message ?? string.Empty, message.Type, message.Seconds));
     }
 
-    public async void ShowError(string message, bool githubWikiButton = false){
+    //ffmpeg - https://github.com/GyanD/codexffmpeg/releases/latest
+    //mkvmerge - https://mkvtoolnix.download/downloads.html#windows
+    //git wiki - https://github.com/Crunchy-DL/Crunchy-Downloader/wiki
+    public async void ShowError(string message, string urlButtonText = "", string url = ""){
         if (activeErrors.Contains(message))
             return;
 
@@ -132,14 +135,14 @@ public partial class MainWindow : AppWindow{
             CloseButtonText = "Close"
         };
 
-        if (githubWikiButton){
-            dialog.PrimaryButtonText = "Github Wiki";
+        if (!string.IsNullOrEmpty(urlButtonText)){
+            dialog.PrimaryButtonText = urlButtonText;
         }
 
         var result = await dialog.ShowAsync();
 
         if (result == ContentDialogResult.Primary){
-            Helpers.OpenUrl($"https://github.com/Crunchy-DL/Crunchy-Downloader/wiki");
+            Helpers.OpenUrl(url);
         }
 
         activeErrors.Remove(message);

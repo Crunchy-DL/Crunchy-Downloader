@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Downloader.Crunchyroll;
+using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
@@ -67,6 +68,10 @@ public class CalendarManager{
             return forDate;
         }
 
+        if (CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes){
+            await LoadAnilistUpcoming();
+        }
+
         var request = calendarLanguage.ContainsKey(CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage ?? "en-us")
             ? HttpClientReq.CreateRequestMessage($"{calendarLanguage[CrunchyrollManager.Instance.CrunOptions.SelectedCalendarLanguage ?? "en-us"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false)
             : HttpClientReq.CreateRequestMessage($"{calendarLanguage["en-us"]}?filter=premium&date={weeksMondayDate}", HttpMethod.Get, false);
@@ -75,19 +80,26 @@ public class CalendarManager{
         request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
         request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
 
-        var response = await HttpClientReq.Instance.SendHttpRequest(request);
+        (bool IsOk, string ResponseContent, string error) response;
+        if (!HttpClientReq.Instance.useFlareSolverr){
+            response = await HttpClientReq.Instance.SendHttpRequest(request);
+        } else{
+            response = await HttpClientReq.Instance.SendFlareSolverrHttpRequest(request);
+        }
+
 
         if (!response.IsOk){
-            if (response.ResponseContent.Contains("<title>Just a moment...</title>") || 
-                response.ResponseContent.Contains("<title>Access denied</title>") || 
-                response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") || 
-                response.ResponseContent.Trim().Equals("error code: 1020") || 
+            if (response.ResponseContent.Contains("<title>Just a moment...</title>") ||
+                response.ResponseContent.Contains("<title>Access denied</title>") ||
+                response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") ||
+                response.ResponseContent.Trim().Equals("error code: 1020") ||
                 response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
                 MessageBus.Current.SendMessage(new ToastMessage("Blocked by Cloudflare. Use the custom calendar.", ToastType.Error, 5));
                 Console.Error.WriteLine($"Blocked by Cloudflare. Use the custom calendar.");
             } else{
                 Console.Error.WriteLine($"Calendar request failed");
             }
+
             return new CalendarWeek();
         }
 
@@ -164,6 +176,24 @@ public class CalendarManager{
             Console.Error.WriteLine("No days found in the HTML document.");
         }
 
+        if (CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes){
+            foreach (var calendarDay in week.CalendarDays){
+                if (calendarDay.DateTime.Date >= DateTime.Now.Date){
+                    if (ProgramManager.Instance.AnilistUpcoming.ContainsKey(calendarDay.DateTime.ToString("yyyy-MM-dd"))){
+                        var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
+
+                        foreach (var calendarEpisode in list
+                                     .Where(e => calendarDay.DateTime.Date.Day == e.DateTime.Date.Day)
+                                     .Where(e => calendarDay.CalendarEpisodes.All(ele =>
+                                         ele.CrSeriesID != e.CrSeriesID &&
+                                         !CrSimulcastCalendarFilter.IsMatch(ele.SeasonName, e.SeasonName, similarityThreshold: 0.5)))){
+                            calendarDay.CalendarEpisodes.Add(calendarEpisode);
+                        }
+                    }
+                }
+            }
+        }
+
         calendar[weeksMondayDate] = week;
 
 
@@ -172,12 +202,12 @@ public class CalendarManager{
 
 
     public async Task<CalendarWeek> BuildCustomCalendar(DateTime calTargetDate, bool forceUpdate){
-        if (CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes){
-            await LoadAnilistUpcoming();
-        }
-
         if (!forceUpdate && calendar.TryGetValue("C" + calTargetDate.ToString("yyyy-MM-dd"), out var forDate)){
             return forDate;
+        }
+
+        if (CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes){
+            await LoadAnilistUpcoming();
         }
 
 
@@ -201,7 +231,7 @@ public class CalendarManager{
         var firstDayOfWeek = week.CalendarDays.First().DateTime;
         week.FirstDayOfWeek = firstDayOfWeek;
 
-        var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes("", 200, firstDayOfWeek, true);
+        var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes(CrunchyrollManager.Instance.CrunOptions.HistoryLang, 2000, null, true);
 
         if (newEpisodesBase is{ Data.Count: > 0 }){
             var newEpisodes = newEpisodesBase.Data;
@@ -222,35 +252,21 @@ public class CalendarManager{
 
                 DateTime targetDate;
 
-                if (CrunchyrollManager.Instance.CrunOptions.CalendarFilterByAirDate){
-                    targetDate = episodeAirDate;
 
-                    if (targetDate >= oneYearFromNow){
-                        DateTime freeAvailableStart = crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.Kind == DateTimeKind.Utc
-                            ? crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.ToLocalTime()
-                            : crBrowseEpisode.EpisodeMetadata.FreeAvailableDate;
+                targetDate = premiumAvailableStart;
 
-                        if (freeAvailableStart <= oneYearFromNow){
-                            targetDate = freeAvailableStart;
-                        } else{
-                            targetDate = premiumAvailableStart;
-                        }
-                    }
-                } else{
-                    targetDate = premiumAvailableStart;
+                if (targetDate >= oneYearFromNow){
+                    DateTime freeAvailableStart = crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.Kind == DateTimeKind.Utc
+                        ? crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.ToLocalTime()
+                        : crBrowseEpisode.EpisodeMetadata.FreeAvailableDate;
 
-                    if (targetDate >= oneYearFromNow){
-                        DateTime freeAvailableStart = crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.Kind == DateTimeKind.Utc
-                            ? crBrowseEpisode.EpisodeMetadata.FreeAvailableDate.ToLocalTime()
-                            : crBrowseEpisode.EpisodeMetadata.FreeAvailableDate;
-
-                        if (freeAvailableStart <= oneYearFromNow){
-                            targetDate = freeAvailableStart;
-                        } else{
-                            targetDate = episodeAirDate;
-                        }
+                    if (freeAvailableStart <= oneYearFromNow){
+                        targetDate = freeAvailableStart;
+                    } else{
+                        targetDate = episodeAirDate;
                     }
                 }
+
 
                 var dubFilter = CrunchyrollManager.Instance.CrunOptions.CalendarDubFilter;
 
@@ -280,7 +296,7 @@ public class CalendarManager{
                         : Regex.IsMatch(crBrowseEpisode.EpisodeMetadata.SeasonTitle, @"^Season\s+\d+$", RegexOptions.IgnoreCase)
                             ? $"{crBrowseEpisode.EpisodeMetadata.SeriesTitle} {crBrowseEpisode.EpisodeMetadata.SeasonTitle}"
                             : crBrowseEpisode.EpisodeMetadata.SeasonTitle;
-                    
+
                     calEpisode.DateTime = targetDate;
                     calEpisode.HasPassed = DateTime.Now > targetDate;
                     calEpisode.EpisodeName = crBrowseEpisode.Title;
@@ -340,7 +356,8 @@ public class CalendarManager{
                             var list = ProgramManager.Instance.AnilistUpcoming[calendarDay.DateTime.ToString("yyyy-MM-dd")];
 
                             foreach (var calendarEpisode in list.Where(calendarEpisodeAnilist => calendarDay.DateTime.Date.Day == calendarEpisodeAnilist.DateTime.Date.Day)
-                                         .Where(calendarEpisodeAnilist => calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisodeAnilist.CrSeriesID && ele.SeasonName != calendarEpisodeAnilist.SeasonName))){
+                                         .Where(calendarEpisodeAnilist =>
+                                             calendarDay.CalendarEpisodes.All(ele => ele.CrSeriesID != calendarEpisodeAnilist.CrSeriesID && ele.SeasonName != calendarEpisodeAnilist.SeasonName))){
                                 calendarDay.CalendarEpisodes.Add(calendarEpisode);
                             }
                         }
@@ -427,7 +444,7 @@ public class CalendarManager{
             aniListResponse ??= currentResponse;
 
             if (aniListResponse != currentResponse){
-                aniListResponse.Data?.Page?.AiringSchedules?.AddRange(currentResponse.Data?.Page?.AiringSchedules ??[]);
+                aniListResponse.Data?.Page?.AiringSchedules?.AddRange(currentResponse.Data?.Page?.AiringSchedules ?? []);
             }
 
             hasNextPage = currentResponse.Data?.Page?.PageInfo?.HasNextPage ?? false;
@@ -436,12 +453,12 @@ public class CalendarManager{
         } while (hasNextPage && currentPage < 20);
 
 
-        var list = aniListResponse.Data?.Page?.AiringSchedules ??[];
+        var list = aniListResponse.Data?.Page?.AiringSchedules ?? [];
 
         list = list.Where(ele => ele.Media?.ExternalLinks != null && ele.Media.ExternalLinks.Any(external =>
             string.Equals(external.Site, "Crunchyroll", StringComparison.OrdinalIgnoreCase))).ToList();
 
-        List<CalendarEpisode> calendarEpisodes =[];
+        List<CalendarEpisode> calendarEpisodes = [];
 
         foreach (var anilistEle in list){
             var calEp = new CalendarEpisode();
@@ -541,7 +558,7 @@ public class CalendarManager{
                         oldestRelease.Second,
                         calEp.DateTime.Kind
                     );
-                    
+
                     if ((adjustedDate - oldestRelease).TotalDays is < 6 and > 1){
                         adjustedDate = oldestRelease.AddDays(7);
                     }

@@ -153,7 +153,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private ComboBoxItem _selectedStreamEndpoint;
-    
+
     [ObservableProperty]
     private bool _firstEndpointVideo;
 
@@ -165,9 +165,6 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _endpointAuthorization = "";
-
-    [ObservableProperty]
-    private string _endpointClientId = "";
 
     [ObservableProperty]
     private string _endpointUserAgent = "";
@@ -367,13 +364,12 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         SelectedStreamEndpointSecondary = streamEndpointSecondar ?? StreamEndpointsSecondary[0];
 
         EndpointAuthorization = options.StreamEndpointSecondSettings?.Authorization ?? string.Empty;
-        EndpointClientId = options.StreamEndpointSecondSettings?.Client_ID ?? string.Empty;
         EndpointUserAgent = options.StreamEndpointSecondSettings?.UserAgent ?? string.Empty;
         EndpointDeviceName = options.StreamEndpointSecondSettings?.Device_name ?? string.Empty;
         EndpointDeviceType = options.StreamEndpointSecondSettings?.Device_type ?? string.Empty;
         EndpointVideo = options.StreamEndpointSecondSettings?.Video ?? true;
         EndpointAudio = options.StreamEndpointSecondSettings?.Audio ?? true;
-        
+
         FirstEndpointVideo = options.StreamEndpoint?.Video ?? true;
         FirstEndpointAudio = options.StreamEndpoint?.Audio ?? true;
 
@@ -382,6 +378,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         }
 
         FFmpegHWAccel.AddRange(GetAvailableHWAccelOptions());
+
+        if (FFmpegHWAccel.Count == 0){
+            FFmpegHWAccel.Add(new StringItemWithDisplayName{
+                DisplayName = "No hardware acceleration (error)",
+                value = "error"
+            });
+        }
 
         StringItemWithDisplayName? hwAccellFlag = FFmpegHWAccel.FirstOrDefault(a => a.value == options.FfmpegHwAccelFlag) ?? null;
         SelectedFFmpegHWAccel = hwAccellFlag ?? FFmpegHWAccel[0];
@@ -554,7 +557,6 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         var endpointSettings = new CrAuthSettings();
         endpointSettings.Endpoint = SelectedStreamEndpointSecondary.Content + "";
         endpointSettings.Authorization = EndpointAuthorization;
-        endpointSettings.Client_ID = EndpointClientId;
         endpointSettings.UserAgent = EndpointUserAgent;
         endpointSettings.Device_name = EndpointDeviceName;
         endpointSettings.Device_type = EndpointDeviceType;
@@ -730,7 +732,6 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         SelectedStreamEndpointSecondary = streamEndpointSecondar ?? StreamEndpointsSecondary[0];
 
         EndpointAuthorization = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Authorization;
-        EndpointClientId = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Client_ID;
         EndpointUserAgent = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.UserAgent;
         EndpointDeviceName = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Device_name;
         EndpointDeviceType = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Device_type;
@@ -786,11 +787,16 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
                 return MapHWAccelOptions(accels);
             }
         } catch (Exception e){
-            Console.WriteLine("Failed to get Available HW Accel Options" + e);
+            Console.Error.WriteLine("Failed to get Available HW Accel Options" + e);
         }
 
+        var result = new List<StringItemWithDisplayName>();
+        result.Add(new StringItemWithDisplayName{
+            DisplayName = "No hardware acceleration / error",
+            value = "error"
+        });
 
-        return [];
+        return result;
     }
 
     private List<StringItemWithDisplayName> MapHWAccelOptions(List<string> accels){

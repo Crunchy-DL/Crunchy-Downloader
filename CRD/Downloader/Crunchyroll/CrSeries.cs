@@ -338,7 +338,7 @@ public class CrSeries{
         }
 
         if (episodeList.Total < 1){
-            Console.Error.WriteLine("Season is empty!");
+            Console.Error.WriteLine($"Season is empty! Uri: {episodeRequest.RequestUri}");
         }
 
         return episodeList;

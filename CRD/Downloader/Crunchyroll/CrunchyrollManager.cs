@@ -838,7 +838,8 @@ public class CrunchyrollManager{
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)){
             if (!File.Exists(CfgManager.PathFFMPEG)){
                 Console.Error.WriteLine("Missing ffmpeg");
-                MainWindow.Instance.ShowError($"FFmpeg not found at: {CfgManager.PathFFMPEG}");
+                MainWindow.Instance.ShowError($"FFmpeg not found at: {CfgManager.PathFFMPEG}", "FFmpeg",
+                    "https://github.com/GyanD/codexffmpeg/releases/latest");
                 return new DownloadResponse{
                     Data = new List<DownloadedMedia>(),
                     Error = true,
@@ -849,7 +850,8 @@ public class CrunchyrollManager{
 
             if (!File.Exists(CfgManager.PathMKVMERGE)){
                 Console.Error.WriteLine("Missing Mkvmerge");
-                MainWindow.Instance.ShowError($"Mkvmerge not found at: {CfgManager.PathMKVMERGE}");
+                MainWindow.Instance.ShowError($"Mkvmerge not found at: {CfgManager.PathMKVMERGE}", "Mkvmerge",
+                    "https://mkvtoolnix.download/downloads.html#windows");
                 return new DownloadResponse{
                     Data = new List<DownloadedMedia>(),
                     Error = true,
@@ -883,7 +885,8 @@ public class CrunchyrollManager{
 
         if (!_widevine.canDecrypt){
             Console.Error.WriteLine("CDM files missing");
-            MainWindow.Instance.ShowError("Can't find CDM files in the Widevine folder.\nFor more information, please check the FAQ section in the Wiki on the GitHub page.", true);
+            MainWindow.Instance.ShowError("Can't find CDM files in the Widevine folder.\nFor more information, please check the FAQ section in the Wiki on the GitHub page.", "GitHub Wiki",
+                "https://github.com/Crunchy-DL/Crunchy-Downloader/wiki");
             return new DownloadResponse{
                 Data = new List<DownloadedMedia>(),
                 Error = true,
@@ -1361,7 +1364,7 @@ public class CrunchyrollManager{
                             //     List<string> streamServers = new List<string>(streamPlaylists.Data.Keys);
                             if (streamPlaylistsReqResponseList.Count > 0){
                                 HashSet<string> streamServers = [];
-                                Dictionary<string, ServerData> playListData = new Dictionary<string, ServerData>();
+                                ServerData playListData = new ServerData();
 
                                 foreach (var curStreams in streamPlaylistsReqResponseList){
                                     var match = Regex.Match(curStreams.Key ?? string.Empty, @"(https?:\/\/.*?\/(?:dash\/|\.urlset\/))");
@@ -1382,7 +1385,7 @@ public class CrunchyrollManager{
                                     }
                                 }
 
-                                options.StreamServer = options.StreamServer > streamServers.Count ? 1 : options.StreamServer;
+                                // options.StreamServer = options.StreamServer > streamServers.Count ? 1 : options.StreamServer;
 
                                 if (streamServers.Count == 0){
                                     return new DownloadResponse{
@@ -1393,17 +1396,20 @@ public class CrunchyrollManager{
                                     };
                                 }
 
-                                if (options.StreamServer == 0){
-                                    options.StreamServer = 1;
-                                }
+                                playListData.video ??= [];
+                                playListData.audio ??= [];
+
+                                // if (options.StreamServer == 0){
+                                //     options.StreamServer = 1;
+                                // }
 
                                 // string selectedServer = streamServers[options.StreamServer - 1];
                                 // ServerData selectedList = streamPlaylists.Data[selectedServer];
 
-                                string selectedServer = streamServers.ToList()[options.StreamServer - 1];
-                                ServerData selectedList = playListData[selectedServer];
+                                // string selectedServer = streamServers.ToList()[options.StreamServer - 1];
+                                // ServerData selectedList = playListData[selectedServer];
 
-                                var videos = selectedList.video.Select(item => new VideoItem{
+                                var videos = playListData.video.Select(item => new VideoItem{
                                     segments = item.segments,
                                     pssh = item.pssh,
                                     quality = item.quality,
@@ -1411,7 +1417,7 @@ public class CrunchyrollManager{
                                     resolutionText = $"{item.quality.width}x{item.quality.height} ({Math.Round(item.bandwidth / 1024.0)}KiB/s)"
                                 }).ToList();
 
-                                var audios = selectedList.audio.Select(item => new AudioItem{
+                                var audios = playListData.audio.Select(item => new AudioItem{
                                     @default = item.@default,
                                     segments = item.segments,
                                     pssh = item.pssh,
@@ -1532,7 +1538,7 @@ public class CrunchyrollManager{
                                 sb.AppendLine($"Selected quality:");
                                 sb.AppendLine($"\tVideo: {chosenVideoSegments.resolutionText}");
                                 sb.AppendLine($"\tAudio: {chosenAudioSegments.resolutionText} / {chosenAudioSegments.audioSamplingRate}");
-                                sb.AppendLine($"\tServer: {selectedServer}");
+                                sb.AppendLine($"\tServer: {string.Join(", ", playListData.servers)}");
 
                                 string qualityConsoleLog = sb.ToString();
                                 Console.WriteLine(qualityConsoleLog);
@@ -1591,8 +1597,10 @@ public class CrunchyrollManager{
                                     await CrAuthEndpoint1.RefreshToken(true);
                                     await CrAuthEndpoint2.RefreshToken(true);
 
-                                    Dictionary<string, string> authDataDict = new Dictionary<string, string>
-                                        { { "authorization", "Bearer " + ((options.StreamEndpoint is { Audio: true } or{ Video: true } ) ? CrAuthEndpoint1.Token?.access_token : CrAuthEndpoint2.Token?.access_token) },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
+                                    Dictionary<string, string> authDataDict = new Dictionary<string, string>{
+                                        { "authorization", "Bearer " + ((options.StreamEndpoint is { Audio: true } or{ Video: true }) ? CrAuthEndpoint1.Token?.access_token : CrAuthEndpoint2.Token?.access_token) },
+                                        { "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty }
+                                    };
 
                                     chosenVideoSegments.encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
 
@@ -1626,8 +1634,10 @@ public class CrunchyrollManager{
                                     await CrAuthEndpoint2.RefreshToken(true);
 
                                     if (chosenVideoSegments.encryptionKeys.Count == 0){
-                                        Dictionary<string, string> authDataDict = new Dictionary<string, string>
-                                            { { "authorization", "Bearer " + ((options.StreamEndpoint is { Audio: true } or{ Video: true } ) ? CrAuthEndpoint1.Token?.access_token : CrAuthEndpoint2.Token?.access_token)  },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
+                                        Dictionary<string, string> authDataDict = new Dictionary<string, string>{
+                                            { "authorization", "Bearer " + ((options.StreamEndpoint is { Audio: true } or{ Video: true }) ? CrAuthEndpoint1.Token?.access_token : CrAuthEndpoint2.Token?.access_token) },
+                                            { "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty }
+                                        };
 
                                         chosenVideoSegments.encryptionKeys = await _widevine.getKeys(chosenVideoSegments.pssh, ApiUrls.WidevineLicenceUrl, authDataDict);
 
@@ -1685,8 +1695,10 @@ public class CrunchyrollManager{
                                     await CrAuthEndpoint1.RefreshToken(true);
                                     await CrAuthEndpoint2.RefreshToken(true);
 
-                                    Dictionary<string, string> authDataDict = new Dictionary<string, string>
-                                        { { "authorization", "Bearer " + ((options.StreamEndpoint is { Audio: true } or{ Video: true } ) ? CrAuthEndpoint1.Token?.access_token : CrAuthEndpoint2.Token?.access_token) },{ "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty } };
+                                    Dictionary<string, string> authDataDict = new Dictionary<string, string>{
+                                        { "authorization", "Bearer " + ((options.StreamEndpoint is { Audio: true } or{ Video: true }) ? CrAuthEndpoint1.Token?.access_token : CrAuthEndpoint2.Token?.access_token) },
+                                        { "x-cr-content-id", mediaGuid },{ "x-cr-video-token", pbData.Meta?.Token ?? string.Empty }
+                                    };
 
                                     var encryptionKeys = chosenVideoSegments.encryptionKeys;
 
