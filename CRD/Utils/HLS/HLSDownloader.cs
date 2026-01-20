@@ -262,7 +262,7 @@ public class HlsDownloader{
                 File.WriteAllText($"{fn}.resume", resumeDataJson);
 
                 // Log progress
-                Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time)} | {dataLog.DownloadSpeed / 1000000.0:F2}Mb/s)");
+                Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time)} | {dataLog.DownloadSpeed / 1000000.0:F2}MB/s)");
 
                 _currentEpMeta.DownloadProgress = new DownloadProgress(){
                     IsDownloading = true,
