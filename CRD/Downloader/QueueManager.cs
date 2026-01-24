@@ -487,12 +487,12 @@ public partial class QueueManager : ObservableObject{
                     activeProcessingJobs.Release(giveBack);
                     _borrowed -= giveBack;
                 }
-
+                
                 int more = newLimit - _limit - giveBack;
                 if (more > 0) activeProcessingJobs.Release(more);
             } else{
                 int toPark = _limit - newLimit;
-
+                
                 for (int i = 0; i < toPark; i++){
                     _ = Task.Run(async () => {
                         await activeProcessingJobs.WaitAsync().ConfigureAwait(false);

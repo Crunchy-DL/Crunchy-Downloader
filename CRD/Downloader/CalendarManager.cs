@@ -293,7 +293,7 @@ public class CalendarManager{
 
                     string? seasonTitle = string.IsNullOrEmpty(crBrowseEpisode.EpisodeMetadata.SeasonTitle)
                         ? crBrowseEpisode.EpisodeMetadata.SeriesTitle
-                        : Regex.IsMatch(crBrowseEpisode.EpisodeMetadata.SeasonTitle, @"^Season\s+\d+$", RegexOptions.IgnoreCase)
+                        : LooksLikeGenericSeasonLabel(crBrowseEpisode.EpisodeMetadata.SeasonTitle, crBrowseEpisode.EpisodeMetadata.SeasonNumber)
                             ? $"{crBrowseEpisode.EpisodeMetadata.SeriesTitle} {crBrowseEpisode.EpisodeMetadata.SeasonTitle}"
                             : crBrowseEpisode.EpisodeMetadata.SeasonTitle;
 
@@ -312,7 +312,7 @@ public class CalendarManager{
                     calEpisode.AudioLocale = crBrowseEpisode.EpisodeMetadata.AudioLocale;
 
                     var existingEpisode = calendarDay.CalendarEpisodes
-                        .FirstOrDefault(e => e.SeasonName == calEpisode.SeasonName && e.AudioLocale == calEpisode.AudioLocale);
+                        .FirstOrDefault(e => e.CrSeriesID == calEpisode.CrSeriesID && e.AudioLocale == calEpisode.AudioLocale);
 
                     if (existingEpisode != null){
                         if (!int.TryParse(existingEpisode.EpisodeNumber, out _)){
@@ -567,6 +567,24 @@ public class CalendarManager{
                 }
             }
         }
+    }
+
+    private bool LooksLikeGenericSeasonLabel(string? seasonTitle, double? seasonNo){
+        if (string.IsNullOrWhiteSpace(seasonTitle)) return true;
+
+        var t = seasonTitle.Trim();
+
+        var m = Regex.Match(t, @"^(?<word>\p{L}+(?:[\p{L}\p{Mn}'\.\- ]*\p{L})?)\s+(?<n>\d+)$",
+            RegexOptions.CultureInvariant);
+
+        if (!m.Success) return false;
+
+        if (seasonNo.HasValue &&
+            double.TryParse(m.Groups["n"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var n)){
+            return n == seasonNo.Value;
+        }
+
+        return true;
     }
 
     #region Query

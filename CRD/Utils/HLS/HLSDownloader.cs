@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Parser.Utils;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
@@ -261,14 +262,18 @@ public class HlsDownloader{
                 string resumeDataJson = JsonConvert.SerializeObject(new{ _data.Parts.Completed, Total = totalSeg });
                 File.WriteAllText($"{fn}.resume", resumeDataJson);
 
+                var downloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
+                    ? $"{dataLog.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
+                    : $"{dataLog.DownloadSpeedBytes / 1000000.0:F2} MB/s";
+                
                 // Log progress
-                Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time)} | {dataLog.DownloadSpeed / 1000000.0:F2}Mb/s)");
+                Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time)} | {downloadSpeed})");
 
                 _currentEpMeta.DownloadProgress = new DownloadProgress(){
                     IsDownloading = true,
                     Percent = dataLog.Percent,
                     Time = dataLog.Time,
-                    DownloadSpeed = dataLog.DownloadSpeed,
+                    DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
                     Doing = _isAudio ? "Downloading Audio" : (_isVideo ? "Downloading Video" : "")
                 };
 
@@ -386,13 +391,17 @@ public class HlsDownloader{
                         _data.BytesDownloaded = 0;
                         _lastUiUpdate = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
-                        Console.WriteLine($"{currentDownloaded}/{totalSeg} [{dataLog.Percent}%] Speed: {dataLog.DownloadSpeed / 1000000.0:F2} MB/s ETA: {FormatTime(dataLog.Time)}");
+                        var downloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
+                            ? $"{dataLog.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
+                            : $"{dataLog.DownloadSpeedBytes / 1000000.0:F2} MB/s";
+                        
+                        Console.WriteLine($"{currentDownloaded}/{totalSeg} [{dataLog.Percent}%] Speed: {downloadSpeed} ETA: {FormatTime(dataLog.Time)}");
 
                         _currentEpMeta.DownloadProgress = new DownloadProgress{
                             IsDownloading = true,
                             Percent = dataLog.Percent,
                             Time = dataLog.Time,
-                            DownloadSpeed = dataLog.DownloadSpeed,
+                            DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
                             Doing = _isAudio ? "Downloading Audio" : (_isVideo ? "Downloading Video" : "")
                         };
                     }
@@ -468,7 +477,7 @@ public class HlsDownloader{
                     IsDownloading = true,
                     Percent = dataLog.Percent,
                     Time = dataLog.Time,
-                    DownloadSpeed = dataLog.DownloadSpeed,
+                    DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
                     Doing = _isAudio ? "Merging Audio" : (_isVideo ? "Merging Video" : "")
                 };
 
@@ -542,7 +551,7 @@ public class HlsDownloader{
         return new Info{
             Percent = percent,
             Time = etaSec,
-            DownloadSpeed = speed
+            DownloadSpeedBytes = speed
         };
     }
 
@@ -761,7 +770,7 @@ public static class HttpContentExtensions{
 public class Info{
     public int Percent{ get; set; }
     public double Time{ get; set; } // Remaining time estimate
-    public double DownloadSpeed{ get; set; } // Bytes per second
+    public double DownloadSpeedBytes{ get; set; } // Bytes per second
 }
 
 public class ResumeData{

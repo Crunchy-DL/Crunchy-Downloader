@@ -65,6 +65,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private double? _downloadSpeed;
+    
+    [ObservableProperty]
+    private bool _downloadSpeedInBits;
 
     [ObservableProperty]
     private double? _retryAttempts;
@@ -298,6 +301,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         HistorySkipUnmonitored = options.HistorySkipUnmonitored;
         HistoryCountSonarr = options.HistoryCountSonarr;
         DownloadSpeed = options.DownloadSpeedLimit;
+        DownloadSpeedInBits = options.DownloadSpeedInBits;
         DownloadMethodeNew = options.DownloadMethodeNew;
         DownloadAllowEarlyStart = options.DownloadAllowEarlyStart;
         RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10);
@@ -344,6 +348,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.HistorySkipUnmonitored = HistorySkipUnmonitored;
         settings.HistoryCountSonarr = HistoryCountSonarr;
         settings.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
+        settings.DownloadSpeedInBits = DownloadSpeedInBits;
         settings.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
         settings.SimultaneousProcessingJobs = Math.Clamp((int)(SimultaneousProcessingJobs ?? 0), 1, 10);
 

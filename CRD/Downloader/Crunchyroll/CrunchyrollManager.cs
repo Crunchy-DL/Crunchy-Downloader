@@ -52,6 +52,7 @@ public class CrunchyrollManager{
 
     public string DefaultLocale = "en-US";
     public CrAuthSettings DefaultAndroidAuthSettings = new CrAuthSettings();
+    public CrAuthSettings GuestAndroidAuthSettings = new CrAuthSettings();
 
     public JsonSerializerSettings? SettingsJsonSerializerSettings = new(){
         NullValueHandling = NullValueHandling.Ignore,
@@ -61,6 +62,8 @@ public class CrunchyrollManager{
 
     public CrAuth CrAuthEndpoint1;
     public CrAuth CrAuthEndpoint2;
+    
+    public CrAuth CrAuthGuest;
 
     public CrEpisode CrEpisode;
     public CrSeries CrSeries;
@@ -161,6 +164,9 @@ public class CrunchyrollManager{
         CrAuthEndpoint1.Init();
         CrAuthEndpoint2 = new CrAuth(this, new CrAuthSettings());
         CrAuthEndpoint2.Init();
+        
+        CrAuthGuest = new CrAuth(this, new CrAuthSettings());
+        CrAuthGuest.Init();
 
         CrEpisode = new CrEpisode();
         CrSeries = new CrSeries();
@@ -201,15 +207,14 @@ public class CrunchyrollManager{
 
         DefaultAndroidAuthSettings = new CrAuthSettings(){
             Endpoint = "android/phone",
-            Client_ID = "pd6uw3dfyhzghs0wxae3",
-            Authorization = "Basic cGQ2dXczZGZ5aHpnaHMwd3hhZTM6NXJ5SjJFQXR3TFc0UklIOEozaWk1anVqbnZrRWRfTkY=",
-            UserAgent = "Crunchyroll/3.95.2 Android/16 okhttp/4.12.0",
+            Authorization = "Basic bzJhNndsamdub3FtdjloMWJ5bHI6Ujk3S3ExZm5faExZVFk0bDJxTjJIT2lDQnpfYnpBSUU=",
+            UserAgent = "Crunchyroll/3.97.0 Android/16 okhttp/4.12.0",
             Device_name = "CPH2449",
             Device_type = "OnePlus CPH2449",
             Audio = true,
             Video = true,
         };
-
+        
         CrunOptions.StreamEndpoint ??= new CrAuthSettings(){ Endpoint = "tv/android_tv", Audio = true, Video = true };
         CrunOptions.StreamEndpoint.Endpoint = "tv/android_tv";
         CrAuthEndpoint1.AuthSettings = new CrAuthSettings(){
@@ -231,6 +236,10 @@ public class CrunchyrollManager{
         if (!string.IsNullOrEmpty(CrAuthEndpoint2.AuthSettings.Endpoint)){
             await CrAuthEndpoint2.Auth();
         }
+
+        CrAuthGuest.AuthSettings = GuestAndroidAuthSettings;
+        CrAuthGuest.EndpointEnum = CrunchyrollEndpoints.Guest;
+        await CrAuthGuest.AuthAnonymousFoxy();
 
         CfgManager.WriteCrSettings();
 
@@ -303,7 +312,7 @@ public class CrunchyrollManager{
             Error = false,
             Percent = 0,
             Time = 0,
-            DownloadSpeed = 0,
+            DownloadSpeedBytes = 0,
             Doing = "Starting"
         };
         QueueManager.Instance.Queue.Refresh();
@@ -323,7 +332,7 @@ public class CrunchyrollManager{
                 Error = true,
                 Percent = 100,
                 Time = 0,
-                DownloadSpeed = 0,
+                DownloadSpeedBytes = 0,
                 Doing = "Download Error" + (!string.IsNullOrEmpty(res.ErrorText) ? " - " + res.ErrorText : ""),
             };
             QueueManager.Instance.Queue.Refresh();
@@ -337,7 +346,7 @@ public class CrunchyrollManager{
                     IsDownloading = true,
                     Percent = 100,
                     Time = 0,
-                    DownloadSpeed = 0,
+                    DownloadSpeedBytes = 0,
                     Doing = "Waiting for Muxing/Encoding"
                 };
                 QueueManager.Instance.Queue.Refresh();
@@ -354,7 +363,7 @@ public class CrunchyrollManager{
                     IsDownloading = true,
                     Percent = 100,
                     Time = 0,
-                    DownloadSpeed = 0,
+                    DownloadSpeedBytes = 0,
                     Doing = "Muxing"
                 };
 
@@ -422,7 +431,7 @@ public class CrunchyrollManager{
                                 IsDownloading = true,
                                 Percent = 100,
                                 Time = 0,
-                                DownloadSpeed = 0,
+                                DownloadSpeedBytes = 0,
                                 Doing = "Encoding"
                             };
 
@@ -481,7 +490,7 @@ public class CrunchyrollManager{
                             IsDownloading = true,
                             Percent = 100,
                             Time = 0,
-                            DownloadSpeed = 0,
+                            DownloadSpeedBytes = 0,
                             Doing = "Encoding"
                         };
 
@@ -517,7 +526,7 @@ public class CrunchyrollManager{
                     Done = true,
                     Percent = 100,
                     Time = 0,
-                    DownloadSpeed = 0,
+                    DownloadSpeedBytes = 0,
                     Doing = (muxError ? "Muxing Failed" : "Done") + (syncError ? $" - Couldn't sync dubs ({notSyncedDubs})" : "")
                 };
 
@@ -543,7 +552,7 @@ public class CrunchyrollManager{
                     Done = true,
                     Percent = 100,
                     Time = 0,
-                    DownloadSpeed = 0,
+                    DownloadSpeedBytes = 0,
                     Doing = "Done - Skipped muxing"
                 };
 
@@ -602,7 +611,7 @@ public class CrunchyrollManager{
             IsDownloading = true,
             Percent = 100,
             Time = 0,
-            DownloadSpeed = 0,
+            DownloadSpeedBytes = 0,
             Doing = "Moving Files"
         };
 
@@ -765,7 +774,7 @@ public class CrunchyrollManager{
                 IsDownloading = true,
                 Percent = 100,
                 Time = 0,
-                DownloadSpeed = 0,
+                DownloadSpeedBytes = 0,
                 Doing = "Muxing – Syncing Dub Timings"
             };
 
@@ -808,7 +817,7 @@ public class CrunchyrollManager{
                 IsDownloading = true,
                 Percent = 100,
                 Time = 0,
-                DownloadSpeed = 0,
+                DownloadSpeedBytes = 0,
                 Doing = "Muxing"
             };
 
@@ -1675,7 +1684,7 @@ public class CrunchyrollManager{
                                         IsDownloading = true,
                                         Percent = 100,
                                         Time = 0,
-                                        DownloadSpeed = 0,
+                                        DownloadSpeedBytes = 0,
                                         Doing = "Decrypting"
                                     };
                                     QueueManager.Instance.Queue.Refresh();
@@ -1766,7 +1775,7 @@ public class CrunchyrollManager{
                                                 IsDownloading = true,
                                                 Percent = 100,
                                                 Time = 0,
-                                                DownloadSpeed = 0,
+                                                DownloadSpeedBytes = 0,
                                                 Doing = "Decrypting video"
                                             };
                                             QueueManager.Instance.Queue.Refresh();
@@ -1837,7 +1846,7 @@ public class CrunchyrollManager{
                                                 IsDownloading = true,
                                                 Percent = 100,
                                                 Time = 0,
-                                                DownloadSpeed = 0,
+                                                DownloadSpeedBytes = 0,
                                                 Doing = "Decrypting audio"
                                             };
                                             QueueManager.Instance.Queue.Refresh();

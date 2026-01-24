@@ -499,7 +499,7 @@ public class Helpers{
                         IsDownloading = true,
                         Percent = progress,
                         Time = 0,
-                        DownloadSpeed = 0,
+                        DownloadSpeedBytes = 0,
                         Doing = "Encoding"
                     };
 

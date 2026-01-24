@@ -105,8 +105,9 @@ public class CrMusic{
     }
 
     public async Task<CrArtist> ParseArtistByIdAsync(string id, string crLocale, bool forcedLang = false){
+        await crunInstance.CrAuthGuest.RefreshToken(true);
         var query = CreateQueryParameters(crLocale, forcedLang);
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/music/artists/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Content}/music/artists/{id}", HttpMethod.Get, true, crunInstance.CrAuthGuest.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -135,8 +136,9 @@ public class CrMusic{
     }
 
     private async Task<CrunchyMusicVideoList> FetchMediaListAsync(string url, string crLocale, bool forcedLang){
+        await crunInstance.CrAuthGuest.RefreshToken(true);
         var query = CreateQueryParameters(crLocale, forcedLang);
-        var request = HttpClientReq.CreateRequestMessage(url, HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+        var request = HttpClientReq.CreateRequestMessage(url, HttpMethod.Get, true, crunInstance.CrAuthGuest.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -186,7 +188,7 @@ public class CrMusic{
             Error = false,
             Percent = 0,
             Time = 0,
-            DownloadSpeed = 0
+            DownloadSpeedBytes = 0
         };
         epMeta.AvailableSubs = new List<string>();
         epMeta.Description = episodeP.Description;

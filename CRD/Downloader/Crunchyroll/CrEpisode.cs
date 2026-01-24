@@ -16,6 +16,7 @@ public class CrEpisode(){
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task<CrunchyEpisode?> ParseEpisodeById(string id, string crLocale, bool forcedLang = false){
+        await crunInstance.CrAuthGuest.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";
@@ -27,7 +28,7 @@ public class CrEpisode(){
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{id}", HttpMethod.Get, true, crunInstance.CrAuthGuest.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -51,7 +52,7 @@ public class CrEpisode(){
             //guid for episode id
             foreach (var episodeVersionse in list){
                 foreach (var version in episodeVersionse){
-                    var checkRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{version.Guid}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+                    var checkRequest = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/episodes/{version.Guid}", HttpMethod.Get, true, crunInstance.CrAuthGuest.Token?.access_token, query);
                     var checkResponse = await HttpClientReq.Instance.SendHttpRequest(checkRequest, true);
                     if (!checkResponse.IsOk){
                         epsidoe.Data.First().Versions?.Remove(version);
@@ -197,7 +198,7 @@ public class CrEpisode(){
                 Error = false,
                 Percent = 0,
                 Time = 0,
-                DownloadSpeed = 0
+                DownloadSpeedBytes = 0
             };
             epMeta.AvailableSubs = item.SubtitleLocales;
             epMeta.Description = item.Description;
@@ -236,7 +237,7 @@ public class CrEpisode(){
     }
 
     public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount, DateTime? firstWeekDay = null, bool forcedLang = false){
-        await crunInstance.CrAuthEndpoint1.RefreshToken(true);
+        await crunInstance.CrAuthGuest.RefreshToken(true);
 
 
         if (string.IsNullOrEmpty(crLocale)){
@@ -256,7 +257,7 @@ public class CrEpisode(){
         query["sort_by"] = "newly_added";
         query["type"] = "episode";
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Browse}", HttpMethod.Get, true, crunInstance.CrAuthGuest.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 

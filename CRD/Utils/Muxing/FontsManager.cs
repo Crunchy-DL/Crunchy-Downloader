@@ -32,7 +32,7 @@ public class FontsManager{
 
     #endregion
 
-        public Dictionary<string, string> Fonts{ get; private set; } = new(){
+        public Dictionary<string, string> Fonts{ get; private set; } = new(StringComparer.OrdinalIgnoreCase){
         { "Adobe Arabic", "AdobeArabic-Bold.otf" },
         { "Andale Mono", "andalemo.ttf" },
         { "Arial", "arial.ttf" },

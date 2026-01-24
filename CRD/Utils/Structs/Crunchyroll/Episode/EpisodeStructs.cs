@@ -409,7 +409,7 @@ public class DownloadProgress{
 
     public int Percent{ get; set; }
     public double Time{ get; set; }
-    public double DownloadSpeed{ get; set; }
+    public double DownloadSpeedBytes{ get; set; }
 }
 
 public class CrunchyEpMetaData{

@@ -116,6 +116,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("download_speed_limit")]
     public int DownloadSpeedLimit{ get; set; }
+    
+    [JsonProperty("download_speed_bits")]
+    public bool DownloadSpeedInBits{ get; set; }
 
     [JsonProperty("proxy_enabled")]
     public bool ProxyEnabled{ get; set; }

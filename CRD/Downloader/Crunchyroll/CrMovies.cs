@@ -14,6 +14,7 @@ public class CrMovies{
     private readonly CrunchyrollManager crunInstance = CrunchyrollManager.Instance;
 
     public async Task<CrunchyMovie?> ParseMovieById(string id, string crLocale, bool forcedLang = false){
+        await crunInstance.CrAuthGuest.RefreshToken(true);
         NameValueCollection query = HttpUtility.ParseQueryString(new UriBuilder().Query);
 
         query["preferred_audio_language"] = "ja-JP";
@@ -25,7 +26,7 @@ public class CrMovies{
         }
 
 
-        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/objects/{id}", HttpMethod.Get, true, crunInstance.CrAuthEndpoint1.Token?.access_token, query);
+        var request = HttpClientReq.CreateRequestMessage($"{ApiUrls.Cms}/objects/{id}", HttpMethod.Get, true, crunInstance.CrAuthGuest.Token?.access_token, query);
 
         var response = await HttpClientReq.Instance.SendHttpRequest(request);
 
@@ -81,7 +82,7 @@ public class CrMovies{
             Error = false,
             Percent = 0,
             Time = 0,
-            DownloadSpeed = 0
+            DownloadSpeedBytes = 0
         };
         epMeta.AvailableSubs = [];
         epMeta.Description = episodeP.Description;

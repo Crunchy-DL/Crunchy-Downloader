@@ -15,6 +15,18 @@ public enum StreamingService{
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
+public enum CrunchyrollEndpoints{
+    [EnumMember(Value = "android/phone")]
+    Android,
+    [EnumMember(Value = "tv/android_tv")]
+    AndroidTv,
+    [EnumMember(Value = "Guest")]
+    Guest,
+    [EnumMember(Value = "Unknown")]
+    Unknown
+}
+
+[JsonConverter(typeof(StringEnumConverter))]
 public enum EpisodeType{
     [EnumMember(Value = "MusicVideo")]
     MusicVideo,

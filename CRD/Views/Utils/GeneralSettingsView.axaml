@@ -91,6 +91,12 @@
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Show download speed in bits/s (Mbps)" Description="When enabled, shows Mbps instead of MB/s">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadSpeedInBits}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Download Retry"
                                                Description="Sett the number of retry attempts and the delay between each retry">
