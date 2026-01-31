@@ -99,6 +99,10 @@
                                         <CheckBox IsChecked="{Binding ShowUpcomingEpisodes}"
                                                   Content="Show Upcoming episodes" Margin="5 5 0 0">
                                         </CheckBox>
+                                        
+                                        <CheckBox IsChecked="{Binding UpdateHistoryFromCalendar}"
+                                                  Content="Update History from Calendar" Margin="5 5 0 0">
+                                        </CheckBox>
                                     </StackPanel>
 
                                 </controls:SettingsExpander.Footer>
@@ -185,7 +189,8 @@
                                                 <Grid HorizontalAlignment="Center">
                                                     <Grid>
                                                         <Image HorizontalAlignment="Center" IsVisible="{Binding !AnilistEpisode}" Source="../Assets/coming_soon_ep.jpg" />
-                                                        <Image HorizontalAlignment="Center" MaxHeight="150" Source="{Binding ImageBitmap}" />
+                                                        <Image HorizontalAlignment="Center" IsVisible="{Binding !AnilistEpisode}"  Source="{Binding ImageBitmap}" />
+                                                        <Image HorizontalAlignment="Center" IsVisible="{Binding AnilistEpisode}" MaxHeight="150" Source="{Binding ImageBitmap}" />
                                                     </Grid>
 
 

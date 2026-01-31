@@ -139,8 +139,8 @@ public partial class QueueManager : ObservableObject{
             (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath, string videoQuality) historyEpisode = (null, [], [], "", "");
 
             if (CrunchyrollManager.Instance.CrunOptions.History){
-                var episode = sList.EpisodeAndLanguages.Items.First();
-                historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDubListAndDownloadDir(episode.SeriesId, episode.SeasonId, episode.Id);
+                var variant = sList.EpisodeAndLanguages.Variants.First();
+                historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDubListAndDownloadDir(variant.Item.SeriesId, variant.Item.SeasonId, variant.Item.Id);
                 if (historyEpisode.dublist.Count > 0){
                     dubLang = historyEpisode.dublist;
                 }
@@ -238,8 +238,9 @@ public partial class QueueManager : ObservableObject{
                     Console.WriteLine("Added Episode to Queue but couldn't find all selected dubs");
                     Console.Error.WriteLine("Added Episode to Queue but couldn't find all selected dubs - Available dubs/subs: ");
 
-                    var languages = sList.EpisodeAndLanguages.Items.Select((a, index) =>
-                        $"{(a.IsPremiumOnly ? "+ " : "")}{sList.EpisodeAndLanguages.Langs.ElementAtOrDefault(index)?.CrLocale ?? "Unknown"}").ToArray();
+                    var languages = sList.EpisodeAndLanguages.Variants
+                        .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang?.CrLocale ?? "Unknown"}")
+                        .ToArray();
 
                     Console.Error.WriteLine(
                         $"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
@@ -252,8 +253,9 @@ public partial class QueueManager : ObservableObject{
                 Console.WriteLine("Episode couldn't be added to Queue");
                 Console.Error.WriteLine("Episode couldn't be added to Queue - Available dubs/subs: ");
 
-                var languages = sList.EpisodeAndLanguages.Items.Select((a, index) =>
-                    $"{(a.IsPremiumOnly ? "+ " : "")}{sList.EpisodeAndLanguages.Langs.ElementAtOrDefault(index)?.CrLocale ?? "Unknown"}").ToArray();
+                var languages = sList.EpisodeAndLanguages.Variants
+                    .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang?.CrLocale ?? "Unknown"}")
+                    .ToArray();
 
                 Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
                 MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
@@ -374,7 +376,7 @@ public partial class QueueManager : ObservableObject{
 
 
     public async Task CrAddSeriesToQueue(CrunchySeriesList list, CrunchyMultiDownload data){
-        var selected = CrunchyrollManager.Instance.CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.But, data.AllEpisodes, data.E);
+        var selected = CrunchyrollManager.Instance.CrSeries.ItemSelectMultiDub(list.Data, data.DubLang, data.AllEpisodes, data.E);
 
         var failed = false;
         var partialAdd = false;

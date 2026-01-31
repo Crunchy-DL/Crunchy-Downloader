@@ -31,6 +31,9 @@ public partial class CalendarPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _showUpcomingEpisodes;
+    
+    [ObservableProperty]
+    private bool _updateHistoryFromCalendar;
 
     [ObservableProperty]
     private bool _hideDubs;
@@ -74,6 +77,7 @@ public partial class CalendarPageViewModel : ViewModelBase{
         CustomCalendar = CrunchyrollManager.Instance.CrunOptions.CustomCalendar;
         HideDubs = CrunchyrollManager.Instance.CrunOptions.CalendarHideDubs;
         ShowUpcomingEpisodes = CrunchyrollManager.Instance.CrunOptions.CalendarShowUpcomingEpisodes;
+        UpdateHistoryFromCalendar = CrunchyrollManager.Instance.CrunOptions.UpdateHistoryFromCalendar;
 
         ComboBoxItem? dubfilter = CalendarDubFilter.FirstOrDefault(a => a.Content != null && (string)a.Content == CrunchyrollManager.Instance.CrunOptions.CalendarDubFilter) ?? null;
         CurrentCalendarDubFilter = dubfilter ?? CalendarDubFilter[0];
@@ -289,4 +293,14 @@ public partial class CalendarPageViewModel : ViewModelBase{
             CfgManager.WriteCrSettings();
         }
     }
+    
+    partial void OnUpdateHistoryFromCalendarChanged(bool value){
+        if (loading){
+            return;
+        }
+
+        CrunchyrollManager.Instance.CrunOptions.UpdateHistoryFromCalendar = value;
+        CfgManager.WriteCrSettings();
+    }
+    
 }

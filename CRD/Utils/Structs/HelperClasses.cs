@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Utils.Structs.History;
 using CRD.Views;
@@ -51,9 +52,18 @@ public class LanguageItem{
     public string Language{ get; set; }
 }
 
+public readonly record struct EpisodeVariant(CrunchyEpisode Item, LanguageItem Lang);
+
 public class EpisodeAndLanguage{
-    public List<CrunchyEpisode> Items{ get; set; }
-    public List<LanguageItem> Langs{ get; set; }
+    public List<EpisodeVariant> Variants{ get; set; } = new();
+    
+    public bool AddUnique(CrunchyEpisode item, LanguageItem lang){
+        if (Variants.Any(v => v.Lang.CrLocale == lang.CrLocale))
+            return false;
+
+        Variants.Add(new EpisodeVariant(item, lang));
+        return true;
+    }
 }
 
 public class CrunchyMultiDownload(List<string> dubLang, bool? all = null, bool? but = null, List<string>? e = null, string? s = null){

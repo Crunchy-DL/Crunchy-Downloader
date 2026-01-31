@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using CRD.Downloader.Crunchyroll;
+using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Sonarr;
@@ -38,7 +39,7 @@ public class History{
                 }
             } else{
                 var matchingSeason = historySeries.Seasons.FirstOrDefault(historySeason => historySeason.SeasonId == seasonId);
-                
+
                 if (matchingSeason != null){
                     foreach (var historyEpisode in matchingSeason.EpisodesList){
                         historyEpisode.IsEpisodeAvailableOnStreamingService = false;
@@ -129,6 +130,129 @@ public class History{
         }
     }
 
+    public async Task UpdateWithEpisode(List<CrBrowseEpisode> episodes){
+        var historyIndex = crunInstance.HistoryList
+            .Where(h => !string.IsNullOrWhiteSpace(h.SeriesId))
+            .ToDictionary(
+                h => h.SeriesId!,
+                h => (h.Seasons)
+                    .Where(s => !string.IsNullOrWhiteSpace(s.SeasonId))
+                    .ToDictionary(
+                        s => s.SeasonId ?? "UNKNOWN",
+                        s => (s.EpisodesList)
+                            .Select(ep => ep.EpisodeId)
+                            .Where(id => !string.IsNullOrWhiteSpace(id))
+                            .ToHashSet(StringComparer.Ordinal),
+                        StringComparer.Ordinal
+                    ),
+                StringComparer.Ordinal
+            );
+        
+        episodes = episodes
+            .Where(e => !string.IsNullOrWhiteSpace(e.EpisodeMetadata?.SeriesId) &&
+                        historyIndex.ContainsKey(e.EpisodeMetadata!.SeriesId!))
+            .ToList();
+
+        foreach (var seriesGroup in episodes.GroupBy(e => e.EpisodeMetadata?.SeriesId ?? "UNKNOWN_SERIES")){
+            var seriesId = seriesGroup.Key;
+
+            var originalEntries = seriesGroup
+                .Select(e => new{ OriginalId = TryGetOriginalId(e), SeasonId = TryGetOriginalSeasonId(e) })
+                .Where(x => !string.IsNullOrWhiteSpace(x.OriginalId))
+                .GroupBy(x => x.OriginalId!, StringComparer.Ordinal)
+                .Select(g => new{
+                    OriginalId = g.Key,
+                    SeasonId = g.Select(x => x.SeasonId).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s))
+                })
+                .ToList();
+
+            var hasAnyOriginalInfo = originalEntries.Count > 0;
+
+            var allOriginalsInHistory =
+                hasAnyOriginalInfo
+                && originalEntries.All(x => IsOriginalInHistory(historyIndex, seriesId, x.SeasonId, x.OriginalId));
+
+            var originalItems = seriesGroup.Where(IsOriginalItem).ToList();
+
+            if (originalItems.Count > 0){
+                if (allOriginalsInHistory){
+                    var sT = seriesGroup.Select(e => e.EpisodeMetadata?.SeriesTitle)
+                        .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? "";
+                    // Console.WriteLine($"[INFO] Skipping SeriesId={seriesId} {sT} - all ORIGINAL episodes already in history.");
+                    continue;
+                }
+
+                var convertedList = originalItems.Select(crBrowseEpisode => crBrowseEpisode.ToCrunchyEpisode()).ToList();
+
+                await crunInstance.History.UpdateWithSeasonData(convertedList.ToList<IHistorySource>());
+
+                continue;
+            }
+            
+            var seriesTitle = seriesGroup.Select(e => e.EpisodeMetadata?.SeriesTitle)
+                .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? "";
+            
+            if (allOriginalsInHistory){
+                // Console.WriteLine($"[INFO] Skipping SeriesId={seriesId} - originals implied by Versions already in history.");
+                continue;
+            }
+
+            Console.WriteLine($"[WARN] No original ITEM found for SeriesId={seriesId} {seriesTitle}");
+
+            if (HasAllSeriesEpisodesInHistory(historyIndex, seriesId, seriesGroup)){
+                Console.WriteLine($"[History] Skip (already in history): {seriesId}");
+            } else{
+                await CrUpdateSeries(seriesId, null);
+                Console.WriteLine($"[History] Updating (full series): {seriesId}");
+            }
+        }
+
+        return;
+    }
+
+    private string? TryGetOriginalId(CrBrowseEpisode e) =>
+        e.EpisodeMetadata?.versions?
+            .FirstOrDefault(v => v.Original && !string.IsNullOrWhiteSpace(v.Guid))
+            ?.Guid;
+
+    private string? TryGetOriginalSeasonId(CrBrowseEpisode e) =>
+        e.EpisodeMetadata?.versions?
+            .FirstOrDefault(v => v.Original && !string.IsNullOrWhiteSpace(v.SeasonGuid))
+            ?.SeasonGuid
+        ?? e.EpisodeMetadata?.SeasonId;
+
+    private bool IsOriginalItem(CrBrowseEpisode e){
+        var originalId = TryGetOriginalId(e);
+        return !string.IsNullOrWhiteSpace(originalId)
+               && !string.IsNullOrWhiteSpace(e.Id)
+               && string.Equals(e.Id, originalId, StringComparison.Ordinal);
+    }
+
+
+    private bool IsOriginalInHistory(Dictionary<string, Dictionary<string, HashSet<string?>>> historyIndex, string seriesId, string? seasonId, string originalEpisodeId){
+        if (!historyIndex.TryGetValue(seriesId, out var seasons)) return false;
+
+        if (!string.IsNullOrWhiteSpace(seasonId))
+            return seasons.TryGetValue(seasonId, out var eps) && eps.Contains(originalEpisodeId);
+        
+        return seasons.Values.Any(eps => eps.Contains(originalEpisodeId));
+    }
+
+    private bool HasAllSeriesEpisodesInHistory(Dictionary<string, Dictionary<string, HashSet<string?>>> historyIndex, string seriesId, IEnumerable<CrBrowseEpisode> seriesEpisodes){
+        if (!historyIndex.TryGetValue(seriesId, out var seasons)) return false;
+
+        var allHistoryEpisodeIds = seasons.Values
+            .SelectMany(set => set)
+            .ToHashSet(StringComparer.Ordinal);
+
+        foreach (var e in seriesEpisodes){
+            if (string.IsNullOrWhiteSpace(e.Id)) return false;
+            if (!allHistoryEpisodeIds.Contains(e.Id)) return false;
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// This method updates the History with a list of episodes. The episodes have to be from the same season.
     /// </summary>
@@ -206,7 +330,7 @@ public class History{
                 historySeries = new HistorySeries{
                     SeriesTitle = firstEpisode.GetSeriesTitle(),
                     SeriesId = firstEpisode.GetSeriesId(),
-                    Seasons =[],
+                    Seasons = [],
                     HistorySeriesAddDate = DateTime.Now,
                     SeriesType = firstEpisode.GetSeriesType(),
                     SeriesStreamingService = StreamingService.Crunchyroll
@@ -302,8 +426,8 @@ public class History{
 
         var downloadDirPath = "";
         var videoQuality = "";
-        List<string> dublist =[];
-        List<string> sublist =[];
+        List<string> dublist = [];
+        List<string> sublist = [];
 
         if (historySeries != null){
             var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
@@ -353,7 +477,7 @@ public class History{
     public List<string> GetDubList(string? seriesId, string? seasonId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
-        List<string> dublist =[];
+        List<string> dublist = [];
 
         if (historySeries != null){
             var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
@@ -372,7 +496,7 @@ public class History{
     public (List<string> sublist, string videoQuality) GetSubList(string? seriesId, string? seasonId){
         var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
-        List<string> sublist =[];
+        List<string> sublist = [];
         var videoQuality = "";
 
         if (historySeries != null){
@@ -430,8 +554,8 @@ public class History{
                         SeriesId = artisteData.Id,
                         SeriesTitle = artisteData.Name ?? "",
                         ThumbnailImageUrl = artisteData.Images.PosterTall.FirstOrDefault(e => e.Height == 360)?.Source ?? "",
-                        HistorySeriesAvailableDubLang =[],
-                        HistorySeriesAvailableSoftSubs =[]
+                        HistorySeriesAvailableDubLang = [],
+                        HistorySeriesAvailableSoftSubs = []
                     };
 
                     historySeries.SeriesDescription = cachedSeries.SeriesDescription;
@@ -563,7 +687,7 @@ public class History{
             SeasonTitle = firstEpisode.GetSeasonTitle(),
             SeasonId = firstEpisode.GetSeasonId(),
             SeasonNum = firstEpisode.GetSeasonNum(),
-            EpisodesList =[],
+            EpisodesList = [],
             SpecialSeason = firstEpisode.IsSpecialSeason()
         };
 
@@ -631,7 +755,7 @@ public class History{
 
             historySeries.SonarrNextAirDate = GetNextAirDate(episodes);
 
-            List<HistoryEpisode> allHistoryEpisodes =[];
+            List<HistoryEpisode> allHistoryEpisodes = [];
 
             foreach (var historySeriesSeason in historySeries.Seasons){
                 allHistoryEpisodes.AddRange(historySeriesSeason.EpisodesList);
@@ -659,7 +783,7 @@ public class History{
                     .ToList();
             }
 
-            List<HistoryEpisode> failedEpisodes =[];
+            List<HistoryEpisode> failedEpisodes = [];
 
             Parallel.ForEach(allHistoryEpisodes, historyEpisode => {
                 if (string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){

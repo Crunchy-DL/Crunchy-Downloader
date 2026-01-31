@@ -234,8 +234,16 @@ public class CalendarManager{
         var newEpisodesBase = await CrunchyrollManager.Instance.CrEpisode.GetNewEpisodes(CrunchyrollManager.Instance.CrunOptions.HistoryLang, 2000, null, true);
 
         if (newEpisodesBase is{ Data.Count: > 0 }){
-            var newEpisodes = newEpisodesBase.Data;
+            var newEpisodes = newEpisodesBase.Data ?? [];
 
+            if (CrunchyrollManager.Instance.CrunOptions.UpdateHistoryFromCalendar){
+                try{
+                    await CrunchyrollManager.Instance.History.UpdateWithEpisode(newEpisodes);
+                } catch (Exception e){
+                    Console.Error.WriteLine("Failed to update History from calendar");
+                }
+            }
+            
             //EpisodeAirDate
             foreach (var crBrowseEpisode in newEpisodes){
                 bool filtered = false;

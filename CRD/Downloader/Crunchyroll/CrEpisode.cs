@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web;
+using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
@@ -73,92 +74,102 @@ public class CrEpisode(){
 
     public async Task<CrunchyRollEpisodeData> EpisodeData(CrunchyEpisode dlEpisode, bool updateHistory = false){
         bool serieshasversions = true;
-
-        // Dictionary<string, EpisodeAndLanguage> episodes = new Dictionary<string, EpisodeAndLanguage>();
-
-        CrunchyRollEpisodeData episode = new CrunchyRollEpisodeData();
+        var episode = new CrunchyRollEpisodeData();
 
         if (crunInstance.CrunOptions.History && updateHistory){
             await crunInstance.History.UpdateWithEpisodeList([dlEpisode]);
-            var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == dlEpisode.SeriesId);
+            var historySeries = crunInstance.HistoryList
+                .FirstOrDefault(series => series.SeriesId == dlEpisode.SeriesId);
+
             if (historySeries != null){
-                CrunchyrollManager.Instance.History.MatchHistorySeriesWithSonarr(false);
-                await CrunchyrollManager.Instance.History.MatchHistoryEpisodesWithSonarr(false, historySeries);
+                crunInstance.History.MatchHistorySeriesWithSonarr(false);
+                await crunInstance.History.MatchHistoryEpisodesWithSonarr(false, historySeries);
                 CfgManager.UpdateHistoryFile();
             }
         }
 
-        var seasonIdentifier = !string.IsNullOrEmpty(dlEpisode.Identifier) ? dlEpisode.Identifier.Split('|')[1] : $"S{dlEpisode.SeasonNumber}";
-        episode.Key = $"{seasonIdentifier}E{dlEpisode.Episode ?? (dlEpisode.EpisodeNumber + "")}";
-        episode.EpisodeAndLanguages = new EpisodeAndLanguage{
-            Items = new List<CrunchyEpisode>(),
-            Langs = new List<LanguageItem>()
-        };
+        // initial key
+        var seasonIdentifier = !string.IsNullOrEmpty(dlEpisode.Identifier)
+            ? dlEpisode.Identifier.Split('|')[1]
+            : $"S{dlEpisode.SeasonNumber}";
 
+        episode.Key = $"{seasonIdentifier}E{dlEpisode.Episode ?? (dlEpisode.EpisodeNumber + "")}";
+
+        episode.EpisodeAndLanguages = new EpisodeAndLanguage();
+
+        // Build Variants
         if (dlEpisode.Versions != null){
             foreach (var version in dlEpisode.Versions){
-                // Ensure there is only one of the same language
-                if (episode.EpisodeAndLanguages.Langs.All(a => a.CrLocale != version.AudioLocale)){
-                    // Push to arrays if there are no duplicates of the same language
-                    episode.EpisodeAndLanguages.Items.Add(dlEpisode);
-                    episode.EpisodeAndLanguages.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == version.AudioLocale) ?? Languages.DEFAULT_lang);
-                }
+                var lang = Array.Find(Languages.languages, a => a.CrLocale == version.AudioLocale)
+                           ?? Languages.DEFAULT_lang;
+
+                episode.EpisodeAndLanguages.AddUnique(dlEpisode, lang);
             }
         } else{
-            // Episode didn't have versions, mark it as such to be logged.
             serieshasversions = false;
-            // Ensure there is only one of the same language
-            if (episode.EpisodeAndLanguages.Langs.All(a => a.CrLocale != dlEpisode.AudioLocale)){
-                // Push to arrays if there are no duplicates of the same language
-                episode.EpisodeAndLanguages.Items.Add(dlEpisode);
-                episode.EpisodeAndLanguages.Langs.Add(Array.Find(Languages.languages, a => a.CrLocale == dlEpisode.AudioLocale) ?? Languages.DEFAULT_lang);
-            }
+
+            var lang = Array.Find(Languages.languages, a => a.CrLocale == dlEpisode.AudioLocale)
+                       ?? Languages.DEFAULT_lang;
+
+            episode.EpisodeAndLanguages.AddUnique(dlEpisode, lang);
         }
 
+        if (episode.EpisodeAndLanguages.Variants.Count == 0)
+            return episode;
 
-        int specialIndex = 1;
-        int epIndex = 1;
+        var baseEp = episode.EpisodeAndLanguages.Variants[0].Item;
 
+        var isSpecial = baseEp.IsSpecialEpisode();
 
-        var isSpecial = !Regex.IsMatch(episode.EpisodeAndLanguages.Items[0].Episode ?? string.Empty, @"^\d+(\.\d+)?$"); // Checking if the episode is not a number (i.e., special).
         string newKey;
-        if (isSpecial && !string.IsNullOrEmpty(episode.EpisodeAndLanguages.Items[0].Episode)){
-            newKey = episode.EpisodeAndLanguages.Items[0].Episode ?? "SP" + (specialIndex + " " + episode.EpisodeAndLanguages.Items[0].Id);
+        if (isSpecial && !string.IsNullOrEmpty(baseEp.Episode)){
+            newKey = baseEp.Episode;
         } else{
-            newKey = $"{(isSpecial ? "SP" : 'E')}{(isSpecial ? (specialIndex + " " + episode.EpisodeAndLanguages.Items[0].Id) : episode.EpisodeAndLanguages.Items[0].Episode ?? epIndex + "")}";
+            var epPart = baseEp.Episode ?? (baseEp.EpisodeNumber?.ToString() ?? "1");
+            newKey = isSpecial
+                ? $"SP{epPart} {baseEp.Id}"
+                : $"E{epPart}";
         }
 
         episode.Key = newKey;
 
-        var seasonTitle = episode.EpisodeAndLanguages.Items.FirstOrDefault(a => !Regex.IsMatch(a.SeasonTitle, @"\(\w+ Dub\)"))?.SeasonTitle
-                          ?? Regex.Replace(episode.EpisodeAndLanguages.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
+        var seasonTitle =
+            episode.EpisodeAndLanguages.Variants
+                .Select(v => v.Item.SeasonTitle)
+                .FirstOrDefault(t => !DownloadQueueItemFactory.HasDubSuffix(t))
+            ?? DownloadQueueItemFactory.StripDubSuffix(baseEp.SeasonTitle);
 
-        var title = episode.EpisodeAndLanguages.Items[0].Title;
-        var seasonNumber = Helpers.ExtractNumberAfterS(episode.EpisodeAndLanguages.Items[0].Identifier) ?? episode.EpisodeAndLanguages.Items[0].SeasonNumber.ToString();
+        var title = baseEp.Title;
+        var seasonNumber = baseEp.GetSeasonNum();
 
-        var languages = episode.EpisodeAndLanguages.Items.Select((a, index) =>
-            $"{(a.IsPremiumOnly ? "+ " : "")}{episode.EpisodeAndLanguages.Langs.ElementAtOrDefault(index)?.Name ?? "Unknown"}").ToArray(); //☆
+        var languages = episode.EpisodeAndLanguages.Variants
+            .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang?.Name ?? "Unknown"}")
+            .ToArray();
 
         Console.WriteLine($"[{episode.Key}] {seasonTitle} - Season {seasonNumber} - {title} [{string.Join(", ", languages)}]");
 
-
-        if (!serieshasversions){
+        if (!serieshasversions)
             Console.WriteLine("Couldn\'t find versions on episode, added languages with language array.");
-        }
 
         return episode;
     }
 
+
     public CrunchyEpMeta EpisodeMeta(CrunchyRollEpisodeData episodeP, List<string> dubLang){
-        // var ret = new Dictionary<string, CrunchyEpMeta>();
+        CrunchyEpMeta? retMeta = null;
 
-        var retMeta = new CrunchyEpMeta();
+        var epNum = episodeP.Key.StartsWith('E') ? episodeP.Key[1..] : episodeP.Key;
+        var hslang = crunInstance.CrunOptions.Hslang;
 
+        var selectedDubs = dubLang
+            .Where(d => episodeP.EpisodeAndLanguages.Variants.Any(v => v.Lang.CrLocale == d))
+            .ToList();
 
-        for (int index = 0; index < episodeP.EpisodeAndLanguages.Items.Count; index++){
-            var item = episodeP.EpisodeAndLanguages.Items[index];
+        foreach (var v in episodeP.EpisodeAndLanguages.Variants){
+            var item = v.Item;
+            var lang = v.Lang;
 
-            if (!dubLang.Contains(episodeP.EpisodeAndLanguages.Langs[index].CrLocale))
+            if (!dubLang.Contains(lang.CrLocale))
                 continue;
 
             item.HideSeasonTitle = true;
@@ -173,67 +184,54 @@ public class CrEpisode(){
                 item.SeriesTitle = "NO_TITLE";
             }
 
-            var epNum = episodeP.Key.StartsWith('E') ? episodeP.Key[1..] : episodeP.Key;
-            var images = (item.Images?.Thumbnail ?? [new List<Image>{ new(){ Source = "/notFound.jpg" } }]);
-
-            Regex dubPattern = new Regex(@"\(\w+ Dub\)");
-
-            var epMeta = new CrunchyEpMeta();
-            epMeta.Data = new List<CrunchyEpMetaData>{ new(){ MediaId = item.Id, Versions = item.Versions, IsSubbed = item.IsSubbed, IsDubbed = item.IsDubbed } };
-            epMeta.SeriesTitle = episodeP.EpisodeAndLanguages.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeriesTitle))?.SeriesTitle ??
-                                 Regex.Replace(episodeP.EpisodeAndLanguages.Items[0].SeriesTitle, @"\(\w+ Dub\)", "").TrimEnd();
-            epMeta.SeasonTitle = episodeP.EpisodeAndLanguages.Items.FirstOrDefault(a => !dubPattern.IsMatch(a.SeasonTitle))?.SeasonTitle ??
-                                 Regex.Replace(episodeP.EpisodeAndLanguages.Items[0].SeasonTitle, @"\(\w+ Dub\)", "").TrimEnd();
-            epMeta.EpisodeNumber = item.Episode;
-            epMeta.EpisodeTitle = item.Title;
-            epMeta.SeasonId = item.SeasonId;
-            epMeta.Season = Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber + "";
-            epMeta.SeriesId = item.SeriesId;
-            epMeta.AbsolutEpisodeNumberE = epNum;
-            epMeta.Image = images.FirstOrDefault()?.FirstOrDefault()?.Source ?? string.Empty;
-            epMeta.ImageBig = images.FirstOrDefault()?.LastOrDefault()?.Source ?? string.Empty;
-            epMeta.DownloadProgress = new DownloadProgress(){
-                IsDownloading = false,
-                Done = false,
-                Error = false,
-                Percent = 0,
-                Time = 0,
-                DownloadSpeedBytes = 0
-            };
-            epMeta.AvailableSubs = item.SubtitleLocales;
-            epMeta.Description = item.Description;
-            epMeta.Hslang = CrunchyrollManager.Instance.CrunOptions.Hslang;
-
-            if (episodeP.EpisodeAndLanguages.Langs.Count > 0){
-                epMeta.SelectedDubs = dubLang
-                    .Where(language => episodeP.EpisodeAndLanguages.Langs.Any(epLang => epLang.CrLocale == language))
-                    .ToList();
-            }
-
-            var epMetaData = epMeta.Data[0];
-            if (!string.IsNullOrEmpty(item.StreamsLink)){
-                epMetaData.Playback = item.StreamsLink;
-                if (string.IsNullOrEmpty(item.Playback)){
-                    item.Playback = item.StreamsLink;
-                }
-            }
-
-            if (retMeta.Data is{ Count: > 0 }){
-                epMetaData.Lang = episodeP.EpisodeAndLanguages.Langs[index];
-                retMeta.Data.Add(epMetaData);
-            } else{
-                epMetaData.Lang = episodeP.EpisodeAndLanguages.Langs[index];
-                epMeta.Data[0] = epMetaData;
-                retMeta = epMeta;
-            }
-
-
-            // show ep
             item.SeqId = epNum;
+
+            if (retMeta == null){
+                var seriesTitle = DownloadQueueItemFactory.CanonicalTitle(
+                    episodeP.EpisodeAndLanguages.Variants.Select(x => (string?)x.Item.SeriesTitle));
+
+                var seasonTitle = DownloadQueueItemFactory.CanonicalTitle(
+                    episodeP.EpisodeAndLanguages.Variants.Select(x => (string?)x.Item.SeasonTitle));
+
+                var (img, imgBig) = DownloadQueueItemFactory.GetThumbSmallBig(item.Images);
+
+                retMeta = DownloadQueueItemFactory.CreateShell(
+                    service: StreamingService.Crunchyroll,
+                    seriesTitle: seriesTitle,
+                    seasonTitle: seasonTitle,
+                    episodeNumber: item.Episode,
+                    episodeTitle: item.GetEpisodeTitle(),
+                    description: item.Description,
+                    seriesId: item.SeriesId,
+                    seasonId: item.SeasonId,
+                    season: item.GetSeasonNum(),
+                    absolutEpisodeNumberE: epNum,
+                    image: img,
+                    imageBig: imgBig,
+                    hslang: hslang,
+                    availableSubs: item.SubtitleLocales,
+                    selectedDubs: selectedDubs
+                );
+            }
+
+            var playback = item.Playback;
+            if (!string.IsNullOrEmpty(item.StreamsLink)){
+                playback = item.StreamsLink;
+                if (string.IsNullOrEmpty(item.Playback))
+                    item.Playback = item.StreamsLink;
+            }
+
+            retMeta.Data.Add(DownloadQueueItemFactory.CreateVariant(
+                mediaId: item.Id,
+                lang: lang,
+                playback: playback,
+                versions: item.Versions,
+                isSubbed: item.IsSubbed,
+                isDubbed: item.IsDubbed
+            ));
         }
 
-
-        return retMeta;
+        return retMeta ?? new CrunchyEpMeta();
     }
 
     public async Task<CrBrowseEpisodeBase?> GetNewEpisodes(string? crLocale, int requestAmount, DateTime? firstWeekDay = null, bool forcedLang = false){

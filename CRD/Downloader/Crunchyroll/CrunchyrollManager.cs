@@ -1551,8 +1551,10 @@ public class CrunchyrollManager{
 
                                 string qualityConsoleLog = sb.ToString();
                                 Console.WriteLine(qualityConsoleLog);
-                                data.AvailableQualities = qualityConsoleLog;
-
+                                if (!options.DlVideoOnce || string.IsNullOrEmpty(data.AvailableQualities)){
+                                    data.AvailableQualities = qualityConsoleLog;
+                                }
+                                
                                 Console.WriteLine("Stream URL:" + chosenVideoSegments.segments[0].uri.Split(new[]{ ",.urlset" }, StringSplitOptions.None)[0]);
 
 

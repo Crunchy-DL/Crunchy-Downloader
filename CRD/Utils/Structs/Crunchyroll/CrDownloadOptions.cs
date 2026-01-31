@@ -310,6 +310,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("calendar_show_upcoming_episodes")]
     public bool CalendarShowUpcomingEpisodes{ get; set; }
+    
+    [JsonProperty("calendar_update_history")]
+    public bool UpdateHistoryFromCalendar{ get; set; }
 
     [JsonProperty("stream_endpoint_settings")]
     public CrAuthSettings? StreamEndpoint{ get; set; }

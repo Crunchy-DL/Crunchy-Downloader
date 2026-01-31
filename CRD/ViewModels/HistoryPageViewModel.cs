@@ -44,17 +44,17 @@ public partial class HistoryPageViewModel : ViewModelBase{
     [ObservableProperty]
     private ComboBoxItem? _selectedView;
 
-    public ObservableCollection<ComboBoxItem> ViewsList{ get; } =[];
+    public ObservableCollection<ComboBoxItem> ViewsList{ get; } = [];
 
     [ObservableProperty]
     private SortingListElement? _selectedSorting;
 
-    public ObservableCollection<SortingListElement> SortingList{ get; } =[];
+    public ObservableCollection<SortingListElement> SortingList{ get; } = [];
 
     [ObservableProperty]
     private FilterListElement? _selectedFilter;
 
-    public ObservableCollection<FilterListElement> FilterList{ get; } =[];
+    public ObservableCollection<FilterListElement> FilterList{ get; } = [];
 
     [ObservableProperty]
     private double _posterWidth;
@@ -115,7 +115,16 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private static string _progressText;
-    
+
+    [ObservableProperty]
+    private string _searchInput;
+
+    [ObservableProperty]
+    private bool _isSearchOpen;
+
+    [ObservableProperty]
+    public bool _isSearchActiveClosed;
+
     #region Table Mode
 
     [ObservableProperty]
@@ -125,8 +134,8 @@ public partial class HistoryPageViewModel : ViewModelBase{
     public Symbol _selectedDownloadIcon = Symbol.ClosedCaption;
 
     #endregion
-    
-    public Vector LastScrollOffset { get; set; } = Vector.Zero;
+
+    public Vector LastScrollOffset{ get; set; } = Vector.Zero;
 
     public HistoryPageViewModel(){
         ProgramManager = ProgramManager.Instance;
@@ -324,8 +333,29 @@ public partial class HistoryPageViewModel : ViewModelBase{
             filteredItems.RemoveAll(item => item.SeriesType == SeriesType.Series);
         }
 
+        if (!string.IsNullOrWhiteSpace(SearchInput)){
+            var tokens = SearchInput
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            filteredItems.RemoveAll(item => {
+                var title = item.SeriesTitle ?? string.Empty;
+
+                return tokens.Any(t => title.IndexOf(t, StringComparison.OrdinalIgnoreCase) < 0);
+            });
+        }
+
+
         FilteredItems.Clear();
         FilteredItems.AddRange(filteredItems);
+    }
+
+
+    partial void OnSearchInputChanged(string value){
+        ApplyFilter();
+    }
+
+    partial void OnIsSearchOpenChanged(bool value){
+        IsSearchActiveClosed = !string.IsNullOrEmpty(SearchInput) && !IsSearchOpen;
     }
 
 
@@ -374,6 +404,10 @@ public partial class HistoryPageViewModel : ViewModelBase{
         }
     }
 
+    [RelayCommand]
+    public void ClearSearchCommand(){
+        SearchInput = "";
+    }
 
     [RelayCommand]
     public void NavToSeries(){
@@ -539,7 +573,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
             await episode.DownloadEpisode();
         }
     }
-    
+
     [RelayCommand]
     public async Task DownloadEpisodeOnlyOptions(HistoryEpisode episode){
         var downloadMode = SelectedDownloadMode;
@@ -606,7 +640,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
     public void ToggleInactive(){
         CfgManager.UpdateHistoryFile();
     }
-    
+
     partial void OnSelectedDownloadModeChanged(EpisodeDownloadMode value){
         SelectedDownloadIcon = SelectedDownloadMode switch{
             EpisodeDownloadMode.OnlyVideo => Symbol.Video,

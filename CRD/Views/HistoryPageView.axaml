@@ -13,7 +13,7 @@
              Unloaded="OnUnloaded"
              Loaded="Control_OnLoaded">
 
-     <UserControl.Resources>
+    <UserControl.Resources>
         <ui:UiIntToVisibilityConverter x:Key="UiIntToVisibilityConverter" />
         <ui:UiSonarrIdToVisibilityConverter x:Key="UiSonarrIdToVisibilityConverter" />
         <ui:UiListToStringConverter x:Key="UiListToStringConverter" />
@@ -70,6 +70,48 @@
                 </StackPanel>
             </ToggleButton>
 
+
+            <StackPanel>
+                <ToggleButton x:Name="DropdownButtonSearch" Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
+                              VerticalAlignment="Center"
+                              IsChecked="{Binding IsSearchOpen, Mode=TwoWay}"
+                              IsEnabled="{Binding !ProgramManager.FetchingData}">
+                    <Grid>
+                        <StackPanel Orientation="Vertical">
+                            <controls:SymbolIcon Symbol="Zoom" FontSize="32" />
+                            <TextBlock Text="Search" HorizontalAlignment="Center" FontSize="12"></TextBlock>
+                        </StackPanel>
+
+                        <Ellipse Width="10" Height="10"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Top"
+                                 Margin="0,0,0,0"
+                                 Fill="Orange"
+                                 IsHitTestVisible="False"
+                                 IsVisible="{Binding IsSearchActiveClosed}" />
+                    </Grid>
+                </ToggleButton>
+                <Popup IsLightDismissEnabled="True"
+                       IsOpen="{Binding IsSearchOpen, Mode=TwoWay}"
+                       Placement="BottomEdgeAlignedRight"
+                       PlacementTarget="{Binding ElementName=DropdownButtonSearch}">
+                    
+                    <Border BorderThickness="1" Background="{DynamicResource ComboBoxDropDownBackground}">
+                        <StackPanel Orientation="Horizontal" Margin="10">
+
+                            <TextBox x:Name="SearchBar" Width="160"
+                                     Watermark="Search"
+                                     Text="{Binding SearchInput, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button Content="✕" Margin="6,0,0,0"
+                                    Command="{Binding ClearSearchCommand}" />
+                        </StackPanel>
+
+                    </Border>
+
+
+                </Popup>
+            </StackPanel>
+
             <Rectangle Width="1" Height="50" Fill="Gray" Margin="10,0" />
 
             <StackPanel Margin="10,0">
@@ -114,6 +156,7 @@
             <!-- <Button Command="{Binding AddMissingToQueue}" Margin="10 0"  IsEnabled="{Binding !FetchingData}">Add To Queue</Button> -->
             <!-- <ToggleButton IsChecked="{Binding EditMode}" Margin="10 0"  IsEnabled="{Binding !FetchingData}">Edit</ToggleButton> -->
         </StackPanel>
+
 
         <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
 

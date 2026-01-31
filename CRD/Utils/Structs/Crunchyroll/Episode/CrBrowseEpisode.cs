@@ -190,7 +190,7 @@ public class CrBrowseEpisodeVersion{
     public Locale? AudioLocale{ get; set; }
 
     public string? Guid{ get; set; }
-    public bool? Original{ get; set; }
+    public bool Original{ get; set; }
     public string? Variant{ get; set; }
     
     [JsonProperty("season_guid")]
@@ -200,6 +200,6 @@ public class CrBrowseEpisodeVersion{
     public string? MediaGuid{ get; set; }
     
     [JsonProperty("is_premium_only")]
-    public bool? IsPremiumOnly{ get; set; }
+    public bool IsPremiumOnly{ get; set; }
     
 }
