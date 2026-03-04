@@ -108,6 +108,20 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         SelectedSeries.UpdateSeriesFolderPath();
     }
+    
+    [RelayCommand]
+    public void ClearFolderPathCommand(HistorySeason? season){
+  
+            if (season != null){
+                season.SeasonDownloadPath = string.Empty;
+            } else{
+                SelectedSeries.SeriesDownloadPath = string.Empty;
+            }
+
+            CfgManager.UpdateHistoryFile();
+            SelectedSeries.UpdateSeriesFolderPath();
+  
+    }
 
     [RelayCommand]
     public async Task OpenFeaturedMusicDialog(){
@@ -213,7 +227,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
     [RelayCommand]
     public async Task DownloadSeasonAll(HistorySeason season){
         foreach (var episode in season.EpisodesList){
-            await episode.DownloadEpisode();
+            await episode.DownloadEpisodeDefault();
         }
     }
 
@@ -226,7 +240,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
             MessageBus.Current.SendMessage(new ToastMessage($"There are no missing episodes", ToastType.Error, 3));
         } else{
             foreach (var episode in missingEpisodes){
-                await episode.DownloadEpisode();
+                await episode.DownloadEpisodeDefault();
             }
         }
     }
@@ -236,7 +250,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
         var downloadMode = SelectedDownloadMode;
 
         if (downloadMode != EpisodeDownloadMode.Default){
-            await episode.DownloadEpisode(downloadMode);
+            await episode.DownloadEpisode(downloadMode,"",false);
         }
     }
 
@@ -246,7 +260,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
 
         if (downloadMode != EpisodeDownloadMode.Default){
             foreach (var episode in season.EpisodesList){
-                await episode.DownloadEpisode(downloadMode);
+                await episode.DownloadEpisode(downloadMode,"",false);
             }
         }
     }
@@ -254,7 +268,7 @@ public partial class SeriesPageViewModel : ViewModelBase{
     [RelayCommand]
     public async Task DownloadSeasonMissingSonarr(HistorySeason season){
         foreach (var episode in season.EpisodesList.Where(episode => !episode.SonarrHasFile)){
-            await episode.DownloadEpisode();
+            await episode.DownloadEpisodeDefault();
         }
     }
 
@@ -262,11 +276,11 @@ public partial class SeriesPageViewModel : ViewModelBase{
     public void ToggleDownloadedMark(HistorySeason season){
         bool allDownloaded = season.EpisodesList.All(ep => ep.WasDownloaded);
 
-        foreach (var historyEpisode in season.EpisodesList){
-            if (historyEpisode.WasDownloaded == allDownloaded){
-                season.UpdateDownloaded(historyEpisode.EpisodeId);
-            }
+        foreach (var historyEpisode in season.EpisodesList.Where(historyEpisode => historyEpisode.WasDownloaded == allDownloaded)){
+            historyEpisode.ToggleWasDownloaded();
         }
+        
+        season.UpdateDownloaded();
     }
 
     [RelayCommand]

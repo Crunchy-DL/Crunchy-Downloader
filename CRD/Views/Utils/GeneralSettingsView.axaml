@@ -62,6 +62,43 @@
                         <CheckBox IsChecked="{Binding HistorySkipUnmonitored}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                                <controls:SettingsExpanderItem Content="Auto History Refresh" Description="Automatically refresh your history at a set interval">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Spacing="8" Width="520">
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Refresh interval (minutes)" />
+                                <DockPanel LastChildFill="True">
+                                    <controls:NumberBox Minimum="0"
+                                                        Maximum="1000000000"
+                                                        Value="{Binding HistoryAutoRefreshIntervalMinutes}"
+                                                        SpinButtonPlacementMode="Hidden"
+                                                        HorizontalAlignment="Stretch" />
+                                </DockPanel>
+                                <TextBlock Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                                           Text="Set to 0 to disable automatic refresh." />
+                            </StackPanel>
+
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Refresh mode" />
+                                <ComboBox ItemsSource="{Binding HistoryAutoRefreshModes}"
+                                          DisplayMemberBinding="{Binding DisplayName}"
+                                          SelectedValueBinding="{Binding value}"
+                                          SelectedValue="{Binding HistoryAutoRefreshMode}"/>
+                                <TextBlock Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                                           Text="{Binding HistoryAutoRefreshModeHint}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Opacity="0.7" FontSize="12" TextWrapping="Wrap" Text="{Binding HistoryAutoRefreshLastRunTime,StringFormat='Last refresh: {0}'}" />
+                            </StackPanel>
+
+                        </StackPanel>
+                   
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
             </controls:SettingsExpander>
 
@@ -241,51 +278,50 @@
 
                                 <CheckBox IsChecked="{Binding DownloadFinishedPlaySound}"> </CheckBox>
                             </StackPanel>
+                            
+                        </StackPanel>
 
-                            <!-- <Grid HorizontalAlignment="Right" Margin="0 5 0 0"> -->
-                            <!--     <Grid.ColumnDefinitions> -->
-                            <!--         <ColumnDefinition Width="Auto" /> -->
-                            <!--         <ColumnDefinition Width="150" /> -->
-                            <!--     </Grid.ColumnDefinitions> -->
-                            <!-- -->
-                            <!--     <Grid.RowDefinitions> -->
-                            <!--         <RowDefinition Height="Auto" /> -->
-                            <!--         <RowDefinition Height="Auto" /> -->
-                            <!--     </Grid.RowDefinitions> -->
-                            <!-- -->
-                            <!--     <TextBlock Text="Opacity" -->
-                            <!--                FontSize="15" -->
-                            <!--                Opacity="0.8" -->
-                            <!--                VerticalAlignment="Center" -->
-                            <!--                HorizontalAlignment="Right" -->
-                            <!--                Margin="0 0 5 10" -->
-                            <!--                Grid.Row="0" Grid.Column="0" /> -->
-                            <!--     <controls:NumberBox Minimum="0" Maximum="1" -->
-                            <!--                         SmallChange="0.05" -->
-                            <!--                         LargeChange="0.1" -->
-                            <!--                         SimpleNumberFormat="F2" -->
-                            <!--                         Value="{Binding BackgroundImageOpacity}" -->
-                            <!--                         SpinButtonPlacementMode="Inline" -->
-                            <!--                         HorizontalAlignment="Stretch" -->
-                            <!--                         Margin="0 0 0 10" -->
-                            <!--                         Grid.Row="0" Grid.Column="1" /> -->
-                            <!-- -->
-                            <!--     <TextBlock Text="Blur Radius" -->
-                            <!--                FontSize="15" -->
-                            <!--                Opacity="0.8" -->
-                            <!--                VerticalAlignment="Center" -->
-                            <!--                HorizontalAlignment="Right" -->
-                            <!--                Margin="0 0 5 0" -->
-                            <!--                Grid.Row="1" Grid.Column="0" /> -->
-                            <!--     <controls:NumberBox Minimum="0" Maximum="40" -->
-                            <!--                         SmallChange="1" -->
-                            <!--                         LargeChange="5" -->
-                            <!--                         SimpleNumberFormat="F0" -->
-                            <!--                         Value="{Binding BackgroundImageBlurRadius}" -->
-                            <!--                         SpinButtonPlacementMode="Inline" -->
-                            <!--                         HorizontalAlignment="Stretch" -->
-                            <!--                         Grid.Row="1" Grid.Column="1" /> -->
-                            <!-- </Grid> -->
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                                <controls:SettingsExpanderItem Content="Execute on completion" Description="Enable to run a selected file after all downloads complete">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                <TextBlock IsVisible="{Binding DownloadFinishedExecute}"
+                                           Text="{Binding DownloadFinishedExecutePath, Mode=OneWay}"
+                                           FontSize="15"
+                                           Opacity="0.8"
+                                           TextWrapping="NoWrap"
+                                           TextAlignment="Center"
+                                           VerticalAlignment="Center" />
+
+                                <Button IsVisible="{Binding DownloadFinishedExecute}"
+                                        Command="{Binding OpenFileDialogAsyncInternalFinishedExecute}"
+                                        VerticalAlignment="Center"
+                                        FontStyle="Italic">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Select file to execute when downloads finish" FontSize="15" />
+                                    </ToolTip.Tip>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Button IsVisible="{Binding DownloadFinishedExecute}"
+                                        Command="{Binding ClearFinishedExectuePath}"
+                                        VerticalAlignment="Center"
+                                        FontStyle="Italic">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Clear selected file" FontSize="15" />
+                                    </ToolTip.Tip>
+                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                        <controls:SymbolIcon Symbol="Clear" FontSize="18" />
+                                    </StackPanel>
+                                </Button>
+
+                                <CheckBox IsChecked="{Binding DownloadFinishedExecute}"> </CheckBox>
+                            </StackPanel>
                         </StackPanel>
 
                     </controls:SettingsExpanderItem.Footer>
@@ -422,6 +458,38 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+
+            </controls:SettingsExpander>
+            
+                        <controls:SettingsExpander Header="General Settings"
+                                       IconSource="Bullets"
+                                       Description="Adjust General settings"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Show tray icon">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding TrayIconEnabled}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding TrayIconEnabled}" Content="Start minimized to tray" Description="Launches in the tray without opening a window">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding StartMinimizedToTray}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding TrayIconEnabled}" Content="Minimize to tray" Description="Minimizing hides the window and removes it from the taskbar">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MinimizeToTray}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem IsVisible="{Binding TrayIconEnabled}" Content="Close to tray" Description="Clicking X hides the app in the tray instead of exiting">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+                
 
             </controls:SettingsExpander>
 

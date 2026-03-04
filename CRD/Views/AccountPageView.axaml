@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:CRD.ViewModels"
+             xmlns:controls="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
              x:DataType="vm:AccountPageViewModel"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="CRD.Views.AccountPageView">
@@ -13,13 +14,33 @@
 
     <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center">
 
-        <!-- Profile Image -->
-        <Image Width="170" Height="170" Margin="20"
-               Source="{Binding ProfileImage}">
-            <Image.Clip>
-                <EllipseGeometry Rect="0,0,170,170" />
-            </Image.Clip>
-        </Image>
+        <Grid Width="170" Height="170" Margin="20"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Top">
+
+            <!-- Profile Image -->
+            <Image Source="{Binding ProfileImage}">
+                <Image.Clip>
+                    <EllipseGeometry Rect="0,0,170,170" />
+                </Image.Clip>
+            </Image>
+
+            <!-- Switch Button (Overlay Bottom Right) -->
+            <Button Width="42"
+                    Height="42"
+                    BorderThickness="0"
+                    CornerRadius="21"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Bottom"
+                    Margin="0,0,4,4"
+                    Command="{Binding OpenMultiProfileDialogCommand}"
+                    IsVisible="{Binding HasMultiProfile}"
+                    ToolTip.Tip="Switch Profile">
+
+                <controls:SymbolIcon Symbol="Switch" FontSize="30"/>
+            </Button>
+
+        </Grid>
 
         <!-- Profile Name -->
         <TextBlock Text="{Binding ProfileName}" HorizontalAlignment="Center" TextAlignment="Center" FontSize="20" Margin="10" />

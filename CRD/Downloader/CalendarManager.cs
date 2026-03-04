@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using CRD.Downloader.Crunchyroll;
 using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;
@@ -239,6 +240,7 @@ public class CalendarManager{
             if (CrunchyrollManager.Instance.CrunOptions.UpdateHistoryFromCalendar){
                 try{
                     await CrunchyrollManager.Instance.History.UpdateWithEpisode(newEpisodes);
+                    CfgManager.UpdateHistoryFile();
                 } catch (Exception e){
                     Console.Error.WriteLine("Failed to update History from calendar");
                 }

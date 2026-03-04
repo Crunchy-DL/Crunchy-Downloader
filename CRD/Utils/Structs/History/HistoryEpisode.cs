@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CRD.Downloader;
@@ -140,10 +141,16 @@ public class HistoryEpisode : INotifyPropertyChanged{
     }
 
     public async Task DownloadEpisodeDefault(){
-        await DownloadEpisode();
+        await DownloadEpisode(EpisodeDownloadMode.Default,"",false);
     }
 
-    public async Task DownloadEpisode(EpisodeDownloadMode episodeDownloadMode = EpisodeDownloadMode.Default, string overrideDownloadPath = ""){
+    public async Task DownloadEpisode(EpisodeDownloadMode episodeDownloadMode, string overrideDownloadPath,bool chekQueueForId){
+        
+        if (chekQueueForId && QueueManager.Instance.Queue.Any(item => item.Data.Any(epmeta => epmeta.MediaId == EpisodeId))){
+            Console.Error.WriteLine($"Episode already in queue! E{EpisodeSeasonNum}-{EpisodeTitle}");
+            return;
+        }
+        
         switch (EpisodeType){
             case EpisodeType.MusicVideo:
                 await QueueManager.Instance.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);

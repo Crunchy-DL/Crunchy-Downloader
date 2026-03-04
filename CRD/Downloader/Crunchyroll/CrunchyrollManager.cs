@@ -151,6 +151,9 @@ public class CrunchyrollManager{
         };
 
         options.History = true;
+        
+        options.HistoryAutoRefreshMode = HistoryRefreshMode.FastNewReleases;
+        options.HistoryAutoRefreshIntervalMinutes = 0;
 
         CfgManager.UpdateSettingsFromFile(options, CfgManager.PathCrDownloadOptions);
 
@@ -581,23 +584,36 @@ public class CrunchyrollManager{
         if (options.MarkAsWatched && data.Data is{ Count: > 0 }){
             _ = CrEpisode.MarkAsWatched(data.Data.First().MediaId);
         }
-
-        if (QueueManager.Instance.Queue.Count == 0 || QueueManager.Instance.Queue.All(e => e.DownloadProgress.Done)){
-            QueueManager.Instance.ResetDownloads();
-            try{
-                var audioPath = CrunOptions.DownloadFinishedSoundPath;
-                if (!string.IsNullOrEmpty(audioPath)){
-                    var player = new AudioPlayer();
-                    player.Play(audioPath);
+        
+        if (!QueueManager.Instance.Queue.Any(e => e.DownloadProgress is{ Done: false, Error: false })){
+            if (CrunOptions.DownloadFinishedPlaySound){
+                try{
+                    var audioPath = CrunOptions.DownloadFinishedSoundPath;
+                    if (!string.IsNullOrEmpty(audioPath)){
+                        var player = new AudioPlayer();
+                        player.Play(audioPath);
+                    }
+                } catch (Exception exception){
+                    Console.Error.WriteLine("Failed to play sound: " + exception);
                 }
-            } catch (Exception exception){
-                Console.Error.WriteLine("Failed to play sound: " + exception);
             }
-
+            if (CrunOptions.DownloadFinishedExecute){
+                try{
+                    var filePath = CrunOptions.DownloadFinishedExecutePath;
+                    if (!string.IsNullOrEmpty(filePath)){
+                        Helpers.ExecuteFile(filePath);
+                    }
+                } catch (Exception exception){
+                    Console.Error.WriteLine("Failed to execute file: " + exception);
+                }
+            }
+            
             if (CrunOptions.ShutdownWhenQueueEmpty){
                 Helpers.ShutdownComputer();
             }
         }
+        
+        
 
         return true;
     }

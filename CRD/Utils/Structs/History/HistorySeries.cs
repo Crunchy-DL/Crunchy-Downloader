@@ -64,16 +64,16 @@ public class HistorySeries : INotifyPropertyChanged{
     public string HistorySeriesVideoQualityOverride{ get; set; } = "";
 
     [JsonProperty("history_series_available_soft_subs")]
-    public List<string> HistorySeriesAvailableSoftSubs{ get; set; } =[];
+    public List<string> HistorySeriesAvailableSoftSubs{ get; set; } = [];
 
     [JsonProperty("history_series_available_dub_lang")]
-    public List<string> HistorySeriesAvailableDubLang{ get; set; } =[];
+    public List<string> HistorySeriesAvailableDubLang{ get; set; } = [];
 
     [JsonProperty("history_series_soft_subs_override")]
-    public ObservableCollection<string> HistorySeriesSoftSubsOverride{ get; set; } =[];
+    public ObservableCollection<string> HistorySeriesSoftSubsOverride{ get; set; } = [];
 
     [JsonProperty("history_series_dub_lang_override")]
-    public ObservableCollection<string> HistorySeriesDubLangOverride{ get; set; } =[];
+    public ObservableCollection<string> HistorySeriesDubLangOverride{ get; set; } = [];
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -329,7 +329,7 @@ public class HistorySeries : INotifyPropertyChanged{
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
     }
 
-    public async Task AddNewMissingToDownloads(){
+    public async Task AddNewMissingToDownloads(bool chekQueueForId = false){
         bool foundWatched = false;
         var options = CrunchyrollManager.Instance.CrunOptions;
 
@@ -355,7 +355,7 @@ public class HistorySeries : INotifyPropertyChanged{
                         }
 
                         if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
-                            await ep.DownloadEpisode();
+                            await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", chekQueueForId);
                         }
                     }
                 }
@@ -372,14 +372,14 @@ public class HistorySeries : INotifyPropertyChanged{
 
                 if (ep.SpecialEpisode){
                     if (historyAddSpecials && ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
-                        await ep.DownloadEpisode();
+                        await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", chekQueueForId);
                     }
 
                     continue;
                 }
 
                 if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, foundWatched)){
-                    await ep.DownloadEpisode();
+                    await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", chekQueueForId);
                 } else{
                     foundWatched = true;
                     if (!historyAddSpecials && !countMissing){
@@ -467,54 +467,61 @@ public class HistorySeries : INotifyPropertyChanged{
     }
 
     public void UpdateSeriesFolderPath(){
-        var season = Seasons.FirstOrDefault(season => !string.IsNullOrEmpty(season.SeasonDownloadPath));
+        // Reset state first
+        SeriesFolderPath = string.Empty;
+        SeriesFolderPathExists = false;
 
+        var season = Seasons.FirstOrDefault(s => !string.IsNullOrEmpty(s.SeasonDownloadPath));
+
+        // Series path
         if (!string.IsNullOrEmpty(SeriesDownloadPath) && Directory.Exists(SeriesDownloadPath)){
             SeriesFolderPath = SeriesDownloadPath;
             SeriesFolderPathExists = true;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));
+            return;
         }
 
-        if (season is{ SeasonDownloadPath: not null }){
+        // Season path
+        if (!string.IsNullOrEmpty(season?.SeasonDownloadPath)){
             try{
-                var seasonPath = season.SeasonDownloadPath;
-                var directoryInfo = new DirectoryInfo(seasonPath);
+                var directoryInfo = new DirectoryInfo(season.SeasonDownloadPath);
 
-                if (!string.IsNullOrEmpty(directoryInfo.Parent?.FullName)){
-                    string parentFolderPath = directoryInfo.Parent?.FullName ?? string.Empty;
+                var parentFolder = directoryInfo.Parent?.FullName;
 
-                    if (Directory.Exists(parentFolderPath)){
-                        SeriesFolderPath = parentFolderPath;
-                        SeriesFolderPathExists = true;
-                    }
+                if (!string.IsNullOrEmpty(parentFolder) && Directory.Exists(parentFolder)){
+                    SeriesFolderPath = parentFolder;
+                    SeriesFolderPathExists = true;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));
+                    return;
                 }
             } catch (Exception e){
-                Console.Error.WriteLine($"An error occurred while opening the folder: {e.Message}");
+                Console.Error.WriteLine($"Error resolving season folder: {e.Message}");
             }
-        } else{
-            string customPath;
+        }
 
-            if (string.IsNullOrEmpty(SeriesTitle))
-                return;
+        // Auto generated path
+        if (string.IsNullOrEmpty(SeriesTitle)){
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));
+            return;
+        }
 
-            var seriesTitle = FileNameManager.CleanupFilename(SeriesTitle);
+        var seriesTitle = FileNameManager.CleanupFilename(SeriesTitle);
 
-            if (string.IsNullOrEmpty(seriesTitle))
-                return;
+        if (string.IsNullOrEmpty(seriesTitle)){
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));
+            return;
+        }
 
-            // Check Crunchyroll download directory
-            var downloadDirPath = CrunchyrollManager.Instance.CrunOptions.DownloadDirPath;
-            if (!string.IsNullOrEmpty(downloadDirPath)){
-                customPath = Path.Combine(downloadDirPath, seriesTitle);
-            } else{
-                // Fallback to configured VIDEOS_DIR path
-                customPath = Path.Combine(CfgManager.PathVIDEOS_DIR, seriesTitle);
-            }
+        string basePath =
+            !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.DownloadDirPath)
+                ? CrunchyrollManager.Instance.CrunOptions.DownloadDirPath
+                : CfgManager.PathVIDEOS_DIR;
 
-            // Check if custom path exists
-            if (Directory.Exists(customPath)){
-                SeriesFolderPath = customPath;
-                SeriesFolderPathExists = true;
-            }
+        var customPath = Path.Combine(basePath, seriesTitle);
+
+        if (Directory.Exists(customPath)){
+            SeriesFolderPath = customPath;
+            SeriesFolderPathExists = true;
         }
 
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SeriesFolderPathExists)));

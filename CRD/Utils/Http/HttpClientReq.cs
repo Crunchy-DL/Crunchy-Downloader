@@ -296,7 +296,7 @@ public static class ApiUrls{
 
     public static string Auth => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/auth/v1/token";
     public static string Profile => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/accounts/v1/me/profile";
-    public static string Profiles => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/accounts/v1/me/multiprofile";
+    public static string MultiProfile => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/accounts/v1/me/multiprofile";
     public static string CmsToken => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/index/v2";
     public static string Search => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/discover/search";
     public static string Browse => (CrunchyrollManager.Instance.CrunOptions.UseCrBetaApi ? ApiBeta : ApiN) + "/content/v2/discover/browse";

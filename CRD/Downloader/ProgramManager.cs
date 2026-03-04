@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -12,10 +13,12 @@ using Avalonia.Styling;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.Files;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Utils.Updater;
 using FluentAvalonia.Styling;
+using ProtoBuf.Meta;
 
 namespace CRD.Downloader;
 
@@ -75,10 +78,12 @@ public partial class ProgramManager : ObservableObject{
 
     #endregion
 
+    private readonly PeriodicWorkRunner checkForNewEpisodesRunner;
 
     public IStorageProvider StorageProvider;
 
     public ProgramManager(){
+        checkForNewEpisodesRunner = new PeriodicWorkRunner(async ct => { await CheckForDownloadsAsync(ct); });
         _faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme;
 
         foreach (var arg in Environment.GetCommandLineArgs()){
@@ -106,7 +111,7 @@ public partial class ProgramManager : ObservableObject{
             }
         }
 
-        Init();
+        _ = Init();
 
         CleanUpOldUpdater();
     }
@@ -172,12 +177,53 @@ public partial class ProgramManager : ObservableObject{
         await Task.WhenAll(tasks);
 
 
-        while (QueueManager.Instance.Queue.Any(e => e.DownloadProgress.Done != true)){
+        while (QueueManager.Instance.Queue.Any(e => e.DownloadProgress is{ Done: false, Error: false })){
             Console.WriteLine("Waiting for downloads to complete...");
-            await Task.Delay(2000); 
+            await Task.Delay(2000);
         }
     }
-    
+
+    private async Task CheckForDownloadsAsync(CancellationToken ct){
+        var crunchyManager = CrunchyrollManager.Instance;
+        var crunOptions = crunchyManager.CrunOptions;
+
+        if (!crunOptions.History){
+            return;
+        }
+
+        switch (crunOptions.HistoryAutoRefreshMode){
+            case HistoryRefreshMode.DefaultAll:
+                await RefreshHistory(FilterType.All);
+                break;
+            case HistoryRefreshMode.DefaultActive:
+                await RefreshHistory(FilterType.Active);
+                break;
+            case HistoryRefreshMode.FastNewReleases:
+                var newEpisodesBase = await crunchyManager.CrEpisode.GetNewEpisodes(
+                    string.IsNullOrEmpty(crunOptions.HistoryLang) ? crunchyManager.DefaultLocale : crunOptions.HistoryLang,
+                    2000, null, true);
+                if (newEpisodesBase is{ Data.Count: > 0 }){
+                    var newEpisodes = newEpisodesBase.Data ?? [];
+
+                    try{
+                        await crunchyManager.History.UpdateWithEpisode(newEpisodes);
+                        CfgManager.UpdateHistoryFile();
+                    } catch (Exception e){
+                        Console.Error.WriteLine("Failed to update History");
+                    }
+                }
+
+                break;
+            default:
+                return;
+        }
+
+        var tasks = crunchyManager.HistoryList
+            .Select(item => item.AddNewMissingToDownloads(true));
+
+        await Task.WhenAll(tasks);
+    }
+
     public void SetBackgroundImage(){
         if (!string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath)){
             Helpers.SetBackgroundImage(CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath, CrunchyrollManager.Instance.CrunOptions.BackgroundImageOpacity,
@@ -186,33 +232,41 @@ public partial class ProgramManager : ObservableObject{
     }
 
     private async Task Init(){
-        CrunchyrollManager.Instance.InitOptions();
+        try{
+            CrunchyrollManager.Instance.InitOptions();
 
-        UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
+            UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
 
-        OpacityButton = UpdateAvailable ? 1.0 : 0.4;
+            OpacityButton = UpdateAvailable ? 1.0 : 0.4;
 
-        if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
-            if (_faTheme != null) _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
-        }
-
-        if (_faTheme != null && Application.Current != null){
-            if (CrunchyrollManager.Instance.CrunOptions.Theme == "System"){
-                _faTheme.PreferSystemTheme = true;
-            } else if (CrunchyrollManager.Instance.CrunOptions.Theme == "Dark"){
-                _faTheme.PreferSystemTheme = false;
-                Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
-            } else{
-                _faTheme.PreferSystemTheme = false;
-                Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+            if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
+                if (_faTheme != null) _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
             }
+
+            if (_faTheme != null && Application.Current != null){
+                if (CrunchyrollManager.Instance.CrunOptions.Theme == "System"){
+                    _faTheme.PreferSystemTheme = true;
+                } else if (CrunchyrollManager.Instance.CrunOptions.Theme == "Dark"){
+                    _faTheme.PreferSystemTheme = false;
+                    Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
+                } else{
+                    _faTheme.PreferSystemTheme = false;
+                    Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+                }
+            }
+
+            await CrunchyrollManager.Instance.Init();
+
+            FinishedLoading = true;
+
+            await WorkOffArgsTasks();
+
+            StartRunners(true);
+        } catch (Exception e){
+            Console.Error.WriteLine(e);
+        } finally{
+            NavigationLock = false;
         }
-        
-        await CrunchyrollManager.Instance.Init();
-
-        FinishedLoading = true;
-
-        await WorkOffArgsTasks();
     }
 
 
@@ -238,8 +292,7 @@ public partial class ProgramManager : ObservableObject{
             }
         }
     }
-
-
+    
     private void CleanUpOldUpdater(){
         var executableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
 
@@ -256,4 +309,17 @@ public partial class ProgramManager : ObservableObject{
             Console.WriteLine("No old updater file found to delete.");
         }
     }
+    
+    public DateTime GetLastRefreshTime(){
+        return checkForNewEpisodesRunner.LastRunTime;
+    }
+    
+    public void StartRunners(bool runImmediately = false){
+        checkForNewEpisodesRunner.StartOrRestartMinutes(CrunchyrollManager.Instance.CrunOptions.HistoryAutoRefreshIntervalMinutes,runImmediately);
+    }
+    
+    public void StopBackgroundTasks(){
+        checkForNewEpisodesRunner.Stop();
+    }
+    
 }

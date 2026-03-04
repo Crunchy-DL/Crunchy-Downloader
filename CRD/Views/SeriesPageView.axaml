@@ -161,6 +161,13 @@
                                     <Button Margin="0 0 5 10" FontStyle="Italic"
                                             VerticalAlignment="Center"
                                             Command="{Binding OpenFolderDialogAsync}">
+                                        <Button.ContextFlyout>
+                                            <MenuFlyout>
+                                                <MenuItem Header="Clear Path"
+                                                          Command="{Binding ClearFolderPathCommand}" />
+                                            </MenuFlyout>
+                                        </Button.ContextFlyout>
+                                        
                                         <ToolTip.Tip>
                                             <TextBlock Text="{Binding SelectedSeries.SeriesDownloadPath,
                                             Converter={StaticResource EmptyToDefault},
@@ -646,6 +653,13 @@
                                                     VerticalAlignment="Center"
                                                     Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).OpenFolderDialogAsync}"
                                                     CommandParameter="{Binding .}">
+                                                <Button.ContextFlyout>
+                                                    <MenuFlyout>
+                                                        <MenuItem Header="Clear Path"
+                                                                  Command="{Binding $parent[UserControl].((vm:SeriesPageViewModel)DataContext).ClearFolderPathCommand}"
+                                                                  CommandParameter="{Binding .}"/>
+                                                    </MenuFlyout>
+                                                </Button.ContextFlyout>
                                                 <ToolTip.Tip>
                                                     <TextBlock Text="{Binding SeasonDownloadPath,
                                                     Converter={StaticResource EmptyToDefault},

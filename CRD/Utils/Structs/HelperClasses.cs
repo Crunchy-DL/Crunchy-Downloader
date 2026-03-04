@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Utils.Structs.History;
 using CRD.Views;
@@ -11,6 +12,23 @@ namespace CRD.Utils.Structs;
 public class AuthData{
     public string Username{ get; set; }
     public string Password{ get; set; }
+}
+
+public partial class AccountProfile : ObservableObject{
+    [ObservableProperty]
+    private string _profileName = "";
+    
+    [ObservableProperty]
+    private string _avatarUrl = "";
+    
+    [ObservableProperty]
+    private Bitmap? _profileImage;
+    
+    [ObservableProperty]
+    private bool _canBeSelected;
+    
+    public string? ProfileId{ get; set; }
+    
 }
 
 public class CrAuthSettings{
@@ -139,6 +157,11 @@ public class StringItem{
 public class StringItemWithDisplayName{
     public string DisplayName{ get; set; }
     public string value{ get; set; }
+}
+
+public class RefreshModeOption{
+    public string DisplayName{ get; set; }
+    public HistoryRefreshMode value{ get; set; }
 }
 
 public class WindowSettings{

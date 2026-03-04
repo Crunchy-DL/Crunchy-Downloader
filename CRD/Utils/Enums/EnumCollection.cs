@@ -276,6 +276,12 @@ public enum EpisodeDownloadMode{
     OnlySubs,
 }
 
+public enum HistoryRefreshMode{
+    DefaultAll = 0,
+    DefaultActive = 1,
+    FastNewReleases = 50
+}
+
 public enum SonarrCoverType{
     Banner,
     FanArt,

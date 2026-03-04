@@ -127,8 +127,7 @@ public class EpisodeHighlightTextBlock : TextBlock{
             streamingService == StreamingService.Crunchyroll ? new HashSet<string>(CrunchyrollManager.Instance.CrunOptions.DlSubs) :
             new HashSet<string>();
         
-        var higlight = dubSet.IsSubsetOf(Episode?.HistoryEpisodeAvailableDubLang ?? []) &&
-                       subSet.IsSubsetOf(Episode?.HistoryEpisodeAvailableSoftSubs ?? []);
+        var higlight = dubSet.IsSubsetOf(Episode?.HistoryEpisodeAvailableDubLang ?? []) && (subSet.IsSubsetOf(Episode?.HistoryEpisodeAvailableSoftSubs ?? []) || subSet.Contains("all"));
 
         if (higlight){
             Foreground = Brushes.Orange;

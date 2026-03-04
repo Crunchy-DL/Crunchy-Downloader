@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -360,157 +361,200 @@ public class Helpers{
         }
     }
 
-    private static string GetQualityOption(VideoPreset preset){
+    private static IEnumerable<string> GetQualityOption(VideoPreset preset){
         return preset.Codec switch{
-            "h264_nvenc" or "hevc_nvenc" => $"-cq {preset.Crf}", // For NVENC
-            "h264_qsv" or "hevc_qsv" => $"-global_quality {preset.Crf}", // For Intel QSV
-            "h264_amf" or "hevc_amf" => $"-qp {preset.Crf}", // For AMD VCE
-            _ => $"-crf {preset.Crf}", // For software codecs like libx264/libx265
+            "h264_nvenc" or "hevc_nvenc" =>["-cq", preset.Crf.ToString()],
+            "h264_qsv" or "hevc_qsv" =>["-global_quality", preset.Crf.ToString()],
+            "h264_amf" or "hevc_amf" =>["-qp", preset.Crf.ToString()],
+            _ =>["-crf", preset.Crf.ToString()]
         };
     }
 
-    public static async Task<(bool IsOk, int ErrorCode)> RunFFmpegWithPresetAsync(string inputFilePath, VideoPreset preset, CrunchyEpMeta? data = null){
+    public static async Task<(bool IsOk, int ErrorCode)> RunFFmpegWithPresetAsync(
+        string inputFilePath,
+        VideoPreset preset,
+        CrunchyEpMeta? data = null){
         try{
-            string outputExtension = Path.GetExtension(inputFilePath);
-            string directory = Path.GetDirectoryName(inputFilePath);
-            string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(inputFilePath);
-            string tempOutputFilePath = Path.Combine(directory, $"{fileNameWithoutExtension}_output{outputExtension}");
+            string ext = Path.GetExtension(inputFilePath);
+            string dir = Path.GetDirectoryName(inputFilePath)!;
+            string name = Path.GetFileNameWithoutExtension(inputFilePath);
 
-            string additionalParams = string.Join(" ", preset.AdditionalParameters.Select(param => {
-                var splitIndex = param.IndexOf(' ');
-                if (splitIndex > 0){
-                    var prefix = param[..splitIndex];
-                    var value = param[(splitIndex + 1)..];
-
-                    if (value.Contains(' ') && !(value.StartsWith("\"") && value.EndsWith("\""))){
-                        value = $"\"{value}\"";
-                    }
-
-                    return $"{prefix} {value}";
-                }
-
-                return param;
-            }));
-
-            string qualityOption = GetQualityOption(preset);
+            string tempOutput = Path.Combine(dir, $"{name}_output{ext}");
 
             TimeSpan? totalDuration = await GetMediaDurationAsync(CfgManager.PathFFMPEG, inputFilePath);
-            if (totalDuration == null){
-                Console.Error.WriteLine("Unable to retrieve input file duration.");
-            } else{
-                Console.WriteLine($"Total Duration: {totalDuration}");
+
+            var args = new List<string>{
+                "-nostdin",
+                "-hide_banner",
+                "-loglevel", "error",
+                "-i", inputFilePath,
+            };
+
+            if (!string.IsNullOrWhiteSpace(preset.Codec)){
+                args.Add("-c:v");
+                args.Add(preset.Codec);
             }
 
+            args.AddRange(GetQualityOption(preset));
 
-            string ffmpegCommand = $"-loglevel info -i \"{inputFilePath}\" -c:v {preset.Codec} {qualityOption} -vf \"scale={preset.Resolution},fps={preset.FrameRate}\" {additionalParams} \"{tempOutputFilePath}\"";
-            using (var process = new Process()){
-                process.StartInfo.FileName = CfgManager.PathFFMPEG;
-                process.StartInfo.Arguments = ffmpegCommand;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.RedirectStandardError = true;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.CreateNoWindow = true;
-                process.EnableRaisingEvents = true;
+            args.Add("-vf");
+            args.Add($"scale={preset.Resolution},fps={preset.FrameRate}");
 
-                process.OutputDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)){
-                        Console.WriteLine(e.Data);
-                    }
-                };
+            foreach (var param in preset.AdditionalParameters){
+                args.AddRange(SplitArguments(param));
+            }
 
-                process.ErrorDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)){
-                        Console.Error.WriteLine($"{e.Data}");
-                        if (data != null && totalDuration != null){
-                            ParseProgress(e.Data, totalDuration.Value, data);
-                        }
-                    }
-                };
+            args.Add(tempOutput);
 
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                using var reg = data?.Cts.Token.Register(() => {
+            string commandString = BuildCommandString(CfgManager.PathFFMPEG, args);
+            int exitCode;
+            try{
+                exitCode = await RunFFmpegAsync(
+                    CfgManager.PathFFMPEG,
+                    args,
+                    data?.Cts.Token ?? CancellationToken.None,
+                    onStdErr: line => { Console.Error.WriteLine(line); },
+                    onStdOut: Console.WriteLine
+                );
+            } catch (OperationCanceledException){
+                if (File.Exists(tempOutput)){
                     try{
-                        if (!process.HasExited)
-                            process.Kill(true);
+                        File.Delete(tempOutput);
                     } catch{
                         // ignored
                     }
-                });
-
-                try{
-                    await process.WaitForExitAsync(data.Cts.Token);
-                } catch (OperationCanceledException){
-                    if (File.Exists(tempOutputFilePath)){
-                        try{
-                            File.Delete(tempOutputFilePath);
-                        } catch{
-                            // ignored
-                        }
-                    }
-
-                    return (IsOk: false, ErrorCode: -2);
                 }
 
-                bool isSuccess = process.ExitCode == 0;
-
-                if (isSuccess){
-                    // Delete the original input file
-                    File.Delete(inputFilePath);
-
-                    // Rename the output file to the original name
-                    File.Move(tempOutputFilePath, inputFilePath);
-                } else{
-                    // If something went wrong, delete the temporary output file
-                    if (File.Exists(tempOutputFilePath)){
-                        try{
-                            File.Delete(tempOutputFilePath);
-                        } catch{
-                            /* ignore */
-                        }
-                    }
-
-                    Console.Error.WriteLine("FFmpeg processing failed.");
-                    Console.Error.WriteLine($"Command: {ffmpegCommand}");
-                }
-
-                return (IsOk: isSuccess, ErrorCode: process.ExitCode);
+                Console.Error.WriteLine("FFMPEG task was canceled");
+                return (false, -2);
             }
+
+            bool success = exitCode == 0;
+
+            if (success){
+                File.Delete(inputFilePath);
+                File.Move(tempOutput, inputFilePath);
+            } else{
+                if (File.Exists(tempOutput)){
+                    File.Delete(tempOutput);
+                }
+
+                Console.Error.WriteLine("FFmpeg processing failed.");
+                Console.Error.WriteLine("Command:");
+                Console.Error.WriteLine(commandString);
+            }
+
+
+            return (success, exitCode);
         } catch (Exception ex){
-            Console.Error.WriteLine($"An error occurred: {ex.Message}");
-            return (IsOk: false, ErrorCode: -1);
+            Console.Error.WriteLine(ex);
+
+            return (false, -1);
         }
     }
 
-    private static void ParseProgress(string progressString, TimeSpan totalDuration, CrunchyEpMeta data){
-        try{
-            if (progressString.Contains("time=")){
-                var timeIndex = progressString.IndexOf("time=") + 5;
-                var timeString = progressString.Substring(timeIndex, 11);
+    private static IEnumerable<string> SplitArguments(string commandLine){
+        var args = new List<string>();
+        var current = new StringBuilder();
+        bool inQuotes = false;
 
-
-                if (TimeSpan.TryParse(timeString, out var currentTime)){
-                    int progress = (int)(currentTime.TotalSeconds / totalDuration.TotalSeconds * 100);
-                    Console.WriteLine($"Progress: {progress:F2}%");
-
-                    data.DownloadProgress = new DownloadProgress(){
-                        IsDownloading = true,
-                        Percent = progress,
-                        Time = 0,
-                        DownloadSpeedBytes = 0,
-                        Doing = "Encoding"
-                    };
-
-                    QueueManager.Instance.Queue.Refresh();
-                }
+        foreach (char c in commandLine){
+            if (c == '"'){
+                inQuotes = !inQuotes;
+                continue;
             }
-        } catch (Exception e){
-            Console.Error.WriteLine("Failed to calculate encoding progess");
-            Console.Error.WriteLine(e.Message);
+
+            if (char.IsWhiteSpace(c) && !inQuotes){
+                if (current.Length > 0){
+                    args.Add(current.ToString());
+                    current.Clear();
+                }
+            } else{
+                current.Append(c);
+            }
         }
+
+        if (current.Length > 0)
+            args.Add(current.ToString());
+
+        return args;
     }
+
+    private static string BuildCommandString(string exe, IEnumerable<string> args){
+        static string Quote(string s){
+            if (string.IsNullOrWhiteSpace(s))
+                return "\"\"";
+
+            return s.Contains(' ') || s.Contains('"')
+                ? $"\"{s.Replace("\"", "\\\"")}\""
+                : s;
+        }
+
+        return exe + " " + string.Join(" ", args.Select(Quote));
+    }
+
+    public static async Task<int> RunFFmpegAsync(
+        string ffmpegPath,
+        IEnumerable<string> args,
+        CancellationToken token,
+        Action<string>? onStdErr = null,
+        Action<string>? onStdOut = null){
+        using var process = new Process();
+
+        process.StartInfo = new ProcessStartInfo{
+            FileName = ffmpegPath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        foreach (var arg in args)
+            process.StartInfo.ArgumentList.Add(arg);
+
+        process.Start();
+
+        // capture streams instead of process
+        var stdout = process.StandardOutput;
+        var stderr = process.StandardError;
+
+        async Task ReadStreamAsync(StreamReader reader, Action<string>? callback){
+            while (await reader.ReadLineAsync(token) is{ } line)
+                callback?.Invoke(line);
+        }
+
+        var stdoutTask = ReadStreamAsync(stdout, onStdOut);
+        var stderrTask = ReadStreamAsync(stderr, onStdErr);
+
+        var proc = process;
+
+        await using var reg = token.Register(() => {
+            try{
+                proc.Kill(true);
+            } catch{
+                // ignored
+            }
+        });
+
+        try{
+            await process.WaitForExitAsync(token);
+        } catch (OperationCanceledException){
+            try{
+                if (!process.HasExited)
+                    process.Kill(true);
+            } catch{
+                // ignored
+            }
+
+            throw;
+        }
+
+        await Task.WhenAll(stdoutTask, stderrTask);
+
+        return process.ExitCode;
+    }
+
 
     public static async Task<TimeSpan?> GetMediaDurationAsync(string ffmpegPath, string inputFilePath){
         try{
@@ -855,7 +899,7 @@ public class Helpers{
         bool mergeVideo){
         if (target == null) throw new ArgumentNullException(nameof(target));
         if (source == null) throw new ArgumentNullException(nameof(source));
-        
+
         var serverSet = new HashSet<string>(target.servers);
 
         void AddServer(string s){
@@ -866,14 +910,14 @@ public class Helpers{
         foreach (var kvp in source){
             var key = kvp.Key;
             var src = kvp.Value;
-            
+
             if (!src.servers.Contains(key))
                 src.servers.Add(key);
-            
+
             AddServer(key);
             foreach (var s in src.servers)
                 AddServer(s);
-            
+
             if (mergeAudio && src.audio != null){
                 target.audio ??= [];
                 target.audio.AddRange(src.audio);
@@ -911,6 +955,8 @@ public class Helpers{
             if (result == ContentDialogResult.Primary){
                 timer.Stop();
             }
+        } catch (Exception e){
+            Console.Error.WriteLine(e);
         } finally{
             ShutdownLock.Release();
         }
@@ -965,6 +1011,20 @@ public class Helpers{
             }
         } catch (Exception ex){
             Console.Error.WriteLine($"Failed to start shutdown process: {ex.Message}");
+        }
+    }
+
+    public static bool ExecuteFile(string filePath){
+        try{
+            Process.Start(new ProcessStartInfo{
+                FileName = filePath,
+                UseShellExecute = true
+            });
+
+            return true;
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Execution failed: {ex.Message}");
+            return false;
         }
     }
 }

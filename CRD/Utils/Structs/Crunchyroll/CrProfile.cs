@@ -4,7 +4,20 @@ using Newtonsoft.Json;
 
 namespace CRD.Utils.Structs.Crunchyroll;
 
+public class CrMultiProfile{
+    
+    [JsonProperty("tier_max_profiles")]
+    public int? TierMaxProfiles{ get; set; }
+    
+    [JsonProperty("max_profiles")]
+    public int? MaxProfiles{ get; set; }
+
+    [JsonProperty("profiles")]
+    public List<CrProfile> Profiles{ get; set; } = [];
+}
+
 public class CrProfile{
+    
     public string? Avatar{ get; set; }
     public string? Email{ get; set; }
     public string? Username{ get; set; }
@@ -20,8 +33,14 @@ public class CrProfile{
     [JsonProperty("preferred_content_subtitle_language")]
     public string? PreferredContentSubtitleLanguage{ get; set; }
     
-    [JsonIgnore]
-    public Subscription? Subscription{ get; set; }
+    [JsonProperty("can_switch")]
+    public bool CanSwitch{ get; set; }
+    
+    [JsonProperty("is_selected")]
+    public bool IsSelected{ get; set; }
+    
+    [JsonProperty("is_pin_protected")]
+    public bool IsPinProtected{ get; set; }
     
     [JsonIgnore]
     public bool HasPremium{ get; set; }

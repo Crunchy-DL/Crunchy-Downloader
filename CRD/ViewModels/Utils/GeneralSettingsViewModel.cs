@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -19,6 +20,7 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Sonarr;
+using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
 using FluentAvalonia.Styling;
@@ -50,6 +52,24 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _historyCountSonarr;
+    
+    [ObservableProperty]
+    private double? _historyAutoRefreshIntervalMinutes;
+
+    [ObservableProperty]
+    private HistoryRefreshMode _historyAutoRefreshMode;
+
+    [ObservableProperty]
+    private string _historyAutoRefreshModeHint;
+    
+    [ObservableProperty]
+    private string _historyAutoRefreshLastRunTime;
+
+    public ObservableCollection<RefreshModeOption> HistoryAutoRefreshModes{ get; } = new(){
+        new RefreshModeOption(){ DisplayName = "Default All", value = HistoryRefreshMode.DefaultAll },
+        new RefreshModeOption(){ DisplayName = "Default Active", value = HistoryRefreshMode.DefaultActive },
+        new RefreshModeOption(){ DisplayName = "Fast New Releases", value = HistoryRefreshMode.FastNewReleases },
+    };
 
     [ObservableProperty]
     private double? _simultaneousDownloads;
@@ -74,6 +94,18 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private double? _retryDelay;
+    
+    [ObservableProperty]
+    private bool _trayIconEnabled;
+    
+    [ObservableProperty]
+    private bool _startMinimizedToTray;
+    
+    [ObservableProperty]
+    private bool _minimizeToTray;
+    
+    [ObservableProperty]
+    private bool _minimizeToTrayOnClose;
 
     [ObservableProperty]
     private ComboBoxItem _selectedHistoryLang;
@@ -231,6 +263,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _downloadFinishedSoundPath;
+    
+    [ObservableProperty]
+    private bool _downloadFinishedExecute;
+
+    [ObservableProperty]
+    private string _downloadFinishedExecutePath;
 
     [ObservableProperty]
     private string _currentIp = "";
@@ -263,6 +301,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         DownloadFinishedSoundPath = options.DownloadFinishedSoundPath ?? string.Empty;
         DownloadFinishedPlaySound = options.DownloadFinishedPlaySound;
+        
+        DownloadFinishedExecutePath = options.DownloadFinishedExecutePath ?? string.Empty;
+        DownloadFinishedExecute = options.DownloadFinishedExecute;
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
         TempDownloadDirPath = string.IsNullOrEmpty(options.DownloadTempDirPath) ? CfgManager.PathTEMP_DIR : options.DownloadTempDirPath;
@@ -300,6 +341,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         HistoryAddSpecials = options.HistoryAddSpecials;
         HistorySkipUnmonitored = options.HistorySkipUnmonitored;
         HistoryCountSonarr = options.HistoryCountSonarr;
+        HistoryAutoRefreshIntervalMinutes = options.HistoryAutoRefreshIntervalMinutes;
+        HistoryAutoRefreshMode = options.HistoryAutoRefreshMode;
+        HistoryAutoRefreshLastRunTime = ProgramManager.Instance.GetLastRefreshTime() == DateTime.MinValue ? "Never" : ProgramManager.Instance.GetLastRefreshTime().ToString("g", CultureInfo.CurrentCulture);
         DownloadSpeed = options.DownloadSpeedLimit;
         DownloadSpeedInBits = options.DownloadSpeedInBits;
         DownloadMethodeNew = options.DownloadMethodeNew;
@@ -310,6 +354,11 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         SimultaneousDownloads = options.SimultaneousDownloads;
         SimultaneousProcessingJobs = options.SimultaneousProcessingJobs;
         LogMode = options.LogMode;
+        
+        TrayIconEnabled = options.TrayIconEnabled;
+        StartMinimizedToTray = options.StartMinimizedToTray;
+        MinimizeToTray = options.MinimizeToTray;
+        MinimizeToTrayOnClose = options.MinimizeToTrayOnClose;
 
         ComboBoxItem? theme = AppThemes.FirstOrDefault(a => a.Content != null && (string)a.Content == options.Theme) ?? null;
         CurrentAppTheme = theme ?? AppThemes[0];
@@ -331,6 +380,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         var settings = CrunchyrollManager.Instance.CrunOptions;
 
         settings.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
+        
+        settings.DownloadFinishedExecute = DownloadFinishedExecute;
 
         settings.DownloadMethodeNew = DownloadMethodeNew;
         settings.DownloadAllowEarlyStart = DownloadAllowEarlyStart;
@@ -347,6 +398,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.HistoryIncludeCrArtists = HistoryIncludeCrArtists;
         settings.HistorySkipUnmonitored = HistorySkipUnmonitored;
         settings.HistoryCountSonarr = HistoryCountSonarr;
+        settings.HistoryAutoRefreshIntervalMinutes =Math.Clamp((int)(HistoryAutoRefreshIntervalMinutes ?? 0), 0, 1000000000) ;
+        settings.HistoryAutoRefreshMode = HistoryAutoRefreshMode;
         settings.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
         settings.DownloadSpeedInBits = DownloadSpeedInBits;
         settings.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
@@ -404,6 +457,11 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         }
 
         settings.FlareSolverrProperties = propsFlareSolverr;
+        
+        settings.TrayIconEnabled = TrayIconEnabled;
+        settings.StartMinimizedToTray = StartMinimizedToTray;
+        settings.MinimizeToTray = MinimizeToTray;
+        settings.MinimizeToTrayOnClose = MinimizeToTrayOnClose;
 
         settings.LogMode = LogMode;
 
@@ -429,7 +487,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                 CrunchyrollManager.Instance.CrunOptions.DownloadDirPath = path;
                 DownloadDirPath = string.IsNullOrEmpty(path) ? CfgManager.PathVIDEOS_DIR : path;
             },
-            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadDirPath,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadDirPath ?? string.Empty,
             defaultPath: CfgManager.PathVIDEOS_DIR
         );
     }
@@ -441,7 +499,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                 CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath = path;
                 TempDownloadDirPath = string.IsNullOrEmpty(path) ? CfgManager.PathTEMP_DIR : path;
             },
-            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadTempDirPath ?? string.Empty,
             defaultPath: CfgManager.PathTEMP_DIR
         );
     }
@@ -490,7 +548,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                 BackgroundImagePath = path;
                 Helpers.SetBackgroundImage(path, BackgroundImageOpacity, BackgroundImageBlurRadius);
             },
-            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.BackgroundImagePath ?? string.Empty,
             defaultPath: string.Empty
         );
     }
@@ -519,11 +577,39 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                 CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath = path;
                 DownloadFinishedSoundPath = path;
             },
-            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath ?? string.Empty,
             defaultPath: string.Empty
         );
     }
 
+    #endregion
+    
+    #region Download Finished Execute File
+
+    [RelayCommand]
+    public void ClearFinishedExectuePath(){
+        CrunchyrollManager.Instance.CrunOptions.DownloadFinishedExecutePath = string.Empty;
+        DownloadFinishedExecutePath = string.Empty;
+    }
+
+    [RelayCommand]
+    public async Task OpenFileDialogAsyncInternalFinishedExecute(){
+        await OpenFileDialogAsyncInternal(
+            title: "Select File",
+            fileTypes: new List<FilePickerFileType>{
+                new("All Files"){
+                    Patterns = new[]{ "*.*" }
+                }
+            },
+            pathSetter: (path) => {
+                CrunchyrollManager.Instance.CrunOptions.DownloadFinishedExecutePath = path;
+                DownloadFinishedExecutePath = path;
+            },
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadFinishedExecutePath ?? string.Empty,
+            defaultPath: string.Empty
+        );
+    }
+    
     #endregion
 
     private async Task OpenFileDialogAsyncInternal(
@@ -559,10 +645,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             _faTheme.PreferSystemTheme = true;
         } else if (value?.Content?.ToString() == "Dark"){
             _faTheme.PreferSystemTheme = false;
-            Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
+            Application.Current?.RequestedThemeVariant = ThemeVariant.Dark;
         } else{
             _faTheme.PreferSystemTheme = false;
-            Application.Current.RequestedThemeVariant = ThemeVariant.Light;
+            Application.Current?.RequestedThemeVariant = ThemeVariant.Light;
         }
 
         UpdateSettings();
@@ -604,6 +690,11 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         _faTheme.CustomAccentColor = color;
         UpdateSettings();
     }
+    partial void OnTrayIconEnabledChanged(bool value){
+        ((App)Application.Current!).SetTrayIconVisible(value);
+        UpdateSettings();
+    }
+    
 
     protected override void OnPropertyChanged(PropertyChangedEventArgs e){
         base.OnPropertyChanged(e);
@@ -613,11 +704,22 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             or nameof(ListBoxColor)
             or nameof(CurrentAppTheme)
             or nameof(UseCustomAccent)
+            or nameof(TrayIconEnabled)
             or nameof(LogMode)){
             return;
         }
 
         UpdateSettings();
+        
+        HistoryAutoRefreshModeHint = HistoryAutoRefreshMode switch{
+            HistoryRefreshMode.DefaultAll =>
+                "Refreshes the full history using the default method and includes all entries",
+            HistoryRefreshMode.DefaultActive =>
+                "Refreshes the history using the default method and includes only active entries",
+            HistoryRefreshMode.FastNewReleases =>
+                "Uses the faster refresh method, similar to the custom calendar, focusing on newly released items",
+            _ => ""
+        };
 
         if (e.PropertyName is nameof(History)){
             if (CrunchyrollManager.Instance.CrunOptions.History){
@@ -658,7 +760,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     }
 
     [RelayCommand]
-    public async void CheckIp(){
+    public async Task CheckIp(){
         var result = await HttpClientReq.Instance.SendHttpRequest(HttpClientReq.CreateRequestMessage("https://icanhazip.com", HttpMethod.Get, false));
         Console.Error.WriteLine("Your IP: " + result.ResponseContent);
         if (result.IsOk){

@@ -56,6 +56,11 @@ public class CrDownloadOptions{
     [JsonProperty("download_finished_sound_path")]
     public string? DownloadFinishedSoundPath{ get; set; }
 
+    [JsonProperty("download_finished_execute")]
+    public bool DownloadFinishedExecute{ get; set; }
+
+    [JsonProperty("download_finished_execute_path")]
+    public string? DownloadFinishedExecutePath{ get; set; }
 
     [JsonProperty("background_image_opacity")]
     public double BackgroundImageOpacity{ get; set; }
@@ -92,6 +97,13 @@ public class CrDownloadOptions{
 
     [JsonProperty("history_count_sonarr")]
     public bool HistoryCountSonarr{ get; set; }
+    
+    [JsonProperty("history_auto_refresh_interval_minutes")]
+    public int HistoryAutoRefreshIntervalMinutes{ get; set; }
+    
+    [JsonProperty("history_auto_refresh_mode")]
+    public HistoryRefreshMode HistoryAutoRefreshMode{ get; set; }
+
 
     [JsonProperty("sonarr_properties")]
     public SonarrProperties? SonarrProperties{ get; set; }
@@ -141,6 +153,17 @@ public class CrDownloadOptions{
     [JsonProperty("flare_solverr_properties")]
     public FlareSolverrProperties? FlareSolverrProperties{ get; set; }
 
+    [JsonProperty("tray_icon_enabled")]
+    public bool TrayIconEnabled{ get; set; }
+    
+    [JsonProperty("tray_start_minimized")]
+    public bool StartMinimizedToTray{ get; set; }
+    
+    [JsonProperty("tray_on_minimize")]
+    public bool MinimizeToTray{ get; set; }
+    
+    [JsonProperty("tray_on_close")]
+    public bool MinimizeToTrayOnClose{ get; set; }
 
     #endregion
 

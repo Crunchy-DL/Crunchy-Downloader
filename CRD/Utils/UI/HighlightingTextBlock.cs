@@ -155,7 +155,7 @@ public class HighlightingTextBlock : TextBlock{
         foreach (var item in Items){
             var run = new Run(item);
 
-            if (highlightSet.Contains(item)){
+            if (highlightSet.Contains(item) || highlightSet.Contains("all")){
                 run.Foreground = Brushes.Orange;
                 // run.FontWeight = FontWeight.Bold;
             }

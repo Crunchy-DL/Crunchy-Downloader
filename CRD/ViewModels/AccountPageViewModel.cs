@@ -7,6 +7,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
+using CRD.Utils.Structs;
+using CRD.Utils.UI;
+using CRD.ViewModels.Utils;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
 using Newtonsoft.Json;
@@ -22,6 +25,9 @@ public partial class AccountPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private string _loginLogoutText = "";
+    
+    [ObservableProperty]
+    private bool _hasMultiProfile;
 
     [ObservableProperty]
     private string _remainingTime = "";
@@ -50,8 +56,8 @@ public partial class AccountPageViewModel : ViewModelBase{
                 RemainingTime = "Subscription maybe ended";
             }
 
-            if (CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription != null){
-                Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription, Formatting.Indented));
+            if (CrunchyrollManager.Instance.CrAuthEndpoint1.Subscription != null){
+                Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.CrAuthEndpoint1.Subscription, Formatting.Indented));
             }
         } else{
             RemainingTime = $"{(IsCancelled ? "Subscription ending in: " : "Subscription refreshing in: ")}{remaining:dd\\:hh\\:mm\\:ss}";
@@ -59,13 +65,18 @@ public partial class AccountPageViewModel : ViewModelBase{
     }
 
     public void UpdatetProfile(){
-        ProfileName = CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Username ?? CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.ProfileName ?? "???"; // Default or fetched user name
-        LoginLogoutText = CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Username == "???" ? "Login" : "Logout"; // Default state
+        
+        var firstEndpoint = CrunchyrollManager.Instance.CrAuthEndpoint1;
+        var firstEndpointProfile = firstEndpoint.Profile;
+        
+        HasMultiProfile = firstEndpoint.MultiProfile.Profiles.Count > 1;
+        ProfileName = firstEndpointProfile.ProfileName ?? firstEndpointProfile.Username ?? "???"; // Default or fetched user name
+        LoginLogoutText = firstEndpointProfile.Username == "???" ? "Login" : "Logout"; // Default state
         LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" +
-                         (string.IsNullOrEmpty(CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Avatar) ? "crbrand_avatars_logo_marks_mangagirl_taupe.png" : CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Avatar));
+                         (string.IsNullOrEmpty(firstEndpointProfile.Avatar) ? "crbrand_avatars_logo_marks_mangagirl_taupe.png" : firstEndpointProfile.Avatar));
 
 
-        var subscriptions = CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription;
+        var subscriptions = CrunchyrollManager.Instance.CrAuthEndpoint1.Subscription;
 
         if (subscriptions != null){
             if (subscriptions.SubscriptionProducts is{ Count: >= 1 }){
@@ -84,8 +95,8 @@ public partial class AccountPageViewModel : ViewModelBase{
                 UnknownEndDate = true;
             }
 
-            if (CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription?.NextRenewalDate != null && !UnknownEndDate){
-                _targetTime = CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription.NextRenewalDate;
+            if (!UnknownEndDate){
+                _targetTime = subscriptions.NextRenewalDate;
                 _timer = new DispatcherTimer{
                     Interval = TimeSpan.FromSeconds(1)
                 };
@@ -101,8 +112,8 @@ public partial class AccountPageViewModel : ViewModelBase{
 
             RaisePropertyChanged(nameof(RemainingTime));
 
-            if (CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription != null){
-                Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Subscription, Formatting.Indented));
+            if (subscriptions != null){
+                Console.Error.WriteLine(JsonConvert.SerializeObject(subscriptions, Formatting.Indented));
             }
         }
 
@@ -133,6 +144,41 @@ public partial class AccountPageViewModel : ViewModelBase{
         } else{
             await CrunchyrollManager.Instance.CrAuthEndpoint1.AuthAnonymous();
             await CrunchyrollManager.Instance.CrAuthEndpoint2.AuthAnonymous();
+            UpdatetProfile();
+        }
+    }
+
+    [RelayCommand]
+    public async Task OpenMultiProfileDialog(){
+        var multiProfile = CrunchyrollManager.Instance.CrAuthEndpoint1.MultiProfile;
+
+        var profiels = multiProfile.Profiles.Select(multiProfileProfile => new AccountProfile{
+            AvatarUrl = string.IsNullOrEmpty(multiProfileProfile.Avatar) ? "" : ("https://static.crunchyroll.com/assets/avatar/170x170/" + multiProfileProfile.Avatar),
+            ProfileName = multiProfileProfile.Username ?? multiProfileProfile.ProfileName ?? "???", CanBeSelected = multiProfileProfile is{ IsSelected: false, CanSwitch: true, IsPinProtected: false },
+            ProfileId = multiProfileProfile.ProfileId,
+        }).ToList();
+
+        var dialog = new CustomContentDialog(){
+            Name = "CRD Select Profile",
+            Title = "Select Profile",
+            IsPrimaryButtonEnabled = false,
+            CloseButtonText = "Close",
+            FullSizeDesired = true,
+        };
+
+        var viewModel = new ContentDialogMultiProfileSelectViewModel(dialog, profiels);
+        dialog.Content = new ContentDialogMultiProfileSelectView(){
+            DataContext = viewModel
+        };
+
+        var dialogResult = await dialog.ShowAsync();
+
+        if (dialogResult == ContentDialogResult.Primary){
+            var selectedProfile = viewModel.SelectedItem;
+            
+            await CrunchyrollManager.Instance.CrAuthEndpoint1.ChangeProfile(selectedProfile.ProfileId ?? string.Empty);
+            await CrunchyrollManager.Instance.CrAuthEndpoint2.ChangeProfile(selectedProfile.ProfileId ?? string.Empty);
+            
             UpdatetProfile();
         }
     }

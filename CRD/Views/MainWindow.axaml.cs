@@ -5,6 +5,7 @@ using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
@@ -46,6 +47,8 @@ public partial class MainWindow : AppWindow{
     #endregion
 
     private object selectedNavVieItem;
+    
+    private ToastNotification? toast;
 
     private const int TitleBarHeightAdjustment = 31;
 
@@ -70,6 +73,7 @@ public partial class MainWindow : AppWindow{
         PositionChanged += OnPositionChanged;
         SizeChanged += OnSizeChanged;
 
+        toast = this.FindControl<ToastNotification>("Toast");
 
         //select first element as default
         var nv = this.FindControl<NavigationView>("NavView");
@@ -150,55 +154,48 @@ public partial class MainWindow : AppWindow{
 
 
     public void ShowToast(string message, ToastType type, int durationInSeconds = 5){
-        var toastControl = this.FindControl<ToastNotification>("Toast");
-        toastControl?.Show(message, type, durationInSeconds);
+        Dispatcher.UIThread.Post(() => toast?.Show(message, type, durationInSeconds));
     }
 
 
     private void NavView_SelectionChanged(object? sender, NavigationViewSelectionChangedEventArgs e){
-        if (sender is NavigationView navView){
-            var selectedItem = navView.SelectedItem as NavigationViewItem;
-            if (selectedItem != null){
-                switch (selectedItem.Tag){
-                    case "DownloadQueue":
-                        navView.Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "AddDownload":
-                        navView.Content = Activator.CreateInstance(typeof(AddDownloadPageViewModel));
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "Calendar":
-                        navView.Content = Activator.CreateInstance(typeof(CalendarPageViewModel));
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "History":
-                        navView.Content = Activator.CreateInstance(typeof(HistoryPageViewModel));
-                        navigationStack.Clear();
-                        navigationStack.Push(navView.Content);
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "Seasons":
-                        navView.Content = Activator.CreateInstance(typeof(UpcomingPageViewModel));
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "Account":
-                        navView.Content = Activator.CreateInstance(typeof(AccountPageViewModel));
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "Settings":
-                        var viewModel = (SettingsPageViewModel)Activator.CreateInstance(typeof(SettingsPageViewModel));
-                        navView.Content = viewModel;
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    case "Update":
-                        navView.Content = Activator.CreateInstance(typeof(UpdateViewModel));
-                        selectedNavVieItem = selectedItem;
-                        break;
-                    default:
-                        // (sender as NavigationView).Content = Activator.CreateInstance(typeof(DownloadsPageViewModel));
-                        break;
-                }
+        if (sender is NavigationView{ SelectedItem: NavigationViewItem selectedItem } navView){
+            switch (selectedItem.Tag){
+                case "DownloadQueue":
+                    navView.Content = Activator.CreateInstance<DownloadsPageViewModel>();
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "AddDownload":
+                    navView.Content = Activator.CreateInstance<AddDownloadPageViewModel>();
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "Calendar":
+                    navView.Content = Activator.CreateInstance<CalendarPageViewModel>();
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "History":
+                    navView.Content = Activator.CreateInstance<HistoryPageViewModel>();
+                    navigationStack.Clear();
+                    navigationStack.Push(navView.Content);
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "Seasons":
+                    navView.Content = Activator.CreateInstance<UpcomingPageViewModel>();
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "Account":
+                    navView.Content = Activator.CreateInstance<AccountPageViewModel>();
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "Settings":
+                    var viewModel = Activator.CreateInstance<SettingsPageViewModel>();
+                    navView.Content = viewModel;
+                    selectedNavVieItem = selectedItem;
+                    break;
+                case "Update":
+                    navView.Content = Activator.CreateInstance<UpdateViewModel>();
+                    selectedNavVieItem = selectedItem;
+                    break;
             }
         }
     }
@@ -209,7 +206,7 @@ public partial class MainWindow : AppWindow{
             if (settings != null){
                 var screens = Screens.All;
                 if (settings.ScreenIndex >= 0 && settings.ScreenIndex < screens.Count){
-                    var screen = screens[settings.ScreenIndex];
+                    // var screen = screens[settings.ScreenIndex];
 
                     // Restore the position first
                     Position = new PixelPoint(settings.PosX, settings.PosY);

@@ -81,7 +81,7 @@ public partial class ContentDialogFeaturedMusicViewModel : ViewModelBase{
 
     [RelayCommand]
     public void DownloadEpisode(HistoryEpisode episode){
-        episode.DownloadEpisode(EpisodeDownloadMode.Default, FolderPath);
+        episode.DownloadEpisode(EpisodeDownloadMode.Default, FolderPath,false);
     }
 
     private void SaveButton(ContentDialog sender, ContentDialogButtonClickEventArgs args){
