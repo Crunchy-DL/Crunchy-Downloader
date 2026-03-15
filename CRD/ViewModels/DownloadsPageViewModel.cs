@@ -260,7 +260,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             Paused = !epMeta.Paused && !isDownloading || epMeta.Paused;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
 
-            CrDownloadOptions newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
+            CrDownloadOptions? newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
 
             if (epMeta.OnlySubs){
                 newOptions.Novids = true;

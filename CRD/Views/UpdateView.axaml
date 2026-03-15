@@ -47,10 +47,21 @@
 
         <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal">
 
+            <ToggleSwitch HorizontalAlignment="Right" Margin="0 0 10 0 " IsChecked="{Binding GhUpdatePrereleases}" OffContent="Prereleases" OnContent="Prereleases"></ToggleSwitch>
+            
+            <Button Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
+                    VerticalAlignment="Center"
+                    Command="{Binding CheckForUpdate}">
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                    <controls:SymbolIcon Symbol="Refresh" FontSize="32" />
+                    <TextBlock Text="Check" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12"></TextBlock>
+                </StackPanel>
+            </Button>
+            
             <Button Width="70" Height="70" Background="Transparent" BorderThickness="0" Margin="5 0"
                     VerticalAlignment="Center"
                     Command="{Binding StartUpdate}"
-                    IsEnabled="{Binding UpdateAvailable}">
+                    IsEnabled="{Binding ProgramManager.UpdateAvailable}">
                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                     <controls:SymbolIcon Symbol="Download" FontSize="32" />
                     <TextBlock Text="Update" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12"></TextBlock>

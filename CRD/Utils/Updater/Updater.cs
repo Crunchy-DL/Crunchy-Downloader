@@ -10,51 +10,29 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CRD.Downloader;
+using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
 using Newtonsoft.Json;
+using NuGet.Versioning;
 
 namespace CRD.Utils.Updater;
 
-public class Updater : INotifyPropertyChanged{
-    public double progress = 0;
-    public bool failed = false;
+public class Updater : ObservableObject{
+    public double Progress;
+    public bool Failed;
+    public string LatestVersion = "";
 
-    public string latestVersion = "";
-
-    #region Singelton
-
-    private static Updater? _instance;
-    private static readonly object Padlock = new();
-
-    public static Updater Instance{
-        get{
-            if (_instance == null){
-                lock (Padlock){
-                    if (_instance == null){
-                        _instance = new Updater();
-                    }
-                }
-            }
-
-            return _instance;
-        }
-    }
-
-    #endregion
-
-    public event PropertyChangedEventHandler PropertyChanged;
-
-    protected void OnPropertyChanged([CallerMemberName] string propertyName = null){
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
+    public static Updater Instance{ get; } = new();
 
     private string downloadUrl = "";
-    private readonly string tempPath = Path.Combine(CfgManager.PathTEMP_DIR, "Update.zip");
-    private readonly string extractPath = Path.Combine(CfgManager.PathTEMP_DIR, "ExtractedUpdate");
+    private readonly string tempPath = Path.Combine(CfgManager.PathTEMP_DIR, "Update", "Update.zip");
+    private readonly string extractPath = Path.Combine(CfgManager.PathTEMP_DIR, "Update", "ExtractedUpdate");
     private readonly string changelogFilePath = Path.Combine(AppContext.BaseDirectory, "CHANGELOG.md");
 
-    private static readonly string apiEndpoint = "https://api.github.com/repos/Crunchy-DL/Crunchy-Downloader/releases";
-    private static readonly string apiEndpointLatest = apiEndpoint + "/latest";
+    private static readonly string ApiEndpoint = "https://api.github.com/repos/Crunchy-DL/Crunchy-Downloader/releases";
+    private static readonly string ApiEndpointLatest = ApiEndpoint + "/latest";
 
     public async Task<bool> CheckForUpdatesAsync(){
         if (File.Exists(tempPath)){
@@ -88,39 +66,49 @@ public class Updater : INotifyPropertyChanged{
 
             Console.WriteLine($"Running on {platformName}");
 
+            var infoVersion = Assembly
+                .GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion
+                .Split('+')[0];
+
+            var currentVersion = NuGetVersion.Parse(infoVersion ?? "0.0.0");
+
             HttpClientHandler handler = new HttpClientHandler();
             handler.UseProxy = false;
             using (var client = new HttpClient(handler)){
                 client.DefaultRequestHeaders.Add("User-Agent", "C# App");
-                var response = await client.GetStringAsync(apiEndpointLatest);
-                var releaseInfo = Helpers.Deserialize<GithubRelease>(response, null);
+                var response = await client.GetStringAsync(ApiEndpoint);
+                var releases = Helpers.Deserialize<List<GithubRelease>>(response, null) ?? [];
 
-                if (releaseInfo == null){
-                    Console.WriteLine($"Failed to get Update info");
+                bool allowPrereleases = CrunchyrollManager.Instance.CrunOptions.GhUpdatePrereleases;
+
+                var selectedRelease = releases
+                    .FirstOrDefault(r => allowPrereleases || !r.Prerelease);
+
+
+                if (selectedRelease == null){
+                    Console.WriteLine("No valid releases found.");
                     return false;
                 }
 
-                latestVersion = releaseInfo.TagName;
+                LatestVersion = selectedRelease.TagName;
 
-                if (releaseInfo.Assets != null)
-                    foreach (var asset in releaseInfo.Assets){
-                        string assetName = (string)asset.name;
-                        if (assetName.Contains(platformName)){
-                            downloadUrl = asset.browser_download_url;
-                            break;
-                        }
+                var latestVersion = NuGetVersion.Parse(selectedRelease.TagName.TrimStart('v'));
+
+                if (latestVersion > currentVersion){
+                    Console.WriteLine($"Update available: {LatestVersion} - Current Version: {currentVersion}");
+
+                    var asset = selectedRelease.Assets?
+                        .FirstOrDefault(a => a.IsForPlatform(platformName));
+
+                    if (asset == null){
+                        Console.WriteLine($"Failed to get Update url for {platformName}");
+                        return false;
                     }
 
-                if (string.IsNullOrEmpty(downloadUrl)){
-                    Console.WriteLine($"Failed to get Update url for {platformName}");
-                    return false;
-                }
+                    downloadUrl = asset.BrowserDownloadUrl;
 
-                var version = Assembly.GetExecutingAssembly().GetName().Version;
-                var currentVersion = $"v{version?.Major}.{version?.Minor}.{version?.Build}";
-
-                if (latestVersion != currentVersion){
-                    Console.WriteLine("Update available: " + latestVersion + " - Current Version: " + currentVersion);
                     _ = UpdateChangelogAsync();
                     return true;
                 }
@@ -144,18 +132,18 @@ public class Updater : INotifyPropertyChanged{
         if (string.IsNullOrEmpty(existingVersion)){
             existingVersion = "v1.0.0";
         }
-        
-        if (string.IsNullOrEmpty(latestVersion)){
-            latestVersion = "v1.0.0";
+
+        if (string.IsNullOrEmpty(LatestVersion)){
+            LatestVersion = "v1.0.0";
         }
 
-        if (existingVersion == latestVersion || Version.Parse(existingVersion.TrimStart('v')) >= Version.Parse(latestVersion.TrimStart('v'))){
+        if (existingVersion == LatestVersion || Version.Parse(existingVersion.TrimStart('v')) >= Version.Parse(LatestVersion.TrimStart('v'))){
             Console.WriteLine("CHANGELOG.md is already up to date.");
             return;
         }
 
         try{
-            string jsonResponse = await client.GetStringAsync(apiEndpoint); // + "?per_page=100&page=1"
+            string jsonResponse = await client.GetStringAsync(ApiEndpoint); // + "?per_page=100&page=1"
 
             var releases = Helpers.Deserialize<List<GithubRelease>>(jsonResponse, null);
 
@@ -231,7 +219,7 @@ public class Updater : INotifyPropertyChanged{
 
     public async Task DownloadAndUpdateAsync(){
         try{
-            failed = false;
+            Failed = false;
             Helpers.EnsureDirectoriesExist(tempPath);
 
             // Download the zip file
@@ -249,8 +237,8 @@ public class Updater : INotifyPropertyChanged{
                         var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                         if (bytesRead == 0){
                             isMoreToRead = false;
-                            progress = 100;
-                            OnPropertyChanged(nameof(progress));
+                            Progress = 100;
+                            OnPropertyChanged(nameof(Progress));
                             continue;
                         }
 
@@ -258,8 +246,8 @@ public class Updater : INotifyPropertyChanged{
 
                         totalBytesRead += bytesRead;
                         if (totalBytes != -1){
-                            progress = (double)totalBytesRead / totalBytes * 100;
-                            OnPropertyChanged(nameof(progress));
+                            Progress = (double)totalBytesRead / totalBytes * 100;
+                            OnPropertyChanged(nameof(Progress));
                         }
                     } while (isMoreToRead);
                 }
@@ -273,13 +261,13 @@ public class Updater : INotifyPropertyChanged{
                 ApplyUpdate(extractPath);
             } else{
                 Console.Error.WriteLine("Failed to get Update");
-                failed = true;
-                OnPropertyChanged(nameof(failed));
+                Failed = true;
+                OnPropertyChanged(nameof(Failed));
             }
         } catch (Exception e){
             Console.Error.WriteLine($"Failed to get Update: {e.Message}");
-            failed = true;
-            OnPropertyChanged(nameof(failed));
+            Failed = true;
+            OnPropertyChanged(nameof(Failed));
         }
     }
 
@@ -301,8 +289,8 @@ public class Updater : INotifyPropertyChanged{
                 System.Diagnostics.Process.Start(chmodProcess)?.WaitForExit();
             } catch (Exception ex){
                 Console.Error.WriteLine($"Error setting execute permissions: {ex.Message}");
-                failed = true;
-                OnPropertyChanged(nameof(failed));
+                Failed = true;
+                OnPropertyChanged(nameof(Failed));
                 return;
             }
         }
@@ -319,8 +307,8 @@ public class Updater : INotifyPropertyChanged{
             Environment.Exit(0);
         } catch (Exception ex){
             Console.Error.WriteLine($"Error launching updater: {ex.Message}");
-            failed = true;
-            OnPropertyChanged(nameof(failed));
+            Failed = true;
+            OnPropertyChanged(nameof(Failed));
         }
     }
 
@@ -328,7 +316,7 @@ public class Updater : INotifyPropertyChanged{
         [JsonProperty("tag_name")]
         public string TagName{ get; set; } = string.Empty;
 
-        public dynamic? Assets{ get; set; }
+        public List<GithubAsset>? Assets{ get; set; } = [];
         public string Body{ get; set; } = string.Empty;
 
         [JsonProperty("published_at")]
@@ -336,4 +324,52 @@ public class Updater : INotifyPropertyChanged{
 
         public bool Prerelease{ get; set; }
     }
+    
+    public class GithubAsset{
+        [JsonProperty("url")]
+        public string Url{ get; set; } = "";
+
+        [JsonProperty("id")]
+        public long Id{ get; set; }
+
+        [JsonProperty("node_id")]
+        public string NodeId{ get; set; } = "";
+
+        [JsonProperty("name")]
+        public string Name{ get; set; } = "";
+
+        [JsonProperty("label")]
+        public string? Label{ get; set; }
+
+        [JsonProperty("content_type")]
+        public string ContentType{ get; set; } = "";
+
+        [JsonProperty("state")]
+        public string State{ get; set; } = "";
+
+        [JsonProperty("size")]
+        public long Size{ get; set; }
+
+        [JsonProperty("digest")]
+        public string? Digest{ get; set; }
+
+        [JsonProperty("download_count")]
+        public int DownloadCount{ get; set; }
+
+        [JsonProperty("created_at")]
+        public DateTime CreatedAt{ get; set; }
+
+        [JsonProperty("updated_at")]
+        public DateTime UpdatedAt{ get; set; }
+
+        [JsonProperty("browser_download_url")]
+        public string BrowserDownloadUrl{ get; set; } = "";
+        
+        
+        public bool IsForPlatform(string platform){
+            return Name.Contains(platform, StringComparison.OrdinalIgnoreCase);
+        }
+        
+    }
+    
 }

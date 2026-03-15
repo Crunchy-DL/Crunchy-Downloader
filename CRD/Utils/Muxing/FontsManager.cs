@@ -157,7 +157,7 @@ public class FontsManager{
         Console.WriteLine("All required fonts downloaded!");
     }
 
-    public static List<string> ExtractFontsFromAss(string ass){
+    public static List<string> ExtractFontsFromAss(string ass, bool checkTypesettingFonts){
         if (string.IsNullOrWhiteSpace(ass))
             return new List<string>();
 
@@ -176,15 +176,21 @@ public class FontsManager{
             }
         }
 
-        var fontMatches = Regex.Matches(ass, @"\\fn([^\\}]+)");
-        foreach (Match match in fontMatches){
-            if (match.Groups.Count > 1){
-                var fontName = match.Groups[1].Value.Trim();
-                fonts.Add(NormalizeFontKey(fontName));
-            }
+        if (checkTypesettingFonts){
+            var fontMatches = Regex.Matches(ass, @"\\fn([^\\}]+)");
+            foreach (Match match in fontMatches){
+                if (match.Groups.Count > 1){
+                    var fontName = match.Groups[1].Value.Trim();
                 
+                    if (Regex.IsMatch(fontName, @"^\d+$"))
+                        continue;
+                
+                    fonts.Add(NormalizeFontKey(fontName));
+                }
+                
+            }
         }
-
+        
         return fonts
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)

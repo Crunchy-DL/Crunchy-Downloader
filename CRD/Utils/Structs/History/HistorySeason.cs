@@ -19,7 +19,7 @@ public class HistorySeason : INotifyPropertyChanged{
     public string? SeasonNum{ get; set; }
 
     [JsonProperty("season_special_season")]
-    public bool? SpecialSeason{ get; set; }
+    public bool SpecialSeason{ get; set; }
 
     [JsonProperty("season_downloaded_episodes")]
     public int DownloadedEpisodes{ get; set; }
@@ -40,7 +40,7 @@ public class HistorySeason : INotifyPropertyChanged{
     public ObservableCollection<string> HistorySeasonDubLangOverride{ get; set; } =[];
 
     [JsonIgnore]
-    public string CombinedProperty => SpecialSeason ?? false ? $"Specials {SeasonNum}" : $"Season {SeasonNum}";
+    public string CombinedProperty => SpecialSeason ? $"Specials {SeasonNum}" : $"Season {SeasonNum}";
 
     [JsonIgnore]
     public bool IsExpanded{ get; set; }

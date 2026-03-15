@@ -12,13 +12,13 @@ using CRD.Utils.Structs;
 namespace CRD.Utils.Muxing;
 
 public class Merger{
-    public MergerOptions options;
+    public MergerOptions Options;
 
     public Merger(MergerOptions options){
-        this.options = options;
+        Options = options;
 
-        if (this.options.VideoTitle != null && this.options.VideoTitle.Length > 0){
-            this.options.VideoTitle = this.options.VideoTitle.Replace("\"", "'");
+        if (Options.VideoTitle is{ Length: > 0 }){
+            Options.VideoTitle = Options.VideoTitle.Replace("\"", "'");
         }
     }
 
@@ -33,9 +33,9 @@ public class Merger{
 
         args.Add("-loglevel warning");
 
-        if (!options.mp3){
-            foreach (var vid in options.OnlyVid){
-                if (!hasVideo || options.KeepAllVideos == true){
+        if (!Options.mp3){
+            foreach (var vid in Options.OnlyVid){
+                if (!hasVideo || Options.KeepAllVideos == true){
                     args.Add($"-i \"{vid.Path}\"");
                     metaData.Add($"-map {index}:v");
                     metaData.Add($"-metadata:s:v:{index} title=\"{(vid.Language.Name)}\"");
@@ -44,7 +44,7 @@ public class Merger{
                 }
             }
 
-            foreach (var aud in options.OnlyAudio){
+            foreach (var aud in Options.OnlyAudio){
                 if (aud.Delay != null && aud.Delay != 0){
                     double delay = aud.Delay / 1000.0 ?? 0;
                     args.Add($"-itsoffset {delay.ToString(CultureInfo.InvariantCulture)}");
@@ -53,8 +53,12 @@ public class Merger{
                 args.Add($"-i \"{aud.Path}\"");
                 metaData.Add($"-map {index}:a");
                 metaData.Add($"-metadata:s:a:{audioIndex} language={aud.Language.Code}");
-                if (options.Defaults.Audio.Code == aud.Language.Code){
-                    metaData.Add($"-disposition:a:{audioIndex} default");
+                if (Options.Defaults.Audio != null && Options.Defaults.Audio != Languages.DEFAULT_lang){
+                    if (Options.Defaults.Audio.Code == aud.Language.Code){
+                        metaData.Add($"-disposition:a:{audioIndex} default");
+                    } else{
+                        metaData.Add($"-disposition:a:{audioIndex} 0");
+                    }
                 } else{
                     metaData.Add($"-disposition:a:{audioIndex} 0");
                 }
@@ -63,18 +67,18 @@ public class Merger{
                 audioIndex++;
             }
 
-            if (options.Chapters != null && options.Chapters.Count > 0){
-                Helpers.ConvertChapterFileForFFMPEG(options.Chapters[0].Path);
+            if (Options.Chapters != null && Options.Chapters.Count > 0){
+                Helpers.ConvertChapterFileForFFMPEG(Options.Chapters[0].Path);
 
-                args.Add($"-i \"{options.Chapters[0].Path}\"");
+                args.Add($"-i \"{Options.Chapters[0].Path}\"");
                 metaData.Add($"-map_metadata {index}");
                 index++;
             }
 
-            if (!options.SkipSubMux){
-                bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
+            if (!Options.SkipSubMux){
+                bool hasSignsSub = Options.Subtitles.Any(sub => sub.Signs && Options.Defaults.Sub?.Code == sub.Language.Code);
 
-                foreach (var sub in options.Subtitles.Select((value, i) => new{ value, i })){
+                foreach (var sub in Options.Subtitles.Select((value, i) => new{ value, i })){
                     if (sub.value.Delay != null && sub.value.Delay != 0){
                         double delay = sub.value.Delay / 1000.0 ?? 0;
                         args.Add($"-itsoffset {delay.ToString(CultureInfo.InvariantCulture)}");
@@ -82,10 +86,14 @@ public class Merger{
 
                     args.Add($"-i \"{sub.value.File}\"");
                     metaData.Add($"-map {index}:s");
-                    if (options.Defaults.Sub.Code == sub.value.Language.Code &&
-                        (options.DefaultSubSigns == sub.value.Signs || options.DefaultSubSigns && !hasSignsSub)
-                        && sub.value.ClosedCaption == false){
-                        metaData.Add($"-disposition:s:{sub.i} default");
+                    if (Options.Defaults.Sub != null && Options.Defaults.Sub != Languages.DEFAULT_lang){
+                        if (Options.Defaults.Sub.Code == sub.value.Language.Code &&
+                            (Options.DefaultSubSigns == sub.value.Signs || Options.DefaultSubSigns && !hasSignsSub)
+                            && sub.value.ClosedCaption == false){
+                            metaData.Add($"-disposition:s:{sub.i} default");
+                        } else{
+                            metaData.Add($"-disposition:s:{sub.i} 0");
+                        }
                     } else{
                         metaData.Add($"-disposition:s:{sub.i} 0");
                     }
@@ -99,19 +107,19 @@ public class Merger{
             // args.AddRange(options.Subtitles.Select((sub, subIndex) => $"-map {subIndex + index}"));
             args.Add("-c:v copy");
             args.Add("-c:a copy");
-            args.Add(options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");
-            if (!options.SkipSubMux){
-                args.AddRange(options.Subtitles.Select((sub, subindex) =>
-                    $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
+            args.Add(Options.Output.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) ? "-c:s mov_text" : "-c:s ass");
+            if (!Options.SkipSubMux){
+                args.AddRange(Options.Subtitles.Select((sub, subindex) =>
+                    $"-metadata:s:s:{subindex} title=\"{sub.Language.Language ?? sub.Language.Name}{(sub.ClosedCaption == true ? $" {Options.CcTag}" : "")}{(sub.Signs == true ? " Signs" : "")}\" -metadata:s:s:{subindex} language={sub.Language.Code}"));
             }
 
-            if (!string.IsNullOrEmpty(options.VideoTitle)){
-                args.Add($"-metadata title=\"{options.VideoTitle}\"");
+            if (!string.IsNullOrEmpty(Options.VideoTitle)){
+                args.Add($"-metadata title=\"{Options.VideoTitle}\"");
             }
 
-            if (options.Description is{ Count: > 0 }){
+            if (Options.Description is{ Count: > 0 }){
                 XmlDocument doc = new XmlDocument();
-                doc.Load(options.Description[0].Path);
+                doc.Load(Options.Description[0].Path);
                 XmlNode? node = doc.SelectSingleNode("//Tag/Simple[Name='DESCRIPTION']/String");
                 string description = node?.InnerText
                                          .Replace("\\", "\\\\") // Escape backslashes
@@ -120,25 +128,25 @@ public class Merger{
                 args.Add($"-metadata comment=\"{description}\"");
             }
 
-            if (options.Options.ffmpeg?.Count > 0){
-                args.AddRange(options.Options.ffmpeg);
+            if (Options.Options.ffmpeg?.Count > 0){
+                args.AddRange(Options.Options.ffmpeg);
             }
 
-            args.Add($"\"{options.Output}\"");
+            args.Add($"\"{Options.Output}\"");
 
             return string.Join(" ", args);
         }
 
 
-        if (options.OnlyAudio.Count > 1){
+        if (Options.OnlyAudio.Count > 1){
             Console.Error.WriteLine("Multiple audio files detected. Only one audio file can be converted to MP3 at a time.");
         }
 
-        var audio = options.OnlyAudio.First();
+        var audio = Options.OnlyAudio.First();
 
         args.Add($"-i \"{audio.Path}\"");
         args.Add("-c:a libmp3lame" + (audio.Bitrate > 0 ? $" -b:a {audio.Bitrate}k" : ""));
-        args.Add($"\"{options.Output}\"");
+        args.Add($"\"{Options.Output}\"");
         return string.Join(" ", args);
     }
 
@@ -148,14 +156,14 @@ public class Merger{
 
         bool hasVideo = false;
 
-        args.Add($"-o \"{Helpers.AddUncPrefixIfNeeded(options.Output)}\"");
-        if (options.Options.mkvmerge != null){
-            args.AddRange(options.Options.mkvmerge);
+        args.Add($"-o \"{Helpers.AddUncPrefixIfNeeded(Options.Output)}\"");
+        if (Options.Options.mkvmerge != null){
+            args.AddRange(Options.Options.mkvmerge);
         }
 
 
-        foreach (var vid in options.OnlyVid){
-            if (!hasVideo || options.KeepAllVideos == true){
+        foreach (var vid in Options.OnlyVid){
+            if (!hasVideo || Options.KeepAllVideos == true){
                 args.Add("--video-tracks 0");
                 args.Add("--no-audio");
 
@@ -172,11 +180,11 @@ public class Merger{
         //     .OrderBy(sub => options.DubLangList.IndexOf(sub.Language.CrLocale) != -1 ? options.DubLangList.IndexOf(sub.Language.CrLocale) : int.MaxValue)
         //     .ToList();
 
-        var rank = options.DubLangList
+        var rank = Options.DubLangList
             .Select((val, i) => new{ val, i })
             .ToDictionary(x => x.val, x => x.i, StringComparer.OrdinalIgnoreCase);
 
-        var sortedAudio = options.OnlyAudio
+        var sortedAudio = Options.OnlyAudio
             .OrderBy(m => {
                 var key = m.Language?.CrLocale ?? string.Empty;
                 return rank.TryGetValue(key, out var r) ? r : int.MaxValue; // unknown locales last
@@ -191,9 +199,12 @@ public class Merger{
             args.Add($"--track-name 0:\"{trackName}\"");
             args.Add($"--language 0:{aud.Language.Code}");
 
-
-            if (options.Defaults.Audio.Code == aud.Language.Code && !aud.IsAudioRoleDescription){
-                args.Add("--default-track 0");
+            if (Options.Defaults.Audio != null && Options.Defaults.Audio != Languages.DEFAULT_lang){
+                if (Options.Defaults.Audio.Code == aud.Language.Code && !aud.IsAudioRoleDescription){
+                    args.Add("--default-track 0");
+                } else{
+                    args.Add("--default-track 0:0");
+                }
             } else{
                 args.Add("--default-track 0:0");
             }
@@ -205,12 +216,12 @@ public class Merger{
             args.Add($"\"{Helpers.AddUncPrefixIfNeeded(aud.Path)}\"");
         }
 
-        if (options.Subtitles.Count > 0 && !options.SkipSubMux){
-            bool hasSignsSub = options.Subtitles.Any(sub => sub.Signs && options.Defaults.Sub.Code == sub.Language.Code);
+        if (Options.Subtitles.Count > 0 && !Options.SkipSubMux){
+            bool hasSignsSub = Options.Subtitles.Any(sub => sub.Signs && Options.Defaults.Sub?.Code == sub.Language.Code);
 
-            var sortedSubtitles = options.Subtitles
-                .OrderBy(sub => options.SubLangList.IndexOf(sub.Language.CrLocale) != -1
-                    ? options.SubLangList.IndexOf(sub.Language.CrLocale)
+            var sortedSubtitles = Options.Subtitles
+                .OrderBy(sub => Options.SubLangList.IndexOf(sub.Language.CrLocale) != -1
+                    ? Options.SubLangList.IndexOf(sub.Language.CrLocale)
                     : int.MaxValue)
                 .ThenBy(sub => sub.ClosedCaption ? 2 : sub.Signs ? 1 : 0)
                 .ToList();
@@ -222,29 +233,32 @@ public class Merger{
                     args.Add($"--sync 0:{delay}");
                 }
 
-                string trackNameExtra = subObj.ClosedCaption ? $" {options.CcTag}" : "";
+                string trackNameExtra = subObj.ClosedCaption ? $" {Options.CcTag}" : "";
                 trackNameExtra += subObj.Signs ? " Signs" : "";
 
                 string trackName = $"0:\"{(subObj.Language.Language ?? subObj.Language.Name) + trackNameExtra}\"";
                 args.Add($"--track-name {trackName}");
                 args.Add($"--language 0:\"{subObj.Language.Code}\"");
-
-                if (options.Defaults.Sub.Code == subObj.Language.Code &&
-                    (options.DefaultSubSigns == subObj.Signs || options.DefaultSubSigns && !hasSignsSub) && subObj.ClosedCaption == false){
-                    args.Add("--default-track 0");
-                    if (options.DefaultSubForcedDisplay){
-                        args.Add("--forced-track 0:yes");
-                        isForced = true;
+                if (Options.Defaults.Sub != null && Options.Defaults.Sub != Languages.DEFAULT_lang){
+                    if (Options.Defaults.Sub.Code == subObj.Language.Code &&
+                        (Options.DefaultSubSigns == subObj.Signs || Options.DefaultSubSigns && !hasSignsSub) && subObj.ClosedCaption == false){
+                        args.Add("--default-track 0");
+                        if (Options.DefaultSubForcedDisplay){
+                            args.Add("--forced-track 0:yes");
+                            isForced = true;
+                        }
+                    } else{
+                        args.Add("--default-track 0:0");
                     }
                 } else{
                     args.Add("--default-track 0:0");
                 }
 
-                if (subObj.ClosedCaption && options.CcSubsMuxingFlag){
+                if (subObj.ClosedCaption && Options.CcSubsMuxingFlag){
                     args.Add("--hearing-impaired-flag 0:yes");
                 }
 
-                if (subObj.Signs && options.SignsSubsAsForced && !isForced){
+                if (subObj.Signs && Options.SignsSubsAsForced && !isForced){
                     args.Add("--forced-track 0:yes");
                 }
 
@@ -254,8 +268,8 @@ public class Merger{
             args.Add("--no-subtitles");
         }
 
-        if (options.Fonts is{ Count: > 0 }){
-            foreach (var font in options.Fonts){
+        if (Options.Fonts is{ Count: > 0 }){
+            foreach (var font in Options.Fonts){
                 args.Add($"--attachment-name \"{font.Name}\"");
                 args.Add($"--attachment-mime-type \"{font.Mime}\"");
                 args.Add($"--attach-file \"{Helpers.AddUncPrefixIfNeeded(font.Path)}\"");
@@ -264,21 +278,21 @@ public class Merger{
             args.Add("--no-attachments");
         }
 
-        if (options.Chapters is{ Count: > 0 }){
-            args.Add($"--chapters \"{Helpers.AddUncPrefixIfNeeded(options.Chapters[0].Path)}\"");
+        if (Options.Chapters is{ Count: > 0 }){
+            args.Add($"--chapters \"{Helpers.AddUncPrefixIfNeeded(Options.Chapters[0].Path)}\"");
         }
 
-        if (!string.IsNullOrEmpty(options.VideoTitle)){
-            args.Add($"--title \"{options.VideoTitle}\"");
+        if (!string.IsNullOrEmpty(Options.VideoTitle)){
+            args.Add($"--title \"{Options.VideoTitle}\"");
         }
 
-        if (options.Description is{ Count: > 0 }){
-            args.Add($"--global-tags \"{Helpers.AddUncPrefixIfNeeded(options.Description[0].Path)}\"");
+        if (Options.Description is{ Count: > 0 }){
+            args.Add($"--global-tags \"{Helpers.AddUncPrefixIfNeeded(Options.Description[0].Path)}\"");
         }
 
-        if (options.Cover.Count > 0){
-            if (File.Exists(options.Cover.First().Path)){
-                args.Add($"--attach-file \"{options.Cover.First().Path}\"");
+        if (Options.Cover.Count > 0){
+            if (File.Exists(Options.Cover.First().Path)){
+                args.Add($"--attach-file \"{Options.Cover.First().Path}\"");
                 args.Add($"--attachment-mime-type image/png");
                 args.Add($"--attachment-name cover.png");
             }
@@ -440,22 +454,22 @@ public class Merger{
 
     public void CleanUp(){
         // Combine all media file lists and iterate through them
-        var allMediaFiles = options.OnlyAudio.Concat(options.OnlyVid)
+        var allMediaFiles = Options.OnlyAudio.Concat(Options.OnlyVid)
             .ToList();
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path));
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".resume"));
         allMediaFiles.ForEach(file => Helpers.DeleteFile(file.Path + ".new.resume"));
 
-        options.Description?.ForEach(description => Helpers.DeleteFile(description.Path));
+        Options.Description?.ForEach(description => Helpers.DeleteFile(description.Path));
 
-        options.Cover?.ForEach(cover => Helpers.DeleteFile(cover.Path));
+        Options.Cover?.ForEach(cover => Helpers.DeleteFile(cover.Path));
 
         // Delete chapter files if any
-        options.Chapters?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
+        Options.Chapters?.ForEach(chapter => Helpers.DeleteFile(chapter.Path));
 
-        if (!options.SkipSubMux){
+        if (!Options.SkipSubMux){
             // Delete subtitle files
-            options.Subtitles.ForEach(subtitle => Helpers.DeleteFile(subtitle.File));
+            Options.Subtitles.ForEach(subtitle => Helpers.DeleteFile(subtitle.File));
         }
     }
 }
@@ -502,8 +516,8 @@ public class CrunchyMuxOptions{
     public string VideoTitle{ get; set; }
     public List<string> FfmpegOptions{ get; set; } = new List<string>();
     public List<string> MkvmergeOptions{ get; set; } = new List<string>();
-    public LanguageItem DefaultSub{ get; set; }
-    public LanguageItem DefaultAudio{ get; set; }
+    public LanguageItem? DefaultSub{ get; set; }
+    public LanguageItem? DefaultAudio{ get; set; }
     public string CcTag{ get; set; }
     public bool SyncTiming{ get; set; }
     public bool DlVideoOnce{ get; set; }
@@ -521,7 +535,7 @@ public class MergerOptions{
     public List<MergerInput> OnlyVid{ get; set; } = new List<MergerInput>();
     public List<MergerInput> OnlyAudio{ get; set; } = new List<MergerInput>();
     public List<SubtitleInput> Subtitles{ get; set; } = new List<SubtitleInput>();
-    public List<MergerInput> Chapters{ get; set; } = new List<MergerInput>();
+    public List<MergerInput>? Chapters{ get; set; } = new List<MergerInput>();
     public string CcTag{ get; set; }
     public string Output{ get; set; }
     public string VideoTitle{ get; set; }
@@ -536,7 +550,7 @@ public class MergerOptions{
     public bool CcSubsMuxingFlag{ get; set; }
     public bool SignsSubsAsForced{ get; set; }
     public List<MergerInput> Description{ get; set; } = new List<MergerInput>();
-    public List<MergerInput> Cover{ get; set; } =[];
+    public List<MergerInput> Cover{ get; set; } = [];
 }
 
 public class MuxOptions{
@@ -545,6 +559,6 @@ public class MuxOptions{
 }
 
 public class Defaults{
-    public LanguageItem Audio{ get; set; }
-    public LanguageItem Sub{ get; set; }
+    public LanguageItem? Audio{ get; set; }
+    public LanguageItem? Sub{ get; set; }
 }

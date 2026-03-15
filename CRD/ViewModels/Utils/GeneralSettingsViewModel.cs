@@ -27,127 +27,129 @@ using FluentAvalonia.Styling;
 
 namespace CRD.ViewModels.Utils;
 
-// ReSharper disable InconsistentNaming
 public partial class GeneralSettingsViewModel : ViewModelBase{
     [ObservableProperty]
-    private string _currentVersion;
+    private string currentVersion;
 
     [ObservableProperty]
-    private bool _downloadToTempFolder;
+    private bool downloadToTempFolder;
 
     [ObservableProperty]
-    private bool _history;
+    private bool history;
 
     [ObservableProperty]
-    private bool _historyCountMissing;
+    private bool historyCountMissing;
 
     [ObservableProperty]
-    private bool _historyIncludeCrArtists;
+    private bool historyIncludeCrArtists;
 
     [ObservableProperty]
-    private bool _historyAddSpecials;
+    private bool historyAddSpecials;
 
     [ObservableProperty]
-    private bool _historySkipUnmonitored;
+    private bool historySkipUnmonitored;
 
     [ObservableProperty]
-    private bool _historyCountSonarr;
+    private bool historyCountSonarr;
     
     [ObservableProperty]
-    private double? _historyAutoRefreshIntervalMinutes;
+    private double? historyAutoRefreshIntervalMinutes;
 
     [ObservableProperty]
-    private HistoryRefreshMode _historyAutoRefreshMode;
+    private HistoryRefreshMode historyAutoRefreshMode;
 
     [ObservableProperty]
-    private string _historyAutoRefreshModeHint;
+    private string historyAutoRefreshModeHint;
     
     [ObservableProperty]
-    private string _historyAutoRefreshLastRunTime;
+    private string historyAutoRefreshLastRunTime;
 
     public ObservableCollection<RefreshModeOption> HistoryAutoRefreshModes{ get; } = new(){
-        new RefreshModeOption(){ DisplayName = "Default All", value = HistoryRefreshMode.DefaultAll },
-        new RefreshModeOption(){ DisplayName = "Default Active", value = HistoryRefreshMode.DefaultActive },
-        new RefreshModeOption(){ DisplayName = "Fast New Releases", value = HistoryRefreshMode.FastNewReleases },
+        new RefreshModeOption{ DisplayName = "Default All", value = HistoryRefreshMode.DefaultAll },
+        new RefreshModeOption{ DisplayName = "Default Active", value = HistoryRefreshMode.DefaultActive },
+        new RefreshModeOption{ DisplayName = "Fast New Releases", value = HistoryRefreshMode.FastNewReleases },
     };
 
     [ObservableProperty]
-    private double? _simultaneousDownloads;
+    private double? simultaneousDownloads;
 
     [ObservableProperty]
-    private double? _simultaneousProcessingJobs;
+    private double? simultaneousProcessingJobs;
 
     [ObservableProperty]
-    private bool _downloadMethodeNew;
-
-    [ObservableProperty]
-    private bool _downloadAllowEarlyStart;
-
-    [ObservableProperty]
-    private double? _downloadSpeed;
+    private bool downloadMethodeNew;
     
     [ObservableProperty]
-    private bool _downloadSpeedInBits;
+    private bool downloadOnlyWithAllSelectedDubSub;
 
     [ObservableProperty]
-    private double? _retryAttempts;
+    private bool downloadAllowEarlyStart;
 
     [ObservableProperty]
-    private double? _retryDelay;
+    private double? downloadSpeed;
     
     [ObservableProperty]
-    private bool _trayIconEnabled;
+    private bool downloadSpeedInBits;
+
+    [ObservableProperty]
+    private double? retryAttempts;
+
+    [ObservableProperty]
+    private double? retryDelay;
     
     [ObservableProperty]
-    private bool _startMinimizedToTray;
+    private bool trayIconEnabled;
     
     [ObservableProperty]
-    private bool _minimizeToTray;
+    private bool startMinimizedToTray;
     
     [ObservableProperty]
-    private bool _minimizeToTrayOnClose;
+    private bool minimizeToTray;
+    
+    [ObservableProperty]
+    private bool minimizeToTrayOnClose;
 
     [ObservableProperty]
-    private ComboBoxItem _selectedHistoryLang;
+    private ComboBoxItem selectedHistoryLang;
 
     [ObservableProperty]
-    private ComboBoxItem? _currentAppTheme;
+    private ComboBoxItem? currentAppTheme;
 
     [ObservableProperty]
-    private bool _useCustomAccent;
+    private bool useCustomAccent;
 
     [ObservableProperty]
-    private string _backgroundImagePath;
+    private string backgroundImagePath;
 
     [ObservableProperty]
-    private double? _backgroundImageOpacity;
+    private double? backgroundImageOpacity;
 
     [ObservableProperty]
-    private double? _backgroundImageBlurRadius;
+    private double? backgroundImageBlurRadius;
 
     [ObservableProperty]
-    private Color _listBoxColor;
+    private Color listBoxColor;
 
     [ObservableProperty]
-    private Color _customAccentColor = Colors.SlateBlue;
+    private Color customAccentColor = Colors.SlateBlue;
 
     [ObservableProperty]
-    private string _sonarrHost = "localhost";
+    private string sonarrHost = "localhost";
 
     [ObservableProperty]
-    private string _sonarrPort = "8989";
+    private string sonarrPort = "8989";
 
     [ObservableProperty]
-    private string _sonarrApiKey = "";
+    private string sonarrApiKey = "";
 
     [ObservableProperty]
-    private bool _sonarrUseSsl = false;
+    private bool sonarrUseSsl;
 
     [ObservableProperty]
-    private bool _sonarrUseSonarrNumbering = false;
+    private bool sonarrUseSonarrNumbering;
 
     [ObservableProperty]
-    private bool _logMode = false;
+    private bool logMode;
 
     public ObservableCollection<Color> PredefinedColors{ get; } = new(){
         Color.FromRgb(255, 185, 0),
@@ -202,76 +204,76 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     };
 
     public ObservableCollection<ComboBoxItem> AppThemes{ get; } = new(){
-        new ComboBoxItem(){ Content = "System" },
-        new ComboBoxItem(){ Content = "Light" },
-        new ComboBoxItem(){ Content = "Dark" },
+        new ComboBoxItem{ Content = "System" },
+        new ComboBoxItem{ Content = "Light" },
+        new ComboBoxItem{ Content = "Dark" },
     };
 
     public ObservableCollection<ComboBoxItem> HistoryLangList{ get; } = new(){
-        new ComboBoxItem(){ Content = "default" },
-        new ComboBoxItem(){ Content = "de-DE" },
-        new ComboBoxItem(){ Content = "en-US" },
-        new ComboBoxItem(){ Content = "es-419" },
-        new ComboBoxItem(){ Content = "es-ES" },
-        new ComboBoxItem(){ Content = "fr-FR" },
-        new ComboBoxItem(){ Content = "it-IT" },
-        new ComboBoxItem(){ Content = "pt-BR" },
-        new ComboBoxItem(){ Content = "pt-PT" },
-        new ComboBoxItem(){ Content = "ru-RU" },
-        new ComboBoxItem(){ Content = "hi-IN" },
-        new ComboBoxItem(){ Content = "ar-SA" },
+        new ComboBoxItem{ Content = "default" },
+        new ComboBoxItem{ Content = "de-DE" },
+        new ComboBoxItem{ Content = "en-US" },
+        new ComboBoxItem{ Content = "es-419" },
+        new ComboBoxItem{ Content = "es-ES" },
+        new ComboBoxItem{ Content = "fr-FR" },
+        new ComboBoxItem{ Content = "it-IT" },
+        new ComboBoxItem{ Content = "pt-BR" },
+        new ComboBoxItem{ Content = "pt-PT" },
+        new ComboBoxItem{ Content = "ru-RU" },
+        new ComboBoxItem{ Content = "hi-IN" },
+        new ComboBoxItem{ Content = "ar-SA" },
     };
 
     [ObservableProperty]
-    private string _downloadDirPath;
+    private string downloadDirPath;
 
     [ObservableProperty]
-    private bool _proxyEnabled;
+    private bool proxyEnabled;
 
     [ObservableProperty]
-    private bool _proxySocks;
+    private bool proxySocks;
 
     [ObservableProperty]
-    private string _proxyHost;
+    private string proxyHost;
 
     [ObservableProperty]
-    private double? _proxyPort;
+    private double? proxyPort;
 
     [ObservableProperty]
-    private string _proxyUsername;
+    private string proxyUsername;
 
     [ObservableProperty]
-    private string _proxyPassword;
+    private string proxyPassword;
     
     [ObservableProperty]
-    private string _flareSolverrHost = "localhost";
+    private string flareSolverrHost = "localhost";
 
     [ObservableProperty]
-    private string _flareSolverrPort = "8191";
+    private string flareSolverrPort = "8191";
 
     [ObservableProperty]
-    private bool _flareSolverrUseSsl = false;
+    private bool flareSolverrUseSsl;
 
     [ObservableProperty]
-    private bool _useFlareSolverr = false;
+    private bool useFlareSolverr;
 
     [ObservableProperty]
-    private string _tempDownloadDirPath;
+    private string tempDownloadDirPath;
 
     [ObservableProperty]
-    private bool _downloadFinishedPlaySound;
+    private bool downloadFinishedPlaySound;
 
     [ObservableProperty]
-    private string _downloadFinishedSoundPath;
+    private string downloadFinishedSoundPath;
     
     [ObservableProperty]
-    private bool _downloadFinishedExecute;
+    private bool downloadFinishedExecute;
 
     [ObservableProperty]
-    private string _downloadFinishedExecutePath;
+    private string downloadFinishedExecutePath;
 
     [ObservableProperty]
-    private string _currentIp = "";
+    private string currentIp = "";
 
     private readonly FluentAvaloniaTheme _faTheme;
 
@@ -282,8 +284,11 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     public GeneralSettingsViewModel(){
         _storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        _currentVersion = $"{version?.Major}.{version?.Minor}.{version?.Build}";
+        var version = Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion.Split('+')[0];
+        CurrentVersion = $"v{version}";
 
         _faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme ??[];
 
@@ -348,6 +353,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         DownloadSpeedInBits = options.DownloadSpeedInBits;
         DownloadMethodeNew = options.DownloadMethodeNew;
         DownloadAllowEarlyStart = options.DownloadAllowEarlyStart;
+        DownloadOnlyWithAllSelectedDubSub = options.DownloadOnlyWithAllSelectedDubSub;
         RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10);
         RetryDelay = Math.Clamp((options.RetryDelay), 1, 30);
         DownloadToTempFolder = options.DownloadToTempFolder;
@@ -369,6 +375,16 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         History = options.History;
 
+        HistoryAutoRefreshModeHint = HistoryAutoRefreshMode switch{
+            HistoryRefreshMode.DefaultAll =>
+                "Refreshes the full history using the default method and includes all entries",
+            HistoryRefreshMode.DefaultActive =>
+                "Refreshes the history using the default method and includes only active entries",
+            HistoryRefreshMode.FastNewReleases =>
+                "Uses the faster refresh method, similar to the custom calendar, focusing on newly released items",
+            _ => ""
+        };
+        
         settingsLoaded = true;
     }
 
@@ -385,6 +401,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         settings.DownloadMethodeNew = DownloadMethodeNew;
         settings.DownloadAllowEarlyStart = DownloadAllowEarlyStart;
+        settings.DownloadOnlyWithAllSelectedDubSub = DownloadOnlyWithAllSelectedDubSub;
 
         settings.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
         settings.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);

@@ -150,10 +150,10 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _quickAddMode;
-    
+
     [ObservableProperty]
     private static bool _showCrFetches;
-    
+
     [ObservableProperty]
     private bool _isLoading;
 
@@ -168,12 +168,12 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     [ObservableProperty]
     private static bool _sortDir;
 
-    public ObservableCollection<SortingListElement> SortingList{ get; } =[];
+    public ObservableCollection<SortingListElement> SortingList{ get; } = [];
 
-    public ObservableCollection<SeasonViewModel> Seasons{ get; set; } =[];
+    public ObservableCollection<SeasonViewModel> Seasons{ get; set; } = [];
 
-    public ObservableCollection<AnilistSeries> SelectedSeason{ get; set; } =[];
-    
+    public ObservableCollection<AnilistSeries> SelectedSeason{ get; set; } = [];
+
     private SeasonViewModel currentSelection;
 
     public UpcomingPageViewModel(){
@@ -213,8 +213,8 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             if (!string.IsNullOrEmpty(anilistSeries.CrunchyrollID) && crunchySimul?.Data is{ Count: > 0 }){
                 var crunchySeries = crunchySimul.Data.FirstOrDefault(ele => ele.Id == anilistSeries.CrunchyrollID);
                 if (crunchySeries != null){
-                    anilistSeries.AudioLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.AudioLocales ??[]));
-                    anilistSeries.SubtitleLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.SubtitleLocales ??[]));
+                    anilistSeries.AudioLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.AudioLocales ?? []));
+                    anilistSeries.SubtitleLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.SubtitleLocales ?? []));
                 }
             }
         }
@@ -240,18 +240,17 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             if (!string.IsNullOrEmpty(anilistSeries.CrunchyrollID) && crunchySimul?.Data is{ Count: > 0 }){
                 var crunchySeries = crunchySimul.Data.FirstOrDefault(ele => ele.Id == anilistSeries.CrunchyrollID);
                 if (crunchySeries != null){
-                    anilistSeries.AudioLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.AudioLocales ??[]));
-                    anilistSeries.SubtitleLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.SubtitleLocales ??[]));
+                    anilistSeries.AudioLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.AudioLocales ?? []));
+                    anilistSeries.SubtitleLocales.AddRange(Languages.LocalListToLangList(crunchySeries.SeriesMetadata.SubtitleLocales ?? []));
                 }
             }
         }
-        
+
         FilterItems();
 
         SortItems();
     }
 
- 
 
     [RelayCommand]
     public void OpenTrailer(AnilistSeries series){
@@ -333,8 +332,8 @@ public partial class UpcomingPageViewModel : ViewModelBase{
 
             hasNext = pageNode?.PageInfo?.HasNextPage ?? false;
             page++;
-        } while (hasNext || page <= maxPage);
-        
+        } while (hasNext && page <= maxPage);
+
         var list = allMedia.Where(ele => ele.ExternalLinks != null && ele.ExternalLinks.Any(external =>
             string.Equals(external.Site, "Crunchyroll", StringComparison.OrdinalIgnoreCase))).ToList();
 
@@ -462,45 +461,27 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     }
 
     private ObservableCollection<SeasonViewModel> GetTargetSeasonsAndYears(){
-        DateTime now = DateTime.Now;
-        int currentMonth = now.Month;
+        var seasons = new[]{ "WINTER", "SPRING", "SUMMER", "FALL" };
+
+        var now = DateTime.Now;
         int currentYear = now.Year;
+        int currentSeasonIndex = (now.Month - 1) / 3;
 
-        string currentSeason;
-        if (currentMonth >= 1 && currentMonth <= 3)
-            currentSeason = "WINTER";
-        else if (currentMonth >= 4 && currentMonth <= 6)
-            currentSeason = "SPRING";
-        else if (currentMonth >= 7 && currentMonth <= 9)
-            currentSeason = "SUMMER";
-        else
-            currentSeason = "FALL";
+        var result = new ObservableCollection<SeasonViewModel>();
 
-
-        var seasons = new List<string>{ "WINTER", "SPRING", "SUMMER", "FALL" };
-
-        int currentSeasonIndex = seasons.IndexOf(currentSeason);
-
-        var targetSeasons = new ObservableCollection<SeasonViewModel>();
-
-        // Includes: -2 (two seasons ago), -1 (previous), 0 (current), 1 (next)
         for (int i = -2; i <= 1; i++){
-            int targetIndex = (currentSeasonIndex + i + 4) % 4;
-            string targetSeason = seasons[targetIndex];
-            int targetYear = currentYear;
+            int rawIndex = currentSeasonIndex + i;
 
+            int yearOffset = (int)Math.Floor(rawIndex / 4.0);
+            int seasonIndex = (rawIndex % 4 + 4) % 4;
 
-            if (i < 0 && targetIndex == 3){
-                targetYear--;
-            } else if (i > 0 && targetIndex == 0){
-                targetYear++;
-            }
-
-
-            targetSeasons.Add(new SeasonViewModel(){ Season = targetSeason, Year = targetYear });
+            result.Add(new SeasonViewModel{
+                Season = seasons[seasonIndex],
+                Year = currentYear + yearOffset
+            });
         }
 
-        return targetSeasons;
+        return result;
     }
 
     public void SelectionChangedOfSeries(AnilistSeries? value){
@@ -512,7 +493,7 @@ public partial class UpcomingPageViewModel : ViewModelBase{
     partial void OnSelectedSeriesChanged(AnilistSeries? value){
         SelectionChangedOfSeries(value);
     }
-    
+
     partial void OnShowCrFetchesChanged(bool value){
         FilterItems();
         SortItems();
@@ -582,19 +563,18 @@ public partial class UpcomingPageViewModel : ViewModelBase{
             SelectedSeason.Add(item);
         }
     }
-    
-    private void FilterItems(){
 
+    private void FilterItems(){
         List<AnilistSeries> filteredList;
-        
+
         if (ProgramManager.Instance.AnilistSeasons.ContainsKey(currentSelection.Season + currentSelection.Year)){
             filteredList = ProgramManager.Instance.AnilistSeasons[currentSelection.Season + currentSelection.Year];
         } else{
             return;
         }
-        
+
         filteredList = !ShowCrFetches ? filteredList.Where(e => !e.FetchedFromCR).ToList() : filteredList.ToList();
-        
+
         SelectedSeason.Clear();
         foreach (var item in filteredList){
             SelectedSeason.Add(item);

@@ -8,6 +8,9 @@ namespace CRD.Utils.Structs.Crunchyroll;
 public class CrDownloadOptions{
     #region General Settings
 
+    [JsonProperty("gh_update_prereleases")]
+    public bool GhUpdatePrereleases{ get; set; }
+    
     [JsonProperty("shutdown_when_queue_empty")]
     public bool ShutdownWhenQueueEmpty{ get; set; }
 
@@ -61,6 +64,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("download_finished_execute_path")]
     public string? DownloadFinishedExecutePath{ get; set; }
+    
+    [JsonProperty("download_only_with_all_selected_dubsub")]
+    public bool DownloadOnlyWithAllSelectedDubSub{ get; set; }
 
     [JsonProperty("background_image_opacity")]
     public double BackgroundImageOpacity{ get; set; }
@@ -258,6 +264,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_fonts")]
     public bool MuxFonts{ get; set; }
+    
+    [JsonProperty("mux_typesetting_fonts")]
+    public bool MuxTypesettingFonts{ get; set; }
 
     [JsonProperty("mux_cover")]
     public bool MuxCover{ get; set; }

@@ -80,7 +80,10 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private bool _muxToMp3;
 
     [ObservableProperty]
-    private bool _muxFonts;
+    private bool muxFonts;
+    
+    [ObservableProperty]
+    private bool muxTypesettingFonts;
 
     [ObservableProperty]
     private bool _muxCover;
@@ -246,9 +249,13 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     public ObservableCollection<ListBoxItem> DubLangList{ get; } = [];
 
 
-    public ObservableCollection<ComboBoxItem> DefaultDubLangList{ get; } = [];
+    public ObservableCollection<ComboBoxItem> DefaultDubLangList{ get; } = [
+        new(){ Content = "none" },
+    ];
 
-    public ObservableCollection<ComboBoxItem> DefaultSubLangList{ get; } = [];
+    public ObservableCollection<ComboBoxItem> DefaultSubLangList{ get; } = [
+        new(){ Content = "none" },
+    ];
 
 
     public ObservableCollection<ListBoxItem> SubLangList{ get; } =[
@@ -441,6 +448,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         MuxToMp4 = options.Mp4;
         MuxToMp3 = options.AudioOnlyToMp3;
         MuxFonts = options.MuxFonts;
+        MuxTypesettingFonts = options.MuxTypesettingFonts;
         MuxCover = options.MuxCover;
         SyncTimings = options.SyncTiming;
         SkipSubMux = options.SkipSubsMux;
@@ -516,6 +524,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.Mp4 = MuxToMp4;
         CrunchyrollManager.Instance.CrunOptions.AudioOnlyToMp3 = MuxToMp3;
         CrunchyrollManager.Instance.CrunOptions.MuxFonts = MuxFonts;
+        CrunchyrollManager.Instance.CrunOptions.MuxTypesettingFonts = MuxTypesettingFonts;
         CrunchyrollManager.Instance.CrunOptions.MuxCover = MuxCover;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
         CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;

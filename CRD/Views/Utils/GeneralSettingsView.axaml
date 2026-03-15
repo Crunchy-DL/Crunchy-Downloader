@@ -118,6 +118,12 @@
                         <CheckBox IsChecked="{Binding DownloadAllowEarlyStart}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
+                
+                <controls:SettingsExpanderItem Content="Skip Episodes Missing Selected Languages" Description="Episodes will only be added to the queue if every selected audio and subtitle language is available">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding DownloadOnlyWithAllSelectedDubSub}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Max Download Speed"
                                                Description="Download in Kb/s - 0 is full speed">

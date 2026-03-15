@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -16,6 +17,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils.Files;
 using CRD.Utils.Updater;
 using Markdig;
 using Markdig.Syntax;
@@ -26,33 +28,48 @@ namespace CRD.ViewModels;
 
 public partial class UpdateViewModel : ViewModelBase{
     [ObservableProperty]
-    private bool _updateAvailable;
+    private bool updating;
 
     [ObservableProperty]
-    private bool _updating;
+    private double progress;
 
     [ObservableProperty]
-    private double _progress;
-
-    [ObservableProperty]
-    private bool _failed;
-
-    private AccountPageViewModel accountPageViewModel;
+    private bool failed;
     
     [ObservableProperty]
-    private string _currentVersion;
+    private string currentVersion;
+    
+    [ObservableProperty]
+    private bool ghUpdatePrereleases;
 
     public ObservableCollection<Control> ChangelogBlocks{ get; } = new();
 
+    public ProgramManager ProgramManager { get; }
+    
     public UpdateViewModel(){
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        _currentVersion = $"{version?.Major}.{version?.Minor}.{version?.Build}";
+        var version = Assembly
+            .GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion.Split('+')[0];
+        CurrentVersion = $"v{version}";
+        
+        ProgramManager = ProgramManager.Instance;
 
         LoadChangelog();
-
-        UpdateAvailable = ProgramManager.Instance.UpdateAvailable;
-
+        
+        GhUpdatePrereleases = CrunchyrollManager.Instance.CrunOptions.GhUpdatePrereleases;
+        
         Updater.Instance.PropertyChanged += Progress_PropertyChanged;
+    }
+    
+    partial void OnGhUpdatePrereleasesChanged(bool value){
+        CrunchyrollManager.Instance.CrunOptions.GhUpdatePrereleases = value;
+        CfgManager.WriteCrSettings();
+    }
+    
+    [RelayCommand]
+    public async Task CheckForUpdate(){
+        ProgramManager.UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
     }
 
     [RelayCommand]
@@ -63,10 +80,10 @@ public partial class UpdateViewModel : ViewModelBase{
     }
 
     private void Progress_PropertyChanged(object? sender, PropertyChangedEventArgs e){
-        if (e.PropertyName == nameof(Updater.Instance.progress)){
-            Progress = Updater.Instance.progress;
-        } else if (e.PropertyName == nameof(Updater.Instance.failed)){
-            Failed = Updater.Instance.failed;
+        if (e.PropertyName == nameof(Updater.Instance.Progress)){
+            Progress = Updater.Instance.Progress;
+        } else if (e.PropertyName == nameof(Updater.Instance.Failed)){
+            Failed = Updater.Instance.Failed;
             ProgramManager.Instance.NavigationLock = !Failed;
         }
     }

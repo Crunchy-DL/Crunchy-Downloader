@@ -60,7 +60,7 @@ public class Helpers{
         return clone;
     }
 
-    public static T DeepCopy<T>(T obj){
+    public static T? DeepCopy<T>(T obj){
         var settings = new JsonSerializerSettings{
             ContractResolver = new DefaultContractResolver{
                 IgnoreSerializableAttribute = true,
@@ -1016,10 +1016,14 @@ public class Helpers{
 
     public static bool ExecuteFile(string filePath){
         try{
-            Process.Start(new ProcessStartInfo{
-                FileName = filePath,
-                UseShellExecute = true
-            });
+            if (Path.GetExtension(filePath).Equals(".ps1", StringComparison.OrdinalIgnoreCase)){
+                Process.Start("powershell.exe", $"-ExecutionPolicy Bypass -File \"{filePath}\"");
+            } else{
+                Process.Start(new ProcessStartInfo{
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
 
             return true;
         } catch (Exception ex){

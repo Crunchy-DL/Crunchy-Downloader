@@ -245,9 +245,20 @@ public class HistorySeries : INotifyPropertyChanged{
         }
     }
 
-    public void UpdateNewEpisodes(){
-        int count = 0;
+ public void UpdateNewEpisodes(){
+        NewEpisodes = EnumerateEpisodes().Count();
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NewEpisodes)));
+    }
 
+    public async Task AddNewMissingToDownloads(bool checkQueueForId = false){
+        var episodes = EnumerateEpisodes().ToList();
+        episodes.Reverse();
+        foreach (var ep in episodes){
+            await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", checkQueueForId);
+        }
+    }
+
+    private IEnumerable<HistoryEpisode> EnumerateEpisodes(){
         bool foundWatched = false;
         var options = CrunchyrollManager.Instance.CrunOptions;
 
@@ -257,64 +268,56 @@ public class HistorySeries : INotifyPropertyChanged{
                              !string.IsNullOrEmpty(SonarrSeriesId);
         bool skipUnmonitored = options.HistorySkipUnmonitored;
         bool countMissing = options.HistoryCountMissing;
-        bool useSonarrCounting = options.HistoryCountSonarr;
+        bool useSonarr = sonarrEnabled && options.HistoryCountSonarr;
 
         for (int i = Seasons.Count - 1; i >= 0; i--){
             var season = Seasons[i];
             var episodes = season.EpisodesList;
 
-            if (season.SpecialSeason == true){
+            if (season.SpecialSeason){
                 if (historyAddSpecials){
                     for (int j = episodes.Count - 1; j >= 0; j--){
                         var ep = episodes[j];
 
-                        if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
+                        if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored)
                             continue;
-                        }
 
-                        if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
-                            count++;
-                        }
+                        if (ShouldCountEpisode(ep, useSonarr, countMissing, false))
+                            yield return ep;
                     }
                 }
 
                 continue;
             }
 
-
             for (int j = episodes.Count - 1; j >= 0; j--){
                 var ep = episodes[j];
 
-                if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
+                if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored)
                     continue;
-                }
 
                 if (ep.SpecialEpisode){
-                    if (historyAddSpecials && ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
-                        count++;
+                    if (historyAddSpecials &&
+                        ShouldCountEpisode(ep, useSonarr, countMissing, false)){
+                        yield return ep;
                     }
 
                     continue;
                 }
 
-                if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, foundWatched)){
-                    count++;
+                if (ShouldCountEpisode(ep, useSonarr, countMissing, foundWatched)){
+                    yield return ep;
                 } else{
                     foundWatched = true;
-                    //if not count specials break
-                    if (!historyAddSpecials && !countMissing){
+
+                    if (!historyAddSpecials && !countMissing)
                         break;
-                    }
                 }
             }
 
-            if (foundWatched && !historyAddSpecials && !countMissing){
+            if (foundWatched && !historyAddSpecials && !countMissing)
                 break;
-            }
         }
-
-        NewEpisodes = count;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(NewEpisodes)));
     }
 
     private bool ShouldCountEpisode(HistoryEpisode episode, bool useSonarr, bool countMissing, bool foundWatched){
@@ -327,71 +330,6 @@ public class HistorySeries : INotifyPropertyChanged{
     public void SetFetchingData(){
         FetchingData = true;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(FetchingData)));
-    }
-
-    public async Task AddNewMissingToDownloads(bool chekQueueForId = false){
-        bool foundWatched = false;
-        var options = CrunchyrollManager.Instance.CrunOptions;
-
-        bool historyAddSpecials = options.HistoryAddSpecials;
-        bool sonarrEnabled = SeriesType != SeriesType.Artist &&
-                             options.SonarrProperties?.SonarrEnabled == true &&
-                             !string.IsNullOrEmpty(SonarrSeriesId);
-        bool skipUnmonitored = options.HistorySkipUnmonitored;
-        bool countMissing = options.HistoryCountMissing;
-        bool useSonarrCounting = options.HistoryCountSonarr;
-
-        for (int i = Seasons.Count - 1; i >= 0; i--){
-            var season = Seasons[i];
-            var episodes = season.EpisodesList;
-
-            if (season.SpecialSeason == true){
-                if (historyAddSpecials){
-                    for (int j = episodes.Count - 1; j >= 0; j--){
-                        var ep = episodes[j];
-
-                        if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
-                            continue;
-                        }
-
-                        if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
-                            await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", chekQueueForId);
-                        }
-                    }
-                }
-
-                continue;
-            }
-
-            for (int j = episodes.Count - 1; j >= 0; j--){
-                var ep = episodes[j];
-
-                if (skipUnmonitored && sonarrEnabled && !ep.SonarrIsMonitored){
-                    continue;
-                }
-
-                if (ep.SpecialEpisode){
-                    if (historyAddSpecials && ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, false)){
-                        await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", chekQueueForId);
-                    }
-
-                    continue;
-                }
-
-                if (ShouldCountEpisode(ep, sonarrEnabled && useSonarrCounting, countMissing, foundWatched)){
-                    await ep.DownloadEpisode(EpisodeDownloadMode.Default, "", chekQueueForId);
-                } else{
-                    foundWatched = true;
-                    if (!historyAddSpecials && !countMissing){
-                        break;
-                    }
-                }
-            }
-
-            if (foundWatched && !historyAddSpecials && !countMissing){
-                break;
-            }
-        }
     }
 
     public async Task<bool> FetchData(string? seasonId){

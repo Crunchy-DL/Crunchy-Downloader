@@ -353,7 +353,7 @@ public class CrunchyrollManager{
                     Doing = "Waiting for Muxing/Encoding"
                 };
                 QueueManager.Instance.Queue.Refresh();
-                await QueueManager.Instance.activeProcessingJobs.WaitAsync(data.Cts.Token);
+                await QueueManager.Instance.ActiveProcessingJobs.WaitAsync(data.Cts.Token);
             }
 
 
@@ -397,8 +397,8 @@ public class CrunchyrollManager{
                                 VideoTitle = res.VideoTitle,
                                 Novids = options.Novids,
                                 NoCleanup = options.Nocleanup,
-                                DefaultAudio = Languages.FindLang(options.DefaultAudio),
-                                DefaultSub = Languages.FindLang(options.DefaultSub),
+                                DefaultAudio = options.DefaultAudio != "none" ? Languages.FindLang(options.DefaultAudio) : null,
+                                DefaultSub = options.DefaultSub != "none" ?  Languages.FindLang(options.DefaultSub) : null,
                                 MkvmergeOptions = options.MkvmergeOptions,
                                 ForceMuxer = options.Force,
                                 SyncTiming = options.SyncTiming,
@@ -442,11 +442,11 @@ public class CrunchyrollManager{
 
                             var preset = FfmpegEncoding.GetPreset(options.EncodingPresetName ?? string.Empty);
 
-                            if (preset != null) await Helpers.RunFFmpegWithPresetAsync(merger.options.Output, preset, data);
+                            if (preset != null) await Helpers.RunFFmpegWithPresetAsync(merger.Options.Output, preset, data);
                         }
 
                         if (options.DownloadToTempFolder){
-                            await MoveFromTempFolder(merger, data, options, res.TempFolderPath ?? CfgManager.PathTEMP_DIR, merger.options.Subtitles);
+                            await MoveFromTempFolder(merger, data, options, res.TempFolderPath ?? CfgManager.PathTEMP_DIR, merger.Options.Subtitles);
                         }
                     }
                 } else{
@@ -464,8 +464,8 @@ public class CrunchyrollManager{
                             VideoTitle = res.VideoTitle,
                             Novids = options.Novids,
                             NoCleanup = options.Nocleanup,
-                            DefaultAudio = Languages.FindLang(options.DefaultAudio),
-                            DefaultSub = Languages.FindLang(options.DefaultSub),
+                            DefaultAudio = options.DefaultAudio != "none" ? Languages.FindLang(options.DefaultAudio) : null,
+                            DefaultSub = options.DefaultSub != "none" ?  Languages.FindLang(options.DefaultSub) : null,
                             MkvmergeOptions = options.MkvmergeOptions,
                             ForceMuxer = options.Force,
                             SyncTiming = options.SyncTiming,
@@ -500,14 +500,14 @@ public class CrunchyrollManager{
                         QueueManager.Instance.Queue.Refresh();
 
                         var preset = FfmpegEncoding.GetPreset(options.EncodingPresetName ?? string.Empty);
-                        if (preset != null && result.merger != null) await Helpers.RunFFmpegWithPresetAsync(result.merger.options.Output, preset, data);
+                        if (preset != null && result.merger != null) await Helpers.RunFFmpegWithPresetAsync(result.merger.Options.Output, preset, data);
                     }
 
                     if (options.DownloadToTempFolder){
                         var tempFolder = res.TempFolderPath ?? CfgManager.PathTEMP_DIR;
 
                         List<SubtitleInput> subtitles =
-                            result.merger?.options.Subtitles
+                            result.merger?.Options.Subtitles
                             ?? res.Data
                                 .Where(d => d.Type == DownloadMediaType.Subtitle)
                                 .Select(d => new SubtitleInput{
@@ -566,7 +566,7 @@ public class CrunchyrollManager{
         } catch (OperationCanceledException){
             // expected when removed/canceled
         } finally{
-            if (options.DownloadAllowEarlyStart) QueueManager.Instance.activeProcessingJobs.Release();
+            if (options.DownloadAllowEarlyStart) QueueManager.Instance.ActiveProcessingJobs.Release();
         }
 
 
@@ -639,7 +639,7 @@ public class CrunchyrollManager{
         }
 
         // Move the main output file
-        await MoveFile(merger?.options.Output ?? string.Empty, tempFolderPath, data.DownloadPath ?? CfgManager.PathVIDEOS_DIR, options);
+        await MoveFile(merger?.Options.Output ?? string.Empty, tempFolderPath, data.DownloadPath ?? CfgManager.PathVIDEOS_DIR, options);
 
         // Move the subtitle files
         foreach (var downloadedMedia in subtitles){
@@ -785,7 +785,7 @@ public class CrunchyrollManager{
         List<string> notSyncedDubs = [];
 
 
-        if (options is{ SyncTiming: true, DlVideoOnce: true } && merger.options.OnlyVid.Count > 0 && merger.options.OnlyAudio.Count > 0){
+        if (options is{ SyncTiming: true, DlVideoOnce: true } && merger.Options.OnlyVid.Count > 0 && merger.Options.OnlyAudio.Count > 0){
             crunchyEpMeta.DownloadProgress = new DownloadProgress(){
                 IsDownloading = true,
                 Percent = 100,
@@ -796,7 +796,7 @@ public class CrunchyrollManager{
 
             QueueManager.Instance.Queue.Refresh();
 
-            var basePath = merger.options.OnlyVid.First().Path;
+            var basePath = merger.Options.OnlyVid.First().Path;
             var syncVideosList = data.Where(a => a.Type == DownloadMediaType.SyncVideo).ToList();
 
             if (!string.IsNullOrEmpty(basePath) && syncVideosList.Count > 0){
@@ -810,12 +810,12 @@ public class CrunchyrollManager{
                             continue;
                         }
 
-                        var audio = merger.options.OnlyAudio.FirstOrDefault(audio => audio.Language.CrLocale == syncVideo.Lang.CrLocale);
+                        var audio = merger.Options.OnlyAudio.FirstOrDefault(audio => audio.Language.CrLocale == syncVideo.Lang.CrLocale);
                         if (audio != null){
                             audio.Delay = (int)(delay * 1000);
                         }
 
-                        var subtitles = merger.options.Subtitles.Where(a => a.RelatedVideoDownloadMedia == syncVideo).ToList();
+                        var subtitles = merger.Options.Subtitles.Where(a => a.RelatedVideoDownloadMedia == syncVideo).ToList();
                         if (subtitles.Count > 0){
                             foreach (var subMergerInput in subtitles){
                                 subMergerInput.Delay = (int)(delay * 1000);
@@ -2204,7 +2204,7 @@ public class CrunchyrollManager{
                                 SubtitleUtils.CleanAssAndEnsureScriptInfo(subsAssReqResponse.ResponseContent, options, langItem);
 
                             sxData.Title = $"{langItem.Name}";
-                            var keysList = FontsManager.ExtractFontsFromAss(subsAssReqResponse.ResponseContent);
+                            var keysList = FontsManager.ExtractFontsFromAss(subsAssReqResponse.ResponseContent,options.MuxTypesettingFonts);
                             sxData.Fonts = FontsManager.Instance.GetDictFromKeyList(keysList);
                         } else if (subsItem.format == "vtt" && options.ConvertVtt2Ass){
                             var assBuilder = new StringBuilder();
@@ -2282,7 +2282,7 @@ public class CrunchyrollManager{
                             subsAssReqResponse.ResponseContent = assBuilder.ToString();
 
                             sxData.Title = $"{langItem.Name} / CC Subtitle";
-                            var keysList = FontsManager.ExtractFontsFromAss(subsAssReqResponse.ResponseContent);
+                            var keysList = FontsManager.ExtractFontsFromAss(subsAssReqResponse.ResponseContent,options.MuxTypesettingFonts);
                             sxData.Fonts = FontsManager.Instance.GetDictFromKeyList(keysList);
                             sxData.Path = sxData.Path.Replace("vtt", "ass");
                         }

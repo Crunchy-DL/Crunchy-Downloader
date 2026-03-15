@@ -1,4 +1,6 @@
 using System;
+using System.Globalization;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -6,8 +8,10 @@ using CRD.ViewModels;
 using MainWindow = CRD.Views.MainWindow;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils;
 
 namespace CRD;
 
@@ -35,6 +39,7 @@ public class App : Application{
                 
                 mainWindow.Opened += (_, _) => { manager.SetBackgroundImage(); };
                 desktop.Exit += (_, _) => { manager.StopBackgroundTasks(); };
+                QueueManager.Instance.QueueStateChanged += (_, _) => { Dispatcher.UIThread.Post(UpdateTrayTooltip); };
                 
                 if (!CrunchyrollManager.Instance.CrunOptions.StartMinimizedToTray){
                     desktop.MainWindow = mainWindow;
@@ -59,6 +64,31 @@ public class App : Application{
         };
 
         var menu = new NativeMenu();
+        
+        var refreshH = new NativeMenuItem("Refresh History");
+        
+        var refreshAll = new NativeMenuItem("Refresh All");
+        refreshAll.Click += (_, _) => _ = ProgramManager.Instance.RefreshHistory(FilterType.All);
+
+        var refreshActive = new NativeMenuItem("Refresh Active");
+        refreshActive.Click += (_, _) => _ = ProgramManager.Instance.RefreshHistory(FilterType.Active);
+
+        var refreshNewReleases = new NativeMenuItem("Fast New Releases");
+        var crunManager = CrunchyrollManager.Instance;
+        refreshNewReleases.Click += (_, _) => _ = ProgramManager.Instance.RefreshHistoryWithNewReleases(crunManager,crunManager.CrunOptions);
+
+        refreshH.Menu = new NativeMenu{
+            Items ={
+                refreshAll,
+                refreshActive,
+                refreshNewReleases
+            }
+        };
+        
+        
+        menu.Items.Add(refreshH);
+        
+        menu.Items.Add(new NativeMenuItemSeparator());
         
         var exitItem = new NativeMenuItem("Exit");
         exitItem.Click += (_, _) => {
@@ -115,6 +145,30 @@ public class App : Application{
             window.WindowState = WindowState.Normal;
 
         window.Activate();
+    }
+    
+    public void UpdateTrayTooltip(){
+        var downloadsToProcess = QueueManager.Instance.Queue.Count(e => e.DownloadProgress is{ Done: false, Error: false });
+        
+        var options = CrunchyrollManager.Instance.CrunOptions;
+        var lastRefresh = ProgramManager.Instance.GetLastRefreshTime();
+
+        string nextRefreshString = "";
+
+        if (options.HistoryAutoRefreshIntervalMinutes != 0){
+            var baseTime = lastRefresh == DateTime.MinValue
+                ? DateTime.Now
+                : lastRefresh;
+
+            var nextRefresh = baseTime
+                .AddMinutes(options.HistoryAutoRefreshIntervalMinutes)
+                .ToString("t", CultureInfo.CurrentCulture);
+
+            nextRefreshString = $"\nNext Refresh: {nextRefresh}";
+        }
+
+        trayIcon?.ToolTipText =
+            $"Queue: {downloadsToProcess}" + nextRefreshString;
     }
 
     public void SetTrayIconVisible(bool enabled){

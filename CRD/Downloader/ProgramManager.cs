@@ -10,11 +10,13 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
 using CRD.Utils.Updater;
 using FluentAvalonia.Styling;
@@ -116,7 +118,7 @@ public partial class ProgramManager : ObservableObject{
         CleanUpOldUpdater();
     }
 
-    private async Task RefreshHistory(FilterType filterType){
+    internal async Task RefreshHistory(FilterType filterType){
         FetchingData = true;
 
 
@@ -199,20 +201,7 @@ public partial class ProgramManager : ObservableObject{
                 await RefreshHistory(FilterType.Active);
                 break;
             case HistoryRefreshMode.FastNewReleases:
-                var newEpisodesBase = await crunchyManager.CrEpisode.GetNewEpisodes(
-                    string.IsNullOrEmpty(crunOptions.HistoryLang) ? crunchyManager.DefaultLocale : crunOptions.HistoryLang,
-                    2000, null, true);
-                if (newEpisodesBase is{ Data.Count: > 0 }){
-                    var newEpisodes = newEpisodesBase.Data ?? [];
-
-                    try{
-                        await crunchyManager.History.UpdateWithEpisode(newEpisodes);
-                        CfgManager.UpdateHistoryFile();
-                    } catch (Exception e){
-                        Console.Error.WriteLine("Failed to update History");
-                    }
-                }
-
+                await RefreshHistoryWithNewReleases(crunchyManager, crunOptions);
                 break;
             default:
                 return;
@@ -222,6 +211,26 @@ public partial class ProgramManager : ObservableObject{
             .Select(item => item.AddNewMissingToDownloads(true));
 
         await Task.WhenAll(tasks);
+        
+        if (Application.Current is App app){
+            Dispatcher.UIThread.Post(app.UpdateTrayTooltip);
+        }
+    }
+
+    internal async Task RefreshHistoryWithNewReleases(CrunchyrollManager crunchyManager, CrDownloadOptions crunOptions){
+        var newEpisodesBase = await crunchyManager.CrEpisode.GetNewEpisodes(
+            string.IsNullOrEmpty(crunOptions.HistoryLang) ? crunchyManager.DefaultLocale : crunOptions.HistoryLang,
+            2000, null, true);
+        if (newEpisodesBase is{ Data.Count: > 0 }){
+            var newEpisodes = newEpisodesBase.Data ?? [];
+
+            try{
+                await crunchyManager.History.UpdateWithEpisode(newEpisodes);
+                CfgManager.UpdateHistoryFile();
+            } catch (Exception e){
+                Console.Error.WriteLine("Failed to update History");
+            }
+        }
     }
 
     public void SetBackgroundImage(){
@@ -284,7 +293,7 @@ public partial class ProgramManager : ObservableObject{
 
         if (exitOnTaskFinish){
             Console.WriteLine("Exiting...");
-            IClassicDesktopStyleApplicationLifetime? lifetime = (IClassicDesktopStyleApplicationLifetime)Application.Current?.ApplicationLifetime;
+            IClassicDesktopStyleApplicationLifetime? lifetime = (IClassicDesktopStyleApplicationLifetime?)Application.Current?.ApplicationLifetime;
             if (lifetime != null){
                 lifetime.Shutdown();
             } else{
