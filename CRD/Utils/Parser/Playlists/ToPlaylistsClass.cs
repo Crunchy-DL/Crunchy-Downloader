@@ -14,20 +14,18 @@ public class ToPlaylistsClass{
 
     public static dynamic GenerateSegments(dynamic input){
         dynamic segmentAttributes = new ExpandoObject();
-        Func<dynamic, List<dynamic>, List<dynamic>> segmentsFn = null;
+        Func<dynamic, List<dynamic>, List<dynamic>>? segmentsFn = null;
 
         
         if (ObjectUtilities.GetMemberValue(input.segmentInfo,"template") != null){
             segmentsFn = SegmentTemplate.SegmentsFromTemplate;
             segmentAttributes = ObjectUtilities.MergeExpandoObjects(input.attributes, input.segmentInfo.template);
-        } else if (ObjectUtilities.GetMemberValue(input.segmentInfo,"@base") != null){
-            //TODO
-            Console.WriteLine("UNTESTED PARSING");
+        } else if (ObjectUtilities.GetMemberValue(input.segmentInfo,"base") != null){
             segmentsFn = SegmentBase.SegmentsFromBase;
             segmentAttributes = ObjectUtilities.MergeExpandoObjects(input.attributes, input.segmentInfo.@base);
         } else if (ObjectUtilities.GetMemberValue(input.segmentInfo,"list") != null){
             //TODO
-            Console.WriteLine("UNTESTED PARSING");
+            Console.Error.WriteLine("UNTESTED PARSING");
             segmentsFn = SegmentList.SegmentsFromList;
             segmentAttributes = ObjectUtilities.MergeExpandoObjects(input.attributes, input.segmentInfo.list);
         }
@@ -39,7 +37,7 @@ public class ToPlaylistsClass{
             return segmentsInfo;
         }
 
-        List<dynamic> segments = segmentsFn(segmentAttributes, input.segmentInfo.segmentTimeline);
+        List<dynamic> segments = segmentsFn(segmentAttributes, ObjectUtilities.GetMemberValue(input.segmentInfo, "segmentTimeline"));
 
         // Duration processing
         if (ObjectUtilities.GetMemberValue(segmentAttributes,"duration") != null){

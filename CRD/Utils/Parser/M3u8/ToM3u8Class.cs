@@ -216,7 +216,7 @@ public class ToM3u8Class{
     }
 
     public static dynamic FormatVttPlaylist(dynamic item){
-        if (ObjectUtilities.GetMemberValue(item,"segments") == null){
+        if (ObjectUtilities.GetMemberValue(item, "segments") == null){
             // VTT tracks may use a single file in BaseURL
             var segment = new ExpandoObject() as IDictionary<string, object>;
             segment["uri"] = item.attributes.baseUrl;
@@ -236,9 +236,8 @@ public class ToM3u8Class{
         m3u8Attributes["BANDWIDTH"] = item.attributes.bandwidth;
         m3u8Attributes["PROGRAM-ID"] = 1;
 
-        
-        
-        if (ObjectUtilities.GetMemberValue(item.attributes,"codecs") != null){
+
+        if (ObjectUtilities.GetMemberValue(item.attributes, "codecs") != null){
             m3u8Attributes["CODECS"] = item.attributes.codecs;
         }
 
@@ -252,7 +251,7 @@ public class ToM3u8Class{
         vttPlaylist.timelineStarts = item.attributes.timelineStarts;
         vttPlaylist.discontinuityStarts = item.discontinuityStarts;
         vttPlaylist.discontinuitySequence = ObjectUtilities.GetMemberValue(item, "discontinuitySequence");
-        vttPlaylist.mediaSequence = ObjectUtilities.GetMemberValue(item,"mediaSequence");
+        vttPlaylist.mediaSequence = ObjectUtilities.GetMemberValue(item, "mediaSequence");
         vttPlaylist.segments = item.segments;
 
         if (ObjectUtilities.GetMemberValue(item.attributes, "serviceLocation") != null){
@@ -312,7 +311,7 @@ public class ToM3u8Class{
         return result;
     }
 
-    
+
     public static List<dynamic> MergeDiscontiguousPlaylists(List<dynamic> playlists){
         // Break out playlists into groups based on their baseUrl
         var playlistsByBaseUrl = playlists.GroupBy(
@@ -365,7 +364,7 @@ public class ToM3u8Class{
         }
 
         return allPlaylists.Select(playlist => {
-            playlist.discontinuityStarts = FindIndexes((List<dynamic>) ObjectUtilities.GetMemberValue(playlists,"segments") ?? new List<dynamic>(), "discontinuity");
+            playlist.discontinuityStarts = FindIndexes((List<dynamic>)ObjectUtilities.GetMemberValue(playlists, "segments") ?? new List<dynamic>(), "discontinuity");
             return playlist;
         }).ToList();
     }
@@ -442,21 +441,26 @@ public class ToM3u8Class{
     public static void AddMediaSequenceValues(List<dynamic> playlists, List<dynamic> timelineStarts){
         foreach (var playlist in playlists){
             playlist.mediaSequence = 0;
-            playlist.discontinuitySequence = timelineStarts.FindIndex(ts => ts.timeline == playlist.timeline);
 
-            if (playlist.segments == null) continue;
+            playlist.discontinuitySequence =
+                timelineStarts.FindIndex(ts => ts.timeline == playlist.timeline);
 
-            for (int i = 0; i < playlist.segments.Count; i++){
-                playlist.segments[i].number = i;
+            var segments = playlist.segments as List<dynamic>;
+            if (segments == null) continue;
+
+            for (int i = 0; i < segments.Count; i++){
+                segments[i].number = i;
             }
         }
     }
 
     public static List<int> FindIndexes(List<dynamic> list, string key){
-        var indexes = new List<int>();
+        var indexes = new List<int>(list.Count);
+
         for (int i = 0; i < list.Count; i++){
-            var expandoDict = list[i] as IDictionary<string, object>;
-            if (expandoDict != null && expandoDict.ContainsKey(key) && expandoDict[key] != null){
+            if (list[i] is IDictionary<string, object?> dict &&
+                dict.TryGetValue(key, out var value) &&
+                value != null){
                 indexes.Add(i);
             }
         }
@@ -464,33 +468,50 @@ public class ToM3u8Class{
         return indexes;
     }
 
-    public static dynamic AddSidxSegmentsToPlaylist(dynamic playlist, IDictionary<string, dynamic> sidxMapping){
-        string sidxKey = GenerateSidxKey(ObjectUtilities.GetMemberValue(playlist, "sidx"));
-        if (!string.IsNullOrEmpty(sidxKey) && sidxMapping.ContainsKey(sidxKey)){
-            var sidxMatch = sidxMapping[sidxKey];
-            if (sidxMatch != null){
-                SegmentBase.AddSidxSegmentsToPlaylist(playlist, sidxMatch.sidx, playlist.sidx.resolvedUri);
-            }
-        }
+    public static dynamic AddSidxSegmentsToPlaylist(
+        dynamic playlist,
+        IDictionary<string, dynamic> sidxMapping){
+        string? sidxKey = GenerateSidxKey(ObjectUtilities.GetMemberValue(playlist, "sidx"));
+
+        if (string.IsNullOrEmpty(sidxKey))
+            return playlist;
+
+        if (!sidxMapping.TryGetValue(sidxKey, out var sidxMatch) || sidxMatch == null)
+            return playlist;
+
+        SegmentBase.AddSidxSegmentsToPlaylist(
+            playlist,
+            sidxMatch?.sidx,
+            ObjectUtilities.GetMemberValue(playlist.sidx, "resolvedUri"));
 
         return playlist;
     }
 
-    public static List<dynamic> AddSidxSegmentsToPlaylists(List<dynamic> playlists, IDictionary<string, dynamic>? sidxMapping = null){
+    public static List<dynamic> AddSidxSegmentsToPlaylists(
+        List<dynamic> playlists,
+        IDictionary<string, dynamic>? sidxMapping = null){
         sidxMapping ??= new Dictionary<string, dynamic>();
 
-        if (sidxMapping.Count == 0){
+        if (sidxMapping.Count == 0)
             return playlists;
-        }
 
-        for (int i = 0; i < playlists.Count; i++){
-            playlists[i] = AddSidxSegmentsToPlaylist(playlists[i], sidxMapping);
+        foreach (var playlist in playlists){
+            AddSidxSegmentsToPlaylist(playlist, sidxMapping);
         }
 
         return playlists;
     }
 
-    public static string GenerateSidxKey(dynamic sidx){
-        return sidx != null ? $"{sidx.uri}-{UrlType.ByteRangeToString(sidx.byterange)}" : null;
+    public static string? GenerateSidxKey(dynamic sidx){
+        if (sidx == null)
+            return null;
+
+        var uri = ObjectUtilities.GetMemberValue(sidx, "uri");
+        var byteRange = ObjectUtilities.GetMemberValue(sidx, "ByteRange");
+
+        if (uri == null || byteRange == null)
+            return null;
+
+        return $"{uri}-{UrlType.ByteRangeToString(byteRange)}";
     }
 }

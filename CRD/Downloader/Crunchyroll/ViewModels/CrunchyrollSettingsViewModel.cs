@@ -158,10 +158,28 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private ComboBoxItem _selectedStreamEndpoint;
 
     [ObservableProperty]
-    private bool _firstEndpointVideo;
+    private bool firstEndpointVideo;
 
     [ObservableProperty]
-    private bool _firstEndpointAudio;
+    private bool firstEndpointAudio;
+    
+    [ObservableProperty]
+    private bool firstEndpointUseDefault;
+    
+    [ObservableProperty]
+    private string firstEndpointAuthorization = "";
+
+    [ObservableProperty]
+    private string firstEndpointUserAgent = "";
+
+    [ObservableProperty]
+    private string firstEndpointDeviceName = "";
+
+    [ObservableProperty]
+    private string firstEndpointDeviceType = "";
+    
+    [ObservableProperty]
+    private bool firstEndpointNotSignedWarning;
 
     [ObservableProperty]
     private ComboBoxItem _SelectedStreamEndpointSecondary;
@@ -179,16 +197,19 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private string _endpointDeviceType = "";
 
     [ObservableProperty]
-    private bool _endpointVideo;
+    private bool endpointVideo;
 
     [ObservableProperty]
-    private bool _endpointAudio;
+    private bool endpointAudio;
+    
+    [ObservableProperty]
+    private bool endpointUseDefault;
 
     [ObservableProperty]
     private bool _isLoggingIn;
 
     [ObservableProperty]
-    private bool _endpointNotSignedWarning;
+    private bool endpointNotSignedWarning;
 
     [ObservableProperty]
     private ComboBoxItem _selectedDefaultDubLang;
@@ -376,12 +397,23 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         EndpointDeviceType = options.StreamEndpointSecondSettings?.Device_type ?? string.Empty;
         EndpointVideo = options.StreamEndpointSecondSettings?.Video ?? true;
         EndpointAudio = options.StreamEndpointSecondSettings?.Audio ?? true;
+        EndpointUseDefault = options.StreamEndpointSecondSettings?.UseDefault ?? true;
 
         FirstEndpointVideo = options.StreamEndpoint?.Video ?? true;
         FirstEndpointAudio = options.StreamEndpoint?.Audio ?? true;
+        FirstEndpointUseDefault = options.StreamEndpoint?.UseDefault ?? true;
+        FirstEndpointAuthorization = options.StreamEndpoint?.Authorization ?? string.Empty;
+        FirstEndpointUserAgent = options.StreamEndpoint?.UserAgent ?? string.Empty;
+        FirstEndpointDeviceName = options.StreamEndpoint?.Device_name ?? string.Empty;
+        FirstEndpointDeviceType = options.StreamEndpoint?.Device_type ?? string.Empty;
+        
 
         if (CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???"){
             EndpointNotSignedWarning = true;
+        }
+        
+        if (CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Username == "???"){
+            FirstEndpointNotSignedWarning = true;
         }
 
         FFmpegHWAccel.AddRange(GetAvailableHWAccelOptions());
@@ -561,6 +593,11 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         endpointSettingsFirst.Endpoint = SelectedStreamEndpoint.Content + "";
         endpointSettingsFirst.Video = FirstEndpointVideo;
         endpointSettingsFirst.Audio = FirstEndpointAudio;
+        endpointSettingsFirst.UseDefault = FirstEndpointUseDefault;
+        endpointSettingsFirst.Authorization = FirstEndpointAuthorization;
+        endpointSettingsFirst.UserAgent = FirstEndpointUserAgent;
+        endpointSettingsFirst.Device_name = FirstEndpointDeviceName;
+        endpointSettingsFirst.Device_type = FirstEndpointDeviceType;
         CrunchyrollManager.Instance.CrunOptions.StreamEndpoint = endpointSettingsFirst;
 
         var endpointSettings = new CrAuthSettings();
@@ -571,6 +608,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         endpointSettings.Device_type = EndpointDeviceType;
         endpointSettings.Video = EndpointVideo;
         endpointSettings.Audio = EndpointAudio;
+        endpointSettings.UseDefault = EndpointUseDefault;
 
 
         CrunchyrollManager.Instance.CrunOptions.StreamEndpointSecondSettings = endpointSettings;
@@ -737,13 +775,33 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [RelayCommand]
     public void ResetEndpointSettings(){
-        ComboBoxItem? streamEndpointSecondar = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == ("android/phone")) ?? null;
+        var defaultSettings = CrunchyrollManager.Instance.DefaultAndroidAuthSettings;
+        
+        ComboBoxItem? streamEndpointSecondar = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == defaultSettings.Endpoint) ?? null;
         SelectedStreamEndpointSecondary = streamEndpointSecondar ?? StreamEndpointsSecondary[0];
 
-        EndpointAuthorization = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Authorization;
-        EndpointUserAgent = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.UserAgent;
-        EndpointDeviceName = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Device_name;
-        EndpointDeviceType = CrunchyrollManager.Instance.DefaultAndroidAuthSettings.Device_type;
+        EndpointAuthorization = defaultSettings.Authorization;
+        EndpointUserAgent = defaultSettings.UserAgent;
+        EndpointDeviceName = defaultSettings.Device_name;
+        EndpointDeviceType = defaultSettings.Device_type;
+        
+        UpdateSettings();
+    }
+    
+    [RelayCommand]
+    public void ResetFirstEndpointSettings(){
+
+        var defaultSettings = CrunchyrollManager.Instance.DefaultAndroidTvAuthSettings;
+        
+        ComboBoxItem? streamEndpointSecondar = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == defaultSettings.Endpoint) ?? null;
+        SelectedStreamEndpoint = streamEndpointSecondar ?? StreamEndpoints[0];
+
+        FirstEndpointAuthorization = defaultSettings.Authorization;
+        FirstEndpointUserAgent = defaultSettings.UserAgent;
+        FirstEndpointDeviceName = defaultSettings.Device_name;
+        FirstEndpointDeviceType = defaultSettings.Device_type;
+        
+        UpdateSettings();
     }
 
     [RelayCommand]
@@ -764,6 +822,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         await viewModel.LoginCompleted;
         IsLoggingIn = false;
         EndpointNotSignedWarning = CrunchyrollManager.Instance.CrAuthEndpoint2.Profile.Username == "???";
+        FirstEndpointNotSignedWarning = CrunchyrollManager.Instance.CrAuthEndpoint1.Profile.Username == "???";
     }
 
     private List<StringItemWithDisplayName> GetAvailableHWAccelOptions(){

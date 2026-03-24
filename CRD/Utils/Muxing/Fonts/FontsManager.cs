@@ -8,11 +8,12 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CRD.Utils.Files;
+using CRD.Utils.Muxing.Structs;
 using CRD.Utils.Structs;
 using CRD.Views;
 using SixLabors.Fonts;
 
-namespace CRD.Utils.Muxing;
+namespace CRD.Utils.Muxing.Fonts;
 
 public class FontsManager{
     #region Singelton
@@ -181,21 +182,21 @@ public class FontsManager{
             foreach (Match match in fontMatches){
                 if (match.Groups.Count > 1){
                     var fontName = match.Groups[1].Value.Trim();
-                
+
                     if (Regex.IsMatch(fontName, @"^\d+$"))
                         continue;
-                
+
                     fonts.Add(NormalizeFontKey(fontName));
                 }
-                
             }
         }
-        
+
         return fonts
             .Where(x => !string.IsNullOrWhiteSpace(x))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
+
 
     public Dictionary<string, string> GetDictFromKeyList(List<string> keysList, bool keepUnknown = true){
         Dictionary<string, string> filteredDictionary = new(StringComparer.OrdinalIgnoreCase);
@@ -329,7 +330,7 @@ public class FontsManager{
 
         if (s.StartsWith("@"))
             s = s.Substring(1);
-        
+
         s = Regex.Replace(s, @"(?<=[a-z])([A-Z])", " $1");
 
         s = s.Replace('_', ' ').Replace('-', ' ');

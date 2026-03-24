@@ -21,6 +21,7 @@ using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.Files;
 using CRD.Utils.HLS;
 using CRD.Utils.JsonConv;
+using CRD.Utils.Parser;
 using CRD.Utils.Structs;
 using FluentAvalonia.UI.Controls;
 using Microsoft.Win32;
@@ -190,81 +191,8 @@ public class Helpers{
             return false;
         }
     }
-
-    public static Locale ConvertStringToLocale(string? value){
-        foreach (Locale locale in Enum.GetValues(typeof(Locale))){
-            var type = typeof(Locale);
-            var memInfo = type.GetMember(locale.ToString());
-            var attributes = memInfo[0].GetCustomAttributes(typeof(EnumMemberAttribute), false);
-            var description = ((EnumMemberAttribute)attributes[0]).Value;
-
-            if (description == value){
-                return locale;
-            }
-        }
-
-        if (string.IsNullOrEmpty(value)){
-            return Locale.DefaulT;
-        }
-
-        return Locale.Unknown; // Return default if not found
-    }
-
-    public static string GenerateSessionId(){
-        // Get UTC milliseconds
-        var utcNow = DateTime.UtcNow;
-        var milliseconds = utcNow.Millisecond.ToString().PadLeft(3, '0');
-
-        // Get a high-resolution timestamp
-        long timestamp = Stopwatch.GetTimestamp();
-        double timestampToMilliseconds = (double)timestamp / Stopwatch.Frequency * 1000;
-        string highResTimestamp = timestampToMilliseconds.ToString("F0").PadLeft(13, '0');
-
-        return milliseconds + highResTimestamp;
-    }
-
-    public static void ConvertChapterFileForFFMPEG(string chapterFilePath){
-        var chapterLines = File.ReadAllLines(chapterFilePath);
-        var ffmpegChapterLines = new List<string>{ ";FFMETADATA1" };
-        var chapters = new List<(double StartTime, string Title)>();
-
-        for (int i = 0; i < chapterLines.Length; i += 2){
-            var timeLine = chapterLines[i];
-            var nameLine = chapterLines[i + 1];
-
-            var timeParts = timeLine.Split('=');
-            var nameParts = nameLine.Split('=');
-
-            if (timeParts.Length == 2 && nameParts.Length == 2){
-                var startTime = TimeSpan.Parse(timeParts[1]).TotalMilliseconds;
-                var title = nameParts[1];
-                chapters.Add((startTime, title));
-            }
-        }
-
-        // Sort chapters by start time
-        chapters = chapters.OrderBy(c => c.StartTime).ToList();
-
-        for (int i = 0; i < chapters.Count; i++){
-            var startTime = chapters[i].StartTime;
-            var title = chapters[i].Title;
-            var endTime = (i + 1 < chapters.Count) ? chapters[i + 1].StartTime : startTime + 10000; // Add 10 seconds to the last chapter end time
-
-            if (endTime < startTime){
-                endTime = startTime + 10000; // Correct end time if it is before start time
-            }
-
-            ffmpegChapterLines.Add("[CHAPTER]");
-            ffmpegChapterLines.Add("TIMEBASE=1/1000");
-            ffmpegChapterLines.Add($"START={startTime}");
-            ffmpegChapterLines.Add($"END={endTime}");
-            ffmpegChapterLines.Add($"title={title}");
-        }
-
-        File.WriteAllLines(chapterFilePath, ffmpegChapterLines);
-    }
-
-    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsync(string type, string bin, string command){
+    
+    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsync(string bin, string command){
         try{
             using (var process = new Process()){
                 process.StartInfo.FileName = bin;

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -568,7 +569,7 @@ public class HlsDownloader{
             byte[]? part;
             if (seg.Key != null){
                 var decipher = await GetKey(seg.Key, p, segOffset);
-                part = await GetData(p, sUri, seg.ByteRange != null ? seg.ByteRange.ToDictionary() : new Dictionary<string, string>(), segOffset, false, _data.Timeout, _data.Retries);
+                part = await GetData(p, sUri, seg.ByteRange, segOffset, false, _data.Timeout, _data.Retries);
                 var partContent = part;
                 using (decipher){
                     if (partContent != null) dec = decipher.TransformFinalBlock(partContent, 0, partContent.Length);
@@ -579,7 +580,7 @@ public class HlsDownloader{
                     Interlocked.Add(ref _data.TotalBytes, dec.Length);
                 }
             } else{
-                part = await GetData(p, sUri, seg.ByteRange != null ? seg.ByteRange.ToDictionary() : new Dictionary<string, string>(), segOffset, false, _data.Timeout, _data.Retries);
+                part = await GetData(p, sUri, seg.ByteRange, segOffset, false, _data.Timeout, _data.Retries);
                 dec = part;
                 if (dec != null){
                     Interlocked.Add(ref _data.BytesDownloaded, dec.Length);
@@ -642,7 +643,7 @@ public class HlsDownloader{
         string kUri = GetUri(key.Uri ?? "", _data.BaseUrl);
         if (!_data.Keys.ContainsKey(kUri)){
             try{
-                var rkey = await GetData(segIndex, kUri, new Dictionary<string, string>(), segOffset, true, _data.Timeout, _data.Retries);
+                var rkey = await GetData(segIndex, kUri, null, segOffset, true, _data.Timeout, _data.Retries);
                 if (rkey == null || rkey.Length != 16){
                     throw new Exception("Key not fully downloaded or is incorrect.");
                 }
@@ -658,7 +659,7 @@ public class HlsDownloader{
         return _data.Keys[kUri];
     }
 
-    public async Task<byte[]?> GetData(int partIndex, string uri, IDictionary<string, string> headers, int segOffset, bool isKey, int timeout, int retryCount){
+    public async Task<byte[]?> GetData(int partIndex, string uri, ByteRange? byteRange, int segOffset, bool isKey, int timeout, int retryCount){
         // Handle local file URI
         if (uri.StartsWith("file://")){
             string path = new Uri(uri).LocalPath;
@@ -667,8 +668,8 @@ public class HlsDownloader{
 
         // Setup request headers
         HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, uri);
-        foreach (var header in headers){
-            request.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        if (byteRange != null){
+            request.Headers.Range = new RangeHeaderValue(byteRange.Offset, byteRange.Offset + byteRange.Length - 1);
         }
 
         // Set default user-agent if not provided
@@ -797,13 +798,6 @@ public class Key{
 public class ByteRange{
     public long Offset{ get; set; }
     public long Length{ get; set; }
-
-    public IDictionary<string, string> ToDictionary(){
-        return new Dictionary<string, string>{
-            { "Offset", Offset.ToString() },
-            { "Length", Length.ToString() }
-        };
-    }
 }
 
 public class HlsOptions{

@@ -3,39 +3,42 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Numerics;
+using CRD.Utils.Parser.Utils;
 
 namespace CRD.Utils.Parser.Segments;
 
 public class SegmentBase{
-    public static List<dynamic> SegmentsFromBase(dynamic attributes, List<dynamic> segmentTimeline){
-        if (attributes.baseUrl == null){
+    public static List<dynamic> SegmentsFromBase(dynamic attributes, List<dynamic>? segmentTimeline = null){
+        var baseUrl = ObjectUtilities.GetMemberValue(attributes, "baseUrl");
+        var initialization = ObjectUtilities.GetMemberValue(attributes, "initialization") ?? new ExpandoObject();
+        var sourceDuration = ObjectUtilities.GetMemberValue(attributes, "sourceDuration");
+        var indexRange = ObjectUtilities.GetMemberValue(attributes, "indexRange") ?? "";
+        var periodStart = ObjectUtilities.GetMemberValue(attributes, "periodStart");
+        var presentationTime = ObjectUtilities.GetMemberValue(attributes, "presentationTime");
+        var number = ObjectUtilities.GetMemberValue(attributes, "number") ?? 0;
+        var duration = ObjectUtilities.GetMemberValue(attributes, "duration");
+        
+        if (baseUrl == null){
             throw new Exception("NO_BASE_URL");
         }
 
-        var initialization = attributes.initialization ?? new ExpandoObject();
-        var sourceDuration = attributes.sourceDuration;
-        var indexRange = attributes.indexRange ?? "";
-        var periodStart = attributes.periodStart;
-        var presentationTime = attributes.presentationTime;
-        var number = attributes.number ?? 0;
-        var duration = attributes.duration;
-
         dynamic initSegment = UrlType.UrlTypeToSegment(new{
-            baseUrl = attributes.baseUrl,
-            source = initialization.sourceURL,
-            range = initialization.range
+            baseUrl = baseUrl,
+            source = ObjectUtilities.GetMemberValue(initialization, "sourceURL"),
+            range = ObjectUtilities.GetMemberValue(initialization, "range")
         });
 
         dynamic segment = UrlType.UrlTypeToSegment(new{
-            baseUrl = attributes.baseUrl,
-            source = attributes.baseUrl,
+            baseUrl = baseUrl,
+            source = baseUrl,
             indexRange = indexRange
         });
 
         segment.map = initSegment;
-
+        
         if (duration != null){
             var segmentTimeInfo = DurationTimeParser.ParseByDuration(attributes);
+
             if (segmentTimeInfo.Count > 0){
                 segment.duration = segmentTimeInfo[0].duration;
                 segment.timeline = segmentTimeInfo[0].timeline;
@@ -44,8 +47,9 @@ public class SegmentBase{
             segment.duration = sourceDuration;
             segment.timeline = periodStart;
         }
-
+        
         segment.presentationTime = presentationTime ?? periodStart;
+
         segment.number = number;
 
         return new List<dynamic>{ segment };

@@ -83,12 +83,12 @@ public class ObjectUtilities{
         targetDict[fieldToSet] = valueToSet;
     }
 
-    public static object GetMemberValue(dynamic obj, string memberName){
+    public static object? GetMemberValue(dynamic obj, string memberName){
         // First, check if the object is indeed an ExpandoObject
         if (obj is ExpandoObject expando){
             // Try to get the value from the ExpandoObject
-            var dictionary = (IDictionary<string, object>)expando;
-            if (dictionary.TryGetValue(memberName, out object value)){
+            var dictionary = (IDictionary<string, object?>)expando;
+            if (dictionary.TryGetValue(memberName, out object? value)){
                 // Return the found value, which could be null
                 return value;
             }

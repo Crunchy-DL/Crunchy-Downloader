@@ -40,6 +40,8 @@ public class CrAuthSettings{
 
     public bool Video{ get; set; }
     public bool Audio{ get; set; }
+
+    public bool UseDefault{ get; set; } = true;
 }
 
 public class StreamInfo{

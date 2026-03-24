@@ -80,12 +80,12 @@ public class ParseAttribute{
     //         });
     // }
 
-    public static dynamic ParseAttributes(XmlNode el){
+    public static dynamic ParseAttributes(XmlNode? el){
         var expandoObj = new ExpandoObject() as IDictionary<string, object>;
 
-        if (el != null && el.Attributes != null){
+        if (el is{ Attributes: not null }){
             foreach (XmlAttribute attr in el.Attributes){
-                Func<string, object> parseFn;
+                Func<string, object>? parseFn;
                 if (ParsersDictionary.TryGetValue(attr.Name, out parseFn)){
                     expandoObj[attr.Name] = parseFn(attr.Value);
                 } else{

@@ -20,27 +20,38 @@ public class InheritAttributes{
         var keySystemInfo = new ExpandoObject() as IDictionary<string, object>;
 
         foreach (var node in contentProtectionNodes){
-            dynamic attributes = ParseAttribute.ParseAttributes(node); // Assume this returns a dictionary
-            var testAttributes = attributes as IDictionary<string, object>;
+            dynamic attributes = ParseAttribute.ParseAttributes(node);
+            var attributesDict = attributes as IDictionary<string, object>;
 
-            if (testAttributes != null && testAttributes.TryGetValue("schemeIdUri", out var attribute)){
-                string? schemeIdUri = attribute.ToString()?.ToLower();
-                if (schemeIdUri != null && KeySystemsMap.TryGetValue(schemeIdUri, out var keySystem)){
-                    dynamic info = new ExpandoObject();
-                    info.attributes = attributes;
+            if (attributesDict == null)
+                continue;
 
-                    var psshNode = XMLUtils.FindChildren(node, "cenc:pssh").FirstOrDefault();
-                    if (psshNode != null){
-                        string pssh = psshNode.InnerText; // Assume this returns the inner text/content
-                        if (!string.IsNullOrEmpty(pssh)){
-                            info.pssh = DecodeB64ToUint8Array(pssh); // Convert base64 string to byte array
-                        }
-                    }
+            if (!attributesDict.TryGetValue("schemeIdUri", out var schemeObj))
+                continue;
 
-                    // Instead of using a dictionary key, add the key system directly as a member of the ExpandoObject
-                    keySystemInfo[keySystem] = info;
-                }
+            var schemeIdUri = schemeObj?.ToString()?.ToLower();
+
+            if (schemeIdUri == null)
+                continue;
+
+            attributesDict["schemeIdUri"] = schemeIdUri;
+
+            if (!KeySystemsMap.TryGetValue(schemeIdUri, out var keySystem))
+                continue;
+
+            dynamic info = new ExpandoObject();
+            info.attributes = attributes;
+
+            var psshNode = XMLUtils.FindChildren(node, "cenc:pssh").FirstOrDefault();
+
+            if (psshNode != null){
+                string pssh = psshNode.InnerText;
+
+                if (!string.IsNullOrEmpty(pssh))
+                    info.pssh = DecodeB64ToUint8Array(pssh);
             }
+
+            keySystemInfo[keySystem] = info;
         }
 
         return keySystemInfo;
@@ -80,8 +91,6 @@ public class InheritAttributes{
             })
         ).ToList();
     }
-
-    
 
 
     public static double? GetPeriodStart(dynamic attributes, dynamic? priorPeriodAttributes, string mpdType){
@@ -179,14 +188,14 @@ public class InheritAttributes{
         var segmentInitializationParentNode = segmentList ?? segmentBase ?? segmentTemplate;
         var segmentInitialization = segmentInitializationParentNode != null ? XMLUtils.FindChildren(segmentInitializationParentNode, "Initialization").FirstOrDefault() : null;
 
-        dynamic template = segmentTemplate != null ? ParseAttribute.ParseAttributes(segmentTemplate) : null;
+        dynamic? template = segmentTemplate != null ? ParseAttribute.ParseAttributes(segmentTemplate) : null;
 
         if (template != null && segmentInitialization != null){
-            template.initialization = ParseAttribute.ParseAttributes(segmentInitialization);
-        } else if (template != null && template.initialization != null){
+            template?.initialization = ParseAttribute.ParseAttributes(segmentInitialization);
+        } else if (template != null && template?.initialization != null){
             dynamic init = new ExpandoObject();
-            init.sourceURL = template.initialization;
-            template.initialization = init;
+            init.sourceURL = template?.initialization;
+            template?.initialization = init;
         }
 
         segmentInfo.template = template;
@@ -194,10 +203,14 @@ public class InheritAttributes{
         segmentInfo.list = segmentList != null
             ? ObjectUtilities.MergeExpandoObjects(ParseAttribute.ParseAttributes(segmentList), new{ segmentUrls, initialization = ParseAttribute.ParseAttributes(segmentInitialization) })
             : null;
-        segmentInfo.baseInfo = segmentBase != null ? ObjectUtilities.MergeExpandoObjects(ParseAttribute.ParseAttributes(segmentBase), new{ initialization = ParseAttribute.ParseAttributes(segmentInitialization) }) : null;
+        
+        dynamic initBas = new ExpandoObject();
+        initBas.initialization = ParseAttribute.ParseAttributes(segmentInitialization);
+        //new{ initialization = ParseAttribute.ParseAttributes(segmentInitialization) }
+        segmentInfo.@base = segmentBase != null ? ObjectUtilities.MergeExpandoObjects(ParseAttribute.ParseAttributes(segmentBase),initBas ) : null;
 
         // Clean up null entries
-        var dict = (IDictionary<string, object>)segmentInfo;
+        var dict = (IDictionary<string, object?>)segmentInfo;
         var keys = dict.Keys.ToList();
         foreach (var key in keys){
             if (dict[key] == null){
@@ -301,24 +314,25 @@ public class InheritAttributes{
         attrs = ObjectUtilities.MergeExpandoObjects(attrs, roleAttributes);
 
         var accessibility = XMLUtils.FindChildren(adaptationSet, "Accessibility").FirstOrDefault();
-        var captionServices = ParseCaptionServiceMetadata(ParseAttribute.ParseAttributes(accessibility));
+        var captionServices = ParseCaptionServiceMetadata(accessibility != null ? ParseAttribute.ParseAttributes(accessibility) : null);
 
         if (captionServices != null){
             attrs = ObjectUtilities.MergeExpandoObjects(attrs, new{ captionServices });
         }
 
-        XmlElement label = XMLUtils.FindChildren(adaptationSet, "Label").FirstOrDefault();
-        if (label != null && label.ChildNodes.Count > 0){
-            var labelVal = label.ChildNodes[0].ToString().Trim();
+        XmlElement? label = XMLUtils.FindChildren(adaptationSet, "Label").FirstOrDefault();
+        if (label is{ ChildNodes.Count: > 0 }){
+            var labelVal = label.ChildNodes[0]?.Value?.Trim();
             attrs = ObjectUtilities.MergeExpandoObjects(attrs, new{ label = labelVal });
         }
 
-        var contentProtection = GenerateKeySystemInformation(XMLUtils.FindChildren(adaptationSet, "ContentProtection"));
+        var nodes = XMLUtils.FindChildren(adaptationSet, "ContentProtection");
+        var contentProtection = GenerateKeySystemInformation(nodes);
         var tempTestContentProtection = contentProtection as IDictionary<string, Object>;
-        if (tempTestContentProtection != null && tempTestContentProtection.Count > 0){
+        if (tempTestContentProtection is{ Count: > 0 }){
             dynamic contentProt = new ExpandoObject();
             contentProt.contentProtection = contentProtection;
-            attrs = ObjectUtilities.MergeExpandoObjects(attrs, contentProt );
+            attrs = ObjectUtilities.MergeExpandoObjects(attrs, contentProt);
         }
 
         var segmentInfo = GetSegmentInformation(adaptationSet);
@@ -337,16 +351,28 @@ public class InheritAttributes{
         return list;
     }
 
+
     public static List<dynamic> InheritBaseUrls(dynamic adaptationSetAttributes, dynamic adaptationSetBaseUrls, dynamic adaptationSetSegmentInfo, XmlElement representation){
         var repBaseUrlElements = XMLUtils.FindChildren(representation, "BaseURL");
         List<dynamic> repBaseUrls = BuildBaseUrls(adaptationSetBaseUrls, repBaseUrlElements);
         var attributes = ObjectUtilities.MergeExpandoObjects(adaptationSetAttributes, ParseAttribute.ParseAttributes(representation));
-        var representationSegmentInfo = GetSegmentInformation(representation);
+        
+        // Representation ContentProtection
+        var repProtectionNodes = XMLUtils.FindChildren(representation, "ContentProtection");
+        var repContentProtection = GenerateKeySystemInformation(repProtectionNodes);
 
+        if ((repContentProtection as IDictionary<string, object>)?.Count > 0){
+            dynamic contentProt = new ExpandoObject();
+            contentProt.contentProtection = repContentProtection;
+            attributes = ObjectUtilities.MergeExpandoObjects(attributes, contentProt);
+        }
+        
+        var representationSegmentInfo = GetSegmentInformation(representation);
+        
         return repBaseUrls.Select(baseUrl => {
             dynamic result = new ExpandoObject();
             result.segmentInfo = ObjectUtilities.MergeExpandoObjects(adaptationSetSegmentInfo, representationSegmentInfo);
-            result.attributes = ObjectUtilities.MergeExpandoObjects(attributes,  baseUrl);
+            result.attributes = ObjectUtilities.MergeExpandoObjects(attributes, baseUrl);
             return result;
         }).ToList();
     }
@@ -368,15 +394,15 @@ public class InheritAttributes{
         dynamic periodSegmentInfo = GetSegmentInformation(period.node);
 
         List<ExpandoObject> list = new List<ExpandoObject>();
-        
+
         for (int i = 0; i < adaptationSets.Count; i++){
             List<ExpandoObject> res = ToRepresentations(periodAttributes, periodBaseUrls, periodSegmentInfo, adaptationSets[i]);
             foreach (dynamic re in res){
                 list.Add(re);
             }
         }
-        
-        
+
+
         return list;
 
 
@@ -438,7 +464,7 @@ public class InheritAttributes{
 
             periods.Add(finalPeriod);
         }
-        
+
 
         List<ExpandoObject> representationInfo = new List<ExpandoObject>();
 

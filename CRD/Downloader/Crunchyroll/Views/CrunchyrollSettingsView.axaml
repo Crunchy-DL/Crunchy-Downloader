@@ -273,6 +273,58 @@
                                 <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
                                           IsChecked="{Binding FirstEndpointAudio}" />
                             </StackPanel>
+                            
+                            <StackPanel Margin="0,5" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Use Default" Margin="0 , 0 , 5 , 0" VerticalAlignment="Center" />
+                                <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
+                                          IsChecked="{Binding FirstEndpointUseDefault}" />
+                            </StackPanel>
+                            
+                             <StackPanel Margin="0,5" IsEnabled="{Binding !FirstEndpointUseDefault}">
+                                <TextBlock Text="Authorization" />
+                                <TextBox Name="FirstAuthorizationTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
+                                         Text="{Binding FirstEndpointAuthorization}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5" IsEnabled="{Binding !FirstEndpointUseDefault}">
+                                <TextBlock Text="User Agent" />
+                                <TextBox Name="FirstUserAgentTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
+                                         Text="{Binding FirstEndpointUserAgent}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5" IsEnabled="{Binding !FirstEndpointUseDefault}">
+                                <TextBlock Text="Device Type" />
+                                <TextBox Name="FirstDeviceTypeTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
+                                         Text="{Binding FirstEndpointDeviceType}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,5" IsEnabled="{Binding !FirstEndpointUseDefault}">
+                                <TextBlock Text="Device Name" />
+                                <TextBox Name="FirstDeviceNameTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
+                                         Text="{Binding FirstEndpointDeviceName}" />
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <Button Margin="5 10" VerticalAlignment="Center"
+                                        IsEnabled="{Binding !FirstEndpointUseDefault}"
+                                        Command="{Binding ResetFirstEndpointSettings}">
+                                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                                        <TextBlock Text="Reset" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12" />
+                                    </StackPanel>
+                                </Button>
+
+                                <controls:SymbolIcon Symbol="CloudOff"
+                                                     IsVisible="{Binding FirstEndpointNotSignedWarning}"
+                                                     Foreground="OrangeRed"
+                                                     FontSize="30"
+                                                     VerticalAlignment="Center">
+                                    <ToolTip.Tip>
+                                        <TextBlock Text="Signin for this endpoint failed. Check logs for more details."
+                                                   TextWrapping="Wrap"
+                                                   MaxWidth="250" />
+                                    </ToolTip.Tip>
+                                </controls:SymbolIcon>
+                            </StackPanel>
 
                         </StackPanel>
 
@@ -297,26 +349,32 @@
                                 <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
                                           IsChecked="{Binding EndpointAudio}" />
                             </StackPanel>
+                            
+                            <StackPanel Margin="0,5" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Use Default" Margin="0 , 0 , 5 , 0" VerticalAlignment="Center" />
+                                <CheckBox HorizontalAlignment="Left" MinWidth="250" VerticalAlignment="Center"
+                                          IsChecked="{Binding EndpointUseDefault}" />
+                            </StackPanel>
 
-                            <StackPanel Margin="0,5">
+                            <StackPanel Margin="0,5" IsEnabled="{Binding !EndpointUseDefault}">
                                 <TextBlock Text="Authorization" />
                                 <TextBox Name="AuthorizationTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointAuthorization}" />
                             </StackPanel>
 
-                            <StackPanel Margin="0,5">
+                            <StackPanel Margin="0,5"  IsEnabled="{Binding !EndpointUseDefault}">
                                 <TextBlock Text="User Agent" />
                                 <TextBox Name="UserAgentTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointUserAgent}" />
                             </StackPanel>
 
-                            <StackPanel Margin="0,5">
+                            <StackPanel Margin="0,5"  IsEnabled="{Binding !EndpointUseDefault}">
                                 <TextBlock Text="Device Type" />
                                 <TextBox Name="DeviceTypeTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointDeviceType}" />
                             </StackPanel>
 
-                            <StackPanel Margin="0,5">
+                            <StackPanel Margin="0,5"  IsEnabled="{Binding !EndpointUseDefault}">
                                 <TextBlock Text="Device Name" />
                                 <TextBox Name="DeviceNameTextBox" HorizontalAlignment="Left" MinWidth="250" MaxWidth="250" TextWrapping="Wrap"
                                          Text="{Binding EndpointDeviceName}" />
@@ -324,6 +382,7 @@
 
                             <StackPanel Orientation="Horizontal">
                                 <Button Margin="5 10" VerticalAlignment="Center"
+                                        IsEnabled="{Binding !EndpointUseDefault}"
                                         Command="{Binding ResetEndpointSettings}">
                                     <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                                         <TextBlock Text="Reset" HorizontalAlignment="Center" TextWrapping="Wrap" FontSize="12" />

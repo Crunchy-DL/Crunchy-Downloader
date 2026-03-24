@@ -5,9 +5,11 @@ using System.Xml;
 namespace CRD.Utils.Parser.Utils;
 
 public class XMLUtils{
-    public static List<XmlElement> FindChildren(XmlElement element, string name){
-        return From(element.ChildNodes).OfType<XmlElement>().Where(child => child.Name == name).ToList();
+    public static List<XmlElement> FindChildren(XmlElement parent, string name){
+        return From(parent.ChildNodes).OfType<XmlElement>().Where(child => child.Name == name).ToList();
     }
+
+
 
     public static string GetContent(XmlElement element){
         return element.InnerText.Trim();

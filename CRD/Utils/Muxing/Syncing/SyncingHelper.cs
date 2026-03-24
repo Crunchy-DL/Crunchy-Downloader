@@ -1,10 +1,11 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
 using CRD.Utils.Structs;
@@ -13,7 +14,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Image = SixLabors.ImageSharp.Image;
 
-namespace CRD.Utils.Muxing;
+namespace CRD.Utils.Muxing.Syncing;
 
 public class SyncingHelper{
     public static async Task<(bool IsOk, int ErrorCode, double frameRate)> ExtractFrames(string videoPath, string outputDir, double offset, double duration){
