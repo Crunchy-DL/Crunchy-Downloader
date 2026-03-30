@@ -9,6 +9,7 @@ using System.Web;
 using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Structs;
 
 namespace CRD.Downloader.Crunchyroll;
@@ -202,6 +203,7 @@ public class CrEpisode(){
                     episodeNumber: item.Episode,
                     episodeTitle: item.GetEpisodeTitle(),
                     description: item.Description,
+                    episodeId: item.Id,
                     seriesId: item.SeriesId,
                     seasonId: item.SeasonId,
                     season: item.GetSeasonNum(),

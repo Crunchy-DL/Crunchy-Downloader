@@ -62,8 +62,8 @@
                         <CheckBox IsChecked="{Binding HistorySkipUnmonitored}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                                <controls:SettingsExpanderItem Content="Auto History Refresh" Description="Automatically refresh your history at a set interval">
+
+                <controls:SettingsExpanderItem Content="Auto History Refresh" Description="Automatically refresh your history at a set interval">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel Spacing="8" Width="520">
 
@@ -86,7 +86,7 @@
                                 <ComboBox ItemsSource="{Binding HistoryAutoRefreshModes}"
                                           DisplayMemberBinding="{Binding DisplayName}"
                                           SelectedValueBinding="{Binding value}"
-                                          SelectedValue="{Binding HistoryAutoRefreshMode}"/>
+                                          SelectedValue="{Binding HistoryAutoRefreshMode}" />
                                 <TextBlock Opacity="0.7" FontSize="12" TextWrapping="Wrap"
                                            Text="{Binding HistoryAutoRefreshModeHint}" />
                             </StackPanel>
@@ -96,7 +96,7 @@
                             </StackPanel>
 
                         </StackPanel>
-                   
+
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
@@ -118,7 +118,7 @@
                         <CheckBox IsChecked="{Binding DownloadAllowEarlyStart}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Skip Episodes Missing Selected Languages" Description="Episodes will only be added to the queue if every selected audio and subtitle language is available">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadOnlyWithAllSelectedDubSub}"> </CheckBox>
@@ -134,7 +134,7 @@
                                             HorizontalAlignment="Stretch" />
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem Content="Show download speed in bits/s (Mbps)" Description="When enabled, shows Mbps instead of MB/s">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding DownloadSpeedInBits}"> </CheckBox>
@@ -284,13 +284,13 @@
 
                                 <CheckBox IsChecked="{Binding DownloadFinishedPlaySound}"> </CheckBox>
                             </StackPanel>
-                            
+
                         </StackPanel>
 
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
-                                <controls:SettingsExpanderItem Content="Execute on completion" Description="Enable to run a selected file after all downloads complete">
+
+                <controls:SettingsExpanderItem Content="Execute on completion" Description="Enable to run a selected file after all downloads complete">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel Spacing="10">
                             <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
@@ -465,9 +465,36 @@
                 </controls:SettingsExpanderItem>
 
 
+                <controls:SettingsExpanderItem Content="Use Mitm Flare Solverr">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding UseMitmFlareSolverr}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Mitm Host" IsVisible="{Binding UseMitmFlareSolverr}">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding MitmFlareSolverrHost}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Mitm Port" IsVisible="{Binding UseMitmFlareSolverr}">
+                    <controls:SettingsExpanderItem.Footer>
+                        <TextBox HorizontalAlignment="Left" MinWidth="250"
+                                 Text="{Binding MitmFlareSolverrPort}" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+                <controls:SettingsExpanderItem Content="Use SSL for Mitm" IsVisible="{Binding UseMitmFlareSolverr}">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding MitmFlareSolverrUseSsl}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+
             </controls:SettingsExpander>
-            
-                        <controls:SettingsExpander Header="General Settings"
+
+            <controls:SettingsExpander Header="General Settings"
                                        IconSource="Bullets"
                                        Description="Adjust General settings"
                                        IsExpanded="False">
@@ -477,25 +504,25 @@
                         <CheckBox IsChecked="{Binding TrayIconEnabled}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding TrayIconEnabled}" Content="Start minimized to tray" Description="Launches in the tray without opening a window">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding StartMinimizedToTray}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding TrayIconEnabled}" Content="Minimize to tray" Description="Minimizing hides the window and removes it from the taskbar">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MinimizeToTray}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
                 <controls:SettingsExpanderItem IsVisible="{Binding TrayIconEnabled}" Content="Close to tray" Description="Clicking X hides the app in the tray instead of exiting">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding MinimizeToTrayOnClose}"> </CheckBox>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
-                
+
 
             </controls:SettingsExpander>
 

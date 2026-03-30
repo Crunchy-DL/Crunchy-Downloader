@@ -147,7 +147,7 @@ public class History{
                     ),
                 StringComparer.Ordinal
             );
-        
+
         episodes = episodes
             .Where(e => !string.IsNullOrWhiteSpace(e.EpisodeMetadata?.SeriesId) &&
                         historyIndex.ContainsKey(e.EpisodeMetadata!.SeriesId!))
@@ -188,10 +188,10 @@ public class History{
 
                 continue;
             }
-            
+
             var seriesTitle = seriesGroup.Select(e => e.EpisodeMetadata?.SeriesTitle)
                 .FirstOrDefault(t => !string.IsNullOrWhiteSpace(t)) ?? "";
-            
+
             if (allOriginalsInHistory){
                 // Console.WriteLine($"[INFO] Skipping SeriesId={seriesId} - originals implied by Versions already in history.");
                 continue;
@@ -234,7 +234,7 @@ public class History{
 
         if (!string.IsNullOrWhiteSpace(seasonId))
             return seasons.TryGetValue(seasonId, out var eps) && eps.Contains(originalEpisodeId);
-        
+
         return seasons.Values.Any(eps => eps.Contains(originalEpisodeId));
     }
 
@@ -377,21 +377,10 @@ public class History{
     }
 
     public HistoryEpisode? GetHistoryEpisode(string? seriesId, string? seasonId, string episodeId){
-        var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
-
-        if (historySeries != null){
-            var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == seasonId);
-
-            if (historySeason != null){
-                var historyEpisode = historySeason.EpisodesList.Find(e => e.EpisodeId == episodeId);
-
-                if (historyEpisode != null){
-                    return historyEpisode;
-                }
-            }
-        }
-
-        return null;
+        return CrunchyrollManager.Instance.HistoryList
+            .FirstOrDefault(series => series.SeriesId == seriesId)?
+            .Seasons.FirstOrDefault(season => season.SeasonId == seasonId)?
+            .EpisodesList.Find(e => e.EpisodeId == episodeId);
     }
 
     public (HistoryEpisode? historyEpisode, string downloadDirPath) GetHistoryEpisodeWithDownloadDir(string? seriesId, string? seasonId, string episodeId){

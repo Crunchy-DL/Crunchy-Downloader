@@ -20,6 +20,7 @@ using CRD.Downloader;
 using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.Files;
 using CRD.Utils.HLS;
+using CRD.Utils.Http;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Parser;
 using CRD.Utils.Structs;

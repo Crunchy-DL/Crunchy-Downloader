@@ -19,6 +19,7 @@ using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
@@ -256,6 +257,18 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool useFlareSolverr;
+    
+    [ObservableProperty]
+    private string mitmFlareSolverrHost = "localhost";
+
+    [ObservableProperty]
+    private string mitmFlareSolverrPort = "8080";
+
+    [ObservableProperty]
+    private bool mitmFlareSolverrUseSsl;
+
+    [ObservableProperty]
+    private bool useMitmFlareSolverr;
 
     [ObservableProperty]
     private string tempDownloadDirPath;
@@ -275,14 +288,14 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     [ObservableProperty]
     private string currentIp = "";
 
-    private readonly FluentAvaloniaTheme _faTheme;
+    private readonly FluentAvaloniaTheme faTheme;
 
     private bool settingsLoaded;
 
-    private IStorageProvider _storageProvider;
+    private IStorageProvider? storageProvider;
 
     public GeneralSettingsViewModel(){
-        _storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
+        storageProvider = ProgramManager.Instance.StorageProvider ?? throw new ArgumentNullException(nameof(ProgramManager.Instance.StorageProvider));
 
         var version = Assembly
             .GetExecutingAssembly()
@@ -290,7 +303,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             ?.InformationalVersion.Split('+')[0];
         CurrentVersion = $"v{version}";
 
-        _faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme ??[];
+        faTheme = Application.Current?.Styles[0] as FluentAvaloniaTheme ??[];
 
         if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
             CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);
@@ -333,6 +346,15 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             UseFlareSolverr = propsFlareSolverr.UseFlareSolverr;
             FlareSolverrHost = propsFlareSolverr.Host + "";
             FlareSolverrPort = propsFlareSolverr.Port + "";
+        }
+        
+        var propsMitmFlareSolverr = options.FlareSolverrMitmProperties;
+
+        if (propsMitmFlareSolverr != null){
+            MitmFlareSolverrUseSsl = propsMitmFlareSolverr.UseSsl;
+            UseMitmFlareSolverr = propsMitmFlareSolverr.UseMitmProxy;
+            MitmFlareSolverrHost = propsMitmFlareSolverr.Host + "";
+            MitmFlareSolverrPort = propsMitmFlareSolverr.Port + "";
         }
 
         ProxyEnabled = options.ProxyEnabled;
@@ -437,8 +459,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         settings.Theme = CurrentAppTheme?.Content + "";
 
-        if (_faTheme.CustomAccentColor != (Application.Current?.PlatformSettings?.GetColorValues().AccentColor1)){
-            settings.AccentColor = _faTheme.CustomAccentColor.ToString();
+        if (faTheme.CustomAccentColor != (Application.Current?.PlatformSettings?.GetColorValues().AccentColor1)){
+            settings.AccentColor = faTheme.CustomAccentColor.ToString();
         } else{
             settings.AccentColor = string.Empty;
         }
@@ -472,8 +494,22 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         } else{
             propsFlareSolverr.Port = 8989;
         }
+        
+        var propsMitmFlareSolverr = new MitmProxyProperties();
+
+        propsMitmFlareSolverr.UseSsl = MitmFlareSolverrUseSsl;
+        propsMitmFlareSolverr.UseMitmProxy = UseMitmFlareSolverr;
+        propsMitmFlareSolverr.Host = MitmFlareSolverrHost;
+        propsMitmFlareSolverr.UseSsl = MitmFlareSolverrUseSsl;
+        
+        if (int.TryParse(MitmFlareSolverrPort, out var portNumberMitmFlare)){
+            propsMitmFlareSolverr.Port = portNumberMitmFlare;
+        } else{
+            propsMitmFlareSolverr.Port = 8080;
+        }
 
         settings.FlareSolverrProperties = propsFlareSolverr;
+        settings.FlareSolverrMitmProperties = propsMitmFlareSolverr;
         
         settings.TrayIconEnabled = TrayIconEnabled;
         settings.StartMinimizedToTray = StartMinimizedToTray;
@@ -522,12 +558,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     }
 
     private async Task OpenFolderDialogAsyncInternal(Action<string> pathSetter, Func<string> pathGetter, string defaultPath){
-        if (_storageProvider == null){
+        if (storageProvider == null){
             Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
             throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
         }
 
-        var result = await _storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{
+        var result = await storageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions{
             Title = "Select Folder"
         });
 
@@ -635,12 +671,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         Action<string> pathSetter,
         Func<string> pathGetter,
         string defaultPath){
-        if (_storageProvider == null){
+        if (storageProvider == null){
             Console.Error.WriteLine("StorageProvider must be set before using the dialog.");
             throw new InvalidOperationException("StorageProvider must be set before using the dialog.");
         }
 
-        var result = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{
+        var result = await storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions{
             Title = title,
             FileTypeFilter = fileTypes,
             AllowMultiple = false
@@ -659,12 +695,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     partial void OnCurrentAppThemeChanged(ComboBoxItem? value){
         if (value?.Content?.ToString() == "System"){
-            _faTheme.PreferSystemTheme = true;
+            faTheme.PreferSystemTheme = true;
         } else if (value?.Content?.ToString() == "Dark"){
-            _faTheme.PreferSystemTheme = false;
+            faTheme.PreferSystemTheme = false;
             Application.Current?.RequestedThemeVariant = ThemeVariant.Dark;
         } else{
-            _faTheme.PreferSystemTheme = false;
+            faTheme.PreferSystemTheme = false;
             Application.Current?.RequestedThemeVariant = ThemeVariant.Light;
         }
 
@@ -673,7 +709,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     partial void OnUseCustomAccentChanged(bool value){
         if (value){
-            if (_faTheme.TryGetResource("SystemAccentColor", null, out var curColor)){
+            if (faTheme.TryGetResource("SystemAccentColor", null, out var curColor)){
                 CustomAccentColor = (Color)curColor;
                 ListBoxColor = CustomAccentColor;
 
@@ -704,7 +740,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     }
 
     private void UpdateAppAccentColor(Color? color){
-        _faTheme.CustomAccentColor = color;
+        faTheme.CustomAccentColor = color;
         UpdateSettings();
     }
     partial void OnTrayIconEnabledChanged(bool value){

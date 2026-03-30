@@ -15,6 +15,7 @@ using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;

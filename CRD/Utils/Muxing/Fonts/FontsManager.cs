@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Muxing.Structs;
 using CRD.Utils.Structs;
 using CRD.Views;

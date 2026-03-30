@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace CRD.Utils.Sonarr.Models;
@@ -12,6 +13,15 @@ public class SonarrEpisode{
     /// </value>
     [JsonProperty("seriesId")]
     public int SeriesId{ get; set; }
+    
+    /// <summary>
+    /// Gets or sets the images.
+    /// </summary>
+    /// <value>
+    /// The images.
+    /// </value>
+    [JsonProperty("images")]
+    public List<SonarrImage>? Images{ get; set; }
 
     /// <summary>
     /// Gets or sets the episode file identifier.
@@ -138,4 +148,8 @@ public class SonarrEpisode{
     /// </value>
     [JsonProperty("id")]
     public int Id{ get; set; }
+    
+    [JsonProperty("series")]
+    public SonarrSeries? Series{ get; set; }
+    
 }

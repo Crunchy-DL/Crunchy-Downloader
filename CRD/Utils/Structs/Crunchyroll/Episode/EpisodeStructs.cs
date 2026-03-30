@@ -366,6 +366,7 @@ public class CrunchyEpMeta{
     public string? EpisodeNumber{ get; set; }
     public string? EpisodeTitle{ get; set; }
     public string? Description{ get; set; }
+    public string? EpisodeId{ get; set; }
     public string? SeasonId{ get; set; }
     public string? Season{ get; set; }
     public string? SeriesId{ get; set; }

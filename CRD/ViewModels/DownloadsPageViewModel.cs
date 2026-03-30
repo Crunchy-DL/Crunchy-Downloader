@@ -21,16 +21,16 @@ public partial class DownloadsPageViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _shutdownWhenQueueEmpty;
-    
+
     [ObservableProperty]
     private bool _autoDownload;
 
     [ObservableProperty]
     private bool _removeFinished;
-    
+
     [ObservableProperty]
     private QueueManager _queueManagerIns;
-    
+
     public DownloadsPageViewModel(){
         QueueManagerIns = QueueManager.Instance;
         QueueManagerIns.UpdateDownloadListItems();
@@ -39,7 +39,7 @@ public partial class DownloadsPageViewModel : ViewModelBase{
         RemoveFinished = CrunchyrollManager.Instance.CrunOptions.RemoveFinishedDownload;
         ShutdownWhenQueueEmpty = CrunchyrollManager.Instance.CrunOptions.ShutdownWhenQueueEmpty;
     }
-    
+
 
     partial void OnAutoDownloadChanged(bool value){
         CrunchyrollManager.Instance.CrunOptions.AutoDownload = value;
@@ -64,7 +64,7 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     public void ClearQueue(){
         var items = QueueManagerIns.Queue;
         QueueManagerIns.Queue.Clear();
-        
+
         foreach (var crunchyEpMeta in items){
             if (!crunchyEpMeta.DownloadProgress.Done){
                 foreach (var downloadItemDownloadedFile in crunchyEpMeta.downloadedFiles){
@@ -79,7 +79,7 @@ public partial class DownloadsPageViewModel : ViewModelBase{
             }
         }
     }
-    
+
     [RelayCommand]
     public void RetryQueue(){
         var items = QueueManagerIns.Queue;
@@ -92,7 +92,6 @@ public partial class DownloadsPageViewModel : ViewModelBase{
 
         QueueManagerIns.UpdateDownloadListItems();
     }
-    
 }
 
 public partial class DownloadItemModel : INotifyPropertyChanged{
@@ -130,8 +129,8 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         DownloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
             ? $"{epMeta.DownloadProgress.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
             : $"{epMeta.DownloadProgress.DownloadSpeedBytes / 1000000.0:F2} MB/s";
-            
-            ;
+
+        ;
         Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
         DoingWhat = epMeta.Paused ? "Paused" :
             Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
@@ -253,22 +252,29 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         }
     }
 
-    public async void StartDownload(){
-        if (!isDownloading){
-            isDownloading = true;
-            epMeta.DownloadProgress.IsDownloading = true;
-            Paused = !epMeta.Paused && !isDownloading || epMeta.Paused;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
+    public Task StartDownload(){
+        QueueManager.Instance.TryStartDownload(this);
+        return Task.CompletedTask;
+    }
 
-            CrDownloadOptions? newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
+    internal async Task StartDownloadCore(){
+        if (isDownloading)
+            return;
 
-            if (epMeta.OnlySubs){
-                newOptions.Novids = true;
-                newOptions.Noaudio = true;
-            }
+        isDownloading = true;
+        epMeta.DownloadProgress.IsDownloading = true;
 
-            await CrunchyrollManager.Instance.DownloadEpisode(epMeta, epMeta.DownloadSettings ?? newOptions);
+        Paused = epMeta.Paused;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
+
+        CrDownloadOptions? newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
+
+        if (epMeta.OnlySubs){
+            newOptions.Novids = true;
+            newOptions.Noaudio = true;
         }
+
+        await CrunchyrollManager.Instance.DownloadEpisode(epMeta, epMeta.DownloadSettings ?? newOptions);
     }
 
     [RelayCommand]

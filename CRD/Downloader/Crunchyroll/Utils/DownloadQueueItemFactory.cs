@@ -36,6 +36,7 @@ public static class DownloadQueueItemFactory{
         string? episodeNumber,
         string? episodeTitle,
         string? description,
+        string? episodeId,
         string? seriesId,
         string? seasonId,
         string? season,
@@ -53,6 +54,7 @@ public static class DownloadQueueItemFactory{
             EpisodeTitle = episodeTitle,
             Description = description,
 
+            EpisodeId = episodeId,
             SeriesId = seriesId,
             SeasonId = seasonId,
             Season = season,

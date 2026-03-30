@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
+using CRD.Utils.Http;
 using CRD.Utils.Parser.Utils;
 using CRD.Utils.Structs;
 using Newtonsoft.Json;
@@ -481,6 +482,8 @@ public class HlsDownloader{
                     DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
                     Doing = _isAudio ? "Merging Audio" : (_isVideo ? "Merging Video" : "")
                 };
+                
+                QueueManager.Instance.Queue.Refresh();
 
                 if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
                     if (!_currentEpMeta.DownloadProgress.Done){

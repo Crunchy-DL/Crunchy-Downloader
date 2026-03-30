@@ -1,48 +1,30 @@
 using System;
-using System.Net;
-using System.Net.Http;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using CRD.Downloader.Crunchyroll;
 
-namespace CRD.Utils;
+namespace CRD.Utils.Http;
 
 public class HttpClientReq{
-    #region Singelton
-
-    private static HttpClientReq? instance;
-    private static readonly object padlock = new object();
-
-    public static HttpClientReq Instance{
-        get{
-            if (instance == null){
-                lock (padlock){
-                    if (instance == null){
-                        instance = new HttpClientReq();
-                    }
-                }
-            }
-
-            return instance;
-        }
-    }
-
-    #endregion
+    public static HttpClientReq Instance{ get; } = new();
 
     private HttpClient client;
 
-    public readonly bool useFlareSolverr;
-    private FlareSolverrClient flareSolverrClient;
+    public readonly bool UseFlareSolverr;
+    private FlareSolverrClient? flareSolverrClient;
 
     public HttpClientReq(){
-        IWebProxy systemProxy = WebRequest.DefaultWebProxy;
+        IWebProxy? systemProxy = WebRequest.DefaultWebProxy;
 
-        HttpClientHandler handler = new HttpClientHandler();
+        HttpClientHandler handler;
 
         if (CrunchyrollManager.Instance.CrunOptions.ProxyEnabled && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.ProxyHost)){
             handler = CreateHandler(true, CrunchyrollManager.Instance.CrunOptions.ProxySocks, CrunchyrollManager.Instance.CrunOptions.ProxyHost, CrunchyrollManager.Instance.CrunOptions.ProxyPort,
@@ -74,7 +56,7 @@ public class HttpClientReq{
         }
 
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0");
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/1.9.0 Nintendo Switch/18.1.0.0 UE4/4.27");
         // client.DefaultRequestHeaders.UserAgent.ParseAdd("Crunchyroll/3.60.0 Android/9 okhttp/4.12.0");
 
@@ -84,7 +66,7 @@ public class HttpClientReq{
         client.DefaultRequestHeaders.Connection.ParseAdd("keep-alive");
 
         if (CrunchyrollManager.Instance.CrunOptions.FlareSolverrProperties != null && CrunchyrollManager.Instance.CrunOptions.FlareSolverrProperties.UseFlareSolverr){
-            useFlareSolverr = true;
+            UseFlareSolverr = true;
             flareSolverrClient = new FlareSolverrClient();
         }
     }
@@ -130,15 +112,37 @@ public class HttpClientReq{
         return handler;
     }
 
-    public async Task<(bool IsOk, string ResponseContent, string error)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false, Dictionary<string, CookieCollection>? cookieStore = null){
+    public async Task<(bool IsOk, string ResponseContent, string error)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false, Dictionary<string, CookieCollection>? cookieStore = null,
+        bool allowChallengeBypass = true){
         string content = string.Empty;
         try{
-            AttachCookies(request, cookieStore);
+            if (request.RequestUri?.ToString() != ApiUrls.WidevineLicenceUrl){
+                AttachCookies(request, cookieStore);
+            }
+            
+            var retryRequest = await CloneHttpRequestMessageAsync(request);
 
             HttpResponseMessage response = await client.SendAsync(request);
 
-            if (ChallengeDetector.IsClearanceRequired(response)){
-                Console.Error.WriteLine($" Cloudflare Challenge detected");
+            if (allowChallengeBypass && ChallengeDetector.IsClearanceRequired(response)){
+                Console.Error.WriteLine($"Cloudflare Challenge detected");
+                if (UseFlareSolverr && flareSolverrClient != null){
+                    var solverResult = await flareSolverrClient.SendViaProxySolverAsync(
+                        retryRequest, GetCookiesForRequest(cookieStore));
+
+                    if (!solverResult.IsOk){
+                        return (false, solverResult.ResponseContent, "Challenge bypass failed");
+                    }
+
+                    // foreach (var cookie in solverResult.Cookies){
+                    //     if(cookie.Name == "__cf_bm")continue;
+                    //     AddCookie(cookie.Domain, cookie, cookieStore);
+                    // }
+
+                    return (true, ExtractJsonFromBrowserHtml(solverResult.ResponseContent), "");
+                }
+
+                return (false, content, "Cloudflare challenge detected");
             }
 
             content = await response.Content.ReadAsStringAsync();
@@ -149,16 +153,16 @@ public class HttpClientReq{
 
             return (IsOk: true, ResponseContent: content, error: "");
         } catch (Exception e){
-            // Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             if (!suppressError){
                 Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             }
-
-            return (IsOk: false, ResponseContent: content, error: e.Message);
+            return (IsOk: false, ResponseContent: content, error: "");
         }
     }
 
+
     public async Task<(bool IsOk, string ResponseContent, string error)> SendFlareSolverrHttpRequest(HttpRequestMessage request, bool suppressError = false){
+        if (flareSolverrClient == null) return (IsOk: false, ResponseContent: "", error: "No Flare Solverr client has been configured");
         string content = string.Empty;
         try{
             var flareSolverrResponses = await flareSolverrClient.SendViaFlareSolverrAsync(request, []);
@@ -166,7 +170,7 @@ public class HttpClientReq{
 
             content = flareSolverrResponses.ResponseContent;
 
-            return (IsOk: flareSolverrResponses.IsOk, ResponseContent: content, error: "");
+            return (flareSolverrResponses.IsOk, ResponseContent: content, error: "");
         } catch (Exception e){
             if (!suppressError){
                 Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
@@ -235,7 +239,7 @@ public class HttpClientReq{
         }
 
         if (cookieStore.TryGetValue(domain, out var cookies)){
-            var cookie = cookies.Cast<Cookie>().FirstOrDefault(c => c.Name == cookieName);
+            var cookie = cookies.FirstOrDefault(c => c.Name == cookieName);
             return cookie?.Value;
         }
 
@@ -258,6 +262,71 @@ public class HttpClientReq{
         }
 
         cookieStore[domain].Add(cookie);
+    }
+
+    private static string ExtractJsonFromBrowserHtml(string responseContent){
+        if (string.IsNullOrWhiteSpace(responseContent)){
+            return responseContent;
+        }
+
+        var match = Regex.Match(
+            responseContent,
+            @"<pre[^>]*>(.*?)</pre>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+        if (!match.Success){
+            return responseContent;
+        }
+
+        return WebUtility.HtmlDecode(match.Groups[1].Value).Trim();
+    }
+
+    private static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage request){
+        var clone = new HttpRequestMessage(request.Method, request.RequestUri){
+            Version = request.Version,
+            VersionPolicy = request.VersionPolicy
+        };
+
+        foreach (var header in request.Headers){
+            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
+        }
+
+        if (request.Content != null){
+            var contentBytes = await request.Content.ReadAsByteArrayAsync();
+            var newContent = new ByteArrayContent(contentBytes);
+
+            foreach (var header in request.Content.Headers){
+                newContent.Headers.TryAddWithoutValidation(header.Key, header.Value);
+            }
+
+            clone.Content = newContent;
+        }
+
+        foreach (var option in request.Options){
+            clone.Options.Set(new HttpRequestOptionsKey<object?>(option.Key), option.Value);
+        }
+
+        return clone;
+    }
+
+    private List<Cookie> GetCookiesForRequest(Dictionary<string, CookieCollection>? cookieStore){
+        var result = new List<Cookie>();
+
+        if (cookieStore == null){
+            return result;
+        }
+
+        foreach (var entry in cookieStore){
+            var cookies = entry.Value;
+
+            foreach (Cookie cookie in cookies){
+                if (cookie.Domain == ".crunchyroll.com"){
+                    result.Add(cookie);
+                }
+            }
+        }
+
+        return result;
     }
 
 

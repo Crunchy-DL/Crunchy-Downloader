@@ -11,6 +11,7 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.History;
 using CRD.Views;
@@ -82,7 +83,7 @@ public class CalendarManager{
         request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
 
         (bool IsOk, string ResponseContent, string error) response;
-        if (!HttpClientReq.Instance.useFlareSolverr){
+        if (!HttpClientReq.Instance.UseFlareSolverr){
             response = await HttpClientReq.Instance.SendHttpRequest(request);
         } else{
             response = await HttpClientReq.Instance.SendFlareSolverrHttpRequest(request);

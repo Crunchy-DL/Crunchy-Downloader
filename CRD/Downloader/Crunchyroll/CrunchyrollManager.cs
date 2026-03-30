@@ -17,12 +17,14 @@ using CRD.Utils.DRM;
 using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.Files;
 using CRD.Utils.HLS;
+using CRD.Utils.Http;
 using CRD.Utils.Muxing;
 using CRD.Utils.Muxing.Fonts;
 using CRD.Utils.Muxing.Structs;
 using CRD.Utils.Muxing.Syncing;
 using CRD.Utils.Parser;
 using CRD.Utils.Sonarr;
+using CRD.Utils.Sonarr.Models;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
@@ -215,8 +217,8 @@ public class CrunchyrollManager{
 
         DefaultAndroidTvAuthSettings = new CrAuthSettings(){
             Endpoint = "tv/android_tv",
-            Authorization = "Basic bzd1b3d5N3E0bGdsdGJhdnloanE6bHFyakVUTng2Vzd1Um5wY0RtOHdSVmo4QkNoakMxZXI=",
-            UserAgent = "ANDROIDTV/3.58.0 Android/16",
+            Authorization = "Basic eTJhcnZqYjBoMHJndnRpemxvdnk6SlZMdndkSXBYdnhVLXFJQnZUMU04b1FUcjFxbFFKWDI=",
+            UserAgent = "ANDROIDTV/3.59.0 Android/16",
             Device_name = "Android TV",
             Device_type = "Android TV",
             Audio = true,
@@ -236,19 +238,19 @@ public class CrunchyrollManager{
 
         if (CrunOptions.StreamEndpoint == null){
             CrunOptions.StreamEndpoint = DefaultAndroidTvAuthSettings;
-        }else if(CrunOptions.StreamEndpoint.UseDefault) {
+        } else if (CrunOptions.StreamEndpoint.UseDefault){
             CrunOptions.StreamEndpoint.Authorization = DefaultAndroidTvAuthSettings.Authorization;
             CrunOptions.StreamEndpoint.UserAgent = DefaultAndroidTvAuthSettings.UserAgent;
             CrunOptions.StreamEndpoint.Device_name = DefaultAndroidTvAuthSettings.Device_name;
             CrunOptions.StreamEndpoint.Device_type = DefaultAndroidTvAuthSettings.Device_type;
         }
-        
+
         CrunOptions.StreamEndpoint.Endpoint = "tv/android_tv";
         CrAuthEndpoint1.AuthSettings = CrunOptions.StreamEndpoint;
-        
+
         if (CrunOptions.StreamEndpointSecondSettings == null){
             CrunOptions.StreamEndpointSecondSettings = DefaultAndroidAuthSettings;
-        }else if(CrunOptions.StreamEndpointSecondSettings.UseDefault) {
+        } else if (CrunOptions.StreamEndpointSecondSettings.UseDefault){
             CrunOptions.StreamEndpointSecondSettings.Authorization = DefaultAndroidAuthSettings.Authorization;
             CrunOptions.StreamEndpointSecondSettings.UserAgent = DefaultAndroidAuthSettings.UserAgent;
             CrunOptions.StreamEndpointSecondSettings.Device_name = DefaultAndroidAuthSettings.Device_name;
@@ -267,7 +269,7 @@ public class CrunchyrollManager{
         await CrAuthGuest.AuthAnonymousFoxy();
 
         CfgManager.WriteCrSettings();
-        
+
         var jsonFiles = Directory.Exists(CfgManager.PathENCODING_PRESETS_DIR) ? Directory.GetFiles(CfgManager.PathENCODING_PRESETS_DIR, "*.json") : [];
 
         foreach (var file in jsonFiles){
@@ -324,7 +326,16 @@ public class CrunchyrollManager{
 
 
     public async Task<bool> DownloadEpisode(CrunchyEpMeta data, CrDownloadOptions options){
-        QueueManager.Instance.IncrementDownloads();
+        bool downloadSlotHeld = true;
+        bool processingSlotHeld = false;
+
+        void ReleaseDownloadSlotIfHeld(){
+            if (!downloadSlotHeld)
+                return;
+
+            downloadSlotHeld = false;
+            QueueManager.Instance.ReleaseDownloadSlot(data);
+        }
 
         data.DownloadProgress = new DownloadProgress(){
             IsDownloading = true,
@@ -345,7 +356,7 @@ public class CrunchyrollManager{
 
 
         if (res.Error){
-            QueueManager.Instance.DecrementDownloads();
+            ReleaseDownloadSlotIfHeld();
             data.DownloadProgress = new DownloadProgress(){
                 IsDownloading = false,
                 Error = true,
@@ -360,7 +371,7 @@ public class CrunchyrollManager{
 
         try{
             if (options.DownloadAllowEarlyStart){
-                QueueManager.Instance.DecrementDownloads();
+                ReleaseDownloadSlotIfHeld();
                 data.DownloadProgress = new DownloadProgress(){
                     IsDownloading = true,
                     Percent = 100,
@@ -369,7 +380,8 @@ public class CrunchyrollManager{
                     Doing = "Waiting for Muxing/Encoding"
                 };
                 QueueManager.Instance.Queue.Refresh();
-                await QueueManager.Instance.ActiveProcessingJobs.WaitAsync(data.Cts.Token);
+                await QueueManager.Instance.WaitForProcessingSlotAsync(data.Cts.Token);
+                processingSlotHeld = true;
             }
 
 
@@ -549,9 +561,7 @@ public class CrunchyrollManager{
                     Doing = (muxError ? "Muxing Failed" : "Done") + (syncError ? $" - Couldn't sync dubs ({notSyncedDubs})" : "")
                 };
 
-                if (CrunOptions.RemoveFinishedDownload && !syncError){
-                    QueueManager.Instance.Queue.Remove(data);
-                }
+                QueueManager.Instance.MarkDownloadFinished(data, CrunOptions.RemoveFinishedDownload && !syncError);
             } else{
                 Console.WriteLine("Skipping mux");
                 res.Data.ForEach(file => Helpers.DeleteFile(file.Path + ".resume"));
@@ -575,21 +585,19 @@ public class CrunchyrollManager{
                     Doing = "Done - Skipped muxing"
                 };
 
-                if (CrunOptions.RemoveFinishedDownload){
-                    QueueManager.Instance.Queue.Remove(data);
-                }
+                QueueManager.Instance.MarkDownloadFinished(data, CrunOptions.RemoveFinishedDownload);
             }
         } catch (OperationCanceledException){
             // expected when removed/canceled
         } finally{
-            if (options.DownloadAllowEarlyStart) QueueManager.Instance.ActiveProcessingJobs.Release();
+            ReleaseDownloadSlotIfHeld();
+
+            if (processingSlotHeld){
+                QueueManager.Instance.ReleaseProcessingSlot();
+            }
         }
 
-
-        if (!options.DownloadAllowEarlyStart){
-            QueueManager.Instance.DecrementDownloads();
-        }
-
+        
         QueueManager.Instance.Queue.Refresh();
 
         if (options.History && data.Data is{ Count: > 0 } && (options.HistoryIncludeCrArtists && data.Music || !data.Music)){
@@ -841,13 +849,12 @@ public class CrunchyrollManager{
 
 
                         var subtitles = merger.Options.Subtitles.Where(a => a.RelatedVideoDownloadMedia == syncVideo).ToList();
-                        
+
                         if (subtitles.Count <= 0) continue;
-                        
+
                         foreach (var subMergerInput in subtitles){
                             subMergerInput.Delay = (int)(delay.offSet * 1000);
                         }
-
                     }
                 }
             }
@@ -984,6 +991,16 @@ public class CrunchyrollManager{
         if (data.Data is{ Count: > 0 }){
             options.Partsize = options.Partsize > 0 ? options.Partsize : 1;
 
+            var historyEpisode = History.GetHistoryEpisode(data.SeriesId ?? string.Empty ,data.SeasonId ?? string.Empty, data.EpisodeId ?? string.Empty);
+            SonarrEpisode? sonarrEpisode;
+            if (historyEpisode != null && CrunOptions.SonarrProperties?.SonarrEnabled == true){
+                sonarrEpisode = await SonarrClient.Instance.GetEpisode(Convert.ToInt32(historyEpisode.SonarrEpisodeId));
+                if(sonarrEpisode is{ Series: null }) sonarrEpisode.Series = await SonarrClient.Instance.GetSeries(sonarrEpisode.SeriesId);
+                variables.Add(new Variable("sonarrSeriesTitle", sonarrEpisode?.Series?.Title ?? string.Empty, true));
+                variables.Add(new Variable("sonarrSeriesReleaseYear", sonarrEpisode?.Series?.Year ?? 0, true));
+                variables.Add(new Variable("sonarrEpisodeTitle", sonarrEpisode?.Title ?? string.Empty, true));
+            }
+            
             if (options.DownloadDescriptionAudio){
                 var alreadyAdr = new HashSet<string>(
                     data.Data.Where(x => x.IsAudioRoleDescription).Select(x => x.Lang?.CrLocale ?? "err")

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using CRD.Utils.DRM;
 using CRD.Utils.HLS;
+using CRD.Utils.Http;
 using CRD.Utils.Parser.Utils;
 using CRD.Utils.Structs;
 

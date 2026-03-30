@@ -17,106 +17,144 @@ using ReactiveUI;
 
 namespace CRD.Downloader;
 
-public partial class QueueManager : ObservableObject{
-    #region Download Variables
+public sealed partial class QueueManager : ObservableObject{
+    
+    public static QueueManager Instance{ get; } = new();
+    
+     #region Download Variables
 
-    public RefreshableObservableCollection<CrunchyEpMeta> Queue = new();
-    public ObservableCollection<DownloadItemModel> DownloadItemModels = new();
-    private int activeDownloads;
+    public RefreshableObservableCollection<CrunchyEpMeta> Queue{ get; } = new();
+    public ObservableCollection<DownloadItemModel> DownloadItemModels{ get; } = new();
 
-    public int ActiveDownloads => Volatile.Read(ref activeDownloads);
+    public int ActiveDownloads{
+        get{
+            lock (downloadStartLock){
+                return activeOrStarting.Count;
+            }
+        }
+    }
 
-    public readonly SemaphoreSlim ActiveProcessingJobs = new(initialCount: CrunchyrollManager.Instance.CrunOptions.SimultaneousProcessingJobs, maxCount: int.MaxValue);
-    private int _limit = CrunchyrollManager.Instance.CrunOptions.SimultaneousProcessingJobs;
-    private int _borrowed = 0;
+    private readonly object downloadStartLock = new();
+    private readonly HashSet<CrunchyEpMeta> activeOrStarting = new();
+    private readonly object processingLock = new();
+
+    private readonly SemaphoreSlim activeProcessingJobs;
+    private int processingJobsLimit;
+    private int borrowed;
+
+    private int pumpScheduled;
+    private int pumpDirty;
 
     #endregion
 
     [ObservableProperty]
     private bool hasFailedItem;
-    
+
     public event EventHandler? QueueStateChanged;
 
-    #region Singelton
-
-    private static QueueManager? _instance;
-    private static readonly object Padlock = new();
-
-    public static QueueManager Instance{
-        get{
-            if (_instance == null){
-                lock (Padlock){
-                    if (_instance == null){
-                        _instance = new QueueManager();
-                    }
-                }
-            }
-
-            return _instance;
-        }
-    }
-
-    #endregion
+    private readonly CrunchyrollManager crunchyrollManager;
 
     public QueueManager(){
+        this.crunchyrollManager = CrunchyrollManager.Instance;
+
+        activeProcessingJobs = new SemaphoreSlim(
+            initialCount: crunchyrollManager.CrunOptions.SimultaneousProcessingJobs,
+            maxCount: 2);
+
+        processingJobsLimit = crunchyrollManager.CrunOptions.SimultaneousProcessingJobs;
+
         Queue.CollectionChanged += UpdateItemListOnRemove;
         Queue.CollectionChanged += (_, _) => OnQueueStateChanged();
     }
 
-    public void IncrementDownloads(){
-        Interlocked.Increment(ref activeDownloads);
+    public bool TryStartDownload(DownloadItemModel model){
+        var item = model.epMeta;
+
+        lock (downloadStartLock){
+            if (activeOrStarting.Contains(item))
+                return false;
+
+            if (item.DownloadProgress is{ IsDownloading: true })
+                return false;
+
+            if (item.DownloadProgress is{ Done: true })
+                return false;
+
+            if (item.DownloadProgress is{ Error: true })
+                return false;
+
+            if (activeOrStarting.Count >= crunchyrollManager.CrunOptions.SimultaneousDownloads)
+                return false;
+
+            activeOrStarting.Add(item);
+        }
+
         OnQueueStateChanged();
+        _ = model.StartDownloadCore();
+        return true;
     }
 
-    public void ResetDownloads(){
-        Interlocked.Exchange(ref activeDownloads, 0);
+    public void ReleaseDownloadSlot(CrunchyEpMeta item){
+        bool removed;
+
+        lock (downloadStartLock){
+            removed = activeOrStarting.Remove(item);
+        }
+
+        if (removed){
+            OnQueueStateChanged();
+            RequestPump();
+        }
     }
 
-    public void DecrementDownloads(){
-        while (true){
-            int current = Volatile.Read(ref activeDownloads);
-            if (current == 0) return;
+    public Task WaitForProcessingSlotAsync(CancellationToken cancellationToken = default){
+        return activeProcessingJobs.WaitAsync(cancellationToken);
+    }
 
-            if (Interlocked.CompareExchange(ref activeDownloads, current - 1, current) == current){
-                OnQueueStateChanged();
+    public void ReleaseProcessingSlot(){
+        lock (processingLock){
+            if (borrowed > 0){
+                borrowed--;
                 return;
             }
-                
+
+            activeProcessingJobs.Release();
         }
     }
-    
-    public void SetLimit(int newLimit){
-        lock (ActiveProcessingJobs){
-            if (newLimit == _limit) return;
 
-            if (newLimit > _limit){
-                int giveBack = Math.Min(_borrowed, newLimit - _limit);
-                if (giveBack > 0){
-                    ActiveProcessingJobs.Release(giveBack);
-                    _borrowed -= giveBack;
-                }
-                
-                int more = newLimit - _limit - giveBack;
-                if (more > 0) ActiveProcessingJobs.Release(more);
+    public void SetLimit(int newLimit){
+        if (newLimit < 0)
+            throw new ArgumentOutOfRangeException(nameof(newLimit));
+
+        lock (processingLock){
+            if (newLimit == processingJobsLimit)
+                return;
+
+            int delta = newLimit - processingJobsLimit;
+
+            if (delta > 0){
+                int giveBack = Math.Min(borrowed, delta);
+                borrowed -= giveBack;
+
+                int toRelease = delta - giveBack;
+                if (toRelease > 0)
+                    activeProcessingJobs.Release(toRelease);
             } else{
-                int toPark = _limit - newLimit;
-                
-                for (int i = 0; i < toPark; i++){
-                    _ = Task.Run(async () => {
-                        await ActiveProcessingJobs.WaitAsync().ConfigureAwait(false);
-                        Interlocked.Increment(ref _borrowed);
-                    });
+                int toRemove = -delta;
+
+
+                while (toRemove > 0 && activeProcessingJobs.Wait(0)){
+                    toRemove--;
                 }
+
+
+                borrowed += toRemove;
             }
 
-            _limit = newLimit;
+            processingJobsLimit = newLimit;
         }
     }
-    
-    private void OnQueueStateChanged(){
-        QueueStateChanged?.Invoke(this, EventArgs.Empty);
-    }
-    
+
     private void UpdateItemListOnRemove(object? sender, NotifyCollectionChangedEventArgs e){
         if (e.Action == NotifyCollectionChangedAction.Remove){
             if (e.OldItems != null)
@@ -135,10 +173,21 @@ public partial class QueueManager : ObservableObject{
         UpdateDownloadListItems();
     }
 
-    public void UpdateDownloadListItems(){
-        var list = Queue;
+    public void MarkDownloadFinished(CrunchyEpMeta item, bool removeFromQueue){
+        Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+            if (removeFromQueue){
+                if (Queue.Contains(item))
+                    Queue.Remove(item);
+            } else{
+                Queue.Refresh();
+            }
 
-        foreach (CrunchyEpMeta crunchyEpMeta in list){
+            OnQueueStateChanged();
+        }, Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    public void UpdateDownloadListItems(){
+        foreach (CrunchyEpMeta crunchyEpMeta in Queue.ToList()){
             var downloadItem = DownloadItemModels.FirstOrDefault(e => e.epMeta.Equals(crunchyEpMeta));
             if (downloadItem != null){
                 downloadItem.Refresh();
@@ -147,13 +196,90 @@ public partial class QueueManager : ObservableObject{
                 _ = downloadItem.LoadImage();
                 DownloadItemModels.Add(downloadItem);
             }
-
-            if (downloadItem is{ isDownloading: false, Error: false } && CrunchyrollManager.Instance.CrunOptions.AutoDownload && ActiveDownloads < CrunchyrollManager.Instance.CrunOptions.SimultaneousDownloads){
-                downloadItem.StartDownload();
-            }
         }
 
         HasFailedItem = Queue.Any(item => item.DownloadProgress.Error);
+
+        if (crunchyrollManager.CrunOptions.AutoDownload){
+            RequestPump();
+        }
+    }
+
+    public void RequestPump(){
+        Interlocked.Exchange(ref pumpDirty, 1);
+
+        if (Interlocked.CompareExchange(ref pumpScheduled, 1, 0) != 0)
+            return;
+
+        Avalonia.Threading.Dispatcher.UIThread.Post(
+            RunPump,
+            Avalonia.Threading.DispatcherPriority.Background);
+    }
+
+    private void RunPump(){
+        try{
+            while (Interlocked.Exchange(ref pumpDirty, 0) == 1){
+                PumpQueue();
+            }
+        } finally{
+            Interlocked.Exchange(ref pumpScheduled, 0);
+            
+            if (Volatile.Read(ref pumpDirty) == 1 &&
+                Interlocked.CompareExchange(ref pumpScheduled, 1, 0) == 0){
+                Avalonia.Threading.Dispatcher.UIThread.Post(
+                    RunPump,
+                    Avalonia.Threading.DispatcherPriority.Background);
+            }
+        }
+    }
+
+    private void PumpQueue(){
+        List<CrunchyEpMeta> toStart = new();
+
+        lock (downloadStartLock){
+            int limit = crunchyrollManager.CrunOptions.SimultaneousDownloads;
+            int freeSlots = Math.Max(0, limit - activeOrStarting.Count);
+
+            if (freeSlots == 0)
+                return;
+
+            foreach (var item in Queue.ToList()){
+                if (freeSlots == 0)
+                    break;
+
+                if (item.DownloadProgress.Error)
+                    continue;
+
+                if (item.DownloadProgress.Done)
+                    continue;
+
+                if (item.DownloadProgress.IsDownloading)
+                    continue;
+
+                if (activeOrStarting.Contains(item))
+                    continue;
+
+                activeOrStarting.Add(item);
+                freeSlots--;
+                toStart.Add(item);
+            }
+        }
+
+        foreach (var item in toStart){
+            var model = DownloadItemModels.FirstOrDefault(x => x.epMeta.Equals(item));
+            if (model != null){
+                _ = model.StartDownloadCore();
+            } else{
+                ReleaseDownloadSlot(item);
+            }
+        }
+
+        OnQueueStateChanged();
+    }
+
+
+    private void OnQueueStateChanged(){
+        QueueStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
 
@@ -173,7 +299,7 @@ public partial class QueueManager : ObservableObject{
                 return;
             }
 
-            var sList = await CrunchyrollManager.Instance.CrEpisode.EpisodeData((CrunchyEpisode)episodeL, updateHistory);
+            var sList = await CrunchyrollManager.Instance.CrEpisode.EpisodeData(episodeL, updateHistory);
 
             (HistoryEpisode? historyEpisode, List<string> dublist, List<string> sublist, string downloadDirPath, string videoQuality) historyEpisode = (null, [], [], "", "");
 
@@ -233,13 +359,13 @@ public partial class QueueManager : ObservableObject{
 
                     if (sortedMetaData.Count != 0){
                         var first = sortedMetaData.First();
-                        selected.Data =[first];
-                        selected.SelectedDubs =[first.Lang?.CrLocale ?? string.Empty];
+                        selected.Data = [first];
+                        selected.SelectedDubs = [first.Lang?.CrLocale ?? string.Empty];
                     }
                 }
 
                 var newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
-                
+
                 if (newOptions == null){
                     Console.Error.WriteLine("Failed to create a copy of your current settings");
                     MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue, check the logs", ToastType.Error, 2));
@@ -250,12 +376,12 @@ public partial class QueueManager : ObservableObject{
                     case EpisodeDownloadMode.OnlyVideo:
                         newOptions.Novids = false;
                         newOptions.Noaudio = true;
-                        selected.DownloadSubs =["none"];
+                        selected.DownloadSubs = ["none"];
                         break;
                     case EpisodeDownloadMode.OnlyAudio:
                         newOptions.Novids = true;
                         newOptions.Noaudio = false;
-                        selected.DownloadSubs =["none"];
+                        selected.DownloadSubs = ["none"];
                         break;
                     case EpisodeDownloadMode.OnlySubs:
                         newOptions.Novids = true;
@@ -266,12 +392,12 @@ public partial class QueueManager : ObservableObject{
                         break;
                 }
 
-                if (!selected.DownloadSubs.Contains("none") && selected.DownloadSubs.All(item => (selected.AvailableSubs ??[]).Contains(item))){
+                if (!selected.DownloadSubs.Contains("none") && selected.DownloadSubs.All(item => (selected.AvailableSubs ?? []).Contains(item))){
                     if (!(selected.Data.Count < dubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub)){
                         selected.HighlightAllAvailable = true;
                     }
                 }
-                
+
                 if (newOptions.DownloadOnlyWithAllSelectedDubSub){
                     if (!selected.DownloadSubs.Contains("none") && !selected.DownloadSubs.Contains("all") && !selected.DownloadSubs.All(item => (selected.AvailableSubs ?? []).Contains(item))){
                         //missing subs
@@ -298,11 +424,11 @@ public partial class QueueManager : ObservableObject{
                     Console.Error.WriteLine("Added Episode to Queue but couldn't find all selected dubs - Available dubs/subs: ");
 
                     var languages = sList.EpisodeAndLanguages.Variants
-                        .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang?.CrLocale ?? "Unknown"}")
+                        .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang.CrLocale}")
                         .ToArray();
 
                     Console.Error.WriteLine(
-                        $"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
+                        $"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ?? [])}]");
                     MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
                 } else{
                     Console.WriteLine("Added Episode to Queue");
@@ -313,10 +439,10 @@ public partial class QueueManager : ObservableObject{
                 Console.Error.WriteLine("Episode couldn't be added to Queue - Available dubs/subs: ");
 
                 var languages = sList.EpisodeAndLanguages.Variants
-                    .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang?.CrLocale ?? "Unknown"}")
+                    .Select(v => $"{(v.Item.IsPremiumOnly ? "+ " : "")}{v.Lang.CrLocale}")
                     .ToArray();
 
-                Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ??[])}]");
+                Console.Error.WriteLine($"{selected.SeasonTitle} - Season {selected.Season} - {selected.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", selected.AvailableSubs ?? [])}]");
                 if (!CrunchyrollManager.Instance.CrunOptions.DownloadOnlyWithAllSelectedDubSub){
                     MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue with current dub settings", ToastType.Error, 2));
                 }
@@ -343,17 +469,17 @@ public partial class QueueManager : ObservableObject{
                     MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue, check the logs", ToastType.Error, 2));
                     return;
                 }
-                
+
                 switch (episodeDownloadMode){
                     case EpisodeDownloadMode.OnlyVideo:
                         newOptions.Novids = false;
                         newOptions.Noaudio = true;
-                        movieMeta.DownloadSubs =["none"];
+                        movieMeta.DownloadSubs = ["none"];
                         break;
                     case EpisodeDownloadMode.OnlyAudio:
                         newOptions.Novids = true;
                         newOptions.Noaudio = false;
-                        movieMeta.DownloadSubs =["none"];
+                        movieMeta.DownloadSubs = ["none"];
                         break;
                     case EpisodeDownloadMode.OnlySubs:
                         newOptions.Novids = true;
@@ -383,7 +509,7 @@ public partial class QueueManager : ObservableObject{
                         return;
                     }
                 }
-                
+
                 Queue.Add(movieMeta);
 
                 Console.WriteLine("Added Movie to Queue");
@@ -464,7 +590,7 @@ public partial class QueueManager : ObservableObject{
 
 
         foreach (var crunchyEpMeta in selected.Values.ToList()){
-            if (crunchyEpMeta.Data?.First() != null){
+            if (crunchyEpMeta.Data.FirstOrDefault() != null){
                 if (CrunchyrollManager.Instance.CrunOptions.History){
                     var historyEpisode = CrunchyrollManager.Instance.History.GetHistoryEpisodeWithDownloadDir(crunchyEpMeta.SeriesId, crunchyEpMeta.SeasonId, crunchyEpMeta.Data.First().MediaId);
                     if (CrunchyrollManager.Instance.CrunOptions.SonarrProperties is{ SonarrEnabled: true, UseSonarrNumbering: true }){
@@ -509,8 +635,8 @@ public partial class QueueManager : ObservableObject{
 
                     if (sortedMetaData.Count != 0){
                         var first = sortedMetaData.First();
-                        crunchyEpMeta.Data =[first];
-                        crunchyEpMeta.SelectedDubs =[first.Lang?.CrLocale ?? string.Empty];
+                        crunchyEpMeta.Data = [first];
+                        crunchyEpMeta.SelectedDubs = [first.Lang?.CrLocale ?? string.Empty];
                     }
                 }
 
@@ -521,7 +647,7 @@ public partial class QueueManager : ObservableObject{
                     MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode to the queue, check the logs", ToastType.Error, 2));
                     return;
                 }
-                
+
                 if (crunchyEpMeta.OnlySubs){
                     newOptions.Novids = true;
                     newOptions.Noaudio = true;
@@ -531,12 +657,12 @@ public partial class QueueManager : ObservableObject{
 
                 crunchyEpMeta.DownloadSettings = newOptions;
 
-                if (!crunchyEpMeta.DownloadSubs.Contains("none") && crunchyEpMeta.DownloadSubs.All(item => (crunchyEpMeta.AvailableSubs ??[]).Contains(item))){
+                if (!crunchyEpMeta.DownloadSubs.Contains("none") && crunchyEpMeta.DownloadSubs.All(item => (crunchyEpMeta.AvailableSubs ?? []).Contains(item))){
                     if (!(crunchyEpMeta.Data.Count < data.DubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub)){
                         crunchyEpMeta.HighlightAllAvailable = true;
                     }
                 }
-                
+
                 if (newOptions.DownloadOnlyWithAllSelectedDubSub){
                     if (!crunchyEpMeta.DownloadSubs.Contains("none") && !crunchyEpMeta.DownloadSubs.Contains("all") && !crunchyEpMeta.DownloadSubs.All(item => (crunchyEpMeta.AvailableSubs ?? []).Contains(item))){
                         //missing subs
@@ -550,7 +676,7 @@ public partial class QueueManager : ObservableObject{
                         continue;
                     }
                 }
-                
+
                 Queue.Add(crunchyEpMeta);
 
                 if (crunchyEpMeta.Data.Count < data.DubLang.Count && !CrunchyrollManager.Instance.CrunOptions.DownloadFirstAvailableDub){
@@ -559,10 +685,10 @@ public partial class QueueManager : ObservableObject{
 
                     partialAdd = true;
 
-                    var languages = (crunchyEpMeta.Data.First().Versions ??[]).Select(version => $"{(version.IsPremiumOnly ? "+ " : "")}{version.AudioLocale}").ToArray();
+                    var languages = (crunchyEpMeta.Data.First().Versions ?? []).Select(version => $"{(version.IsPremiumOnly ? "+ " : "")}{version.AudioLocale}").ToArray();
 
                     Console.Error.WriteLine(
-                        $"{crunchyEpMeta.SeasonTitle} - Season {crunchyEpMeta.Season} - {crunchyEpMeta.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", crunchyEpMeta.AvailableSubs ??[])}]");
+                        $"{crunchyEpMeta.SeasonTitle} - Season {crunchyEpMeta.Season} - {crunchyEpMeta.EpisodeTitle} dubs - [{string.Join(", ", languages)}] subs - [{string.Join(", ", crunchyEpMeta.AvailableSubs ?? [])}]");
                     MessageBus.Current.SendMessage(new ToastMessage($"Added episode to the queue but couldn't find all selected dubs", ToastType.Warning, 2));
                 }
             } else{
@@ -578,6 +704,4 @@ public partial class QueueManager : ObservableObject{
             MessageBus.Current.SendMessage(new ToastMessage($"Couldn't add episode(s) to the queue with current dub settings", ToastType.Error, 2));
         }
     }
-
-
 }

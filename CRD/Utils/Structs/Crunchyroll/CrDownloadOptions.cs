@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using CRD.Utils.Http;
 using CRD.Utils.Sonarr;
 using CRD.ViewModels;
 using Newtonsoft.Json;
@@ -158,6 +159,9 @@ public class CrDownloadOptions{
     
     [JsonProperty("flare_solverr_properties")]
     public FlareSolverrProperties? FlareSolverrProperties{ get; set; }
+    
+    [JsonProperty("flare_solverr_mitm_properties")]
+    public MitmProxyProperties? FlareSolverrMitmProperties{ get; set; }
 
     [JsonProperty("tray_icon_enabled")]
     public bool TrayIconEnabled{ get; set; }

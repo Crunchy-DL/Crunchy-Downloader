@@ -123,6 +123,21 @@ public class SonarrClient{
         return series;
     }
     
+    public async Task<SonarrSeries?> GetSeries(int seriesId){
+        var json = await GetJson($"/v3/series/{seriesId}{(true ? $"?includeSeasonImages={true}" : "")}");
+
+        SonarrSeries? series = null;
+
+        try{
+            series = Helpers.Deserialize<SonarrSeries>(json, null);
+        } catch (Exception e){
+            MainWindow.Instance.ShowError("Sonarr GetSeries error \n" + e);
+            Console.Error.WriteLine("[Sonarr] Sonarr GetSeries error \n" + e);
+        }
+
+        return series;
+    }
+    
     public async Task<List<SonarrEpisode>> GetEpisodes(int seriesId){
         var json = await GetJson($"/v3/episode?seriesId={seriesId}");
         
@@ -139,11 +154,11 @@ public class SonarrClient{
     }
 
 
-    public async Task<SonarrEpisode> GetEpisode(int episodeId){
-        var json = await GetJson($"/v3/episode/id={episodeId}");
-        var episode = new SonarrEpisode();
+    public async Task<SonarrEpisode?> GetEpisode(int episodeId){
+        var json = await GetJson($"/v3/episode/{episodeId}");
+        SonarrEpisode? episode = null;
         try{
-            episode = Helpers.Deserialize<SonarrEpisode>(json,null) ?? new SonarrEpisode();
+            episode = Helpers.Deserialize<SonarrEpisode>(json,null);
         } catch (Exception e){
             MainWindow.Instance.ShowError("Sonarr GetEpisode error \n" + e);
             Console.Error.WriteLine("Sonarr GetEpisode error \n" + e);

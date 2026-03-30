@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Web;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Views;
@@ -132,11 +133,15 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
             Token.device_id = deviceId;
             Token.expires = DateTime.Now.AddSeconds((double)Token.expires_in);
 
+            if (EndpointEnum == CrunchyrollEndpoints.Guest){
+                return;
+            }
+
             CfgManager.WriteJsonToFile(GetTokenFilePath(), Token);
         }
     }
 
-    public async Task Auth(AuthData data){
+    private async Task AuthOld(AuthData data){
         string uuid = Guid.NewGuid().ToString();
 
         var formData = new Dictionary<string, string>{
@@ -173,13 +178,13 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
             JsonTokenToFileAndVariable(response.ResponseContent, uuid);
         } else{
             if (response.ResponseContent.Contains("invalid_credentials")){
-                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - because of invalid login credentials", ToastType.Error, 5));
+                MessageBus.Current.SendMessage(new ToastMessage("Login failed. Please check your username and password.", ToastType.Error, 5));
             } else if (response.ResponseContent.Contains("<title>Just a moment...</title>") ||
                        response.ResponseContent.Contains("<title>Access denied</title>") ||
                        response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") ||
                        response.ResponseContent.Trim().Equals("error code: 1020") ||
                        response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
-                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error try to change to BetaAPI in settings", ToastType.Error, 5));
+                MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error {(crunInstance.CrunOptions.UseCrBetaApi ? "" : "try to change to BetaAPI in settings")}", ToastType.Error, 5));
             } else{
                 MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - {response.ResponseContent.Substring(0, response.ResponseContent.Length < 200 ? response.ResponseContent.Length : 200)}",
                     ToastType.Error, 5));
@@ -379,8 +384,8 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
             response.ResponseContent.Contains("<title>Attention Required! | Cloudflare</title>") ||
             response.ResponseContent.Trim().Equals("error code: 1020") ||
             response.ResponseContent.IndexOf("<title>DDOS-GUARD</title>", StringComparison.OrdinalIgnoreCase) > -1){
-            MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error try to change to BetaAPI in settings", ToastType.Error, 5));
-            Console.Error.WriteLine($"Failed to login - Cloudflare error try to change to BetaAPI in settings");
+            MessageBus.Current.SendMessage(new ToastMessage($"Failed to login - Cloudflare error {(crunInstance.CrunOptions.UseCrBetaApi ? "" : "try to change to BetaAPI in settings")}", ToastType.Error, 5));
+            Console.Error.WriteLine($"Failed to login - Cloudflare error {(crunInstance.CrunOptions.UseCrBetaApi ? "" : "try to change to BetaAPI in settings")}");
         }
 
         if (response.IsOk){

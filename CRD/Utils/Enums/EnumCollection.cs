@@ -283,9 +283,12 @@ public enum HistoryRefreshMode{
 }
 
 public enum SonarrCoverType{
+    Unknown,
+    Poster,
     Banner,
     FanArt,
-    Poster,
+    Screenshot,
+    Headshot,
     ClearLogo,
 }
 

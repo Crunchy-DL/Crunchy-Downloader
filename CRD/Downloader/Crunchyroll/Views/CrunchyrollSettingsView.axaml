@@ -507,7 +507,7 @@
                 </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Filename"
-                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs} - Folder with \\">
+                                               Description="${seriesTitle} ${seasonTitle} ${title} ${season} ${episode} ${height} ${width} ${dubs} - Folder with \\ &#10;Sonarr: ${sonarrSeriesTitle} ${sonarrSeriesReleaseYear} ${sonarrEpisodeTitle}">
                     <controls:SettingsExpanderItem.Footer>
                         <TextBox Name="FileNameTextBox" HorizontalAlignment="Left" MinWidth="250"
                                  Text="{Binding FileName}" />

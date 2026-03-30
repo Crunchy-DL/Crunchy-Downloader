@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
 using CRD.Utils;
+using CRD.Utils.Http;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll.Music;
 

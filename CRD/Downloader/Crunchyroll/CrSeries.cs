@@ -9,6 +9,7 @@ using System.Web;
 using CRD.Downloader.Crunchyroll.Utils;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using CRD.Utils.Structs;
 using CRD.Views;
 using ReactiveUI;
@@ -93,6 +94,7 @@ public class CrSeries{
                         episodeNumber: item.Episode,
                         episodeTitle: item.Title,
                         description: item.Description,
+                        episodeId: item.Id,
                         seriesId: item.SeriesId,
                         seasonId: item.SeasonId,
                         season: Helpers.ExtractNumberAfterS(item.Identifier) ?? item.SeasonNumber.ToString(),

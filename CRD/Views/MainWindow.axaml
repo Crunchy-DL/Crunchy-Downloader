@@ -69,7 +69,9 @@
                                                IconSource="Library" />
                     </ui:NavigationView.MenuItems>
                     <ui:NavigationView.FooterMenuItems>
-                        <ui:NavigationViewItem Classes="SampleAppNav" Content="Update" Tag="Update" Opacity="{Binding ProgramManager.OpacityButton}"
+                        <ui:NavigationViewItem Classes="SampleAppNav" 
+                                               Classes.redDot="{Binding ProgramManager.UpdateAvailable}"
+                                               Content="Update" Tag="Update"
                                                IconSource="CloudDownload" Focusable="False" /> 
                         <ui:NavigationViewItem Classes="SampleAppNav" Content="Account" Tag="Account"
                                                IconSource="Contact" />

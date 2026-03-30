@@ -24,45 +24,24 @@ using ProtoBuf.Meta;
 
 namespace CRD.Downloader;
 
-public partial class ProgramManager : ObservableObject{
-    #region Singelton
-
-    private static ProgramManager? _instance;
-    private static readonly object Padlock = new();
-
-    public static ProgramManager Instance{
-        get{
-            if (_instance == null){
-                lock (Padlock){
-                    if (_instance == null){
-                        _instance = new ProgramManager();
-                    }
-                }
-            }
-
-            return _instance;
-        }
-    }
-
-    #endregion
+public sealed partial class ProgramManager : ObservableObject{
+    
+    public static ProgramManager Instance{ get; } = new();
 
 
     #region Observables
 
     [ObservableProperty]
-    private bool _fetchingData;
+    private bool fetchingData;
 
     [ObservableProperty]
-    private bool _updateAvailable = true;
+    private bool updateAvailable = true;
 
     [ObservableProperty]
-    private double _opacityButton = 0.4;
+    private bool finishedLoading;
 
     [ObservableProperty]
-    private bool _finishedLoading;
-
-    [ObservableProperty]
-    private bool _navigationLock;
+    private bool navigationLock;
 
     #endregion
 
@@ -82,7 +61,7 @@ public partial class ProgramManager : ObservableObject{
 
     private readonly PeriodicWorkRunner checkForNewEpisodesRunner;
 
-    public IStorageProvider StorageProvider;
+    public IStorageProvider? StorageProvider;
 
     public ProgramManager(){
         checkForNewEpisodesRunner = new PeriodicWorkRunner(async ct => { await CheckForDownloadsAsync(ct); });
@@ -228,7 +207,7 @@ public partial class ProgramManager : ObservableObject{
                 await crunchyManager.History.UpdateWithEpisode(newEpisodes);
                 CfgManager.UpdateHistoryFile();
             } catch (Exception e){
-                Console.Error.WriteLine("Failed to update History");
+                Console.Error.WriteLine("Failed to update History: " + e.Message);
             }
         }
     }
@@ -245,8 +224,6 @@ public partial class ProgramManager : ObservableObject{
             CrunchyrollManager.Instance.InitOptions();
 
             UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
-
-            OpacityButton = UpdateAvailable ? 1.0 : 0.4;
 
             if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
                 if (_faTheme != null) _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);

@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
+using CRD.Utils.Http;
 using Newtonsoft.Json;
 using NuGet.Versioning;
 
