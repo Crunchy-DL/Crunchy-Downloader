@@ -1,0 +1,16 @@
+#!/usr/bin/with-contenv sh
+set -eu
+
+desktop_dir="/config/Desktop"
+autostart_dir="/config/.config/autostart"
+desktop_file="/usr/share/applications/crd.desktop"
+app_data_dir="/crd-data"
+run_uid="${PUID:-1000}"
+run_gid="${PGID:-1000}"
+
+mkdir -p "$desktop_dir" "$autostart_dir"
+mkdir -p "$app_data_dir/config" "$app_data_dir/temp" "$app_data_dir/video" "$app_data_dir/presets" "$app_data_dir/fonts" "$app_data_dir/widevine" "$app_data_dir/lib"
+cp "$desktop_file" "$desktop_dir/CRD.desktop"
+cp "$desktop_file" "$autostart_dir/CRD.desktop"
+chmod +x "$desktop_dir/CRD.desktop" "$autostart_dir/CRD.desktop"
+chown -R "$run_uid:$run_gid" "$app_data_dir" "$desktop_dir" "$autostart_dir"

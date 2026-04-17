@@ -1,0 +1,121 @@
+name: Docker From Release
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build from
+        required: true
+        type: string
+      asset_contains:
+        description: Substring used to find the Linux zip asset
+        required: false
+        default: linux-x64
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/crunchy-downloader-webtop
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release asset
+        id: release
+        uses: actions/github-script@v7
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag || '' }}
+          INPUT_ASSET_CONTAINS: ${{ github.event.inputs.asset_contains || 'linux-x64' }}
+        with:
+          script: |
+            const tag = context.eventName === "release"
+              ? context.payload.release.tag_name
+              : process.env.INPUT_TAG;
+            const assetContains = context.eventName === "release"
+              ? "linux-x64"
+              : process.env.INPUT_ASSET_CONTAINS;
+
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+            });
+
+            const asset = release.assets.find(a =>
+              a.name.toLowerCase().includes(assetContains.toLowerCase()) &&
+              a.name.toLowerCase().endsWith(".zip")
+            );
+
+            if (!asset) {
+              core.setFailed(`No release asset containing "${assetContains}" and ending in .zip was found on ${tag}.`);
+              return;
+            }
+
+            core.setOutput("tag", tag);
+            core.setOutput("asset_name", asset.name);
+            core.setOutput("asset_api_url", asset.url);
+            core.setOutput(
+              "channel_tag",
+              context.eventName === "release" && release.prerelease ? "nightly" : "latest"
+            );
+
+      - name: Download release zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -H "Accept: application/octet-stream" "${{ steps.release.outputs.asset_api_url }}" > release.zip
+
+      - name: Stage Docker payload
+        run: |
+          rm -rf docker/crd-linux-x64
+          mkdir -p docker/crd-linux-x64 docker/.tmp-release
+          unzip -q release.zip -d docker/.tmp-release
+          shopt -s dotglob nullglob
+          entries=(docker/.tmp-release/*)
+          if [ ${#entries[@]} -eq 1 ] && [ -d "${entries[0]}" ]; then
+            cp -a "${entries[0]}/." docker/crd-linux-x64/
+          else
+            cp -a docker/.tmp-release/. docker/crd-linux-x64/
+          fi
+          test -f docker/crd-linux-x64/CRD
+          rm -rf docker/.tmp-release
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.release.outputs.tag }}
+            type=raw,value=${{ steps.release.outputs.channel_tag }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.webtop
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

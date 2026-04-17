@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=CRD
+Comment=Crunchy Downloader
+Exec=/opt/crd/CRD
+Icon=/opt/crd/crd-icon.png
+Terminal=false
+Categories=AudioVideo;Network;
