@@ -66,17 +66,14 @@ jobs:
             core.setOutput("tag", tag);
             core.setOutput("asset_name", asset.name);
             core.setOutput("asset_api_url", asset.url);
-            core.setOutput(
-              "channel_tag",
-              context.eventName === "release" && release.prerelease ? "nightly" : "latest"
-            );
+            core.setOutput("is_prerelease", String(release.prerelease));
 
       - name: Download release zip
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api -H "Accept: application/octet-stream" "${{ steps.release.outputs.asset_api_url }}" > release.zip
-    
+
       - name: Stage Docker payload
         run: |
           rm -rf docker/crd-linux-x64
@@ -107,9 +104,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=false
           tags: |
-            type=raw,value=${{ steps.release.outputs.tag }}
-            type=raw,value=${{ steps.release.outputs.channel_tag }}
+            type=semver,pattern={{version}},value=${{ steps.release.outputs.tag }}
+            type=raw,value=current
+            type=raw,value=latest,enable=${{ steps.release.outputs.is_prerelease != 'true' }}
+            type=raw,value=stable,enable=${{ steps.release.outputs.is_prerelease != 'true' }}
 
       - name: Build and push image
         uses: docker/build-push-action@v6
