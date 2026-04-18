@@ -36,8 +36,8 @@ jobs:
         id: release
         uses: actions/github-script@v7
         env:
-          INPUT_TAG: ${{ github.event.inputs.tag || '' }}
-          INPUT_ASSET_CONTAINS: ${{ github.event.inputs.asset_contains || 'linux-x64' }}
+          INPUT_TAG: ${{ inputs.tag || '' }}
+          INPUT_ASSET_CONTAINS: ${{ inputs.asset_contains || 'linux-x64' }}
         with:
           script: |
             const tag = context.eventName === "release"
@@ -74,8 +74,9 @@ jobs:
       - name: Download release zip
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh api -H "Accept: application/octet-stream" "${{ steps.release.outputs.asset_api_url }}" > release.zip
-
+        run: |
+          gh api -H "Accept: application/octet-stream" "${{ steps.release.outputs.asset_api_url }}" > release.zip
+    
       - name: Stage Docker payload
         run: |
           rm -rf docker/crd-linux-x64
