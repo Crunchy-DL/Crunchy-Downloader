@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using CRD.Utils.Muxing.Commands;
 using CRD.Utils.Muxing.Structs;
@@ -27,7 +28,7 @@ public class Merger{
     }
     
 
-    public async Task<bool> Merge(string type, string bin){
+    public async Task<bool> Merge(string type, string bin, CancellationToken cancellationToken = default){
         string command = type switch{
             "ffmpeg" => FFmpeg(),
             "mkvmerge" => MkvMerge(),
@@ -40,7 +41,7 @@ public class Merger{
         }
 
         Console.WriteLine($"[{type}] Started merging");
-        var result = await Helpers.ExecuteCommandAsync(bin, command);
+        var result = await Helpers.ExecuteCommandAsync(bin, command, cancellationToken);
 
         if (!result.IsOk && type == "mkvmerge" && result.ErrorCode == 1){
             Console.Error.WriteLine($"[{type}] Mkvmerge finished with at least one warning");

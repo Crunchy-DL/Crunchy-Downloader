@@ -19,34 +19,37 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
     private readonly ContentDialog dialog;
 
     [ObservableProperty]
-    private bool _editMode;
+    private bool editMode;
 
     [ObservableProperty]
-    private string _presetName;
+    private string presetName;
 
     [ObservableProperty]
-    private string _codec;
+    [NotifyPropertyChangedFor(nameof(HasCodec))]
+    private string codec;
 
     [ObservableProperty]
-    private ComboBoxItem _selectedResolution = new();
+    private ComboBoxItem selectedResolution = new();
 
     [ObservableProperty]
-    private double? _crf = 23;
+    private double? crf = 23;
 
     [ObservableProperty]
-    private string _frameRate = "";
+    private string frameRate = "";
 
     [ObservableProperty]
-    private string _additionalParametersString = "";
+    private string additionalParametersString = "";
 
     [ObservableProperty]
-    private ObservableCollection<StringItem> _additionalParameters = new();
+    private ObservableCollection<StringItem> additionalParameters = new();
 
     [ObservableProperty]
-    private VideoPreset? _selectedCustomPreset;
+    private VideoPreset? selectedCustomPreset;
 
     [ObservableProperty]
-    private bool _fileExists;
+    private bool fileExists;
+
+    public bool HasCodec => !string.IsNullOrWhiteSpace(Codec);
 
     public ObservableCollection<VideoPreset> CustomPresetsList{ get; } = new(){ };
 
@@ -108,7 +111,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
         PresetName = value.PresetName ?? "";
         Codec = value.Codec ?? "";
         Crf = value.Crf;
-        FrameRate = value.FrameRate ?? "24";
+        FrameRate = value.FrameRate ?? "24000/1001";
 
         SelectedResolution = ResolutionList.FirstOrDefault(e => e.Content?.ToString() == value.Resolution) ?? ResolutionList.First();
         AdditionalParameters.Clear();

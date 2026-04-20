@@ -184,9 +184,7 @@ public class CrMusic{
         epMeta.Image = images.FirstOrDefault()?.Source ?? string.Empty;
         epMeta.ImageBig = images.FirstOrDefault()?.Source ?? string.Empty;
         epMeta.DownloadProgress = new DownloadProgress(){
-            IsDownloading = false,
-            Done = false,
-            Error = false,
+            State = DownloadState.Queued,
             Percent = 0,
             Time = 0,
             DownloadSpeedBytes = 0

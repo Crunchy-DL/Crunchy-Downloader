@@ -585,6 +585,12 @@
                             <CheckBox IsChecked="{Binding MuxFonts}" Content="Mux Fonts"> </CheckBox>
                         
                             <CheckBox IsEnabled="{Binding MuxFonts}" IsChecked="{Binding MuxTypesettingFonts}" Content="Include Typesetting Fonts"> </CheckBox>
+                            <TextBlock IsVisible="{Binding MuxFonts}"
+                                       MaxWidth="360"
+                                       Margin="0,6,0,0"
+                                       Opacity="0.85"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding FontMuxDisclaimer}" />
                         </StackPanel>
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
@@ -633,6 +639,15 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ComboBox>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Right"
+                                        Spacing="8"
+                                        IsVisible="{Binding SyncTimings}">
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="Mux failed dubs in selected quality" />
+                                <CheckBox VerticalAlignment="Center"
+                                          IsChecked="{Binding SyncTimingsFullQualityFallback}" />
                             </StackPanel>
 
                         </StackPanel>

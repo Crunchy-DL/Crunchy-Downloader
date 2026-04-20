@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using CRD.Utils.Files;
-using CRD.Utils.Http;
 using CRD.Utils.Muxing.Structs;
 using CRD.Utils.Structs;
 using CRD.Views;
@@ -108,55 +108,27 @@ public class FontsManager{
         { "Webdings", "webdings.ttf" }
     };
 
-    private string root = "https://static.crunchyroll.com/vilos-v2/web/vilos/assets/libass-fonts/";
-
-
     private readonly FontIndex index = new();
+    private int _fontSourceNoticePrinted;
 
     private void EnsureIndex(string fontsDir){
-        index.Rebuild(fontsDir);
+        index.Rebuild(GetFontSearchDirectories(fontsDir));
     }
 
-    public async Task GetFontsAsync(){
-        Console.WriteLine("Downloading fonts...");
-        var fonts = Fonts.Values.ToList();
-
-        foreach (var font in fonts){
-            var fontLoc = Path.Combine(CfgManager.PathFONTS_DIR, font);
-
-            if (File.Exists(fontLoc) && new FileInfo(fontLoc).Length != 0){
-                continue;
-            }
-
-            var fontFolder = Path.GetDirectoryName(fontLoc);
-            if (File.Exists(fontLoc) && new FileInfo(fontLoc).Length == 0)
-                File.Delete(fontLoc);
-
-            try{
-                if (!Directory.Exists(fontFolder))
-                    Directory.CreateDirectory(fontFolder!);
-            } catch (Exception e){
-                Console.WriteLine($"Failed to create directory: {e.Message}");
-            }
-
-            var fontUrl = root + font;
-
-            var httpClient = HttpClientReq.Instance.GetHttpClient();
-            try{
-                var response = await httpClient.GetAsync(fontUrl);
-                if (response.IsSuccessStatusCode){
-                    var fontData = await response.Content.ReadAsByteArrayAsync();
-                    await File.WriteAllBytesAsync(fontLoc, fontData);
-                    Console.WriteLine($"Downloaded: {font}");
-                } else{
-                    Console.Error.WriteLine($"Failed to download: {font}");
-                }
-            } catch (Exception e){
-                Console.Error.WriteLine($"Error downloading {font}: {e.Message}");
-            }
+    public Task GetFontsAsync(){
+        try{
+            Directory.CreateDirectory(CfgManager.PathFONTS_DIR);
+        } catch (Exception e){
+            Console.Error.WriteLine($"Failed to create fonts directory '{CfgManager.PathFONTS_DIR}': {e.Message}");
         }
 
-        Console.WriteLine("All required fonts downloaded!");
+        if (Interlocked.Exchange(ref _fontSourceNoticePrinted, 1) == 0){
+            Console.WriteLine("Crunchyroll-hosted subtitle fonts are no longer available.");
+            Console.WriteLine($"Font muxing now uses local fonts from '{CfgManager.PathFONTS_DIR}' and system font directories.");
+            Console.WriteLine("Copy any missing subtitle fonts into the local fonts folder if muxing reports them as missing.");
+        }
+
+        return Task.CompletedTask;
     }
 
     public static List<string> ExtractFontsFromAss(string ass, bool checkTypesettingFonts){
@@ -273,7 +245,7 @@ public class FontsManager{
         }
 
         if (missing.Count > 0)
-            MainWindow.Instance.ShowError($"Missing Fonts:\n{string.Join(", ", missing)}");
+            MainWindow.Instance.ShowError($"Missing Fonts:\n{string.Join(", ", missing)}\n\nAdd the missing font files to:\n{CfgManager.PathFONTS_DIR}");
 
         return fontsList;
     }
@@ -288,8 +260,8 @@ public class FontsManager{
             return true;
 
         if (Fonts.TryGetValue(req, out var crFile)){
-            var p = Path.Combine(fontsDir, crFile);
-            if (File.Exists(p)){
+            var p = FindKnownFontFile(crFile, fontsDir);
+            if (!string.IsNullOrEmpty(p)){
                 resolvedPath = p;
                 return true;
             }
@@ -303,9 +275,22 @@ public class FontsManager{
                 return true;
 
             if (Fonts.TryGetValue(family, out var crFamilyFile)){
-                var p = Path.Combine(fontsDir, crFamilyFile);
-                if (File.Exists(p)){
+                var p = FindKnownFontFile(crFamilyFile, fontsDir);
+                if (!string.IsNullOrEmpty(p)){
                     resolvedPath = p;
+                    return true;
+                }
+            }
+        }
+
+        var reqNoSpace = RemoveSpaces(req);
+
+        foreach (var kv in Fonts){
+            if (RemoveSpaces(kv.Key).Equals(reqNoSpace, StringComparison.OrdinalIgnoreCase)){
+                var p = FindKnownFontFile(kv.Value, fontsDir);
+                if (!string.IsNullOrEmpty(p)){
+                    resolvedPath = p;
+                    isExactMatch = false;
                     return true;
                 }
             }
@@ -315,15 +300,19 @@ public class FontsManager{
     }
 
     private static string StripStyleSuffix(string name){
-        var n = name;
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        n = Regex.Replace(n, @"\s+(Bold\s+Italic|Bold\s+Oblique|Black\s+Italic|Black|Bold|Italic|Oblique|Regular)$",
-            "", RegexOptions.IgnoreCase).Trim();
+        var styleWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase){
+            "Bold", "Italic", "Oblique", "Regular", "Black",
+            "Light", "Medium", "Semi", "Condensed"
+        };
 
-        return n;
+        var filtered = parts.Where(p => !styleWords.Contains(p)).ToList();
+
+        return filtered.Count > 0 ? string.Join(" ", filtered) : name;
     }
 
-    public static string NormalizeFontKey(string s){
+    private static string NormalizeFontKey(string s){
         if (string.IsNullOrWhiteSpace(s))
             return string.Empty;
 
@@ -332,16 +321,23 @@ public class FontsManager{
         if (s.StartsWith("@"))
             s = s.Substring(1);
 
+        // Convert camel case (TimesNewRoman → Times New Roman)
         s = Regex.Replace(s, @"(?<=[a-z])([A-Z])", " $1");
 
+        // unify separators
         s = s.Replace('_', ' ').Replace('-', ' ');
 
-        s = Regex.Replace(s, @"\s+", " ").Trim();
+        // remove MT suffix (ArialMT → Arial)
+        s = Regex.Replace(s, @"MT$", "", RegexOptions.IgnoreCase);
 
-        s = Regex.Replace(s, @"\s+Regular$", "", RegexOptions.IgnoreCase);
+        // collapse spaces
+        s = Regex.Replace(s, @"\s+", " ").Trim();
 
         return s;
     }
+
+    private static string RemoveSpaces(string s)
+        => s.Replace(" ", "");
 
     private static string MakeUniqueAttachmentName(string path, List<ParsedFont> existing){
         var baseName = Path.GetFileName(path);
@@ -356,23 +352,79 @@ public class FontsManager{
         return $"{hash}-{baseName}";
     }
 
+    private static IEnumerable<string> GetFontSearchDirectories(string fontsDir){
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var paths = new List<string>();
+
+        void AddIfUsable(string? dir){
+            if (string.IsNullOrWhiteSpace(dir))
+                return;
+
+            try{
+                var fullPath = Path.GetFullPath(dir);
+                if (Directory.Exists(fullPath) && seen.Add(fullPath))
+                    paths.Add(fullPath);
+            } catch{
+                // ignore invalid paths
+            }
+        }
+
+        AddIfUsable(fontsDir);
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)){
+            AddIfUsable(Environment.GetFolderPath(Environment.SpecialFolder.Fonts));
+        } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)){
+            AddIfUsable("/System/Library/Fonts");
+            AddIfUsable("/Library/Fonts");
+            AddIfUsable(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Library", "Fonts"));
+        } else{
+            AddIfUsable("/usr/share/fonts");
+            AddIfUsable("/usr/local/share/fonts");
+            AddIfUsable(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".fonts"));
+            AddIfUsable(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "fonts"));
+        }
+
+        return paths;
+    }
+
+    private static string FindKnownFontFile(string fileName, string fontsDir){
+        foreach (var dir in GetFontSearchDirectories(fontsDir)){
+            var path = Path.Combine(dir, fileName);
+            if (File.Exists(path))
+                return path;
+        }
+
+        return string.Empty;
+    }
+
 
     private sealed class FontIndex{
         private readonly Dictionary<string, Candidate> map = new(StringComparer.OrdinalIgnoreCase);
 
-        public void Rebuild(string fontsDir){
+        public void Rebuild(IEnumerable<string> fontDirs){
             map.Clear();
-            if (!Directory.Exists(fontsDir)) return;
-
-            foreach (var path in Directory.EnumerateFiles(fontsDir, "*.*", SearchOption.AllDirectories)){
-                var ext = Path.GetExtension(path).ToLowerInvariant();
-                if (ext is not (".ttf" or ".otf" or ".ttc" or ".otc" or ".woff" or ".woff2"))
+            foreach (var fontsDir in fontDirs){
+                if (!Directory.Exists(fontsDir))
                     continue;
 
-                foreach (var desc in LoadDescriptions(path)){
-                    foreach (var alias in BuildAliases(desc)){
-                        Add(alias, path);
+                try{
+                    foreach (var path in Directory.EnumerateFiles(fontsDir, "*.*", SearchOption.AllDirectories)){
+                        var ext = Path.GetExtension(path).ToLowerInvariant();
+                        if (ext is not (".ttf" or ".otf" or ".ttc" or ".otc" or ".woff" or ".woff2"))
+                            continue;
+
+                        try{
+                            foreach (var desc in LoadDescriptions(path)){
+                                foreach (var alias in BuildAliases(desc)){
+                                    Add(alias, path);
+                                }
+                            }
+                        } catch (Exception e){
+                            Console.Error.WriteLine($"Failed to inspect font '{path}': {e.Message}");
+                        }
                     }
+                } catch (Exception e){
+                    Console.Error.WriteLine($"Failed to scan font directory '{fontsDir}': {e.Message}");
                 }
             }
         }
@@ -440,9 +492,9 @@ public class FontsManager{
         }
 
         private static IEnumerable<string> BuildAliases(FontDescription d){
-            var family = d.FontFamilyInvariantCulture.Trim();
-            var sub = d.FontSubFamilyNameInvariantCulture.Trim(); // Regular/Bold/Italic
-            var full = d.FontNameInvariantCulture.Trim(); // "Family Subfamily"
+            var family = d.FontFamilyInvariantCulture?.Trim() ?? string.Empty;
+            var sub = d.FontSubFamilyNameInvariantCulture?.Trim() ?? string.Empty; // Regular/Bold/Italic
+            var full = d.FontNameInvariantCulture?.Trim() ?? string.Empty; // "Family Subfamily"
 
             if (!string.IsNullOrWhiteSpace(family)) yield return family;
             if (!string.IsNullOrWhiteSpace(full)) yield return full;

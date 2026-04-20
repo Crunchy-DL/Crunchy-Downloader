@@ -207,14 +207,14 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
 
                 if (music != null){
                     var meta = musicClass.EpisodeMeta(music);
-                    QueueManager.Instance.CrAddMusicMetaToQueue(meta);
+                    CrunchyrollManager.Instance.CrQueue.CrAddMusicMetaToQueue(meta);
                 }
             }
         } else if (AddAllEpisodes){
             var musicClass = CrunchyrollManager.Instance.CrMusic;
             if (currentMusicVideoList == null) return;
             foreach (var meta in currentMusicVideoList.Data.Select(crunchyMusicVideo => musicClass.EpisodeMeta(crunchyMusicVideo))){
-                QueueManager.Instance.CrAddMusicMetaToQueue(meta);
+                CrunchyrollManager.Instance.CrQueue.CrAddMusicMetaToQueue(meta);
             }
         }
     }
@@ -223,7 +223,7 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
         AddItemsToSelectedEpisodes();
 
         if (currentSeriesList != null){
-            await QueueManager.Instance.CrAddSeriesToQueue(
+            await CrunchyrollManager.Instance.CrQueue.CrAddSeriesToQueue(
                 currentSeriesList,
                 new CrunchyMultiDownload(
                     CrunchyrollManager.Instance.CrunOptions.DubLang,
@@ -327,17 +327,17 @@ public partial class AddDownloadPageViewModel : ViewModelBase{
     }
 
     private void HandleMusicVideoUrl(string id){
-        _ = QueueManager.Instance.CrAddMusicVideoToQueue(id);
+        _ = CrunchyrollManager.Instance.CrQueue.CrAddMusicVideoToQueue(id);
         ResetState();
     }
 
     private void HandleConcertUrl(string id){
-        _ = QueueManager.Instance.CrAddConcertToQueue(id);
+        _ = CrunchyrollManager.Instance.CrQueue.CrAddConcertToQueue(id);
         ResetState();
     }
 
     private void HandleEpisodeUrl(string locale, string id){
-        _ = QueueManager.Instance.CrAddEpisodeToQueue(
+        _ = CrunchyrollManager.Instance.CrQueue.CrAddEpisodeToQueue(
             id, DetermineLocale(locale),
             CrunchyrollManager.Instance.CrunOptions.DubLang, true);
         ResetState();

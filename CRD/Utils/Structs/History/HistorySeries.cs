@@ -81,7 +81,7 @@ public class HistorySeries : INotifyPropertyChanged{
     public Bitmap? ThumbnailImage{ get; set; }
 
     [JsonIgnore]
-    public bool IsImageLoaded{ get; private set; } = false;
+    public bool IsImageLoaded{ get; private set; }
 
     [JsonIgnore]
     public bool FetchingData{ get; set; }
@@ -112,7 +112,7 @@ public class HistorySeries : INotifyPropertyChanged{
     #region Settings Override
 
     [JsonIgnore]
-    private bool Loading = false;
+    private bool Loading;
 
     [JsonIgnore]
     public StringItem? _selectedVideoQualityItem;
@@ -350,6 +350,7 @@ public class HistorySeries : INotifyPropertyChanged{
                 }
 
                 break;
+            case SeriesType.Movie:
             case SeriesType.Series:
             case SeriesType.Unknown:
             default:
@@ -396,6 +397,7 @@ public class HistorySeries : INotifyPropertyChanged{
             case SeriesType.Artist:
                 Helpers.OpenUrl($"https://www.crunchyroll.com/artist/{SeriesId}");
                 break;
+            case SeriesType.Movie:
             case SeriesType.Series:
             case SeriesType.Unknown:
             default:

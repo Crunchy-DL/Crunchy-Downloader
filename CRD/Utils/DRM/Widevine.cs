@@ -13,7 +13,7 @@ public class Widevine{
     private byte[] privateKey = new byte[0];
     private byte[] identifierBlob = new byte[0];
 
-    public bool canDecrypt = false;
+    public bool canDecrypt;
 
 
     #region Singelton

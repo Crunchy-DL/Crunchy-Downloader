@@ -44,6 +44,8 @@ public enum SeriesType{
     Artist,
     [EnumMember(Value = "Series")]
     Series,
+    [EnumMember(Value = "Movie")]
+    Movie,
     [EnumMember(Value = "Unknown")]
     Unknown
 }
@@ -274,6 +276,15 @@ public enum EpisodeDownloadMode{
     OnlyVideo,
     OnlyAudio,
     OnlySubs,
+}
+
+public enum DownloadState{
+    Queued,
+    Downloading,
+    Paused,
+    Processing,
+    Done,
+    Error
 }
 
 public enum HistoryRefreshMode{

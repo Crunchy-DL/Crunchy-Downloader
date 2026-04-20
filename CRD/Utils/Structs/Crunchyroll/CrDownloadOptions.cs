@@ -21,6 +21,9 @@ public class CrDownloadOptions{
     [JsonProperty("remove_finished_downloads")]
     public bool RemoveFinishedDownload{ get; set; }
 
+    [JsonProperty("persist_queue")]
+    public bool PersistQueue{ get; set; }
+
     [JsonIgnore]
     public int Timeout{ get; set; }
 
@@ -92,6 +95,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("history_include_cr_artists")]
     public bool HistoryIncludeCrArtists{ get; set; }
+    
+    [JsonProperty("history_remove_missing_episodes")]
+    public bool HistoryRemoveMissingEpisodes{ get; set; } = true;
 
     [JsonProperty("history_lang")]
     public string? HistoryLang{ get; set; }
@@ -316,6 +322,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("mux_sync_dubs")]
     public bool SyncTiming{ get; set; }
+
+    [JsonProperty("mux_sync_fallback_full_quality")]
+    public bool SyncTimingFullQualityFallback{ get; set; }
 
     [JsonProperty("mux_sync_hwaccel")]
     public string? FfmpegHwAccelFlag{ get; set; }

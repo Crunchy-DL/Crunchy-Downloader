@@ -133,6 +133,7 @@ public class DownloadedMedia : SxItem{
     public bool IsPrimary{ get; set; }
     
     public int bitrate{ get; set; }
+    public int? Delay{ get; set; }
     public bool? Cc{ get; set; }
     public bool? Signs{ get; set; }
 

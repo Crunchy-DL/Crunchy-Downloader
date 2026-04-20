@@ -213,7 +213,7 @@ public class SyncingHelper{
             Pixels = GetPixelsArray(f.FilePath)
         }).ToList();
 
-        var delay = 0.0;
+        var delay = double.NaN;
 
         foreach (var baseFrame in baseFrames){
             var baseFramePixels = GetPixelsArray(baseFrame.FilePath);

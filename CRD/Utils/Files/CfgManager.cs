@@ -21,6 +21,7 @@ public class CfgManager{
     public static readonly string PathCrDownloadOptions = Path.Combine(workingDirectory, "config", "settings.json");
 
     public static readonly string PathCrHistory = Path.Combine(workingDirectory, "config", "history.json");
+    public static readonly string PathCrQueue = Path.Combine(workingDirectory, "config", "queue.json");
     public static readonly string PathWindowSettings = Path.Combine(workingDirectory, "config", "windowSettings.json");
 
     private static readonly string ExecutableExtension = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : string.Empty;
@@ -44,7 +45,7 @@ public class CfgManager{
     public static readonly string PathLogFile = Path.Combine(workingDirectory, "logfile.txt");
 
     private static StreamWriter logFile;
-    private static bool isLogModeEnabled = false;
+    private static bool isLogModeEnabled;
 
     static CfgManager(){
         AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
@@ -364,6 +365,16 @@ public class CfgManager{
         } catch (Exception ex){
             Console.Error.WriteLine($"An error occurred while reading the JSON file: {ex.Message}");
             return null;
+        }
+    }
+
+    public static void DeleteFileIfExists(string pathToFile){
+        try{
+            if (File.Exists(pathToFile)){
+                File.Delete(pathToFile);
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"An error occurred while deleting the file {pathToFile}: {ex.Message}");
         }
     }
 }

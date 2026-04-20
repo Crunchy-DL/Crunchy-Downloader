@@ -45,6 +45,12 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="Remove Missing History Episodes" Description="During history refresh, remove episodes no longer available on the streaming service. Seasons with no episodes left are removed too.">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding HistoryRemoveMissingEpisodes}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
                 <controls:SettingsExpanderItem Content="History Add Specials" Description="Add specials to the queue/count if they weren't downloaded before">
                     <controls:SettingsExpanderItem.Footer>
                         <CheckBox IsChecked="{Binding HistoryAddSpecials}"> </CheckBox>
@@ -106,6 +112,12 @@
                                        IconSource="Download"
                                        Description="Adjust download settings"
                                        IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Persist queue" Description="Save the current download queue on exit and restore it on the next start">
+                    <controls:SettingsExpanderItem.Footer>
+                        <CheckBox IsChecked="{Binding PersistQueue}"> </CheckBox>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
 
                 <controls:SettingsExpanderItem Content="Enable New Download Method" Description="Enables the updated download handling logic. This may improve performance and stability.">
                     <controls:SettingsExpanderItem.Footer>
@@ -776,7 +788,7 @@
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="IP" Description="Check your current IP address to confirm if traffic is routed through a VPN">
+                <controls:SettingsExpanderItem Content="IP" Description="Check your current IP address to confirm that traffic is routed through a VPN.&#10;After enabling the VPN or changing location, restart the app; otherwise, Crunchyroll may still see the old login location.">
                     <controls:SettingsExpanderItem.Footer>
                         <Grid VerticalAlignment="Center">
                             <Grid.ColumnDefinitions>

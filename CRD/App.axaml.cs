@@ -29,6 +29,7 @@ public class App : Application{
             var isHeadless = Environment.GetCommandLineArgs().Contains("--headless");
 
             var manager = ProgramManager.Instance;
+            QueueManager.Instance.RestorePersistedQueue();
             
             if (!isHeadless){
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -38,7 +39,10 @@ public class App : Application{
                 };
                 
                 mainWindow.Opened += (_, _) => { manager.SetBackgroundImage(); };
-                desktop.Exit += (_, _) => { manager.StopBackgroundTasks(); };
+                desktop.Exit += (_, _) => {
+                    QueueManager.Instance.SaveQueueSnapshot();
+                    manager.StopBackgroundTasks();
+                };
                 QueueManager.Instance.QueueStateChanged += (_, _) => { Dispatcher.UIThread.Post(UpdateTrayTooltip); };
                 
                 if (!CrunchyrollManager.Instance.CrunOptions.StartMinimizedToTray){
@@ -148,7 +152,7 @@ public class App : Application{
     }
     
     public void UpdateTrayTooltip(){
-        var downloadsToProcess = QueueManager.Instance.Queue.Count(e => e.DownloadProgress is{ Done: false, Error: false });
+        var downloadsToProcess = QueueManager.Instance.Queue.Count(e => !e.DownloadProgress.IsFinished);
         
         var options = CrunchyrollManager.Instance.CrunOptions;
         var lastRefresh = ProgramManager.Instance.GetLastRefreshTime();

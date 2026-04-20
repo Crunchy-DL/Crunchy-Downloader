@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -18,6 +18,7 @@ using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
+using CRD.Utils.Updater;
 using CRD.ViewModels;
 using CRD.ViewModels.Utils;
 using CRD.Views.Utils;
@@ -90,6 +91,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool _syncTimings;
+
+    [ObservableProperty]
+    private bool _syncTimingsFullQualityFallback;
 
     [ObservableProperty]
     private bool _defaultSubSigns;
@@ -352,6 +356,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     [ObservableProperty]
     private bool _markAsWatched;
 
+    public string FontMuxDisclaimer =>
+        $"Crunchyroll no longer provides the old libass font files. Font muxing now uses installed system fonts and custom files from {CfgManager.PathFONTS_DIR}. If subtitles still report missing fonts, add those files there manually.";
+
     private bool settingsLoaded;
 
     public CrunchyrollSettingsViewModel(){
@@ -483,6 +490,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         MuxTypesettingFonts = options.MuxTypesettingFonts;
         MuxCover = options.MuxCover;
         SyncTimings = options.SyncTiming;
+        SyncTimingsFullQualityFallback = options.SyncTimingFullQualityFallback;
         SkipSubMux = options.SkipSubsMux;
         LeadingNumbers = options.Numbers;
         FileName = options.FileName;
@@ -559,6 +567,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.MuxTypesettingFonts = MuxTypesettingFonts;
         CrunchyrollManager.Instance.CrunOptions.MuxCover = MuxCover;
         CrunchyrollManager.Instance.CrunOptions.SyncTiming = SyncTimings;
+        CrunchyrollManager.Instance.CrunOptions.SyncTimingFullQualityFallback = SyncTimingsFullQualityFallback;
         CrunchyrollManager.Instance.CrunOptions.SkipSubsMux = SkipSubMux;
         CrunchyrollManager.Instance.CrunOptions.Numbers = Math.Clamp((int)(LeadingNumbers ?? 0), 0, 10);
         CrunchyrollManager.Instance.CrunOptions.FileName = FileName;
@@ -776,7 +785,18 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     [RelayCommand]
     public void ResetEndpointSettings(){
         var defaultSettings = CrunchyrollManager.Instance.DefaultAndroidAuthSettings;
+        var ghAuth = Updater.Instance.GhAuthJson;
         
+        var ghAuthMobile = ghAuth.FirstOrDefault(e => e.Type.Equals("mobile"));
+        if (ghAuthMobile != null &&
+            !string.IsNullOrEmpty(ghAuthMobile.Authorization) &&
+            !string.IsNullOrEmpty(ghAuthMobile.VersionName) &&
+            Helpers.CompareClientVersions(ghAuthMobile.VersionName, Helpers.ExtractClientVersion(defaultSettings.UserAgent)) > 0){
+            defaultSettings.Authorization = ghAuthMobile.Authorization;
+            defaultSettings.UserAgent = $"Crunchyroll/{ghAuthMobile.VersionName} Android/16 okhttp/4.12.0";
+        }
+        
+       
         ComboBoxItem? streamEndpointSecondar = StreamEndpointsSecondary.FirstOrDefault(a => a.Content != null && (string)a.Content == defaultSettings.Endpoint) ?? null;
         SelectedStreamEndpointSecondary = streamEndpointSecondar ?? StreamEndpointsSecondary[0];
 
@@ -792,6 +812,15 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     public void ResetFirstEndpointSettings(){
 
         var defaultSettings = CrunchyrollManager.Instance.DefaultAndroidTvAuthSettings;
+        var ghAuth = Updater.Instance.GhAuthJson;
+        var ghAuthTv = ghAuth.FirstOrDefault(e => e.Type.Equals("tv"));
+        if (ghAuthTv != null &&
+            !string.IsNullOrEmpty(ghAuthTv.Authorization) &&
+            !string.IsNullOrEmpty(ghAuthTv.VersionName) &&
+            Helpers.CompareClientVersions(ghAuthTv.VersionName, Helpers.ExtractClientVersion(defaultSettings.UserAgent)) > 0){
+            defaultSettings.Authorization = ghAuthTv.Authorization;
+            defaultSettings.UserAgent = $"ANDROIDTV/{ghAuthTv.VersionName} Android/16";
+        }
         
         ComboBoxItem? streamEndpointSecondar = StreamEndpoints.FirstOrDefault(a => a.Content != null && (string)a.Content == defaultSettings.Endpoint) ?? null;
         SelectedStreamEndpoint = streamEndpointSecondar ?? StreamEndpoints[0];

@@ -5,7 +5,7 @@ namespace CRD.Utils;
 
 public class AudioPlayer{
     private readonly Player _player;
-    private bool _isPlaying = false;
+    private bool _isPlaying;
 
     public AudioPlayer(){
         _player = new Player();

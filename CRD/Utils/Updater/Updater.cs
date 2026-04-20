@@ -24,6 +24,7 @@ public class Updater : ObservableObject{
     public double Progress;
     public bool Failed;
     public string LatestVersion = "";
+    public List<GithubJson> GhAuthJson = [];
 
     public static Updater Instance{ get; } = new();
 
@@ -123,6 +124,25 @@ public class Updater : ObservableObject{
             return false;
         }
     }
+    
+    public async Task CheckGhJsonAsync(){
+        var url = "https://Crunchy-DL.github.io/Crunchy-Downloader/data.json";
+        try{
+            HttpClientHandler handler = new HttpClientHandler();
+            handler.UseProxy = false;
+            
+            using (var client = new HttpClient(handler)){
+                client.DefaultRequestHeaders.Add("User-Agent", "C# App");
+                var response = await client.GetStringAsync(url);
+                var authList = Helpers.Deserialize<List<GithubJson>>(response, null);
+                if (authList is{ Count: > 0 }){
+                    GhAuthJson = authList;
+                }
+            }
+        } catch (Exception e){
+            Console.Error.WriteLine("Failed to get GH CR Auth information");
+        }
+    }
 
     public async Task UpdateChangelogAsync(){
         var client = HttpClientReq.Instance.GetHttpClient();
@@ -138,7 +158,15 @@ public class Updater : ObservableObject{
             LatestVersion = "v1.0.0";
         }
 
-        if (existingVersion == LatestVersion || Version.Parse(existingVersion.TrimStart('v')) >= Version.Parse(LatestVersion.TrimStart('v'))){
+        if (!NuGetVersion.TryParse(existingVersion.TrimStart('v'), out var existingNuGetVersion)){
+            existingNuGetVersion = NuGetVersion.Parse("1.0.0");
+        }
+
+        if (!NuGetVersion.TryParse(LatestVersion.TrimStart('v'), out var latestNuGetVersion)){
+            latestNuGetVersion = NuGetVersion.Parse("1.0.0");
+        }
+
+        if (existingNuGetVersion >= latestNuGetVersion){
             Console.WriteLine("CHANGELOG.md is already up to date.");
             return;
         }
@@ -180,10 +208,16 @@ public class Updater : ObservableObject{
             return string.Empty;
 
         string[] lines = File.ReadAllLines(changelogFilePath);
+
         foreach (string line in lines){
-            Match match = Regex.Match(line, @"## \[(v?\d+\.\d+\.\d+)\]");
-            if (match.Success)
-                return match.Groups[1].Value;
+            Match match = Regex.Match(line, @"^## \[(v?[^\]]+)\]");
+            if (!match.Success)
+                continue;
+
+            string versionText = match.Groups[1].Value;
+
+            if (NuGetVersion.TryParse(versionText.TrimStart('v'), out _))
+                return versionText;
         }
 
         return string.Empty;
@@ -312,6 +346,18 @@ public class Updater : ObservableObject{
             OnPropertyChanged(nameof(Failed));
         }
     }
+    
+    public class GithubJson{
+        [JsonProperty("type")]
+        public string Type{ get; set; } = string.Empty;
+        [JsonProperty("version_name")]
+        public string VersionName{ get; set; } = string.Empty;
+        [JsonProperty("version_code")]
+        public string VersionCode{ get; set; } = string.Empty;
+        [JsonProperty("Authorization")]
+        public string Authorization{ get; set; } = string.Empty;
+
+    }
 
     public class GithubRelease{
         [JsonProperty("tag_name")]
@@ -325,7 +371,7 @@ public class Updater : ObservableObject{
 
         public bool Prerelease{ get; set; }
     }
-    
+
     public class GithubAsset{
         [JsonProperty("url")]
         public string Url{ get; set; } = "";
@@ -365,12 +411,10 @@ public class Updater : ObservableObject{
 
         [JsonProperty("browser_download_url")]
         public string BrowserDownloadUrl{ get; set; } = "";
-        
-        
+
+
         public bool IsForPlatform(string platform){
             return Name.Contains(platform, StringComparison.OrdinalIgnoreCase);
         }
-        
     }
-    
 }

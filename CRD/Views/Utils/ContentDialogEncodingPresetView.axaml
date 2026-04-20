@@ -38,10 +38,15 @@
         <StackPanel>
             <TextBlock Text="Enter Codec" Margin="0,10,0,5" />
             <TextBox Watermark="libx265" Text="{Binding Codec}" />
+            <TextBlock Text="Leave empty to provide the encoding options through Additional Parameters only."
+                       Opacity="0.7"
+                       FontSize="12"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding !HasCodec}" />
         </StackPanel>
 
         <!-- Resolution ComboBox -->
-        <StackPanel>
+        <StackPanel IsVisible="{Binding HasCodec}">
             <TextBlock Text="Select Resolution" Margin="0,10,0,5" />
             <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                       ItemsSource="{Binding ResolutionList}"
@@ -50,17 +55,17 @@
         </StackPanel>
 
         <!-- Frame Rate NumberBox -->
-        <StackPanel>
+        <StackPanel IsVisible="{Binding HasCodec}">
             <TextBlock Text="Enter Frame Rate" Margin="0,10,0,5" />
             <!-- <controls:NumberBox Minimum="1" Maximum="999" -->
             <!--                     Value="{Binding FrameRate}" -->
             <!--                     SpinButtonPlacementMode="Inline" -->
             <!--                     HorizontalAlignment="Stretch" /> -->
-            <TextBox Watermark="24" Text="{Binding FrameRate}" />
+            <TextBox Watermark="24000/1001" Text="{Binding FrameRate}" />
         </StackPanel>
 
         <!-- CRF NumberBox -->
-        <StackPanel>
+        <StackPanel IsVisible="{Binding HasCodec}">
             <TextBlock Text="Enter CRF (0-51) - (cq,global_quality,qp)" Margin="0,10,0,5" />
             <controls:NumberBox Minimum="0" Maximum="51"
                                 Value="{Binding Crf}"

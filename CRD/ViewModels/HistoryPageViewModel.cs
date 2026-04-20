@@ -88,6 +88,9 @@ public partial class HistoryPageViewModel : ViewModelBase{
     private bool _showArtists;
 
     [ObservableProperty]
+    private bool _showMovies = true;
+
+    [ObservableProperty]
     private static bool _viewSelectionOpen;
 
     [ObservableProperty]
@@ -160,6 +163,7 @@ public partial class HistoryPageViewModel : ViewModelBase{
         SortDir = properties?.Ascending ?? false;
         ShowSeries = properties?.ShowSeries ?? true;
         ShowArtists = properties?.ShowArtists ?? false;
+        ShowMovies = properties?.ShowMovies ?? true;
 
         foreach (HistoryViewType viewType in Enum.GetValues(typeof(HistoryViewType))){
             var combobox = new ComboBoxItem{ Content = viewType };
@@ -274,6 +278,14 @@ public partial class HistoryPageViewModel : ViewModelBase{
         ApplyFilter();
     }
 
+    partial void OnShowMoviesChanged(bool value){
+        if (CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties != null) CrunchyrollManager.Instance.CrunOptions.HistoryPageProperties.ShowMovies = ShowMovies;
+
+        CfgManager.WriteCrSettings();
+
+        ApplyFilter();
+    }
+
 
     partial void OnSelectedFilterChanged(FilterListElement? value){
         if (value == null){
@@ -331,6 +343,10 @@ public partial class HistoryPageViewModel : ViewModelBase{
 
         if (!ShowSeries){
             filteredItems.RemoveAll(item => item.SeriesType == SeriesType.Series);
+        }
+
+        if (!ShowMovies){
+            filteredItems.RemoveAll(item => item.SeriesType == SeriesType.Movie);
         }
 
         if (!string.IsNullOrWhiteSpace(SearchInput)){
@@ -662,6 +678,7 @@ public class HistoryPageProperties{
 
     public bool ShowSeries{ get; set; } = true;
     public bool ShowArtists{ get; set; } = true;
+    public bool ShowMovies{ get; set; } = true;
 }
 
 public class SeasonsPageProperties{

@@ -6,7 +6,7 @@ namespace CRD.Utils.Structs.Crunchyroll;
 
 public class StreamError{
     [JsonPropertyName("error")]
-    public string Error{ get; set; }
+    public string? Error{ get; set; }
 
     [JsonPropertyName("activeStreams")]
     public List<ActiveStream> ActiveStreams{ get; set; } = new ();
@@ -22,6 +22,10 @@ public class StreamError{
 
     public bool IsTooManyActiveStreamsError(){
         return Error is "TOO_MANY_ACTIVE_STREAMS" or "TOO_MANY_CONCURRENT_STREAMS";
+    }
+
+    public bool IsRateLimitError(){
+        return Error?.Contains("4294") == true;
     }
 }
 

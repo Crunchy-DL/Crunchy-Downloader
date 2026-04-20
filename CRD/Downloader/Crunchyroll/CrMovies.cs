@@ -78,9 +78,7 @@ public class CrMovies{
         epMeta.Image = images.FirstOrDefault()?.FirstOrDefault()?.Source;
         epMeta.ImageBig = images.FirstOrDefault()?.LastOrDefault()?.Source;
         epMeta.DownloadProgress = new DownloadProgress(){
-            IsDownloading = false,
-            Done = false,
-            Error = false,
+            State = DownloadState.Queued,
             Percent = 0,
             Time = 0,
             DownloadSpeedBytes = 0

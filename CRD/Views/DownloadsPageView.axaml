@@ -42,6 +42,20 @@
                     <TextBlock Text="Retry failed" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
                 </ToolTip.Tip>
             </Button>
+            
+            <Button BorderThickness="0"
+                    HorizontalAlignment="Right"
+                    Margin="0 0 10 0 "
+                    VerticalAlignment="Center"
+                    IsEnabled="{Binding QueueManagerIns.HasActiveDownloads}"
+                    Command="{Binding PauseQueue}">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <controls:SymbolIcon Symbol="Pause" FontSize="22" />
+                </StackPanel>
+                <ToolTip.Tip>
+                    <TextBlock Text="Pause running" HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap"></TextBlock>
+                </ToolTip.Tip>
+            </Button>
 
             <Button BorderThickness="0"
                     HorizontalAlignment="Right"
@@ -108,11 +122,11 @@
                                             HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
                                             <controls:SymbolIcon Symbol="{Binding 
-                                            !Paused, Converter={StaticResource UiValueConverter}}" FontSize="18" />
+                                            ShowPauseIcon, Converter={StaticResource UiValueConverter}}" FontSize="18" />
                                         </StackPanel>
                                     </Button>
 
-                                    <Button Grid.Row="0" Grid.Column="1" Margin="0 0 5 0" IsVisible="{Binding Error}" Command="{Binding ToggleIsDownloading}" FontStyle="Italic"
+                                    <Button Grid.Row="0" Grid.Column="1" Margin="0 0 5 0" IsVisible="{Binding Error}" Command="{Binding RetryDownload}" FontStyle="Italic"
                                             HorizontalAlignment="Right" VerticalAlignment="Top">
                                         <StackPanel Orientation="Horizontal">
                                             <controls:SymbolIcon Symbol="Refresh" FontSize="18" />

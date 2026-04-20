@@ -257,6 +257,16 @@
                                 <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding ShowArtists}" VerticalAlignment="Center" />
                             </Grid>
 
+                            <Grid Margin="8 0 5 0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Movies" Grid.Column="0" VerticalAlignment="Center" />
+                                <ToggleSwitch OffContent="" OnContent="" Grid.Column="1" IsChecked="{Binding ShowMovies}" VerticalAlignment="Center" />
+                            </Grid>
+
 
                             <Rectangle Height="1" Fill="Gray" Margin="0,8,0,8" />
 

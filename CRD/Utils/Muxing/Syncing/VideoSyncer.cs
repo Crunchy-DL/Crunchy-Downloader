@@ -14,7 +14,9 @@ public class VideoSyncer{
     public static async Task<(double offSet, double startOffset, double endOffset, double lengthDiff)> ProcessVideo(string baseVideoPath, string compareVideoPath){
         string baseFramesDir, baseFramesDirEnd;
         string compareFramesDir, compareFramesDirEnd;
-        string cleanupDir;
+        string cleanupDir = string.Empty;
+        double baseEndWindowOffset = 0;
+        double compareEndWindowOffset = 0;
         try{
             var tempDir = CfgManager.PathTEMP_DIR;
             string uuid = Guid.NewGuid().ToString();
@@ -46,8 +48,13 @@ public class VideoSyncer{
                 return (-100, 0, 0, 0);
             }
 
-            var extractFramesBaseEnd = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDirEnd, baseVideoDurationTimeSpan.Value.TotalSeconds - 360, 360);
-            var extractFramesCompareEnd = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDirEnd, compareVideoDurationTimeSpan.Value.TotalSeconds - 360, 360);
+            var baseEndWindowDuration = Math.Min(360, baseVideoDurationTimeSpan.Value.TotalSeconds);
+            var compareEndWindowDuration = Math.Min(360, compareVideoDurationTimeSpan.Value.TotalSeconds);
+            baseEndWindowOffset = Math.Max(0, baseVideoDurationTimeSpan.Value.TotalSeconds - baseEndWindowDuration);
+            compareEndWindowOffset = Math.Max(0, compareVideoDurationTimeSpan.Value.TotalSeconds - compareEndWindowDuration);
+
+            var extractFramesBaseEnd = await SyncingHelper.ExtractFrames(baseVideoPath, baseFramesDirEnd, baseEndWindowOffset, baseEndWindowDuration);
+            var extractFramesCompareEnd = await SyncingHelper.ExtractFrames(compareVideoPath, compareFramesDirEnd, compareEndWindowOffset, compareEndWindowDuration);
 
             if (!extractFramesBaseStart.IsOk || !extractFramesCompareStart.IsOk || !extractFramesBaseEnd.IsOk || !extractFramesCompareEnd.IsOk){
                 Console.Error.WriteLine("Failed to extract Frames to Compare");
@@ -57,24 +64,24 @@ public class VideoSyncer{
             // Load frames from start of the videos
             var baseFramesStart = Directory.GetFiles(baseFramesDir).Select(fp => new FrameData{
                 FilePath = fp,
-                Time = GetTimeFromFileName(fp, extractFramesBaseStart.frameRate)
-            }).ToList();
+                Time = GetTimeFromFileName(fp, extractFramesBaseStart.frameRate, 0)
+            }).OrderBy(frame => frame.Time).ToList();
 
             var compareFramesStart = Directory.GetFiles(compareFramesDir).Select(fp => new FrameData{
                 FilePath = fp,
-                Time = GetTimeFromFileName(fp, extractFramesCompareStart.frameRate)
-            }).ToList();
+                Time = GetTimeFromFileName(fp, extractFramesCompareStart.frameRate, 0)
+            }).OrderBy(frame => frame.Time).ToList();
 
             // Load frames from end of the videos
             var baseFramesEnd = Directory.GetFiles(baseFramesDirEnd).Select(fp => new FrameData{
                 FilePath = fp,
-                Time = GetTimeFromFileName(fp, extractFramesBaseEnd.frameRate)
-            }).ToList();
+                Time = GetTimeFromFileName(fp, extractFramesBaseEnd.frameRate, baseEndWindowOffset)
+            }).OrderBy(frame => frame.Time).ToList();
 
             var compareFramesEnd = Directory.GetFiles(compareFramesDirEnd).Select(fp => new FrameData{
                 FilePath = fp,
-                Time = GetTimeFromFileName(fp, extractFramesCompareEnd.frameRate)
-            }).ToList();
+                Time = GetTimeFromFileName(fp, extractFramesCompareEnd.frameRate, compareEndWindowOffset)
+            }).OrderBy(frame => frame.Time).ToList();
 
 
             // Calculate offsets
@@ -83,12 +90,13 @@ public class VideoSyncer{
 
             var lengthDiff = (baseVideoDurationTimeSpan.Value.TotalMicroseconds - compareVideoDurationTimeSpan.Value.TotalMicroseconds) / 1000000;
 
-            endOffset += lengthDiff;
+            if (double.IsNaN(startOffset) || double.IsNaN(endOffset)){
+                Console.Error.WriteLine("Couldn't find enough matching frames to sync dub.");
+                return (-100, startOffset, endOffset, lengthDiff);
+            }
 
             Console.WriteLine($"Start offset: {startOffset} seconds");
             Console.WriteLine($"End offset: {endOffset} seconds");
-
-            CleanupDirectory(cleanupDir);
 
             baseFramesStart.Clear();
             baseFramesEnd.Clear();
@@ -112,21 +120,23 @@ public class VideoSyncer{
         } catch (Exception e){
             Console.Error.WriteLine(e);
             return (-100, 0, 0, 0);
+        } finally{
+            CleanupDirectory(cleanupDir);
         }
     }
 
     private static void CleanupDirectory(string dirPath){
-        if (Directory.Exists(dirPath)){
+        if (!string.IsNullOrEmpty(dirPath) && Directory.Exists(dirPath)){
             Directory.Delete(dirPath, true);
         }
     }
 
-    private static double GetTimeFromFileName(string fileName, double frameRate){
+    private static double GetTimeFromFileName(string fileName, double frameRate, double timeOffset){
         var match = Regex.Match(Path.GetFileName(fileName), @"frame(\d+)");
         if (match.Success){
-            return int.Parse(match.Groups[1].Value) / frameRate;
+            return timeOffset + int.Parse(match.Groups[1].Value) / frameRate;
         }
 
-        return 0;
+        return timeOffset;
     }
 }

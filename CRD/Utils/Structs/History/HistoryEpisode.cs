@@ -43,6 +43,9 @@ public class HistoryEpisode : INotifyPropertyChanged{
     [JsonProperty("episode_type")]
     public EpisodeType EpisodeType{ get; set; } = EpisodeType.Unknown;
 
+    [JsonProperty("episode_series_type")]
+    public SeriesType EpisodeSeriesType{ get; set; } = SeriesType.Unknown;
+
     [JsonProperty("episode_thumbnail_url")]
     public string? ThumbnailImageUrl{ get; set; }
 
@@ -86,7 +89,7 @@ public class HistoryEpisode : INotifyPropertyChanged{
     public Bitmap? ThumbnailImage{ get; set; }
 
     [JsonIgnore]
-    public bool IsImageLoaded{ get; private set; } = false;
+    public bool IsImageLoaded{ get; private set; }
 
     public async Task LoadImage(){
         if (IsImageLoaded || string.IsNullOrEmpty(ThumbnailImageUrl))
@@ -153,15 +156,15 @@ public class HistoryEpisode : INotifyPropertyChanged{
         
         switch (EpisodeType){
             case EpisodeType.MusicVideo:
-                await QueueManager.Instance.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);
+                await CrunchyrollManager.Instance.CrQueue.CrAddMusicVideoToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);
                 break;
             case EpisodeType.Concert:
-                await QueueManager.Instance.CrAddConcertToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);
+                await CrunchyrollManager.Instance.CrQueue.CrAddConcertToQueue(EpisodeId ?? string.Empty, overrideDownloadPath);
                 break;
             case EpisodeType.Episode:
             case EpisodeType.Unknown:
             default:
-                await QueueManager.Instance.CrAddEpisodeToQueue(EpisodeId ?? string.Empty,
+                await CrunchyrollManager.Instance.CrQueue.CrAddEpisodeToQueue(EpisodeId ?? string.Empty,
                     string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.HistoryLang) ? CrunchyrollManager.Instance.DefaultLocale : CrunchyrollManager.Instance.CrunOptions.HistoryLang,
                     CrunchyrollManager.Instance.CrunOptions.DubLang, false, episodeDownloadMode);
                 break;

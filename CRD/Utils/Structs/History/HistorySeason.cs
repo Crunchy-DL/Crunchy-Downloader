@@ -53,7 +53,7 @@ public class HistorySeason : INotifyPropertyChanged{
     public StringItem? _selectedVideoQualityItem;
 
     [JsonIgnore]
-    private bool Loading = false;
+    private bool Loading;
 
     [JsonIgnore]
     public StringItem? SelectedVideoQualityItem{

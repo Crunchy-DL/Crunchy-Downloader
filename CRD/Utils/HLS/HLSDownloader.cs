@@ -17,6 +17,7 @@ using Newtonsoft.Json;
 namespace CRD.Utils.HLS;
 
 public class HlsDownloader{
+    private readonly CancellationToken _cancellationToken;
     private Data _data = new();
 
     private CrunchyEpMeta _currentEpMeta;
@@ -24,12 +25,24 @@ public class HlsDownloader{
     private bool _isAudio;
     private bool _newDownloadMethode;
 
+    private async Task WaitWhilePausedAsync(CancellationToken cancellationToken){
+        while (_currentEpMeta.DownloadProgress.IsPaused){
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            await Task.Delay(500, cancellationToken);
+        }
+    }
+
     public HlsDownloader(HlsOptions options, CrunchyEpMeta meta, bool isVideo, bool isAudio, bool newDownloadMethode){
         if (options == null || options.M3U8Json == null || options.M3U8Json.Segments == null){
             throw new Exception("Playlist is empty");
         }
 
         _currentEpMeta = meta;
+        _cancellationToken = meta.Cts.Token;
 
         _isVideo = isVideo;
         _isAudio = isAudio;
@@ -62,6 +75,7 @@ public class HlsDownloader{
 
 
     public async Task<(bool Ok, PartsData Parts)> Download(){
+        _cancellationToken.ThrowIfCancellationRequested();
         string fn = _data.OutputFile ?? string.Empty;
 
         if (File.Exists(fn) && File.Exists($"{fn}.resume") && _data.Offset < 1){
@@ -141,8 +155,8 @@ public class HlsDownloader{
 
                 try{
                     var initDl = await DownloadPart(initSeg, 0, 0);
-                    await File.WriteAllBytesAsync(fn, initDl);
-                    await File.WriteAllTextAsync($"{fn}.resume", JsonConvert.SerializeObject(new{ completed = 0, total = segments.Count }));
+                    await File.WriteAllBytesAsync(fn, initDl, _cancellationToken);
+                    await File.WriteAllTextAsync($"{fn}.resume", JsonConvert.SerializeObject(new{ completed = 0, total = segments.Count }), _cancellationToken);
                     Console.WriteLine("Init part downloaded.");
                 } catch (Exception e){
                     Console.Error.WriteLine($"Part init download error:\n\t{e.Message}");
@@ -185,7 +199,7 @@ public class HlsDownloader{
                 }
 
                 try{
-                    await Task.WhenAll(keyTasks.Values);
+                    await Task.WhenAll(keyTasks.Values).WaitAsync(_cancellationToken);
                 } catch (Exception ex){
                     Console.Error.WriteLine($"Error downloading keys: {ex.Message}");
                     throw;
@@ -200,7 +214,7 @@ public class HlsDownloader{
                 }
 
                 while (partTasks.Count > 0){
-                    Task<byte[]> completedTask = await Task.WhenAny(partTasks.Values);
+                    Task<byte[]> completedTask = await Task.WhenAny(partTasks.Values).WaitAsync(_cancellationToken);
                     int completedIndex = -1;
                     foreach (var task in partTasks){
                         if (task.Value == completedTask){
@@ -234,7 +248,7 @@ public class HlsDownloader{
                     while (attempt < 3 && !writeSuccess){
                         try{
                             using (var stream = new FileStream(fn, FileMode.Append, FileAccess.Write, FileShare.None)){
-                                await stream.WriteAsync(part, 0, part.Length);
+                                await stream.WriteAsync(part, 0, part.Length, _cancellationToken);
                             }
 
                             writeSuccess = true;
@@ -242,7 +256,7 @@ public class HlsDownloader{
                             Console.Error.WriteLine(ex);
                             Console.Error.WriteLine($"Unable to write to file '{fn}' (Attempt {attempt + 1}/3)");
                             Console.WriteLine($"Waiting {Math.Round(_data.WaitTime / 1000.0)}s before retrying");
-                            await Task.Delay(_data.WaitTime);
+                            await Task.Delay(_data.WaitTime, _cancellationToken);
                             attempt++;
                         }
                     }
@@ -267,12 +281,17 @@ public class HlsDownloader{
                 var downloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
                     ? $"{dataLog.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
                     : $"{dataLog.DownloadSpeedBytes / 1000000.0:F2} MB/s";
-                
+
+                await WaitWhilePausedAsync(_cancellationToken);
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    return (Ok: false, _data.Parts);
+                }
+
                 // Log progress
                 Console.WriteLine($"{_data.Parts.Completed} of {totalSeg} parts downloaded [{dataLog.Percent}%] ({FormatTime(dataLog.Time)} | {downloadSpeed})");
 
                 _currentEpMeta.DownloadProgress = new DownloadProgress(){
-                    IsDownloading = true,
+                    State = DownloadState.Downloading,
                     Percent = dataLog.Percent,
                     Time = dataLog.Time,
                     DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
@@ -280,7 +299,7 @@ public class HlsDownloader{
                 };
 
                 if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
-                    if (!_currentEpMeta.DownloadProgress.Done){
+                    if (!_currentEpMeta.DownloadProgress.IsDone){
                         foreach (var downloadItemDownloadedFile in _currentEpMeta.downloadedFiles){
                             try{
                                 if (File.Exists(downloadItemDownloadedFile)){
@@ -295,13 +314,11 @@ public class HlsDownloader{
                     return (Ok: false, _data.Parts);
                 }
 
-                QueueManager.Instance.Queue.Refresh();
+                QueueManager.Instance.RefreshQueue();
 
-                while (_currentEpMeta.Paused){
-                    await Task.Delay(500);
-                    if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
-                        return (Ok: false, _data.Parts);
-                    }
+                await WaitWhilePausedAsync(_cancellationToken);
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    return (Ok: false, _data.Parts);
                 }
             }
         }
@@ -311,10 +328,110 @@ public class HlsDownloader{
 
     private static readonly object _resumeLock = new object();
 
+    private void CleanupDownloadedFiles(){
+        if (_currentEpMeta.DownloadProgress.IsDone){
+            return;
+        }
+
+        foreach (var file in _currentEpMeta.downloadedFiles){
+            try{
+                if (File.Exists(file)){
+                    File.Delete(file);
+                }
+            } catch (Exception ex){
+                Console.Error.WriteLine($"Failed to delete file '{file}': {ex.Message}");
+            }
+        }
+    }
+
+    private async Task DownloadBufferedSegmentAsync(int index, List<dynamic> segments, string tempDir, string resumeFile, int totalSeg, int mergedParts, SemaphoreSlim semaphore,
+        CancellationTokenSource cancellationSource, CancellationToken token, Action markError, Func<long> getLastUiUpdate, Action<long> setLastUiUpdate){
+        try{
+            token.ThrowIfCancellationRequested();
+            await WaitWhilePausedAsync(token);
+            if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                cancellationSource.Cancel();
+                return;
+            }
+
+            var segment = new Segment{
+                Uri = ObjectUtilities.GetMemberValue(segments[index], "uri"),
+                Key = ObjectUtilities.GetMemberValue(segments[index], "key"),
+                ByteRange = ObjectUtilities.GetMemberValue(segments[index], "byteRange")
+            };
+
+            var data = await DownloadPart(segment, index, _data.Offset);
+
+            string tempFile = Path.Combine(tempDir, $"part_{index:D6}.tmp");
+            await File.WriteAllBytesAsync(tempFile, data, token);
+
+            int currentDownloaded = Directory.GetFiles(tempDir, "part_*.tmp").Length;
+            lock (_resumeLock){
+                File.WriteAllText(resumeFile, JsonConvert.SerializeObject(new{
+                    DownloadedParts = currentDownloaded,
+                    MergedParts = mergedParts,
+                    Total = totalSeg
+                }));
+            }
+
+            long lastUiUpdate = getLastUiUpdate();
+            if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - lastUiUpdate > 500){
+                var dataLog = GetDownloadInfo(
+                    lastUiUpdate,
+                    currentDownloaded,
+                    totalSeg,
+                    _data.BytesDownloaded,
+                    _data.TotalBytes
+                );
+
+                _data.BytesDownloaded = 0;
+                setLastUiUpdate(DateTimeOffset.Now.ToUnixTimeMilliseconds());
+
+                var downloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
+                    ? $"{dataLog.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
+                    : $"{dataLog.DownloadSpeedBytes / 1000000.0:F2} MB/s";
+
+                await WaitWhilePausedAsync(token);
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    cancellationSource.Cancel();
+                    return;
+                }
+
+                Console.WriteLine($"{currentDownloaded}/{totalSeg} [{dataLog.Percent}%] Speed: {downloadSpeed} ETA: {FormatTime(dataLog.Time)}");
+
+                _currentEpMeta.DownloadProgress = new DownloadProgress{
+                    State = DownloadState.Downloading,
+                    Percent = dataLog.Percent,
+                    Time = dataLog.Time,
+                    DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
+                    Doing = _isAudio ? "Downloading Audio" : (_isVideo ? "Downloading Video" : "")
+                };
+            }
+
+            if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                cancellationSource.Cancel();
+                return;
+            }
+
+            QueueManager.Instance.RefreshQueue();
+
+            await WaitWhilePausedAsync(token);
+            if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                cancellationSource.Cancel();
+            }
+        } catch (Exception ex){
+            Console.Error.WriteLine($"Error downloading part {index}: {ex.Message}");
+            markError();
+            cancellationSource.Cancel();
+        } finally{
+            semaphore.Release();
+        }
+    }
+
     public async Task<(bool Ok, PartsData Parts)> DownloadSegmentsBufferedResumeAsync(List<dynamic> segments, string fn){
         var totalSeg = _data.Parts.Total;
         string sessionId = Path.GetFileNameWithoutExtension(fn);
-        string tempDir = Path.Combine(Path.GetDirectoryName(fn), $"{sessionId}_temp");
+        string tempDir = Path.Combine(Path.GetDirectoryName(fn) ?? string.Empty, $"{sessionId}_temp");
 
         Directory.CreateDirectory(tempDir);
 
@@ -328,6 +445,7 @@ public class HlsDownloader{
                 downloadedParts = (int?)resumeData?.DownloadedParts ?? 0;
                 mergedParts = (int?)resumeData?.MergedParts ?? 0;
             } catch{
+                // ignored
             }
         }
 
@@ -336,133 +454,76 @@ public class HlsDownloader{
 
         var semaphore = new SemaphoreSlim(_data.Threads);
         var downloadTasks = new List<Task>();
-        bool errorOccurred = false;
+        int errorOccurred = 0;
 
         var _lastUiUpdate = DateTimeOffset.Now.ToUnixTimeMilliseconds();
 
-        var cts = new CancellationTokenSource();
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationToken);
         var token = cts.Token;
 
-        for (int i = 0; i < segments.Count; i++){
-            try{
-                await semaphore.WaitAsync(token);
-            } catch (OperationCanceledException){
-                break;
-            }
-
-            if (File.Exists(Path.Combine(tempDir, $"part_{i:D6}.tmp"))){
-                semaphore.Release();
-                continue;
-            }
-
-            int index = i;
-
-
-            downloadTasks.Add(Task.Run(async () => {
-                try{
-                    token.ThrowIfCancellationRequested();
-                    var segment = new Segment{
-                        Uri = ObjectUtilities.GetMemberValue(segments[index], "uri"),
-                        Key = ObjectUtilities.GetMemberValue(segments[index], "key"),
-                        ByteRange = ObjectUtilities.GetMemberValue(segments[index], "byteRange")
-                    };
-
-                    var data = await DownloadPart(segment, index, _data.Offset);
-
-                    string tempFile = Path.Combine(tempDir, $"part_{index:D6}.tmp");
-                    await File.WriteAllBytesAsync(tempFile, data);
-
-                    int currentDownloaded = Directory.GetFiles(tempDir, "part_*.tmp").Length;
-                    lock (_resumeLock){
-                        File.WriteAllText(resumeFile, JsonConvert.SerializeObject(new{
-                            DownloadedParts = currentDownloaded,
-                            MergedParts = mergedParts,
-                            Total = totalSeg
-                        }));
-                    }
-
-                    if (DateTimeOffset.Now.ToUnixTimeMilliseconds() - _lastUiUpdate > 500){
-                        var dataLog = GetDownloadInfo(
-                            _lastUiUpdate,
-                            currentDownloaded,
-                            totalSeg,
-                            _data.BytesDownloaded,
-                            _data.TotalBytes
-                        );
-
-                        _data.BytesDownloaded = 0;
-                        _lastUiUpdate = DateTimeOffset.Now.ToUnixTimeMilliseconds();
-
-                        var downloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
-                            ? $"{dataLog.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
-                            : $"{dataLog.DownloadSpeedBytes / 1000000.0:F2} MB/s";
-                        
-                        Console.WriteLine($"{currentDownloaded}/{totalSeg} [{dataLog.Percent}%] Speed: {downloadSpeed} ETA: {FormatTime(dataLog.Time)}");
-
-                        _currentEpMeta.DownloadProgress = new DownloadProgress{
-                            IsDownloading = true,
-                            Percent = dataLog.Percent,
-                            Time = dataLog.Time,
-                            DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
-                            Doing = _isAudio ? "Downloading Audio" : (_isVideo ? "Downloading Video" : "")
-                        };
-                    }
-
-                    if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
-                        cts.Cancel();
-                        return;
-                    }
-
-
-                    QueueManager.Instance.Queue.Refresh();
-
-                    while (_currentEpMeta.Paused){
-                        await Task.Delay(500);
-                        if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
-                            cts.Cancel();
-                            return;
-                        }
-                    }
-                } catch (Exception ex){
-                    Console.Error.WriteLine($"Error downloading part {index}: {ex.Message}");
-                    errorOccurred = true;
-                    cts.Cancel();
-                } finally{
-                    semaphore.Release();
-                }
-            }, token));
+        void CleanupBufferedArtifacts(bool cleanAll = true){
+            CleanupNewDownloadMethod(tempDir, resumeFile, cleanAll);
         }
 
         try{
-            await Task.WhenAll(downloadTasks);
-        } catch (OperationCanceledException){
-            if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
-                if (!_currentEpMeta.DownloadProgress.Done){
-                    CleanupNewDownloadMethod(tempDir, resumeFile, true);
+            for (int i = 0; i < segments.Count; i++){
+                try{
+                    await semaphore.WaitAsync(token);
+                } catch (OperationCanceledException){
+                    break;
                 }
-            } else{
-                Console.Error.WriteLine("Download cancelled due to error.");
+
+                if (File.Exists(Path.Combine(tempDir, $"part_{i:D6}.tmp"))){
+                    semaphore.Release();
+                    continue;
+                }
+
+                int index = i;
+
+
+                downloadTasks.Add(DownloadBufferedSegmentAsync(index, segments, tempDir, resumeFile, totalSeg, mergedParts, semaphore, cts, token,
+                    () => Interlocked.Exchange(ref errorOccurred, 1),
+                    () => Volatile.Read(ref _lastUiUpdate),
+                    value => Interlocked.Exchange(ref _lastUiUpdate, value)));
             }
 
+            try{
+                await Task.WhenAll(downloadTasks);
+            } catch (OperationCanceledException){
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    CleanupBufferedArtifacts();
+                } else{
+                    Console.Error.WriteLine("Download cancelled due to error.");
+                    CleanupBufferedArtifacts(false);
+                }
+
+                return (false, _data.Parts);
+            }
+        } finally{
+            cts.Dispose();
+        }
+
+        if (Volatile.Read(ref errorOccurred) == 1){
+            CleanupBufferedArtifacts(false);
             return (false, _data.Parts);
         }
 
-        if (errorOccurred)
-            return (false, _data.Parts);
-
         using (var output = new FileStream(fn, FileMode.Append, FileAccess.Write, FileShare.None)){
             for (int i = mergedParts; i < segments.Count; i++){
-                if (token.IsCancellationRequested)
+                if (token.IsCancellationRequested){
+                    CleanupBufferedArtifacts();
                     return (false, _data.Parts);
+                }
 
                 string tempFile = Path.Combine(tempDir, $"part_{i:D6}.tmp");
                 if (!File.Exists(tempFile)){
                     Console.Error.WriteLine($"Missing temp file for part {i}, aborting merge.");
+                    CleanupBufferedArtifacts(false);
                     return (false, _data.Parts);
                 }
 
-                byte[] data = await File.ReadAllBytesAsync(tempFile);
-                await output.WriteAsync(data, 0, data.Length);
+                byte[] data = await File.ReadAllBytesAsync(tempFile, token);
+                await output.WriteAsync(data, 0, data.Length, token);
 
                 mergedParts++;
 
@@ -475,21 +536,24 @@ public class HlsDownloader{
                 var dataLog = GetDownloadInfo(_data.DateStart, mergedParts, totalSeg, _data.BytesDownloaded, _data.TotalBytes);
                 Console.WriteLine($"{mergedParts}/{totalSeg} parts merged [{dataLog.Percent}%]");
 
+                await WaitWhilePausedAsync(token);
+                if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
+                    CleanupBufferedArtifacts();
+                    return (false, _data.Parts);
+                }
+
                 _currentEpMeta.DownloadProgress = new DownloadProgress{
-                    IsDownloading = true,
+                    State = DownloadState.Processing,
                     Percent = dataLog.Percent,
                     Time = dataLog.Time,
                     DownloadSpeedBytes = dataLog.DownloadSpeedBytes,
                     Doing = _isAudio ? "Merging Audio" : (_isVideo ? "Merging Video" : "")
                 };
-                
-                QueueManager.Instance.Queue.Refresh();
+
+                QueueManager.Instance.RefreshQueue();
 
                 if (!QueueManager.Instance.Queue.Contains(_currentEpMeta)){
-                    if (!_currentEpMeta.DownloadProgress.Done){
-                        CleanupNewDownloadMethod(tempDir, resumeFile, true);
-                    }
-
+                    CleanupBufferedArtifacts();
                     return (false, _data.Parts);
                 }
             }
@@ -503,16 +567,9 @@ public class HlsDownloader{
 
     private void CleanupNewDownloadMethod(string tempDir, string resumeFile, bool cleanAll = false){
         if (cleanAll){
-            // Delete downloaded files
-            foreach (var file in _currentEpMeta.downloadedFiles){
-                try{
-                    File.Delete(file); // Safe: File.Delete does nothing if file doesn't exist
-                } catch (Exception ex){
-                    Console.Error.WriteLine($"Failed to delete file '{file}': {ex.Message}");
-                }
-            }
+            CleanupDownloadedFiles();
         }
-        
+
         // Delete temp directory
         try{
             if (Directory.Exists(tempDir))
@@ -565,6 +622,7 @@ public class HlsDownloader{
     }
 
     public async Task<byte[]> DownloadPart(Segment seg, int segIndex, int segOffset){
+        _cancellationToken.ThrowIfCancellationRequested();
         string sUri = GetUri(seg.Uri ?? "", _data.BaseUrl);
         byte[]? dec = null;
         int p = segIndex;
@@ -572,7 +630,7 @@ public class HlsDownloader{
             byte[]? part;
             if (seg.Key != null){
                 var decipher = await GetKey(seg.Key, p, segOffset);
-                part = await GetData(p, sUri, seg.ByteRange, segOffset, false, _data.Timeout, _data.Retries);
+                part = await GetData(p, sUri, seg.ByteRange, segOffset, false, _data.Timeout, _data.Retries, _cancellationToken);
                 var partContent = part;
                 using (decipher){
                     if (partContent != null) dec = decipher.TransformFinalBlock(partContent, 0, partContent.Length);
@@ -583,7 +641,7 @@ public class HlsDownloader{
                     Interlocked.Add(ref _data.TotalBytes, dec.Length);
                 }
             } else{
-                part = await GetData(p, sUri, seg.ByteRange, segOffset, false, _data.Timeout, _data.Retries);
+                part = await GetData(p, sUri, seg.ByteRange, segOffset, false, _data.Timeout, _data.Retries, _cancellationToken);
                 dec = part;
                 if (dec != null){
                     Interlocked.Add(ref _data.BytesDownloaded, dec.Length);
@@ -646,7 +704,7 @@ public class HlsDownloader{
         string kUri = GetUri(key.Uri ?? "", _data.BaseUrl);
         if (!_data.Keys.ContainsKey(kUri)){
             try{
-                var rkey = await GetData(segIndex, kUri, null, segOffset, true, _data.Timeout, _data.Retries);
+                var rkey = await GetData(segIndex, kUri, null, segOffset, true, _data.Timeout, _data.Retries, _cancellationToken);
                 if (rkey == null || rkey.Length != 16){
                     throw new Exception("Key not fully downloaded or is incorrect.");
                 }
@@ -662,7 +720,8 @@ public class HlsDownloader{
         return _data.Keys[kUri];
     }
 
-    public async Task<byte[]?> GetData(int partIndex, string uri, ByteRange? byteRange, int segOffset, bool isKey, int timeout, int retryCount){
+    public async Task<byte[]?> GetData(int partIndex, string uri, ByteRange? byteRange, int segOffset, bool isKey, int timeout, int retryCount, CancellationToken cancellationToken){
+        cancellationToken.ThrowIfCancellationRequested();
         // Handle local file URI
         if (uri.StartsWith("file://")){
             string path = new Uri(uri).LocalPath;
@@ -680,17 +739,18 @@ public class HlsDownloader{
             request.Headers.Add("User-Agent", ApiUrls.FirefoxUserAgent);
         }
 
-        return await SendRequestWithRetry(request, partIndex, segOffset, isKey, retryCount);
+        return await SendRequestWithRetry(request, partIndex, segOffset, isKey, retryCount, cancellationToken);
     }
 
-    private async Task<byte[]?> SendRequestWithRetry(HttpRequestMessage requestPara, int partIndex, int segOffset, bool isKey, int retryCount){
+    private async Task<byte[]?> SendRequestWithRetry(HttpRequestMessage requestPara, int partIndex, int segOffset, bool isKey, int retryCount, CancellationToken cancellationToken){
         HttpResponseMessage response;
         for (int attempt = 0; attempt < retryCount + 1; attempt++){
+            cancellationToken.ThrowIfCancellationRequested();
             using (var request = CloneHttpRequestMessage(requestPara)){
                 try{
-                    response = await HttpClientReq.Instance.GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+                    response = await HttpClientReq.Instance.GetHttpClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                     response.EnsureSuccessStatusCode();
-                    return await ReadContentAsByteArrayAsync(response.Content);
+                    return await ReadContentAsByteArrayAsync(response.Content, cancellationToken);
                 } catch (Exception ex) when (ex is HttpRequestException or IOException){
                     // Log retry attempts
                     string partType = isKey ? "Key" : "Part";
@@ -700,7 +760,7 @@ public class HlsDownloader{
                     if (attempt == retryCount)
                         throw; // rethrow after last retry
 
-                    await Task.Delay(_data.WaitTime);
+                    await Task.Delay(_data.WaitTime, cancellationToken);
                 } catch (Exception ex){
                     Console.Error.WriteLine($"Unexpected exception at part {partIndex + 1 + segOffset}:");
                     Console.Error.WriteLine($"\tType: {ex.GetType()}");
@@ -713,14 +773,14 @@ public class HlsDownloader{
         return null; // Should not reach here
     }
 
-    private async Task<byte[]> ReadContentAsByteArrayAsync(HttpContent content){
+    private async Task<byte[]> ReadContentAsByteArrayAsync(HttpContent content, CancellationToken cancellationToken){
         using (var memoryStream = new MemoryStream())
-        using (var contentStream = await content.ReadAsStreamAsync())
+        using (var contentStream = await content.ReadAsStreamAsync(cancellationToken))
         using (var throttledStream = new ThrottledStream(contentStream)){
             byte[] buffer = new byte[8192];
             int bytesRead;
-            while ((bytesRead = await throttledStream.ReadAsync(buffer, 0, buffer.Length)) > 0){
-                await memoryStream.WriteAsync(buffer, 0, bytesRead);
+            while ((bytesRead = await throttledStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0){
+                await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
             }
 
             return memoryStream.ToArray();
@@ -757,7 +817,7 @@ public class HlsDownloader{
 }
 
 public static class HttpContentExtensions{
-    public static HttpContent Clone(this HttpContent content){
+    public static HttpContent? Clone(this HttpContent? content){
         if (content == null) return null;
         var memStream = new MemoryStream();
         content.CopyToAsync(memStream).Wait();

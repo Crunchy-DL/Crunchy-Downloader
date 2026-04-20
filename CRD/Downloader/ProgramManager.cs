@@ -54,7 +54,7 @@ public sealed partial class ProgramManager : ObservableObject{
     #region Startup Param Variables
 
     private Queue<Func<Task>> taskQueue = new Queue<Func<Task>>();
-    bool historyRefreshAdded = false;
+    bool historyRefreshAdded;
     private bool exitOnTaskFinish;
 
     #endregion
@@ -158,7 +158,7 @@ public sealed partial class ProgramManager : ObservableObject{
         await Task.WhenAll(tasks);
 
 
-        while (QueueManager.Instance.Queue.Any(e => e.DownloadProgress is{ Done: false, Error: false })){
+        while (QueueManager.Instance.Queue.Any(e => !e.DownloadProgress.IsFinished)){
             Console.WriteLine("Waiting for downloads to complete...");
             await Task.Delay(2000);
         }
@@ -224,6 +224,7 @@ public sealed partial class ProgramManager : ObservableObject{
             CrunchyrollManager.Instance.InitOptions();
 
             UpdateAvailable = await Updater.Instance.CheckForUpdatesAsync();
+            await Updater.Instance.CheckGhJsonAsync();
 
             if (CrunchyrollManager.Instance.CrunOptions.AccentColor != null && !string.IsNullOrEmpty(CrunchyrollManager.Instance.CrunOptions.AccentColor)){
                 if (_faTheme != null) _faTheme.CustomAccentColor = Color.Parse(CrunchyrollManager.Instance.CrunOptions.AccentColor);

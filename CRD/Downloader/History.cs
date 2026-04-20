@@ -59,31 +59,59 @@ public class History{
         if (parsedSeries.Data != null){
             var result = false;
             foreach (var s in parsedSeries.Data){
-                var sId = s.Id;
-                if (s.Versions is{ Count: > 0 }){
-                    foreach (var sVersion in s.Versions.Where(sVersion => sVersion.Original == true)){
-                        if (sVersion.Guid != null){
-                            sId = sVersion.Guid;
-                        }
+                var lang = string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang)
+                    ? crunInstance.DefaultLocale
+                    : crunInstance.CrunOptions.HistoryLang;
 
-                        break;
-                    }
+                var candidateIds = new List<string>();
+
+                if (s.Versions is{ Count: > 0 }){
+                    candidateIds.AddRange(
+                        s.Versions
+                            .Where(v => v.Original == true && !string.IsNullOrWhiteSpace(v.Guid))
+                            .OrderByDescending(v => v.Guid!.Length)
+                            .Select(v => v.Guid!)
+                    );
                 }
 
-                if (!string.IsNullOrEmpty(seasonId) && sId != seasonId) continue;
+                if (!string.IsNullOrWhiteSpace(s.Id)){
+                    candidateIds.Add(s.Id);
+                }
 
+                candidateIds = candidateIds
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
 
-                var seasonData = await crunInstance.CrSeries.GetSeasonDataById(sId, string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang, true);
+                if (!string.IsNullOrEmpty(seasonId) &&
+                    !candidateIds.Contains(seasonId, StringComparer.OrdinalIgnoreCase)){
+                    continue;
+                }
 
-                if (seasonData.Data is{ Count: > 0 }){
-                    result = true;
-                    await UpdateWithSeasonData(seasonData.Data.ToList<IHistorySource>());
+                foreach (var candidateId in candidateIds){
+                    try{
+                        var seasonData = await crunInstance.CrSeries.GetSeasonDataById(candidateId, lang, true);
+
+                        if (seasonData.Data is{ Count: > 0 }){
+                            result = true;
+                            await crunInstance.History.UpdateWithSeasonData(seasonData.Data.ToList<IHistorySource>());
+                            break;
+                        }
+                    } catch{
+                        // optional: log candidateId
+                    }
                 }
             }
 
             historySeries ??= crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
 
             if (historySeries != null){
+                RemoveUnavailableEpisodes(historySeries);
+                if (historySeries.Seasons.Count == 0){
+                    crunInstance.HistoryList.Remove(historySeries);
+                    CfgManager.UpdateHistoryFile();
+                    return result;
+                }
+
                 MatchHistorySeriesWithSonarr(false);
                 await MatchHistoryEpisodesWithSonarr(false, historySeries);
                 CfgManager.UpdateHistoryFile();
@@ -263,10 +291,7 @@ public class History{
             var historySeries = crunInstance.HistoryList.FirstOrDefault(series => series.SeriesId == seriesId);
             if (historySeries != null){
                 historySeries.HistorySeriesAddDate ??= DateTime.Now;
-                historySeries.SeriesType = firstEpisode.GetSeriesType();
                 historySeries.SeriesStreamingService = StreamingService.Crunchyroll;
-
-                await RefreshSeriesData(seriesId, historySeries);
                 var historySeason = historySeries.Seasons.FirstOrDefault(s => s.SeasonId == firstEpisode.GetSeasonId());
 
                 if (historySeason != null){
@@ -307,6 +332,7 @@ public class History{
                             historyEpisode.EpisodeSeasonNum = historySource.GetSeasonNum();
                             historyEpisode.EpisodeCrPremiumAirDate = historySource.GetAvailableDate();
                             historyEpisode.EpisodeType = historySource.GetEpisodeType();
+                            historyEpisode.EpisodeSeriesType = historySource.GetSeriesType();
                             historyEpisode.IsEpisodeAvailableOnStreamingService = true;
                             historyEpisode.ThumbnailImageUrl = historySource.GetImageUrl();
 
@@ -325,6 +351,9 @@ public class History{
                     newSeason.Init();
                 }
 
+                historySeries.SeriesType = InferSeriesType(historySeries);
+                await RefreshSeriesData(seriesId, historySeries);
+                _ = historySeries.LoadImage();
                 historySeries.UpdateNewEpisodes();
             } else if (!string.IsNullOrEmpty(seriesId)){
                 historySeries = new HistorySeries{
@@ -332,7 +361,7 @@ public class History{
                     SeriesId = firstEpisode.GetSeriesId(),
                     Seasons = [],
                     HistorySeriesAddDate = DateTime.Now,
-                    SeriesType = firstEpisode.GetSeriesType(),
+                    SeriesType = SeriesType.Unknown,
                     SeriesStreamingService = StreamingService.Crunchyroll
                 };
                 crunInstance.HistoryList.Add(historySeries);
@@ -341,9 +370,10 @@ public class History{
 
                 newSeason.EpisodesList.Sort(new NumericStringPropertyComparer());
 
-                await RefreshSeriesData(seriesId, historySeries);
-
                 historySeries.Seasons.Add(newSeason);
+                historySeries.SeriesType = InferSeriesType(historySeries);
+                await RefreshSeriesData(seriesId, historySeries);
+                _ = historySeries.LoadImage();
                 historySeries.UpdateNewEpisodes();
                 historySeries.Init();
                 newSeason.Init();
@@ -515,7 +545,7 @@ public class History{
 
     private async Task RefreshSeriesData(string seriesId, HistorySeries historySeries){
         if (cachedSeries == null || (!string.IsNullOrEmpty(cachedSeries.SeriesId) && cachedSeries.SeriesId != seriesId)){
-            if (historySeries.SeriesType == SeriesType.Series){
+            if (historySeries.SeriesType is SeriesType.Series or SeriesType.Movie){
                 var seriesData = await crunInstance.CrSeries.SeriesById(seriesId, string.IsNullOrEmpty(crunInstance.CrunOptions.HistoryLang) ? crunInstance.DefaultLocale : crunInstance.CrunOptions.HistoryLang, true);
                 if (seriesData is{ Data: not null }){
                     var firstEpisode = seriesData.Data.First();
@@ -658,6 +688,31 @@ public class History{
         return null;
     }
 
+    private static SeriesType InferSeriesType(HistorySeries? historySeries){
+        var seriesTypes = new List<SeriesType>();
+
+        if (historySeries != null){
+            seriesTypes.AddRange(historySeries.Seasons
+                .SelectMany(season => season.EpisodesList)
+                .Select(episode => episode.EpisodeSeriesType)
+                .Where(type => type != SeriesType.Unknown));
+        }
+
+        if (seriesTypes.Count == 0){
+            return historySeries?.SeriesType ?? SeriesType.Unknown;
+        }
+
+        if (seriesTypes.All(type => type == SeriesType.Artist)){
+            return SeriesType.Artist;
+        }
+
+        if (seriesTypes.All(type => type == SeriesType.Movie)){
+            return SeriesType.Movie;
+        }
+
+        return SeriesType.Series;
+    }
+
 
     private string GetSeriesThumbnail(CrSeriesBase series){
         // var series = await crunInstance.CrSeries.SeriesById(seriesId);
@@ -668,6 +723,39 @@ public class History{
         }
 
         return "";
+    }
+
+    private void RemoveUnavailableEpisodes(HistorySeries historySeries){
+        if (!crunInstance.CrunOptions.HistoryRemoveMissingEpisodes){
+            return;
+        }
+
+        var seasonsToRemove = new List<HistorySeason>();
+
+        foreach (var season in historySeries.Seasons){
+            var unavailableEpisodes = season.EpisodesList
+                .Where(episode => !episode.IsEpisodeAvailableOnStreamingService)
+                .ToList();
+
+            foreach (var episode in unavailableEpisodes){
+                season.EpisodesList.Remove(episode);
+            }
+
+            if (season.EpisodesList.Count == 0){
+                seasonsToRemove.Add(season);
+                continue;
+            }
+
+            season.EpisodesList.Sort(new NumericStringPropertyComparer());
+            season.UpdateDownloaded();
+        }
+
+        foreach (var season in seasonsToRemove){
+            historySeries.Seasons.Remove(season);
+        }
+
+        historySeries.UpdateNewEpisodes();
+        SortSeasons(historySeries);
     }
 
 
@@ -696,6 +784,7 @@ public class History{
                 HistoryEpisodeAvailableSoftSubs = historySource.GetEpisodeAvailableSoftSubs(),
                 EpisodeCrPremiumAirDate = historySource.GetAvailableDate(),
                 EpisodeType = historySource.GetEpisodeType(),
+                EpisodeSeriesType = historySource.GetSeriesType(),
                 IsEpisodeAvailableOnStreamingService = true,
                 ThumbnailImageUrl = historySource.GetImageUrl(),
             };

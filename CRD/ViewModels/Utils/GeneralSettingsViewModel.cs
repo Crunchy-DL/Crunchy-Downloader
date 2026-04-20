@@ -43,6 +43,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool historyIncludeCrArtists;
+    
+    [ObservableProperty]
+    private bool historyRemoveMissingEpisodes;
 
     [ObservableProperty]
     private bool historyAddSpecials;
@@ -85,6 +88,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private bool downloadAllowEarlyStart;
+
+    [ObservableProperty]
+    private bool persistQueue;
 
     [ObservableProperty]
     private double? downloadSpeed;
@@ -365,6 +371,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         ProxyPort = options.ProxyPort;
         HistoryCountMissing = options.HistoryCountMissing;
         HistoryIncludeCrArtists = options.HistoryIncludeCrArtists;
+        HistoryRemoveMissingEpisodes = options.HistoryRemoveMissingEpisodes;
         HistoryAddSpecials = options.HistoryAddSpecials;
         HistorySkipUnmonitored = options.HistorySkipUnmonitored;
         HistoryCountSonarr = options.HistoryCountSonarr;
@@ -376,6 +383,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         DownloadMethodeNew = options.DownloadMethodeNew;
         DownloadAllowEarlyStart = options.DownloadAllowEarlyStart;
         DownloadOnlyWithAllSelectedDubSub = options.DownloadOnlyWithAllSelectedDubSub;
+        PersistQueue = options.PersistQueue;
         RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10);
         RetryDelay = Math.Clamp((options.RetryDelay), 1, 30);
         DownloadToTempFolder = options.DownloadToTempFolder;
@@ -424,6 +432,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.DownloadMethodeNew = DownloadMethodeNew;
         settings.DownloadAllowEarlyStart = DownloadAllowEarlyStart;
         settings.DownloadOnlyWithAllSelectedDubSub = DownloadOnlyWithAllSelectedDubSub;
+        settings.PersistQueue = PersistQueue;
 
         settings.BackgroundImageBlurRadius = Math.Clamp((BackgroundImageBlurRadius ?? 0), 0, 40);
         settings.BackgroundImageOpacity = Math.Clamp((BackgroundImageOpacity ?? 0), 0, 1);
@@ -435,6 +444,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.HistoryCountMissing = HistoryCountMissing;
         settings.HistoryAddSpecials = HistoryAddSpecials;
         settings.HistoryIncludeCrArtists = HistoryIncludeCrArtists;
+        settings.HistoryRemoveMissingEpisodes = HistoryRemoveMissingEpisodes;
         settings.HistorySkipUnmonitored = HistorySkipUnmonitored;
         settings.HistoryCountSonarr = HistoryCountSonarr;
         settings.HistoryAutoRefreshIntervalMinutes =Math.Clamp((int)(HistoryAutoRefreshIntervalMinutes ?? 0), 0, 1000000000) ;
@@ -444,7 +454,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
         settings.SimultaneousProcessingJobs = Math.Clamp((int)(SimultaneousProcessingJobs ?? 0), 1, 10);
 
-        QueueManager.Instance.SetLimit(settings.SimultaneousProcessingJobs);
+        QueueManager.Instance.SetProcessingLimit(settings.SimultaneousProcessingJobs);
 
         settings.ProxyEnabled = ProxyEnabled;
         settings.ProxySocks = ProxySocks;
@@ -519,6 +529,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.LogMode = LogMode;
 
         CfgManager.WriteCrSettings();
+
+        if (!PersistQueue){
+            QueueManager.Instance.SaveQueueSnapshot();
+        }
     }
 
     [RelayCommand]
@@ -758,7 +772,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             or nameof(CurrentAppTheme)
             or nameof(UseCustomAccent)
             or nameof(TrayIconEnabled)
-            or nameof(LogMode)){
+            or nameof(LogMode)
+            or nameof(PersistQueue)){
             return;
         }
 
@@ -828,5 +843,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         } else{
             CfgManager.DisableLogMode();
         }
+    }
+
+    partial void OnPersistQueueChanged(bool value){
+        UpdateSettings();
+        QueueManager.Instance.SaveQueueSnapshot();
     }
 }

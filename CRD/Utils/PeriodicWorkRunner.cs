@@ -60,7 +60,7 @@ public class PeriodicWorkRunner(Func<CancellationToken, Task> work) : IDisposabl
         }
     }
 
-    private int running = 0;
+    private int running;
 
     private async Task SafeRunWork(CancellationToken token){
         if (Interlocked.Exchange(ref running, 1) == 1){

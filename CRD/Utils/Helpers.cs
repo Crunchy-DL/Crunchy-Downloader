@@ -28,10 +28,35 @@ using FluentAvalonia.UI.Controls;
 using Microsoft.Win32;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using NuGet.Versioning;
 
 namespace CRD.Utils;
 
 public class Helpers{
+    private static readonly Regex ClientVersionRegex = new(@"(?:ANDROIDTV|Crunchyroll)/(?<version>[0-9]+(?:[._][0-9]+)*)", RegexOptions.Compiled);
+
+    public static string? ExtractClientVersion(string? userAgent){
+        if (string.IsNullOrWhiteSpace(userAgent)){
+            return null;
+        }
+
+        var match = ClientVersionRegex.Match(userAgent);
+        return match.Success ? match.Groups["version"].Value : null;
+    }
+
+    public static int CompareClientVersions(string? left, string? right){
+        var leftVersion = ParseClientVersion(left);
+        var rightVersion = ParseClientVersion(right);
+
+        return VersionComparer.Version.Compare(leftVersion, rightVersion);
+    }
+
+    private static NuGetVersion ParseClientVersion(string? version){
+        return NuGetVersion.TryParse(version?.Replace('_', '.') ?? "", out var nuGetVersion)
+            ? nuGetVersion
+            : NuGetVersion.Parse("0.0.0");
+    }
+
     public static T? Deserialize<T>(string json, JsonSerializerSettings? serializerSettings){
         try{
             serializerSettings ??= new JsonSerializerSettings();
@@ -193,7 +218,7 @@ public class Helpers{
         }
     }
     
-    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsync(string bin, string command){
+    public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsync(string bin, string command, CancellationToken cancellationToken = default){
         try{
             using (var process = new Process()){
                 process.StartInfo.FileName = bin;
@@ -224,7 +249,17 @@ public class Helpers{
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await process.WaitForExitAsync();
+                await using var registration = cancellationToken.Register(() => {
+                    try{
+                        if (!process.HasExited){
+                            process.Kill(true);
+                        }
+                    } catch{
+                        // ignored
+                    }
+                });
+
+                await process.WaitForExitAsync(cancellationToken);
 
                 bool isSuccess = process.ExitCode == 0;
 
@@ -236,66 +271,129 @@ public class Helpers{
         }
     }
 
-    public static void DeleteFile(string filePath){
+    public static bool DeleteFile(string filePath, int maxRetries = 5, int delayMs = 150){
         if (string.IsNullOrEmpty(filePath)){
-            return;
+            return false;
         }
 
-        try{
-            if (File.Exists(filePath)){
+        for (int attempt = 0; attempt < maxRetries; attempt++){
+            try{
+                if (!File.Exists(filePath)){
+                    return true;
+                }
+
                 File.Delete(filePath);
+                return true;
+            } catch (Exception ex) when (attempt < maxRetries - 1 && (ex is IOException || ex is UnauthorizedAccessException)){
+                Thread.Sleep(delayMs * (attempt + 1));
+            } catch (Exception ex){
+                Console.Error.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
+                return false;
             }
-        } catch (Exception ex){
-            Console.Error.WriteLine($"Failed to delete file {filePath}. Error: {ex.Message}");
         }
+
+        Console.Error.WriteLine($"Failed to delete file {filePath}. Error: file remained locked after {maxRetries} attempts.");
+        return false;
+    }
+
+    public static string GetAvailableDestinationPath(string destinationPath){
+        if (!File.Exists(destinationPath)){
+            return destinationPath;
+        }
+
+        var directory = Path.GetDirectoryName(destinationPath) ?? string.Empty;
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(destinationPath);
+        var extension = Path.GetExtension(destinationPath);
+        var counter = 1;
+
+        string candidatePath;
+        do{
+            candidatePath = Path.Combine(directory, $"{fileNameWithoutExtension}({counter}){extension}");
+            counter++;
+        } while (File.Exists(candidatePath));
+
+        return candidatePath;
     }
 
     public static async Task<(bool IsOk, int ErrorCode)> ExecuteCommandAsyncWorkDir(string type, string bin, string command, string workingDir){
+        Process? process = null;
+        DataReceivedEventHandler? outputHandler = null;
+        DataReceivedEventHandler? errorHandler = null;
+
         try{
-            using (var process = new Process()){
-                process.StartInfo.WorkingDirectory = workingDir;
-                process.StartInfo.FileName = bin;
-                process.StartInfo.Arguments = command;
-                process.StartInfo.RedirectStandardOutput = true;
-                process.StartInfo.RedirectStandardError = true;
-                process.StartInfo.UseShellExecute = false;
-                process.StartInfo.CreateNoWindow = true;
+            process = new Process{
+                StartInfo = new ProcessStartInfo{
+                    WorkingDirectory = workingDir,
+                    FileName = bin,
+                    Arguments = command,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                },
+                EnableRaisingEvents = true
+            };
 
-                process.OutputDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)){
-                        Console.WriteLine(e.Data);
-                    }
-                };
+            outputHandler = (_, e) => {
+                if (!string.IsNullOrEmpty(e.Data)){
+                    Console.WriteLine(e.Data);
+                }
+            };
 
-                process.ErrorDataReceived += (sender, e) => {
-                    if (!string.IsNullOrEmpty(e.Data)){
-                        Console.Error.WriteLine($"{e.Data}");
-                    }
-                };
+            errorHandler = (_, e) => {
+                if (!string.IsNullOrEmpty(e.Data)){
+                    Console.Error.WriteLine(e.Data);
+                }
+            };
 
-                process.Start();
+            process.OutputDataReceived += outputHandler;
+            process.ErrorDataReceived += errorHandler;
 
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+            process.Start();
 
-                await process.WaitForExitAsync();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
 
-                bool isSuccess = process.ExitCode == 0;
+            await process.WaitForExitAsync();
+            process.WaitForExit();
 
-                return (IsOk: isSuccess, ErrorCode: process.ExitCode);
-            }
+            return (IsOk: process.ExitCode == 0, ErrorCode: process.ExitCode);
         } catch (Exception ex){
             Console.Error.WriteLine($"An error occurred: {ex.Message}");
             return (IsOk: false, ErrorCode: -1);
+        } finally{
+            if (process != null){
+                if (outputHandler != null){
+                    process.OutputDataReceived -= outputHandler;
+                }
+
+                if (errorHandler != null){
+                    process.ErrorDataReceived -= errorHandler;
+                }
+
+                process.Dispose();
+            }
         }
     }
 
     private static IEnumerable<string> GetQualityOption(VideoPreset preset){
+        if (preset.Crf is -1)
+            return [];
+
+        var q = preset.Crf.ToString();
+
         return preset.Codec switch{
-            "h264_nvenc" or "hevc_nvenc" =>["-cq", preset.Crf.ToString()],
-            "h264_qsv" or "hevc_qsv" =>["-global_quality", preset.Crf.ToString()],
-            "h264_amf" or "hevc_amf" =>["-qp", preset.Crf.ToString()],
-            _ =>["-crf", preset.Crf.ToString()]
+            "h264_nvenc" or "hevc_nvenc"
+                => preset.Crf is >= 0 and <= 51 ? ["-cq", q] : [],
+
+            "h264_qsv" or "hevc_qsv"
+                => preset.Crf is >= 1 and <= 51 ? ["-global_quality", q] : [],
+
+            "h264_amf" or "hevc_amf"
+                => preset.Crf is >= 0 and <= 51 ? ["-qp", q] : [],
+
+            _ // libx264/libx265/etc.
+                => preset.Crf >= 0 ? ["-crf", q] : []
         };
     }
 
@@ -322,12 +420,13 @@ public class Helpers{
             if (!string.IsNullOrWhiteSpace(preset.Codec)){
                 args.Add("-c:v");
                 args.Add(preset.Codec);
+                
+                args.AddRange(GetQualityOption(preset));
+
+                args.Add("-vf");
+                args.Add($"scale={preset.Resolution},fps={preset.FrameRate}");
             }
-
-            args.AddRange(GetQualityOption(preset));
-
-            args.Add("-vf");
-            args.Add($"scale={preset.Resolution},fps={preset.FrameRate}");
+            
 
             foreach (var param in preset.AdditionalParameters){
                 args.AddRange(SplitArguments(param));

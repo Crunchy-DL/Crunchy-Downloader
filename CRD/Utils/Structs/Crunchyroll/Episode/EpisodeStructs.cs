@@ -246,6 +246,12 @@ public class CrunchyEpisode : IHistorySource{
     }
 
     public bool IsSpecialSeason(){
+        if (SeasonTitle.Contains("OVA", StringComparison.Ordinal) ||
+            SeasonTitle.Contains("Special", StringComparison.Ordinal) ||
+            SeasonTitle.Contains("Extra", StringComparison.Ordinal)){
+            return true;
+        }
+        
         if (string.IsNullOrEmpty(Identifier)){
             return false;
         }
@@ -285,7 +291,20 @@ public class CrunchyEpisode : IHistorySource{
     }
 
     public SeriesType GetSeriesType(){
-        return SeriesType.Series;
+        if (string.IsNullOrWhiteSpace(Identifier))
+            return SeriesType.Series;
+
+        var parts = Identifier.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length < 2)
+            return SeriesType.Series;
+
+        return parts[1] switch{
+            var p when p.StartsWith("S", StringComparison.OrdinalIgnoreCase) => SeriesType.Series,
+            var p when p.StartsWith("M", StringComparison.OrdinalIgnoreCase) => SeriesType.Movie,
+            var p when p.StartsWith("T", StringComparison.OrdinalIgnoreCase) => SeriesType.Movie,
+            var p when parts.Length == 2 && p.StartsWith("E", StringComparison.OrdinalIgnoreCase) => SeriesType.Movie,
+            _ => SeriesType.Series
+        };
     }
 
     public EpisodeType GetEpisodeType(){
@@ -373,7 +392,6 @@ public class CrunchyEpMeta{
     public string? AbsolutEpisodeNumberE{ get; set; }
     public string? Image{ get; set; }
     public string? ImageBig{ get; set; }
-    public bool Paused{ get; set; }
     public DownloadProgress DownloadProgress{ get; set; } = new();
 
     public List<string>? SelectedDubs{ get; set; }
@@ -385,6 +403,7 @@ public class CrunchyEpMeta{
     public string? DownloadPath{ get; set; }
     public string? VideoQuality{ get; set; }
     public List<string> DownloadSubs{ get; set; } =[];
+    public string? TempFileSuffix{ get; set; }
     public bool Music{ get; set; }
 
     public string Resolution{ get; set; }
@@ -399,18 +418,53 @@ public class CrunchyEpMeta{
 
     public bool HighlightAllAvailable{ get; set; }
     
-    public CancellationTokenSource Cts { get; } = new();
+    [JsonIgnore]
+    public CancellationTokenSource Cts { get; private set; } = new();
+
+    public void RenewCancellationToken(){
+        if (!Cts.IsCancellationRequested){
+            return;
+        }
+
+        Cts.Dispose();
+        Cts = new CancellationTokenSource();
+    }
+
+    public void CancelDownload(){
+        if (Cts.IsCancellationRequested){
+            return;
+        }
+
+        Cts.Cancel();
+    }
 }
 
 public class DownloadProgress{
-    public bool IsDownloading = false;
-    public bool Done = false;
-    public bool Error = false;
+    public DownloadState State{ get; set; } = DownloadState.Queued;
+    public DownloadState ResumeState{ get; set; } = DownloadState.Downloading;
     public string Doing = string.Empty;
 
     public int Percent{ get; set; }
     public double Time{ get; set; }
     public double DownloadSpeedBytes{ get; set; }
+
+    public bool IsQueued => State == DownloadState.Queued;
+    public bool IsDownloading => State == DownloadState.Downloading;
+    public bool IsPaused => State == DownloadState.Paused;
+    public bool IsProcessing => State == DownloadState.Processing;
+    public bool IsDone => State == DownloadState.Done;
+    public bool IsError => State == DownloadState.Error;
+    public bool IsFinished => State is DownloadState.Done or DownloadState.Error;
+    public bool IsRunnable => State is DownloadState.Queued or DownloadState.Error;
+    
+    public void ResetForRetry(){
+        State = DownloadState.Queued;
+        ResumeState = DownloadState.Downloading;
+        Percent = 0;
+        Time = 0;
+        DownloadSpeedBytes = 0;
+        Doing = string.Empty;
+    }
 }
 
 public class CrunchyEpMetaData{

@@ -20,16 +20,16 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     public ObservableCollection<DownloadItemModel> Items{ get; }
 
     [ObservableProperty]
-    private bool _shutdownWhenQueueEmpty;
+    private bool shutdownWhenQueueEmpty;
 
     [ObservableProperty]
-    private bool _autoDownload;
+    private bool autoDownload;
 
     [ObservableProperty]
-    private bool _removeFinished;
+    private bool removeFinished;
 
     [ObservableProperty]
-    private QueueManager _queueManagerIns;
+    private QueueManager queueManagerIns;
 
     public DownloadsPageViewModel(){
         QueueManagerIns = QueueManager.Instance;
@@ -63,10 +63,10 @@ public partial class DownloadsPageViewModel : ViewModelBase{
     [RelayCommand]
     public void ClearQueue(){
         var items = QueueManagerIns.Queue;
-        QueueManagerIns.Queue.Clear();
+        QueueManagerIns.ClearQueue();
 
         foreach (var crunchyEpMeta in items){
-            if (!crunchyEpMeta.DownloadProgress.Done){
+            if (!crunchyEpMeta.DownloadProgress.IsDone){
                 foreach (var downloadItemDownloadedFile in crunchyEpMeta.downloadedFiles){
                     try{
                         if (File.Exists(downloadItemDownloadedFile)){
@@ -85,13 +85,26 @@ public partial class DownloadsPageViewModel : ViewModelBase{
         var items = QueueManagerIns.Queue;
 
         foreach (var crunchyEpMeta in items){
-            if (crunchyEpMeta.DownloadProgress.Error){
-                crunchyEpMeta.DownloadProgress = new();
+            if (crunchyEpMeta.DownloadProgress.IsError){
+                crunchyEpMeta.DownloadProgress.ResetForRetry();
             }
         }
 
         QueueManagerIns.UpdateDownloadListItems();
     }
+    
+    [RelayCommand]
+    public void PauseQueue(){
+        AutoDownload = false;
+        foreach (var item in Items){
+            if (item.epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing){
+                item.ToggleIsDownloading();
+            }
+        }
+
+        QueueManagerIns.UpdateDownloadListItems();
+    }
+    
 }
 
 public partial class DownloadItemModel : INotifyPropertyChanged{
@@ -113,6 +126,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
 
     public bool Error{ get; set; }
+    public bool ShowPauseIcon{ get; set; }
 
     public DownloadItemModel(CrunchyEpMeta epMetaF){
         epMeta = epMetaF;
@@ -121,9 +135,9 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         Title = epMeta.SeriesTitle + (!string.IsNullOrEmpty(epMeta.Season) ? " - S" + epMeta.Season + "E" + (epMeta.EpisodeNumber != string.Empty ? epMeta.EpisodeNumber : epMeta.AbsolutEpisodeNumberE) : "") + " - " +
                 epMeta.EpisodeTitle;
 
-        isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
-
-        Done = epMeta.DownloadProgress.Done;
+        Done = epMeta.DownloadProgress.IsDone;
+        isDownloading = epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing;
+        ShowPauseIcon = isDownloading;
         Percent = epMeta.DownloadProgress.Percent;
         Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
         DownloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
@@ -131,8 +145,8 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             : $"{epMeta.DownloadProgress.DownloadSpeedBytes / 1000000.0:F2} MB/s";
 
         ;
-        Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-        DoingWhat = epMeta.Paused ? "Paused" :
+        Paused = epMeta.DownloadProgress.IsPaused;
+        DoingWhat = Paused ? "Paused" :
             Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
             epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
@@ -143,7 +157,7 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         );
         InfoTextHover = epMeta.AvailableQualities;
 
-        Error = epMeta.DownloadProgress.Error;
+        Error = epMeta.DownloadProgress.IsError;
     }
 
     string JoinWithSeparator(params string[] parts){
@@ -191,16 +205,17 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
     }
 
     public void Refresh(){
-        isDownloading = epMeta.DownloadProgress.IsDownloading || Done;
-        Done = epMeta.DownloadProgress.Done;
+        Done = epMeta.DownloadProgress.IsDone;
+        isDownloading = epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing;
+        ShowPauseIcon = isDownloading;
         Percent = epMeta.DownloadProgress.Percent;
         Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
         DownloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
             ? $"{epMeta.DownloadProgress.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
             : $"{epMeta.DownloadProgress.DownloadSpeedBytes / 1000000.0:F2} MB/s";
 
-        Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-        DoingWhat = epMeta.Paused ? "Paused" :
+        Paused = epMeta.DownloadProgress.IsPaused;
+        DoingWhat = Paused ? "Paused" :
             Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
             epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
 
@@ -210,11 +225,12 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
             epMeta.Resolution
         );
         InfoTextHover = epMeta.AvailableQualities;
-        Error = epMeta.DownloadProgress.Error;
+        Error = epMeta.DownloadProgress.IsError;
 
 
         if (PropertyChanged != null){
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowPauseIcon)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Percent)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Time)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadSpeed)));
@@ -230,26 +246,58 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
     [RelayCommand]
     public void ToggleIsDownloading(){
-        if (isDownloading){
-            //StopDownload();
-            epMeta.Paused = !epMeta.Paused;
+        if (epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing){
+            epMeta.DownloadProgress.ResumeState = epMeta.DownloadProgress.State;
+            epMeta.DownloadProgress.State = DownloadState.Paused;
+            isDownloading = false;
+            Paused = true;
+            ShowPauseIcon = false;
 
-            Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
-        } else{
-            if (epMeta.Paused){
-                epMeta.Paused = false;
-                Paused = epMeta.Paused || !isDownloading && !epMeta.Paused;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
-            } else{
-                StartDownload();
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowPauseIcon)));
+
+            QueueManager.Instance.ReleaseDownloadSlot(epMeta);
+            QueueManager.Instance.RefreshQueue();
+            return;
         }
 
+        if (epMeta.DownloadProgress.IsPaused){
+            if (!QueueManager.Instance.TryResumeDownload(epMeta))
+                return;
 
-        if (PropertyChanged != null){
-            PropertyChanged.Invoke(this, new PropertyChangedEventArgs("isDownloading"));
+            epMeta.DownloadProgress.State = epMeta.DownloadProgress.ResumeState;
+            isDownloading = epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing;
+            Paused = false;
+            ShowPauseIcon = isDownloading;
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowPauseIcon)));
+            return;
         }
+
+        StartDownload();
+    }
+    
+    [RelayCommand]
+    public void RetryDownload(){
+        epMeta.DownloadProgress.ResetForRetry();
+        isDownloading = false;
+        Paused = false;
+        ShowPauseIcon = false;
+
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowPauseIcon)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Error)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Percent)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Time)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DownloadSpeed)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(DoingWhat)));
+
+        QueueManager.Instance.RefreshQueue();
+        StartDownload();
     }
 
     public Task StartDownload(){
@@ -261,28 +309,34 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         if (isDownloading)
             return;
 
+        epMeta.RenewCancellationToken();
         isDownloading = true;
-        epMeta.DownloadProgress.IsDownloading = true;
+        epMeta.DownloadProgress.State = DownloadState.Downloading;
+        Paused = false;
+        ShowPauseIcon = true;
 
-        Paused = epMeta.Paused;
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(isDownloading)));
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Paused)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ShowPauseIcon)));
 
         CrDownloadOptions? newOptions = Helpers.DeepCopy(CrunchyrollManager.Instance.CrunOptions);
 
         if (epMeta.OnlySubs){
-            newOptions.Novids = true;
-            newOptions.Noaudio = true;
+            newOptions?.Novids = true;
+            newOptions?.Noaudio = true;
         }
 
-        await CrunchyrollManager.Instance.DownloadEpisode(epMeta, epMeta.DownloadSettings ?? newOptions);
+        await CrunchyrollManager.Instance.DownloadEpisode(
+            epMeta,
+            epMeta.DownloadSettings ?? newOptions ?? CrunchyrollManager.Instance.CrunOptions);
     }
 
     [RelayCommand]
     public void RemoveFromQueue(){
         CrunchyEpMeta? downloadItem = QueueManager.Instance.Queue.FirstOrDefault(e => e.Equals(epMeta)) ?? null;
         if (downloadItem != null){
-            QueueManager.Instance.Queue.Remove(downloadItem);
-            epMeta.Cts.Cancel();
+            QueueManager.Instance.RemoveFromQueue(downloadItem);
+            epMeta.CancelDownload();
             if (!Done){
                 foreach (var downloadItemDownloadedFile in downloadItem.downloadedFiles){
                     try{
