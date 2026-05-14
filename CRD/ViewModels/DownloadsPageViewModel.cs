@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -139,16 +140,10 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         isDownloading = epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing;
         ShowPauseIcon = isDownloading;
         Percent = epMeta.DownloadProgress.Percent;
-        Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
-        DownloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
-            ? $"{epMeta.DownloadProgress.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
-            : $"{epMeta.DownloadProgress.DownloadSpeedBytes / 1000000.0:F2} MB/s";
-
-        ;
+        Time = GetTimeText();
+        DownloadSpeed = GetDownloadSpeedText();
         Paused = epMeta.DownloadProgress.IsPaused;
-        DoingWhat = Paused ? "Paused" :
-            Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
-            epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
+        DoingWhat = GetDoingWhatText();
 
         InfoText = JoinWithSeparator(
             GetDubString(),
@@ -209,15 +204,11 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
         isDownloading = epMeta.DownloadProgress.State is DownloadState.Downloading or DownloadState.Processing;
         ShowPauseIcon = isDownloading;
         Percent = epMeta.DownloadProgress.Percent;
-        Time = "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
-        DownloadSpeed = CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
-            ? $"{epMeta.DownloadProgress.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
-            : $"{epMeta.DownloadProgress.DownloadSpeedBytes / 1000000.0:F2} MB/s";
+        Time = GetTimeText();
+        DownloadSpeed = GetDownloadSpeedText();
 
         Paused = epMeta.DownloadProgress.IsPaused;
-        DoingWhat = Paused ? "Paused" :
-            Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
-            epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
+        DoingWhat = GetDoingWhatText();
 
         InfoText = JoinWithSeparator(
             GetDubString(),
@@ -243,6 +234,36 @@ public partial class DownloadItemModel : INotifyPropertyChanged{
 
 
     public event PropertyChangedEventHandler? PropertyChanged;
+
+    private string GetDoingWhatText(){
+        if (epMeta.DownloadProgress.IsWaitingForRetry && epMeta.DownloadProgress.RetryAtUtc.HasValue){
+            return "Rate limited, retrying at " + epMeta.DownloadProgress.RetryAtUtc.Value
+                .ToLocalTime()
+                .ToString("T", CultureInfo.CurrentCulture);
+        }
+
+        return Paused ? "Paused" :
+            Done ? (epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Done") :
+            epMeta.DownloadProgress.Doing != string.Empty ? epMeta.DownloadProgress.Doing : "Waiting";
+    }
+
+    private string GetTimeText(){
+        if (epMeta.DownloadProgress.IsWaitingForRetry && epMeta.DownloadProgress.RetryAtUtc.HasValue){
+            return string.Empty;
+        }
+
+        return "Estimated Time: " + TimeSpan.FromSeconds(epMeta.DownloadProgress.Time).ToString(@"hh\:mm\:ss");
+    }
+
+    private string GetDownloadSpeedText(){
+        if (epMeta.DownloadProgress.IsWaitingForRetry){
+            return string.Empty;
+        }
+
+        return CrunchyrollManager.Instance.CrunOptions.DownloadSpeedInBits
+            ? $"{epMeta.DownloadProgress.DownloadSpeedBytes * 8 / 1000000.0:F2} Mb/s"
+            : $"{epMeta.DownloadProgress.DownloadSpeedBytes / 1000000.0:F2} MB/s";
+    }
 
     [RelayCommand]
     public void ToggleIsDownloading(){

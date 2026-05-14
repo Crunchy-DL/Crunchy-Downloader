@@ -112,9 +112,10 @@ public class HttpClientReq{
         return handler;
     }
 
-    public async Task<(bool IsOk, string ResponseContent, string error)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false, Dictionary<string, CookieCollection>? cookieStore = null,
+    public async Task<(bool IsOk, string ResponseContent, string error, Dictionary<string, string> Headers)> SendHttpRequest(HttpRequestMessage request, bool suppressError = false, Dictionary<string, CookieCollection>? cookieStore = null,
         bool allowChallengeBypass = true){
         string content = string.Empty;
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try{
             if (request.RequestUri?.ToString() != ApiUrls.WidevineLicenceUrl){
                 AttachCookies(request, cookieStore);
@@ -131,7 +132,7 @@ public class HttpClientReq{
                         retryRequest, GetCookiesForRequest(cookieStore));
 
                     if (!solverResult.IsOk){
-                        return (false, solverResult.ResponseContent, "Challenge bypass failed");
+                        return (false, solverResult.ResponseContent, "Challenge bypass failed",headers);
                     }
 
                     // foreach (var cookie in solverResult.Cookies){
@@ -139,30 +140,36 @@ public class HttpClientReq{
                     //     AddCookie(cookie.Domain, cookie, cookieStore);
                     // }
 
-                    return (true, ExtractJsonFromBrowserHtml(solverResult.ResponseContent), "");
+                    return (true, ExtractJsonFromBrowserHtml(solverResult.ResponseContent), "",headers);
                 }
 
-                return (false, content, "Cloudflare challenge detected");
+                return (false, content, "Cloudflare challenge detected",headers);
             }
 
             content = await response.Content.ReadAsStringAsync();
+            
+            foreach (var header in response.Headers)
+                headers[header.Key] = string.Join(", ", header.Value);
+
+            foreach (var header in response.Content.Headers)
+                headers[header.Key] = string.Join(", ", header.Value);
 
             response.EnsureSuccessStatusCode();
 
             CaptureResponseCookies(response, request.RequestUri!, cookieStore);
 
-            return (IsOk: true, ResponseContent: content, error: "");
+            return (IsOk: true, ResponseContent: content, error: "",headers);
         } catch (Exception e){
             if (!suppressError){
                 Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             }
-            return (IsOk: false, ResponseContent: content, error: "");
+            return (IsOk: false, ResponseContent: content, error: "",headers);
         }
     }
 
 
-    public async Task<(bool IsOk, string ResponseContent, string error)> SendFlareSolverrHttpRequest(HttpRequestMessage request, bool suppressError = false){
-        if (flareSolverrClient == null) return (IsOk: false, ResponseContent: "", error: "No Flare Solverr client has been configured");
+    public async Task<(bool IsOk, string ResponseContent, string error, Dictionary<string, string> Headers)> SendFlareSolverrHttpRequest(HttpRequestMessage request, bool suppressError = false){
+        if (flareSolverrClient == null) return (IsOk: false, ResponseContent: "", error: "No Flare Solverr client has been configured",[]);
         string content = string.Empty;
         try{
             var flareSolverrResponses = await flareSolverrClient.SendViaFlareSolverrAsync(request, []);
@@ -170,13 +177,13 @@ public class HttpClientReq{
 
             content = flareSolverrResponses.ResponseContent;
 
-            return (flareSolverrResponses.IsOk, ResponseContent: content, error: "");
+            return (flareSolverrResponses.IsOk, ResponseContent: content, error: "",[]);
         } catch (Exception e){
             if (!suppressError){
                 Console.Error.WriteLine($"Error: {e} \n Response: {(content.Length < 500 ? content : "error to long")}");
             }
 
-            return (IsOk: false, ResponseContent: content, error: "");
+            return (IsOk: false, ResponseContent: content, error: "",[]);
         }
     }
 

@@ -255,6 +255,17 @@
                 </controls:SettingsExpanderItem>
 
 
+                <controls:SettingsExpanderItem Content="Dub Download Delay"
+                                               Description="Delay in seconds before starting the next selected dub. 0 disables the delay.">
+                    <controls:SettingsExpanderItem.Footer>
+                        <controls:NumberBox Minimum="0"
+                                            Value="{Binding DubDownloadDelaySeconds}"
+                                            SpinButtonPlacementMode="Hidden"
+                                            HorizontalAlignment="Stretch" />
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
+
+
                 <controls:SettingsExpanderItem Content="Stream Endpoint ">
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel>

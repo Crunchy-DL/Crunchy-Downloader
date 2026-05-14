@@ -69,7 +69,7 @@ public sealed class QueuePersistenceManager : IDisposable{
             return;
         }
 
-        var queue = queueManager.Queue;
+        var queue = queueManager.GetQueueSnapshot();
         if (queue.Count == 0){
             CfgManager.DeleteFileIfExists(CfgManager.PathCrQueue);
             return;
@@ -94,7 +94,14 @@ public sealed class QueuePersistenceManager : IDisposable{
         item.downloadedFiles ??= [];
         item.DownloadProgress ??= new DownloadProgress();
 
-        if (!item.DownloadProgress.IsFinished){
+        if (item.DownloadProgress.RetryAtUtc.HasValue){
+            if (item.DownloadProgress.RetryAtUtc.Value <= DateTimeOffset.UtcNow){
+                item.DownloadProgress.ResetForRetry();
+            } else{
+                item.DownloadProgress.State = DownloadState.Queued;
+                item.DownloadProgress.ResumeState = DownloadState.Downloading;
+            }
+        } else if (!item.DownloadProgress.IsFinished){
             item.DownloadProgress.ResetForRetry();
         }
 

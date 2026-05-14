@@ -864,7 +864,7 @@ public class History{
             List<HistoryEpisode> failedEpisodes = [];
 
             Parallel.ForEach(allHistoryEpisodes, historyEpisode => {
-                if (string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId)){
+                if (string.IsNullOrEmpty(historyEpisode.SonarrEpisodeId) || rematchAll){
                     // Create a copy of the episodes list for each thread
                     var episodesCopy = new List<SonarrEpisode>(episodes);
 

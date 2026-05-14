@@ -98,6 +98,13 @@
                             </StackPanel>
 
                             <StackPanel Spacing="4">
+                                <CheckBox IsChecked="{Binding HistoryAutoRefreshAddToQueue}"
+                                          Content="Add newly found missing episodes to the queue" />
+                                <TextBlock Opacity="0.7" FontSize="12" TextWrapping="Wrap"
+                                           Text="When disabled, auto refresh only updates history and missing counts." />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
                                 <TextBlock Opacity="0.7" FontSize="12" TextWrapping="Wrap" Text="{Binding HistoryAutoRefreshLastRunTime,StringFormat='Last refresh: {0}'}" />
                             </StackPanel>
 
@@ -158,16 +165,30 @@
                     <controls:SettingsExpanderItem.Footer>
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Width="100" Text="Retry Attempts" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
+                                <TextBlock Width="200" Text="Retry Attempts" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
                                 <controls:NumberBox Minimum="1" Maximum="10"
                                                     Value="{Binding RetryAttempts}"
                                                     SpinButtonPlacementMode="Hidden"
                                                     HorizontalAlignment="Stretch" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0 5">
-                                <TextBlock Width="100" Text="Retry Delay (s)" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
+                                <TextBlock Width="200" Text="Retry Delay (s)" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
                                 <controls:NumberBox Minimum="1" Maximum="30"
                                                     Value="{Binding RetryDelay}"
+                                                    SpinButtonPlacementMode="Hidden"
+                                                    HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0 5">
+                                <TextBlock Width="200" Text="Rate Limit Delay (s)" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
+                                <controls:NumberBox Minimum="1" Maximum="86400"
+                                                    Value="{Binding PlaybackRateLimitRetryDelaySeconds}"
+                                                    SpinButtonPlacementMode="Hidden"
+                                                    HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0 5">
+                                <TextBlock Width="200" Text="Rate Limit Max Delay (s)" Margin="5 0" VerticalAlignment="Center" HorizontalAlignment="Center"></TextBlock>
+                                <controls:NumberBox Minimum="1" Maximum="86400"
+                                                    Value="{Binding RetryMaxDelaySeconds}"
                                                     SpinButtonPlacementMode="Hidden"
                                                     HorizontalAlignment="Stretch" />
                             </StackPanel>
@@ -258,96 +279,212 @@
                 </controls:SettingsExpanderItem>
 
 
-                <controls:SettingsExpanderItem Content="Play completion sound" Description="Enables a notification sound to be played when all downloads have finished">
+                <controls:SettingsExpander.Footer>
+                </controls:SettingsExpander.Footer>
+            </controls:SettingsExpander>
+
+            <controls:SettingsExpander Header="Notifications"
+                                       IconSource="AlertOn"
+                                       Description="Configure sound, file execution, and webhook notifications"
+                                       IsExpanded="False">
+
+                <controls:SettingsExpanderItem Content="Sound notification" Description="Play a sound file when the queue finishes">
                     <controls:SettingsExpanderItem.Footer>
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                                <TextBlock IsVisible="{Binding DownloadFinishedPlaySound}"
+                        <StackPanel Spacing="10" Width="520">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0"
+                                           IsVisible="{Binding DownloadFinishedPlaySound}"
                                            Text="{Binding DownloadFinishedSoundPath, Mode=OneWay}"
                                            FontSize="15"
                                            Opacity="0.8"
                                            TextWrapping="NoWrap"
-                                           TextAlignment="Center"
-                                           VerticalAlignment="Center" />
-
-                                <Button IsVisible="{Binding DownloadFinishedPlaySound}"
-                                        Command="{Binding OpenImageFileDialogAsyncInternalFinishedSound}"
-                                        VerticalAlignment="Center"
-                                        FontStyle="Italic">
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center">
                                     <ToolTip.Tip>
-                                        <TextBlock Text="Select Finished Sound" FontSize="15" />
+                                        <TextBlock Text="{Binding DownloadFinishedSoundPath, Mode=OneWay}" FontSize="15" />
                                     </ToolTip.Tip>
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <controls:SymbolIcon Symbol="Folder" FontSize="18" />
-                                    </StackPanel>
-                                </Button>
+                                </TextBlock>
 
-                                <Button IsVisible="{Binding DownloadFinishedPlaySound}"
-                                        Command="{Binding ClearFinishedSoundPath}"
-                                        VerticalAlignment="Center"
-                                        FontStyle="Italic">
-                                    <ToolTip.Tip>
-                                        <TextBlock Text="Remove Finished Sound Path" FontSize="15" />
-                                    </ToolTip.Tip>
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <controls:SymbolIcon Symbol="Clear" FontSize="18" />
-                                    </StackPanel>
-                                </Button>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                    <Button IsVisible="{Binding DownloadFinishedPlaySound}"
+                                            Command="{Binding OpenImageFileDialogAsyncInternalFinishedSound}"
+                                            VerticalAlignment="Center"
+                                            FontStyle="Italic">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Select notification sound" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
 
-                                <CheckBox IsChecked="{Binding DownloadFinishedPlaySound}"> </CheckBox>
-                            </StackPanel>
+                                    <Button IsVisible="{Binding DownloadFinishedPlaySound}"
+                                            Command="{Binding TestFinishedSoundAsync}"
+                                            VerticalAlignment="Center"
+                                            FontStyle="Italic">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Test selected notification sound" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <controls:SymbolIcon Symbol="Play" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
 
+                                    <Button IsVisible="{Binding IsTestingFinishedSound}"
+                                            Command="{Binding StopFinishedSoundAsync}"
+                                            VerticalAlignment="Center"
+                                            FontStyle="Italic">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Stop notification sound test" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <controls:SymbolIcon Symbol="Stop" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button IsVisible="{Binding DownloadFinishedPlaySound}"
+                                            Command="{Binding ClearFinishedSoundPath}"
+                                            VerticalAlignment="Center"
+                                            FontStyle="Italic">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Clear selected notification sound" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <controls:SymbolIcon Symbol="Clear" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <CheckBox IsChecked="{Binding DownloadFinishedPlaySound}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Opacity="0.7"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="This notification is sent only when the full queue finishes." />
                         </StackPanel>
-
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
-                <controls:SettingsExpanderItem Content="Execute on completion" Description="Enable to run a selected file after all downloads complete">
+                <controls:SettingsExpanderItem Content="Execute file" Description="Run a selected file when the queue finishes">
                     <controls:SettingsExpanderItem.Footer>
-                        <StackPanel Spacing="10">
-                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
-                                <TextBlock IsVisible="{Binding DownloadFinishedExecute}"
+                        <StackPanel Spacing="10" Width="520">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0"
+                                           IsVisible="{Binding DownloadFinishedExecute}"
                                            Text="{Binding DownloadFinishedExecutePath, Mode=OneWay}"
                                            FontSize="15"
                                            Opacity="0.8"
                                            TextWrapping="NoWrap"
-                                           TextAlignment="Center"
-                                           VerticalAlignment="Center" />
-
-                                <Button IsVisible="{Binding DownloadFinishedExecute}"
-                                        Command="{Binding OpenFileDialogAsyncInternalFinishedExecute}"
-                                        VerticalAlignment="Center"
-                                        FontStyle="Italic">
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center">
                                     <ToolTip.Tip>
-                                        <TextBlock Text="Select file to execute when downloads finish" FontSize="15" />
+                                        <TextBlock Text="{Binding DownloadFinishedExecutePath, Mode=OneWay}" FontSize="15" />
                                     </ToolTip.Tip>
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <controls:SymbolIcon Symbol="Folder" FontSize="18" />
-                                    </StackPanel>
-                                </Button>
+                                </TextBlock>
 
-                                <Button IsVisible="{Binding DownloadFinishedExecute}"
-                                        Command="{Binding ClearFinishedExectuePath}"
-                                        VerticalAlignment="Center"
-                                        FontStyle="Italic">
-                                    <ToolTip.Tip>
-                                        <TextBlock Text="Clear selected file" FontSize="15" />
-                                    </ToolTip.Tip>
-                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                        <controls:SymbolIcon Symbol="Clear" FontSize="18" />
-                                    </StackPanel>
-                                </Button>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                    <Button IsVisible="{Binding DownloadFinishedExecute}"
+                                            Command="{Binding OpenFileDialogAsyncInternalFinishedExecute}"
+                                            VerticalAlignment="Center"
+                                            FontStyle="Italic">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Select file to execute" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <controls:SymbolIcon Symbol="Folder" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
 
-                                <CheckBox IsChecked="{Binding DownloadFinishedExecute}"> </CheckBox>
-                            </StackPanel>
+                                    <Button IsVisible="{Binding DownloadFinishedExecute}"
+                                            Command="{Binding ClearFinishedExectuePath}"
+                                            VerticalAlignment="Center"
+                                            FontStyle="Italic">
+                                        <ToolTip.Tip>
+                                            <TextBlock Text="Clear selected file" FontSize="15" />
+                                        </ToolTip.Tip>
+                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                            <controls:SymbolIcon Symbol="Clear" FontSize="18" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <CheckBox IsChecked="{Binding DownloadFinishedExecute}" />
+                                </StackPanel>
+                            </Grid>
+
+                            <TextBlock Opacity="0.7"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="This action runs only when the full queue finishes." />
                         </StackPanel>
-
                     </controls:SettingsExpanderItem.Footer>
                 </controls:SettingsExpanderItem>
 
+                <controls:SettingsExpanderItem Content="Webhook" Description="Send an HTTP request when selected notification events are raised">
+                    <controls:SettingsExpanderItem.Footer>
+                        <StackPanel Spacing="10" Width="520">
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                <TextBox Watermark="https://example.com/webhook"
+                                         MinWidth="420"
+                                         Text="{Binding WebhookUrl}" />
+                                <CheckBox IsChecked="{Binding WebhookEnabled}" />
+                            </StackPanel>
 
-                <controls:SettingsExpander.Footer>
-                </controls:SettingsExpander.Footer>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Method" />
+                                    <TextBox MinWidth="120" Text="{Binding WebhookMethod}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="Content type" />
+                                    <TextBox MinWidth="220" Text="{Binding WebhookContentType}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Headers" />
+                                <TextBox AcceptsReturn="True"
+                                         Height="90"
+                                         Text="{Binding WebhookHeadersText}"
+                                         Watermark="Authorization: Bearer token&#10;X-App: CRD" />
+                                <TextBlock Opacity="0.7"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           Text="Enter one header per line in the format Name: Value." />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="Body template" />
+                                <TextBox AcceptsReturn="True"
+                                         Height="120"
+                                         Text="{Binding WebhookBodyTemplate}"
+                                         Watermark="JSON template using placeholders like {{eventType}} and {{message}}" />
+                                <TextBlock Opacity="0.7"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           Text="Leave empty to send the default JSON payload. Available placeholders include {{eventType}}, {{title}}, {{message}}, {{timestampUtc}}, and metadata keys." />
+                            </StackPanel>
+
+                            <WrapPanel ItemWidth="245" Orientation="Horizontal">
+                                <CheckBox IsChecked="{Binding WebhookNotifyQueueFinished}" Content="Queue finished" />
+                                <CheckBox IsChecked="{Binding WebhookNotifyDownloadFinished}" Content="Download finished" />
+                                <CheckBox IsChecked="{Binding WebhookNotifyDownloadFailed}" Content="Download failed" />
+                                <CheckBox IsChecked="{Binding WebhookNotifyTrackedSeriesEpisodeReleased}" Content="Tracked series episode released" />
+                                <CheckBox IsChecked="{Binding WebhookNotifyLoginExpired}" Content="Login expired" />
+                                <CheckBox IsChecked="{Binding WebhookNotifyUpdateAvailable}" Content="Update available" />
+                            </WrapPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+                                <Button Command="{Binding TestWebhookCommand}"
+                                        Content="Send selected test events" />
+                                <ProgressBar Width="120"
+                                             IsIndeterminate="True"
+                                             IsVisible="{Binding IsTestingWebhook}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </controls:SettingsExpanderItem.Footer>
+                </controls:SettingsExpanderItem>
             </controls:SettingsExpander>
 
             <controls:SettingsExpander Header="Sonarr Settings"

@@ -120,6 +120,9 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
     private double? _partSize;
 
     [ObservableProperty]
+    private double? _dubDownloadDelaySeconds;
+
+    [ObservableProperty]
     private string _fileName = "";
 
     [ObservableProperty]
@@ -474,6 +477,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         DefaultSubForcedDisplay = options.DefaultSubForcedDisplay;
         DefaultSubSigns = options.DefaultSubSigns;
         PartSize = options.Partsize;
+        DubDownloadDelaySeconds = options.DubDownloadDelaySeconds;
         IncludeEpisodeDescription = options.IncludeVideoDescription;
         FileTitle = options.VideoTitle ?? "";
         IncludeSignSubs = options.IncludeSignsSubs;
@@ -575,6 +579,7 @@ public partial class CrunchyrollSettingsViewModel : ViewModelBase{
         CrunchyrollManager.Instance.CrunOptions.IncludeSignsSubs = IncludeSignSubs;
         CrunchyrollManager.Instance.CrunOptions.IncludeCcSubs = IncludeCcSubs;
         CrunchyrollManager.Instance.CrunOptions.Partsize = Math.Clamp((int)(PartSize ?? 1), 1, 10000);
+        CrunchyrollManager.Instance.CrunOptions.DubDownloadDelaySeconds = Math.Max((int)(DubDownloadDelaySeconds ?? 0), 0);
         CrunchyrollManager.Instance.CrunOptions.SearchFetchFeaturedMusic = SearchFetchFeaturedMusic;
 
         CrunchyrollManager.Instance.CrunOptions.SubsAddScaledBorder = GetScaledBorderAndShadowSelection();

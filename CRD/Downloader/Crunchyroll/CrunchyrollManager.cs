@@ -22,6 +22,7 @@ using CRD.Utils.Muxing;
 using CRD.Utils.Muxing.Fonts;
 using CRD.Utils.Muxing.Structs;
 using CRD.Utils.Muxing.Syncing;
+using CRD.Utils.Notifications;
 using CRD.Utils.Parser;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Sonarr.Models;
@@ -78,7 +79,7 @@ public class CrunchyrollManager{
     public CrMovies CrMovies;
     public CrMusic CrMusic;
     public CrQueue CrQueue;
-    
+
     public History History;
 
     #region Singelton
@@ -119,6 +120,7 @@ public class CrunchyrollManager{
         options.Force = "Y";
         options.FileName = "${seriesTitle} - S${season}E${episode} [${height}p]";
         options.Partsize = 10;
+        options.DubDownloadDelaySeconds = 0;
         options.DlSubs = new List<string>{ "en-US" };
         options.SkipMuxing = false;
         options.MkvmergeOptions = [];
@@ -131,6 +133,8 @@ public class CrunchyrollManager{
         options.CcSubsFont = "Trebuchet MS";
         options.RetryDelay = 5;
         options.RetryAttempts = 5;
+        options.PlaybackRateLimitRetryDelaySeconds = 30;
+        options.RetryMaxDelaySeconds = 3600;
         options.Numbers = 2;
         options.Timeout = 15000;
         options.DubLang = new List<string>(){ "ja-JP" };
@@ -168,6 +172,7 @@ public class CrunchyrollManager{
         options.HistoryAutoRefreshIntervalMinutes = 0;
 
         CfgManager.UpdateSettingsFromFile(options, CfgManager.PathCrDownloadOptions);
+        options.NormalizeNotificationSettings();
 
         return options;
     }
@@ -254,8 +259,8 @@ public class CrunchyrollManager{
             Device_type = DefaultAndroidTvAuthSettings.Device_type,
             UseDefault = true
         };
-        
-        
+
+
         if (CrunOptions.StreamEndpoint.UseDefault){
             var streamEndpointAuthorization = DefaultAndroidTvAuthSettings.Authorization;
             var streamEndpointUserAgent = DefaultAndroidTvAuthSettings.UserAgent;
@@ -282,14 +287,14 @@ public class CrunchyrollManager{
             CrunOptions.StreamEndpoint.Device_name = DefaultAndroidTvAuthSettings.Device_name;
             CrunOptions.StreamEndpoint.Device_type = DefaultAndroidTvAuthSettings.Device_type;
         }
-        
+
 
         CrunOptions.StreamEndpoint.Endpoint = "tv/android_tv";
         CrAuthEndpoint1.AuthSettings = CrunOptions.StreamEndpoint;
 
         //---------- TV ----------
-        
-        
+
+
         //---------- Mobile ----------
         CrunOptions.StreamEndpointSecondSettings ??= new CrAuthSettings{
             Authorization = DefaultAndroidAuthSettings.Authorization,
@@ -298,7 +303,7 @@ public class CrunchyrollManager{
             Device_type = DefaultAndroidAuthSettings.Device_type,
             UseDefault = true
         };
-        
+
         if (CrunOptions.StreamEndpointSecondSettings.UseDefault){
             var streamEndpointSecondAuthorization = DefaultAndroidAuthSettings.Authorization;
             var streamEndpointSecondUserAgent = DefaultAndroidAuthSettings.UserAgent;
@@ -329,7 +334,7 @@ public class CrunchyrollManager{
         CrAuthEndpoint2.AuthSettings = CrunOptions.StreamEndpointSecondSettings;
 
         //---------- Mobile ----------
-        
+
         await CrAuthEndpoint1.Auth();
         if (!string.IsNullOrEmpty(CrAuthEndpoint2.AuthSettings.Endpoint)){
             await CrAuthEndpoint2.Auth();
@@ -408,12 +413,14 @@ public class CrunchyrollManager{
             QueueManager.Instance.ReleaseDownloadSlot(data);
         }
 
+        int retryAttemptCount = data.DownloadProgress.RetryAttemptCount;
         data.DownloadProgress = new DownloadProgress(){
             State = DownloadState.Downloading,
             Percent = 0,
             Time = 0,
             DownloadSpeedBytes = 0,
-            Doing = "Starting"
+            Doing = "Starting",
+            RetryAttemptCount = retryAttemptCount
         };
         QueueManager.Instance.RefreshQueue();
         var res = new DownloadResponse();
@@ -424,6 +431,19 @@ public class CrunchyrollManager{
             res.Error = true;
         }
 
+        if (res.RetrySuggested){
+            ReleaseDownloadSlotIfHeld();
+            var retryDelay = TimeSpan.FromSeconds(Math.Max(1, res.RetryDelaySeconds));
+            QueueManager.Instance.BlockAutoDownloadUntil(retryDelay, data.Cts.Token);
+            QueueManager.Instance.ScheduleRetry(
+                data,
+                retryDelay,
+                $"Rate limited by playback API. Retrying in {(int)retryDelay.TotalSeconds}s",
+                data.Cts.Token);
+            return false;
+        }
+
+        data.DownloadProgress.ClearRetryState();
 
         if (res.Error){
             ReleaseDownloadSlotIfHeld();
@@ -435,6 +455,7 @@ public class CrunchyrollManager{
                 Doing = "Download Error" + (!string.IsNullOrEmpty(res.ErrorText) ? " - " + res.ErrorText : ""),
             };
             QueueManager.Instance.RefreshQueue();
+            await NotificationPublisher.Instance.PublishDownloadFailedAsync(CrunOptions.NotificationSettings, data, res.ErrorText);
             return false;
         }
 
@@ -671,13 +692,13 @@ public class CrunchyrollManager{
                 }
 
 
-                    data.DownloadProgress = new DownloadProgress(){
-                        State = DownloadState.Done,
-                        Percent = 100,
-                        Time = 0,
-                        DownloadSpeedBytes = 0,
-                        Doing = (muxError ? "Muxing Failed" : "Done") + (syncError ? $" - Couldn't sync dubs ({notSyncedDubs})" : "") + (fallbackUsed ? " - Used full-quality fallback" : "")
-                    };
+                data.DownloadProgress = new DownloadProgress(){
+                    State = DownloadState.Done,
+                    Percent = 100,
+                    Time = 0,
+                    DownloadSpeedBytes = 0,
+                    Doing = (muxError ? "Muxing Failed" : "Done") + (syncError ? $" - Couldn't sync dubs ({notSyncedDubs})" : "") + (fallbackUsed ? " - Used full-quality fallback" : "")
+                };
 
                 QueueManager.Instance.MarkDownloadFinished(data, CrunOptions.RemoveFinishedDownload && !syncError);
             } else{
@@ -714,7 +735,7 @@ public class CrunchyrollManager{
             }
         }
 
-        
+
         QueueManager.Instance.RefreshQueue();
 
         if (options.History && data.Data is{ Count: > 0 } && (options.HistoryIncludeCrArtists && data.Music || !data.Music)){
@@ -726,31 +747,14 @@ public class CrunchyrollManager{
             _ = CrEpisode.MarkAsWatched(data.Data.First().MediaId);
         }
 
-        if (!QueueManager.Instance.Queue.Any(e => !e.DownloadProgress.IsFinished)){
-            if (CrunOptions.DownloadFinishedPlaySound){
-                try{
-                    var audioPath = CrunOptions.DownloadFinishedSoundPath;
-                    if (!string.IsNullOrEmpty(audioPath)){
-                        var player = new AudioPlayer();
-                        player.Play(audioPath);
-                    }
-                } catch (Exception exception){
-                    Console.Error.WriteLine("Failed to play sound: " + exception);
-                }
-            }
+        await NotificationPublisher.Instance.PublishDownloadFinishedAsync(CrunOptions.NotificationSettings, data);
 
-            if (CrunOptions.DownloadFinishedExecute){
-                try{
-                    var filePath = CrunOptions.DownloadFinishedExecutePath;
-                    if (!string.IsNullOrEmpty(filePath)){
-                        Helpers.ExecuteFile(filePath);
-                    }
-                } catch (Exception exception){
-                    Console.Error.WriteLine("Failed to execute file: " + exception);
-                }
-            }
+        if (!QueueManager.Instance.Queue.Any(e => !e.DownloadProgress.IsFinished)){
+            await NotificationPublisher.Instance.PublishQueueFinishedAsync(CrunOptions.NotificationSettings, data);
 
             if (CrunOptions.ShutdownWhenQueueEmpty){
+                CrunOptions.ShutdownWhenQueueEmpty = false;
+                CfgManager.WriteCrSettings();
                 Helpers.ShutdownComputer();
             }
         }
@@ -835,7 +839,8 @@ public class CrunchyrollManager{
 
     #endregion
 
-    private async Task<(Merger? merger, bool isMuxed, bool syncError, string notSyncedDubs, List<string> failedSyncLocales)> MuxStreams(List<DownloadedMedia> data, CrunchyMuxOptions options, string filename, CrunchyEpMeta crunchyEpMeta){
+    private async Task<(Merger? merger, bool isMuxed, bool syncError, string notSyncedDubs, List<string> failedSyncLocales)> MuxStreams(List<DownloadedMedia> data, CrunchyMuxOptions options, string filename,
+        CrunchyEpMeta crunchyEpMeta){
         var muxToMp3 = false;
 
         if (options.Novids == true || data.FindAll(a => a.Type == DownloadMediaType.Video).Count == 0){
@@ -1235,16 +1240,16 @@ public class CrunchyrollManager{
         if (data.Data is{ Count: > 0 }){
             options.Partsize = options.Partsize > 0 ? options.Partsize : 1;
 
-            var historyEpisode = History.GetHistoryEpisode(data.SeriesId ?? string.Empty ,data.SeasonId ?? string.Empty, data.EpisodeId ?? string.Empty);
+            var historyEpisode = History.GetHistoryEpisode(data.SeriesId ?? string.Empty, data.SeasonId ?? string.Empty, data.EpisodeId ?? string.Empty);
             SonarrEpisode? sonarrEpisode;
             if (historyEpisode != null && CrunOptions.SonarrProperties?.SonarrEnabled == true){
                 sonarrEpisode = await SonarrClient.Instance.GetEpisode(Convert.ToInt32(historyEpisode.SonarrEpisodeId));
-                if(sonarrEpisode is{ Series: null }) sonarrEpisode.Series = await SonarrClient.Instance.GetSeries(sonarrEpisode.SeriesId);
+                if (sonarrEpisode is{ Series: null }) sonarrEpisode.Series = await SonarrClient.Instance.GetSeries(sonarrEpisode.SeriesId);
                 variables.Add(new Variable("sonarrSeriesTitle", sonarrEpisode?.Series?.Title ?? string.Empty, true));
                 variables.Add(new Variable("sonarrSeriesReleaseYear", sonarrEpisode?.Series?.Year ?? 0, true));
                 variables.Add(new Variable("sonarrEpisodeTitle", sonarrEpisode?.Title ?? string.Empty, true));
             }
-            
+
             if (options.DownloadDescriptionAudio){
                 var alreadyAdr = new HashSet<string>(
                     data.Data.Where(x => x.IsAudioRoleDescription).Select(x => x.Lang?.CrLocale ?? "err")
@@ -1288,7 +1293,16 @@ public class CrunchyrollManager{
 
             data.Data = sortedMetaData;
 
+            var epMetaIndex = 0;
             foreach (CrunchyEpMetaData epMeta in data.Data){
+                if (epMetaIndex > 0 && options.DubDownloadDelaySeconds > 0){
+                    var delay = TimeSpan.FromSeconds(options.DubDownloadDelaySeconds);
+                    data.DownloadProgress.Doing = $"Waiting {options.DubDownloadDelaySeconds}s before next dub";
+                    QueueManager.Instance.RefreshQueue();
+                    await Task.Delay(delay, data.Cts.Token);
+                }
+
+                epMetaIndex++;
                 Console.WriteLine($"Requesting: [{epMeta.MediaId}] {mediaName}");
 
                 string currentMediaId = (epMeta.MediaId.Contains(':') ? epMeta.MediaId.Split(':')[1] : epMeta.MediaId);
@@ -1365,8 +1379,8 @@ public class CrunchyrollManager{
 
                 #endregion
 
-                (bool IsOk, PlaybackData pbData, string error) fetchPlaybackData = default;
-                (bool IsOk, PlaybackData pbData, string error) fetchPlaybackData2 = default;
+                (bool IsOk, PlaybackData pbData, string error, Dictionary<string, string> Headers) fetchPlaybackData = default;
+                (bool IsOk, PlaybackData pbData, string error, Dictionary<string, string> Headers) fetchPlaybackData2 = default;
 
                 if (CrAuthEndpoint1.Profile.Username != "???" && options.StreamEndpoint != null && (options.StreamEndpoint.Video || options.StreamEndpoint.Audio)){
                     fetchPlaybackData = await FetchPlaybackData(CrAuthEndpoint1, mediaId, mediaGuid, data.Music, epMeta.IsAudioRoleDescription, options.StreamEndpoint);
@@ -1377,7 +1391,9 @@ public class CrunchyrollManager{
                 }
 
                 if (!fetchPlaybackData.IsOk && !fetchPlaybackData2.IsOk){
-                    var errorJson = fetchPlaybackData.error;
+                    var errorJson = !string.IsNullOrEmpty(fetchPlaybackData.error)
+                        ? fetchPlaybackData.error
+                        : fetchPlaybackData2.error;
                     if (!string.IsNullOrEmpty(errorJson)){
                         var error = StreamError.FromJson(errorJson);
 
@@ -1402,12 +1418,21 @@ public class CrunchyrollManager{
                             };
                         }
 
-                        if (error?.IsRateLimitError() == true || errorJson.Contains("4294")){
-                            CrunOptions.AutoDownload = false;
-                            MainWindow.Instance.ShowError("Couldn't get Playback Data\nRate limit reached. Auto Download has been stopped.");
+                        if (error?.IsPlaybackRateLimitError() == true){
+                            int retryDelaySeconds = Helpers.GetRetryDelaySeconds(options, data.DownloadProgress.RetryAttemptCount);
+
+                            if (fetchPlaybackData.Headers != null &&
+                                fetchPlaybackData.Headers.TryGetValue("retry-after", out var retryAfter) &&
+                                int.TryParse(retryAfter, out var parsedRetryAfter)){
+                                Console.WriteLine($"Retry after: {parsedRetryAfter} seconds");
+                                retryDelaySeconds = parsedRetryAfter;
+                            }
+
+                            Console.Error.WriteLine($"Playback API rate limited with 4294. Requeueing download in {retryDelaySeconds}s.");
                             return new DownloadResponse{
                                 Data = new List<DownloadedMedia>(),
-                                Error = true,
+                                RetrySuggested = true,
+                                RetryDelaySeconds = retryDelaySeconds,
                                 FileName = "./unknown",
                                 ErrorText = "Rate limit error"
                             };
@@ -1907,7 +1932,8 @@ public class CrunchyrollManager{
                                 string outFile = fileName + "." + (epMeta.Lang?.CrLocale ?? lang.CrLocale) + (epMeta.IsAudioRoleDescription ? ".AD" : "");
 
                                 string tempFile = Path.Combine(FileNameManager
-                                    .ParseFileName($"temp-{(!string.IsNullOrEmpty(currentVersion.Guid) ? currentVersion.Guid : currentMediaId)}{data.TempFileSuffix ?? string.Empty}", variables, options.Numbers, options.FileNameWhitespaceSubstitute,
+                                    .ParseFileName($"temp-{(!string.IsNullOrEmpty(currentVersion.Guid) ? currentVersion.Guid : currentMediaId)}{data.TempFileSuffix ?? string.Empty}", variables, options.Numbers,
+                                        options.FileNameWhitespaceSubstitute,
                                         options.Override)
                                     .ToArray());
                                 string tempTsFile = Path.IsPathRooted(tempFile) ? tempFile : Path.Combine(fileDir, tempFile);
@@ -2715,7 +2741,7 @@ public class CrunchyrollManager{
 
     #region Fetch Playback Data
 
-    private async Task<(bool IsOk, PlaybackData pbData, string error)> FetchPlaybackData(CrAuth authEndpoint, string mediaId, string mediaGuidId, bool music, bool auioRoleDesc,
+    private async Task<(bool IsOk, PlaybackData pbData, string error, Dictionary<string, string> Headers)> FetchPlaybackData(CrAuth authEndpoint, string mediaId, string mediaGuidId, bool music, bool auioRoleDesc,
         CrAuthSettings optionsStreamEndpointSettings){
         var temppbData = new PlaybackData{
             Total = 0,
@@ -2749,16 +2775,17 @@ public class CrunchyrollManager{
             }
         }
 
-        return (playbackRequestResponse.IsOk, pbData: temppbData, error: playbackRequestResponse.IsOk ? "" : playbackRequestResponse.ResponseContent);
+        return (playbackRequestResponse.IsOk, pbData: temppbData, error: playbackRequestResponse.IsOk ? "" : playbackRequestResponse.ResponseContent, playbackRequestResponse.Headers);
     }
 
-    private async Task<(bool IsOk, string ResponseContent, string error)> SendPlaybackRequestAsync(string endpoint, CrAuth authEndpoint){
+    private async Task<(bool IsOk, string ResponseContent, string error, Dictionary<string, string> Headers)> SendPlaybackRequestAsync(string endpoint, CrAuth authEndpoint){
         var request = HttpClientReq.CreateRequestMessage(endpoint, HttpMethod.Get, true, authEndpoint.Token?.access_token, null);
         request.Headers.UserAgent.ParseAdd(authEndpoint.AuthSettings.UserAgent);
         return await HttpClientReq.Instance.SendHttpRequest(request, false, authEndpoint.cookieStore);
     }
 
-    private async Task<(bool IsOk, string ResponseContent, string error)> HandleStreamErrorsAsync((bool IsOk, string ResponseContent, string error) response, string endpoint, CrAuth authEndpoint){
+    private async Task<(bool IsOk, string ResponseContent, string error, Dictionary<string, string> Headers)> HandleStreamErrorsAsync(
+        (bool IsOk, string ResponseContent, string error, Dictionary<string, string> Headers) response, string endpoint, CrAuth authEndpoint){
         if (response.IsOk || string.IsNullOrEmpty(response.ResponseContent)) return response;
 
         var error = StreamError.FromJson(response.ResponseContent);

@@ -12,11 +12,10 @@ using CRD.Utils.UI;
 using CRD.ViewModels.Utils;
 using CRD.Views.Utils;
 using FluentAvalonia.UI.Controls;
-using Newtonsoft.Json;
 
 namespace CRD.ViewModels;
 
-public partial class AccountPageViewModel : ViewModelBase{
+public partial class AccountPageViewModel : ViewModelBase, IDisposable{
     [ObservableProperty]
     private Bitmap? _profileImage;
 
@@ -32,7 +31,9 @@ public partial class AccountPageViewModel : ViewModelBase{
     [ObservableProperty]
     private string _remainingTime = "";
 
-    private static DispatcherTimer? _timer;
+    private static AccountPageViewModel? _activeInstance;
+
+    private readonly DispatcherTimer _timer;
     private DateTime _targetTime;
 
     private bool IsCancelled;
@@ -40,6 +41,14 @@ public partial class AccountPageViewModel : ViewModelBase{
     private bool EndedButMaybeActive;
 
     public AccountPageViewModel(){
+        _activeInstance?.StopSubscriptionTimer();
+        _activeInstance = this;
+
+        _timer = new DispatcherTimer{
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _timer.Tick += Timer_Tick;
+
         UpdatetProfile();
     }
 
@@ -47,7 +56,7 @@ public partial class AccountPageViewModel : ViewModelBase{
         var remaining = _targetTime - DateTime.Now;
         if (remaining <= TimeSpan.Zero){
             RemainingTime = "No active Subscription";
-            _timer?.Stop();
+            _timer.Stop();
             if (UnknownEndDate){
                 RemainingTime = "Unknown Subscription end date";
             }
@@ -55,30 +64,32 @@ public partial class AccountPageViewModel : ViewModelBase{
             if (EndedButMaybeActive){
                 RemainingTime = "Subscription maybe ended";
             }
-
-            if (CrunchyrollManager.Instance.CrAuthEndpoint1.Subscription != null){
-                Console.Error.WriteLine(JsonConvert.SerializeObject(CrunchyrollManager.Instance.CrAuthEndpoint1.Subscription, Formatting.Indented));
-            }
         } else{
             RemainingTime = $"{(IsCancelled ? "Subscription ending in: " : "Subscription refreshing in: ")}{remaining:dd\\:hh\\:mm\\:ss}";
         }
     }
 
     public void UpdatetProfile(){
-        
+        StopSubscriptionTimer();
+        IsCancelled = false;
+        UnknownEndDate = false;
+        EndedButMaybeActive = false;
+        RemainingTime = "No active Subscription";
+
         var firstEndpoint = CrunchyrollManager.Instance.CrAuthEndpoint1;
         var firstEndpointProfile = firstEndpoint.Profile;
-        
-        HasMultiProfile = firstEndpoint.MultiProfile.Profiles.Count > 1;
+
+        var isLoggedIn = firstEndpointProfile.Username != "???";
+        HasMultiProfile = isLoggedIn && firstEndpoint.MultiProfile.Profiles.Count > 1;
         ProfileName = firstEndpointProfile.ProfileName ?? firstEndpointProfile.Username ?? "???"; // Default or fetched user name
-        LoginLogoutText = firstEndpointProfile.Username == "???" ? "Login" : "Logout"; // Default state
+        LoginLogoutText = isLoggedIn ? "Logout" : "Login"; // Default state
         LoadProfileImage("https://static.crunchyroll.com/assets/avatar/170x170/" +
                          (string.IsNullOrEmpty(firstEndpointProfile.Avatar) ? "crbrand_avatars_logo_marks_mangagirl_taupe.png" : firstEndpointProfile.Avatar));
 
 
         var subscriptions = CrunchyrollManager.Instance.CrAuthEndpoint1.Subscription;
 
-        if (subscriptions != null){
+        if (subscriptions != null && HasSubscriptionData(subscriptions)){
             if (subscriptions.SubscriptionProducts is{ Count: >= 1 }){
                 var sub = subscriptions.SubscriptionProducts.First();
                 IsCancelled = sub.IsCancelled;
@@ -97,23 +108,8 @@ public partial class AccountPageViewModel : ViewModelBase{
 
             if (!UnknownEndDate){
                 _targetTime = subscriptions.NextRenewalDate;
-                _timer = new DispatcherTimer{
-                    Interval = TimeSpan.FromSeconds(1)
-                };
-                _timer.Tick += Timer_Tick;
                 _timer.Start();
-            }
-        } else{
-            RemainingTime = "No active Subscription";
-            if (_timer != null){
-                _timer.Stop();
-                _timer.Tick -= Timer_Tick;
-            }
-
-            RaisePropertyChanged(nameof(RemainingTime));
-
-            if (subscriptions != null){
-                Console.Error.WriteLine(JsonConvert.SerializeObject(subscriptions, Formatting.Indented));
+                Timer_Tick(null, EventArgs.Empty);
             }
         }
 
@@ -123,6 +119,26 @@ public partial class AccountPageViewModel : ViewModelBase{
 
         if (EndedButMaybeActive){
             RemainingTime = "Subscription maybe ended";
+        }
+    }
+
+    private static bool HasSubscriptionData(CRD.Utils.Structs.Crunchyroll.Subscription subscriptions){
+        return subscriptions.SubscriptionProducts is{ Count: > 0 } ||
+               subscriptions.ThirdPartySubscriptionProducts is{ Count: > 0 } ||
+               subscriptions.NonrecurringSubscriptionProducts is{ Count: > 0 } ||
+               subscriptions.FunimationSubscriptions is{ Count: > 0 };
+    }
+
+    private void StopSubscriptionTimer(){
+        _timer.Stop();
+    }
+
+    public void Dispose(){
+        _timer.Tick -= Timer_Tick;
+        StopSubscriptionTimer();
+
+        if (ReferenceEquals(_activeInstance, this)){
+            _activeInstance = null;
         }
     }
 

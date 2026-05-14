@@ -51,7 +51,16 @@
             <ComboBox HorizontalContentAlignment="Center" MinWidth="210" MaxDropDownHeight="400"
                       ItemsSource="{Binding ResolutionList}"
                       SelectedItem="{Binding SelectedResolution}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
             </ComboBox>
+            <TextBlock Text="Use exact sizes for fixed output dimensions, or keep AR to preserve the source aspect ratio."
+                       Opacity="0.7"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
         </StackPanel>
 
         <!-- Frame Rate NumberBox -->
@@ -112,6 +121,25 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
+        </StackPanel>
+
+        <StackPanel Margin="0,20,0,0">
+            <TextBlock Text="Generated FFmpeg Command" Margin="0,0,0,5" />
+            <Border BorderBrush="#4a4a4a"
+                    Background="{DynamicResource ControlAltFillColorQuarternary}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="10"
+                    MaxWidth="700"
+                    HorizontalAlignment="Left">
+                <SelectableTextBlock Text="{Binding CommandPreview}"
+                                     FontFamily="Cascadia Mono, Consolas, Courier New"
+                                     TextWrapping="Wrap" />
+            </Border>
+            <TextBlock Text="This preview uses sample input and output file names, but the generated options match the preset."
+                       Opacity="0.7"
+                       FontSize="12"
+                       TextWrapping="Wrap" />
         </StackPanel>
 
     </StackPanel>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using Avalonia.Controls;
@@ -7,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CRD.Utils.Ffmpeg_Encoding;
 using CRD.Utils.Files;
+using CRD.Utils;
 using CRD.Utils.Structs;
 using CRD.Views;
 using DynamicData;
@@ -22,25 +24,32 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
     private bool editMode;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
     private string presetName;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCodec))]
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
     private string codec;
 
     [ObservableProperty]
-    private ComboBoxItem selectedResolution = new();
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
+    private StringItemWithDisplayName selectedResolution = new(){ value = "1920:1080", DisplayName = "1080p exact (1920:1080)" };
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
     private double? crf = 23;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
     private string frameRate = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
     private string additionalParametersString = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CommandPreview))]
     private ObservableCollection<StringItem> additionalParameters = new();
 
     [ObservableProperty]
@@ -50,33 +59,46 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
     private bool fileExists;
 
     public bool HasCodec => !string.IsNullOrWhiteSpace(Codec);
+    public string CommandPreview => BuildCommandPreview();
 
     public ObservableCollection<VideoPreset> CustomPresetsList{ get; } = new(){ };
 
-    public ObservableCollection<ComboBoxItem> ResolutionList{ get; } = new(){
-        new ComboBoxItem(){ Content = "3840:2160" }, // 4K UHD
-        new ComboBoxItem(){ Content = "3440:1440" }, // Ultra-Wide Quad HD
-        new ComboBoxItem(){ Content = "2560:1440" }, // 1440p
-        new ComboBoxItem(){ Content = "2560:1080" }, // Ultra-Wide Full HD
-        new ComboBoxItem(){ Content = "2160:1080" }, // 2:1 Aspect Ratio
-        new ComboBoxItem(){ Content = "1920:1080" }, // 1080p Full HD
-        new ComboBoxItem(){ Content = "1920:800" }, // Cinematic 2.40:1
-        new ComboBoxItem(){ Content = "1600:900" }, // 900p
-        new ComboBoxItem(){ Content = "1366:768" }, // 768p
-        new ComboBoxItem(){ Content = "1280:960" }, // SXGA 4:3
-        new ComboBoxItem(){ Content = "1280:720" }, // 720p HD
-        new ComboBoxItem(){ Content = "1024:576" }, // 576p
-        new ComboBoxItem(){ Content = "960:540" }, // 540p qHD
-        new ComboBoxItem(){ Content = "854:480" }, // 480p
-        new ComboBoxItem(){ Content = "800:600" }, // SVGA
-        new ComboBoxItem(){ Content = "768:432" }, // 432p
-        new ComboBoxItem(){ Content = "720:480" }, // NTSC SD
-        new ComboBoxItem(){ Content = "704:576" }, // PAL SD
-        new ComboBoxItem(){ Content = "640:360" }, // 360p
-        new ComboBoxItem(){ Content = "426:240" }, // 240p
-        new ComboBoxItem(){ Content = "320:240" }, // QVGA
-        new ComboBoxItem(){ Content = "320:180" }, // 180p
-        new ComboBoxItem(){ Content = "256:144" }, // 144p
+    public ObservableCollection<StringItemWithDisplayName> ResolutionList{ get; } = new(){
+        new(){ value = "3840:2160", DisplayName = "4K exact (3840:2160)" },
+        new(){ value = "-2:2160", DisplayName = "4K keep AR (-2:2160)" },
+        new(){ value = "3440:1440", DisplayName = "UWQHD exact (3440:1440)" },
+        new(){ value = "2560:1440", DisplayName = "1440p exact (2560:1440)" },
+        new(){ value = "-2:1440", DisplayName = "1440p keep AR (-2:1440)" },
+        new(){ value = "2560:1080", DisplayName = "UW FHD exact (2560:1080)" },
+        new(){ value = "2160:1080", DisplayName = "2:1 exact (2160:1080)" },
+        new(){ value = "1920:1080", DisplayName = "1080p exact (1920:1080)" },
+        new(){ value = "-2:1080", DisplayName = "1080p keep AR (-2:1080)" },
+        new(){ value = "1920:800", DisplayName = "Cinema exact (1920:800)" },
+        new(){ value = "1600:900", DisplayName = "900p exact (1600:900)" },
+        new(){ value = "1366:768", DisplayName = "768p exact (1366:768)" },
+        new(){ value = "1280:960", DisplayName = "SXGA exact (1280:960)" },
+        new(){ value = "1280:720", DisplayName = "720p exact (1280:720)" },
+        new(){ value = "-2:720", DisplayName = "720p keep AR (-2:720)" },
+        new(){ value = "1024:576", DisplayName = "576p exact (1024:576)" },
+        new(){ value = "-2:576", DisplayName = "576p keep AR (-2:576)" },
+        new(){ value = "960:540", DisplayName = "540p exact (960:540)" },
+        new(){ value = "-2:540", DisplayName = "540p keep AR (-2:540)" },
+        new(){ value = "854:480", DisplayName = "480p exact (854:480)" },
+        new(){ value = "-2:480", DisplayName = "480p keep AR (-2:480)" },
+        new(){ value = "800:600", DisplayName = "SVGA exact (800:600)" },
+        new(){ value = "768:432", DisplayName = "432p exact (768:432)" },
+        new(){ value = "-2:432", DisplayName = "432p keep AR (-2:432)" },
+        new(){ value = "720:480", DisplayName = "NTSC exact (720:480)" },
+        new(){ value = "704:576", DisplayName = "PAL exact (704:576)" },
+        new(){ value = "640:360", DisplayName = "360p exact (640:360)" },
+        new(){ value = "-2:360", DisplayName = "360p keep AR (-2:360)" },
+        new(){ value = "426:240", DisplayName = "240p exact (426:240)" },
+        new(){ value = "-2:240", DisplayName = "240p keep AR (-2:240)" },
+        new(){ value = "320:240", DisplayName = "QVGA exact (320:240)" },
+        new(){ value = "320:180", DisplayName = "180p exact (320:180)" },
+        new(){ value = "-2:180", DisplayName = "180p keep AR (-2:180)" },
+        new(){ value = "256:144", DisplayName = "144p exact (256:144)" },
+        new(){ value = "-2:144", DisplayName = "144p keep AR (-2:144)" },
     };
 
     public ContentDialogEncodingPresetViewModel(ContentDialog dialog, bool editMode){
@@ -87,6 +109,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
         }
         
         AdditionalParameters.Add(new StringItem(){ stringValue = "-map 0" });
+        AdditionalParameters.CollectionChanged += AdditionalParametersOnCollectionChanged;
 
         if (editMode){
             EditMode = true;
@@ -113,7 +136,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
         Crf = value.Crf;
         FrameRate = value.FrameRate ?? "24000/1001";
 
-        SelectedResolution = ResolutionList.FirstOrDefault(e => e.Content?.ToString() == value.Resolution) ?? ResolutionList.First();
+        SelectedResolution = ResolutionList.FirstOrDefault(e => e.value == value.Resolution) ?? ResolutionList.First();
         AdditionalParameters.Clear();
 
         foreach (var valueAdditionalParameter in value.AdditionalParameters){
@@ -136,13 +159,36 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
     public void AddAdditionalParam(){
         AdditionalParameters.Add(new StringItem(){ stringValue = AdditionalParametersString });
         AdditionalParametersString = "";
-        RaisePropertyChanged(nameof(AdditionalParametersString));
     }
 
     [RelayCommand]
     public void RemoveAdditionalParam(StringItem param){
         AdditionalParameters.Remove(param);
-        RaisePropertyChanged(nameof(AdditionalParameters));
+    }
+
+    private void AdditionalParametersOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e){
+        OnPropertyChanged(nameof(CommandPreview));
+    }
+
+    private string BuildCommandPreview(){
+        var previewPreset = new VideoPreset{
+            PresetName = PresetName,
+            Codec = Codec,
+            FrameRate = string.IsNullOrWhiteSpace(FrameRate) ? "24000/1001" : FrameRate,
+            Crf = Math.Clamp((int)(Crf ?? 0), 0, 51),
+            Resolution = SelectedResolution.value,
+            AdditionalParameters = AdditionalParameters
+                .Select(additionalParameter => additionalParameter.stringValue)
+                .Where(static value => !string.IsNullOrWhiteSpace(value))
+                .ToList()
+        };
+
+        var args = Helpers.BuildFFmpegArgsForPreset(
+            "S01E01.mkv",
+            previewPreset,
+            "S01E01_output.mkv");
+
+        return Helpers.BuildCommandString("ffmpeg", args);
     }
 
     private void SaveButton(ContentDialog sender, ContentDialogButtonClickEventArgs args){
@@ -156,7 +202,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
                 SelectedCustomPreset.Codec = Codec;
                 SelectedCustomPreset.FrameRate = FrameRate;
                 SelectedCustomPreset.Crf = Math.Clamp((int)(Crf ?? 0), 0, 51);
-                SelectedCustomPreset.Resolution = SelectedResolution.Content?.ToString() ?? "1920:1080";
+                SelectedCustomPreset.Resolution = SelectedResolution.value;
                 SelectedCustomPreset.AdditionalParameters = AdditionalParameters.Select(additionalParameter => additionalParameter.stringValue).ToList();
 
                 try{
@@ -178,7 +224,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
                 Codec = Codec,
                 FrameRate = FrameRate,
                 Crf = Math.Clamp((int)(Crf ?? 0), 0, 51),
-                Resolution = SelectedResolution.Content?.ToString() ?? "1920:1080",
+                Resolution = SelectedResolution.value,
                 AdditionalParameters = AdditionalParameters.Select(additionalParameter => additionalParameter.stringValue).ToList()
             };
 
@@ -189,6 +235,7 @@ public partial class ContentDialogEncodingPresetViewModel : ViewModelBase{
     }
 
     private void DialogOnClosed(ContentDialog sender, ContentDialogClosedEventArgs args){
+        AdditionalParameters.CollectionChanged -= AdditionalParametersOnCollectionChanged;
         dialog.Closed -= DialogOnClosed;
     }
 }

@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
+using CRD.Utils.Notifications;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
@@ -60,6 +61,8 @@ public sealed partial class ProgramManager : ObservableObject{
     #endregion
 
     private readonly PeriodicWorkRunner checkForNewEpisodesRunner;
+    private bool historyRefreshNotificationsArmed;
+    private static readonly TimeSpan TrackedSeriesReleaseOverlap = TimeSpan.FromMinutes(10);
 
     public IStorageProvider? StorageProvider;
 
@@ -99,7 +102,6 @@ public sealed partial class ProgramManager : ObservableObject{
 
     internal async Task RefreshHistory(FilterType filterType){
         FetchingData = true;
-
 
         List<HistorySeries> filteredItems;
         var historyList = CrunchyrollManager.Instance.HistoryList;
@@ -149,6 +151,7 @@ public sealed partial class ProgramManager : ObservableObject{
 
         FetchingData = false;
         CrunchyrollManager.Instance.History.SortItems();
+        await PublishTrackedSeriesReleaseNotificationsAsync(CrunchyrollManager.Instance);
     }
 
     private async Task AddMissingToQueue(){
@@ -186,23 +189,27 @@ public sealed partial class ProgramManager : ObservableObject{
                 return;
         }
 
-        var tasks = crunchyManager.HistoryList
-            .Select(item => item.AddNewMissingToDownloads(true));
+        if (crunOptions.HistoryAutoRefreshAddToQueue){
+            var tasks = crunchyManager.HistoryList
+                .Select(item => item.AddNewMissingToDownloads(true));
 
-        await Task.WhenAll(tasks);
+            await Task.WhenAll(tasks);
+        }
         
         if (Application.Current is App app){
             Dispatcher.UIThread.Post(app.UpdateTrayTooltip);
         }
+
+        historyRefreshNotificationsArmed = true;
     }
 
     internal async Task RefreshHistoryWithNewReleases(CrunchyrollManager crunchyManager, CrDownloadOptions crunOptions){
         var newEpisodesBase = await crunchyManager.CrEpisode.GetNewEpisodes(
             string.IsNullOrEmpty(crunOptions.HistoryLang) ? crunchyManager.DefaultLocale : crunOptions.HistoryLang,
             2000, null, true);
-        if (newEpisodesBase is{ Data.Count: > 0 }){
-            var newEpisodes = newEpisodesBase.Data ?? [];
+        var newEpisodes = newEpisodesBase?.Data ?? [];
 
+        if (newEpisodesBase is{ Data.Count: > 0 }){
             try{
                 await crunchyManager.History.UpdateWithEpisode(newEpisodes);
                 CfgManager.UpdateHistoryFile();
@@ -210,6 +217,114 @@ public sealed partial class ProgramManager : ObservableObject{
                 Console.Error.WriteLine("Failed to update History: " + e.Message);
             }
         }
+
+        await PublishTrackedSeriesReleaseNotificationsAsync(crunchyManager, newEpisodes);
+    }
+
+    private async Task PublishTrackedSeriesReleaseNotificationsAsync(CrunchyrollManager crunchyManager, List<CrBrowseEpisode>? releaseFeedEpisodes = null){
+        var currentCheckTimeUtc = DateTime.UtcNow;
+        var settings = crunchyManager.CrunOptions;
+        var previousCheckUtc = settings.TrackedSeriesReleaseLastCheckUtc;
+
+        if (!historyRefreshNotificationsArmed){
+            settings.TrackedSeriesReleaseLastCheckUtc = currentCheckTimeUtc;
+            CfgManager.WriteCrSettings();
+            return;
+        }
+
+        var trackedSeries = crunchyManager.HistoryList
+            .Where(series => !string.IsNullOrWhiteSpace(series.SeriesId))
+            .ToDictionary(series => series.SeriesId!, StringComparer.Ordinal);
+
+        if (trackedSeries.Count == 0){
+            settings.TrackedSeriesReleaseLastCheckUtc = currentCheckTimeUtc;
+            CfgManager.WriteCrSettings();
+            return;
+        }
+
+        releaseFeedEpisodes ??= (await crunchyManager.CrEpisode.GetNewEpisodes(
+            string.IsNullOrEmpty(crunchyManager.CrunOptions.HistoryLang) ? crunchyManager.DefaultLocale : crunchyManager.CrunOptions.HistoryLang,
+            2000, null, true))?.Data ?? [];
+
+        var notificationSettings = settings.NotificationSettings;
+        var historyUpdated = false;
+        var windowStartUtc = previousCheckUtc?.Subtract(TrackedSeriesReleaseOverlap);
+
+        foreach (var release in releaseFeedEpisodes){
+            var seriesId = release.EpisodeMetadata?.SeriesId;
+            if (string.IsNullOrWhiteSpace(seriesId) || !trackedSeries.TryGetValue(seriesId, out var historySeries)){
+                continue;
+            }
+
+            var releaseDateUtc = GetTrackedReleaseDateUtc(release);
+            if (windowStartUtc.HasValue && releaseDateUtc < windowStartUtc.Value){
+                continue;
+            }
+
+            if (releaseDateUtc > currentCheckTimeUtc){
+                continue;
+            }
+
+            var historyEpisode = crunchyManager.History.GetHistoryEpisode(seriesId, release.EpisodeMetadata.SeasonId, release.Id ?? string.Empty);
+            if (historyEpisode == null && !string.IsNullOrWhiteSpace(release.Id)){
+                historyEpisode = historySeries.Seasons
+                    .SelectMany(season => season.EpisodesList)
+                    .FirstOrDefault(episode => episode.EpisodeId == release.Id);
+            }
+
+            if (historyEpisode == null || historyEpisode.TrackedSeriesReleaseNotified){
+                continue;
+            }
+
+            var notificationSent = await NotificationPublisher.Instance.PublishTrackedSeriesEpisodeReleasedAsync(
+                notificationSettings,
+                historySeries,
+                historyEpisode,
+                release,
+                string.IsNullOrEmpty(crunchyManager.CrunOptions.HistoryLang) ? crunchyManager.DefaultLocale : crunchyManager.CrunOptions.HistoryLang
+            );
+            if (notificationSent){
+                historyEpisode.TrackedSeriesReleaseNotified = true;
+                historyUpdated = true;
+            }
+        }
+
+        settings.TrackedSeriesReleaseLastCheckUtc = currentCheckTimeUtc;
+
+        if (historyUpdated){
+            CfgManager.UpdateHistoryFile();
+        }
+
+        CfgManager.WriteCrSettings();
+    }
+
+    private static DateTime GetTrackedReleaseDateUtc(CrBrowseEpisode episode){
+        DateTime episodeAirDate = episode.EpisodeMetadata.EpisodeAirDate.Kind == DateTimeKind.Utc
+            ? episode.EpisodeMetadata.EpisodeAirDate.ToLocalTime()
+            : episode.EpisodeMetadata.EpisodeAirDate;
+
+        DateTime premiumAvailableStart = episode.EpisodeMetadata.PremiumAvailableDate.Kind == DateTimeKind.Utc
+            ? episode.EpisodeMetadata.PremiumAvailableDate.ToLocalTime()
+            : episode.EpisodeMetadata.PremiumAvailableDate;
+
+        DateTime now = DateTime.Now;
+        DateTime oneYearFromNow = now.AddYears(1);
+
+        var targetDate = premiumAvailableStart;
+
+        if (targetDate >= oneYearFromNow){
+            DateTime freeAvailableStart = episode.EpisodeMetadata.FreeAvailableDate.Kind == DateTimeKind.Utc
+                ? episode.EpisodeMetadata.FreeAvailableDate.ToLocalTime()
+                : episode.EpisodeMetadata.FreeAvailableDate;
+
+            if (freeAvailableStart <= oneYearFromNow){
+                targetDate = freeAvailableStart;
+            } else{
+                targetDate = episodeAirDate;
+            }
+        }
+
+        return targetDate.Kind == DateTimeKind.Utc ? targetDate : targetDate.ToUniversalTime();
     }
 
     public void SetBackgroundImage(){

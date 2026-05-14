@@ -15,6 +15,7 @@ using CRD.Downloader;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils.Files;
 using CRD.Utils.Http;
+using CRD.Utils.Notifications;
 using Newtonsoft.Json;
 using NuGet.Versioning;
 
@@ -110,12 +111,19 @@ public class Updater : ObservableObject{
                     }
 
                     downloadUrl = asset.BrowserDownloadUrl;
+                    await NotificationPublisher.Instance.PublishUpdateAvailableAsync(
+                        CrunchyrollManager.Instance.CrunOptions.NotificationSettings,
+                        currentVersion.ToString(),
+                        selectedRelease.TagName,
+                        platformName,
+                        downloadUrl);
 
                     _ = UpdateChangelogAsync();
                     return true;
                 }
 
                 Console.WriteLine("No updates available.");
+                NotificationPublisher.Instance.ResetUpdateAvailableNotification();
                 _ = UpdateChangelogAsync();
                 return false;
             }

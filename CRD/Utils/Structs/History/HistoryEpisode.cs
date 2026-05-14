@@ -34,6 +34,9 @@ public class HistoryEpisode : INotifyPropertyChanged{
     [JsonProperty("episode_was_downloaded")]
     public bool WasDownloaded{ get; set; }
 
+    [JsonProperty("episode_tracked_series_release_notified")]
+    public bool TrackedSeriesReleaseNotified{ get; set; }
+
     [JsonProperty("episode_special_episode")]
     public bool SpecialEpisode{ get; set; }
 

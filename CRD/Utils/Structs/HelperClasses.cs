@@ -125,6 +125,8 @@ public class DownloadResponse{
     public string VideoTitle{ get; set; }
     public bool Error{ get; set; }
     public string ErrorText{ get; set; }
+    public bool RetrySuggested{ get; set; }
+    public int RetryDelaySeconds{ get; set; }
 }
 
 public class DownloadedMedia : SxItem{

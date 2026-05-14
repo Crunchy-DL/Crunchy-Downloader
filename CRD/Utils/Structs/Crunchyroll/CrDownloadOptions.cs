@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
 using CRD.Utils.Http;
+using CRD.Utils.Notifications;
 using CRD.Utils.Sonarr;
 using CRD.ViewModels;
 using Newtonsoft.Json;
+using System;
 
 namespace CRD.Utils.Structs.Crunchyroll;
 
@@ -32,6 +34,12 @@ public class CrDownloadOptions{
 
     [JsonProperty("retry_attempts")]
     public int RetryAttempts{ get; set; }
+    
+    [JsonProperty("playback_rate_limit_retry_delay_seconds")]
+    public int PlaybackRateLimitRetryDelaySeconds{ get; set; }
+
+    [JsonProperty("retry_max_delay_seconds")]
+    public int RetryMaxDelaySeconds{ get; set; }
 
     [JsonIgnore]
     public string Force{ get; set; } = "";
@@ -68,6 +76,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("download_finished_execute_path")]
     public string? DownloadFinishedExecutePath{ get; set; }
+
+    [JsonProperty("notifications")]
+    public NotificationSettings? NotificationSettings{ get; set; }
     
     [JsonProperty("download_only_with_all_selected_dubsub")]
     public bool DownloadOnlyWithAllSelectedDubSub{ get; set; }
@@ -116,6 +127,12 @@ public class CrDownloadOptions{
     
     [JsonProperty("history_auto_refresh_mode")]
     public HistoryRefreshMode HistoryAutoRefreshMode{ get; set; }
+
+    [JsonProperty("history_auto_refresh_add_to_queue")]
+    public bool HistoryAutoRefreshAddToQueue{ get; set; } = true;
+
+    [JsonProperty("tracked_series_release_last_check_utc")]
+    public DateTime? TrackedSeriesReleaseLastCheckUtc{ get; set; }
 
 
     [JsonProperty("sonarr_properties")]
@@ -229,6 +246,9 @@ public class CrDownloadOptions{
 
     [JsonProperty("download_part_size")]
     public int Partsize{ get; set; }
+
+    [JsonProperty("dub_download_delay_seconds")]
+    public int DubDownloadDelaySeconds{ get; set; }
 
     [JsonProperty("soft_subs")]
     public List<string> DlSubs{ get; set; } =[];
@@ -369,4 +389,46 @@ public class CrDownloadOptions{
     public bool SearchFetchFeaturedMusic{ get; set; }
 
     #endregion
+
+    public void NormalizeNotificationSettings(){
+        NotificationSettings ??= new NotificationSettings();
+
+        var hasProviders = NotificationSettings.Providers.Count > 0;
+
+        var soundProvider = NotificationSettings.GetOrCreateProvider(NotificationProviderType.Sound);
+        if (hasProviders){
+            if (soundProvider.Events.Count == 0){
+                soundProvider.Events.Add(NotificationEventType.QueueFinished);
+            }
+        } else{
+            soundProvider.Enabled = DownloadFinishedPlaySound;
+            soundProvider.Path = DownloadFinishedSoundPath ?? string.Empty;
+            soundProvider.Events.Add(NotificationEventType.QueueFinished);
+        }
+
+        var executeProvider = NotificationSettings.GetOrCreateProvider(NotificationProviderType.Execute);
+        if (hasProviders){
+            if (executeProvider.Events.Count == 0){
+                executeProvider.Events.Add(NotificationEventType.QueueFinished);
+            }
+        } else{
+            executeProvider.Enabled = DownloadFinishedExecute;
+            executeProvider.Path = DownloadFinishedExecutePath ?? string.Empty;
+            executeProvider.Events.Add(NotificationEventType.QueueFinished);
+        }
+
+        SyncLegacyNotificationFields();
+    }
+
+    public void SyncLegacyNotificationFields(){
+        NotificationSettings ??= new NotificationSettings();
+
+        var soundProvider = NotificationSettings.GetOrCreateProvider(NotificationProviderType.Sound);
+        DownloadFinishedPlaySound = soundProvider.Enabled;
+        DownloadFinishedSoundPath = soundProvider.Path;
+
+        var executeProvider = NotificationSettings.GetOrCreateProvider(NotificationProviderType.Execute);
+        DownloadFinishedExecute = executeProvider.Enabled;
+        DownloadFinishedExecutePath = executeProvider.Path;
+    }
 }

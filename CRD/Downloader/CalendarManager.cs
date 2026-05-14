@@ -82,7 +82,7 @@ public class CalendarManager{
         request.Headers.Accept.ParseAdd("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8");
         request.Headers.AcceptEncoding.ParseAdd("gzip, deflate, br");
 
-        (bool IsOk, string ResponseContent, string error) response;
+        (bool IsOk, string ResponseContent, string error, Dictionary<string,string> Headers) response;
         if (!HttpClientReq.Instance.UseFlareSolverr){
             response = await HttpClientReq.Instance.SendHttpRequest(request);
         } else{

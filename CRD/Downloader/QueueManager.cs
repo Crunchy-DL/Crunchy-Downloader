@@ -5,6 +5,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
@@ -37,6 +38,8 @@ public sealed partial class QueueManager : ObservableObject{
 
     private int pumpScheduled;
     private int pumpDirty;
+    private DateTimeOffset? autoDownloadBlockedUntilUtc;
+    private readonly object autoDownloadBlockLock = new();
 
     #endregion
     
@@ -182,6 +185,17 @@ public sealed partial class QueueManager : ObservableObject{
         queuePersistenceManager.SaveNow();
     }
 
+    internal List<CrunchyEpMeta> GetQueueSnapshot(){
+        if (Dispatcher.UIThread.CheckAccess()){
+            return queue.ToList();
+        }
+
+        return Dispatcher.UIThread
+            .InvokeAsync(() => queue.ToList())
+            .GetAwaiter()
+            .GetResult();
+    }
+
     public void ReplaceQueue(IEnumerable<CrunchyEpMeta> items){
         uiMutationQueue.Enqueue(() => {
             queue.Clear();
@@ -190,6 +204,7 @@ public sealed partial class QueueManager : ObservableObject{
                     queue.Add(item);
             }
 
+            RestoreRetryStateFromQueue();
             UpdateDownloadListItems();
         });
     }
@@ -263,6 +278,20 @@ public sealed partial class QueueManager : ObservableObject{
     private void PumpQueue(){
         if (!crunchyrollManager.CrunOptions.AutoDownload)
             return;
+
+        lock (autoDownloadBlockLock){
+            if (autoDownloadBlockedUntilUtc.HasValue && !HasPendingRetryItems()){
+                autoDownloadBlockedUntilUtc = null;
+            }
+
+            if (autoDownloadBlockedUntilUtc.HasValue && autoDownloadBlockedUntilUtc.Value > DateTimeOffset.UtcNow){
+                return;
+            }
+
+            if (autoDownloadBlockedUntilUtc.HasValue){
+                autoDownloadBlockedUntilUtc = null;
+            }
+        }
         
         List<CrunchyEpMeta> toStart = new();
         List<CrunchyEpMeta> toResume = new();
@@ -280,6 +309,9 @@ public sealed partial class QueueManager : ObservableObject{
                     break;
 
                 if (item.DownloadProgress.IsError)
+                    continue;
+
+                if (item.DownloadProgress.IsWaitingForRetry)
                     continue;
 
                 if (item.DownloadProgress.IsDone)
@@ -324,6 +356,102 @@ public sealed partial class QueueManager : ObservableObject{
         }
 
         OnQueueStateChanged();
+    }
+
+    public void BlockAutoDownloadUntil(TimeSpan delay, CancellationToken cancellationToken = default){
+        DateTimeOffset unblockAt = DateTimeOffset.UtcNow.Add(delay);
+
+        lock (autoDownloadBlockLock){
+            if (!autoDownloadBlockedUntilUtc.HasValue || unblockAt > autoDownloadBlockedUntilUtc.Value){
+                autoDownloadBlockedUntilUtc = unblockAt;
+            } else{
+                unblockAt = autoDownloadBlockedUntilUtc.Value;
+            }
+        }
+
+        _ = Task.Run(async () => {
+            try{
+                var remaining = unblockAt - DateTimeOffset.UtcNow;
+                if (remaining > TimeSpan.Zero){
+                    await Task.Delay(remaining, cancellationToken);
+                }
+
+                lock (autoDownloadBlockLock){
+                    if (autoDownloadBlockedUntilUtc.HasValue && autoDownloadBlockedUntilUtc.Value <= DateTimeOffset.UtcNow){
+                        autoDownloadBlockedUntilUtc = null;
+                    }
+                }
+
+                RefreshQueue();
+                UpdateDownloadListItems();
+            } catch (OperationCanceledException){
+                // ignored
+            }
+        }, cancellationToken);
+    }
+
+    public void ScheduleRetry(CrunchyEpMeta item, TimeSpan delay, string statusText, CancellationToken cancellationToken = default){
+        item.DownloadProgress.ScheduleRetry(delay, statusText);
+        RefreshQueue();
+        OnQueueStateChanged();
+
+        ScheduleRetryWake(item, item.DownloadProgress.RetryAtUtc, cancellationToken);
+    }
+
+    private void RestoreRetryStateFromQueue(){
+        var retryItems = queue
+            .Where(item => item.DownloadProgress.IsWaitingForRetry)
+            .ToList();
+
+        if (retryItems.Count == 0){
+            lock (autoDownloadBlockLock){
+                autoDownloadBlockedUntilUtc = null;
+            }
+
+            return;
+        }
+
+        var maxRetryAt = retryItems
+            .Select(item => item.DownloadProgress.RetryAtUtc)
+            .OfType<DateTimeOffset>()
+            .Max();
+
+        lock (autoDownloadBlockLock){
+            autoDownloadBlockedUntilUtc = maxRetryAt;
+        }
+
+        foreach (var retryItem in retryItems){
+            ScheduleRetryWake(retryItem, retryItem.DownloadProgress.RetryAtUtc);
+        }
+    }
+
+    private bool HasPendingRetryItems(){
+        return queue.Any(item => item.DownloadProgress.IsWaitingForRetry);
+    }
+
+    private void ScheduleRetryWake(CrunchyEpMeta item, DateTimeOffset? retryAtUtc, CancellationToken cancellationToken = default){
+        if (!retryAtUtc.HasValue){
+            return;
+        }
+
+        _ = Task.Run(async () => {
+            try{
+                var remaining = retryAtUtc.Value - DateTimeOffset.UtcNow;
+                if (remaining > TimeSpan.Zero){
+                    await Task.Delay(remaining, cancellationToken);
+                }
+
+                if (cancellationToken.IsCancellationRequested){
+                    return;
+                }
+
+                item.DownloadProgress.RetryAtUtc = null;
+                RefreshQueue();
+                UpdateDownloadListItems();
+            } catch (OperationCanceledException){
+                // ignored
+            }
+        }, cancellationToken);
     }
 
 

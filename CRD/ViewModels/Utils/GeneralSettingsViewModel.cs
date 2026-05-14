@@ -20,15 +20,20 @@ using CRD.Downloader.Crunchyroll;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Http;
+using CRD.Utils.Notifications;
 using CRD.Utils.Sonarr;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Utils.Structs.History;
+using CRD.Views;
 using FluentAvalonia.Styling;
+using ReactiveUI;
 
 namespace CRD.ViewModels.Utils;
 
 public partial class GeneralSettingsViewModel : ViewModelBase{
+    private readonly AudioPlayer notificationTestPlayer = new();
+
     [ObservableProperty]
     private string currentVersion;
 
@@ -61,6 +66,9 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private HistoryRefreshMode historyAutoRefreshMode;
+
+    [ObservableProperty]
+    private bool historyAutoRefreshAddToQueue;
 
     [ObservableProperty]
     private string historyAutoRefreshModeHint;
@@ -103,6 +111,12 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [ObservableProperty]
     private double? retryDelay;
+
+    [ObservableProperty]
+    private double? playbackRateLimitRetryDelaySeconds;
+
+    [ObservableProperty]
+    private double? retryMaxDelaySeconds;
     
     [ObservableProperty]
     private bool trayIconEnabled;
@@ -292,7 +306,49 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
     private string downloadFinishedExecutePath;
 
     [ObservableProperty]
+    private bool webhookEnabled;
+
+    [ObservableProperty]
+    private string webhookUrl = string.Empty;
+
+    [ObservableProperty]
+    private string webhookMethod = "POST";
+
+    [ObservableProperty]
+    private string webhookContentType = "application/json";
+
+    [ObservableProperty]
+    private string webhookHeadersText = string.Empty;
+
+    [ObservableProperty]
+    private string webhookBodyTemplate = string.Empty;
+
+    [ObservableProperty]
+    private bool webhookNotifyQueueFinished;
+
+    [ObservableProperty]
+    private bool webhookNotifyDownloadFinished;
+
+    [ObservableProperty]
+    private bool webhookNotifyDownloadFailed;
+
+    [ObservableProperty]
+    private bool webhookNotifyTrackedSeriesEpisodeReleased;
+
+    [ObservableProperty]
+    private bool webhookNotifyLoginExpired;
+
+    [ObservableProperty]
+    private bool webhookNotifyUpdateAvailable;
+
+    [ObservableProperty]
     private string currentIp = "";
+
+    [ObservableProperty]
+    private bool isTestingFinishedSound;
+
+    [ObservableProperty]
+    private bool isTestingWebhook;
 
     private readonly FluentAvaloniaTheme faTheme;
 
@@ -318,16 +374,29 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         }
 
         CrDownloadOptions options = CrunchyrollManager.Instance.CrunOptions;
+        options.NormalizeNotificationSettings();
 
         BackgroundImageBlurRadius = options.BackgroundImageBlurRadius;
         BackgroundImageOpacity = options.BackgroundImageOpacity;
         BackgroundImagePath = options.BackgroundImagePath ?? string.Empty;
 
-        DownloadFinishedSoundPath = options.DownloadFinishedSoundPath ?? string.Empty;
-        DownloadFinishedPlaySound = options.DownloadFinishedPlaySound;
+        var soundProvider = options.NotificationSettings?.GetOrCreateProvider(NotificationProviderType.Sound);
+        DownloadFinishedSoundPath = soundProvider?.Path ?? string.Empty;
+        DownloadFinishedPlaySound = soundProvider?.Enabled ?? false;
         
-        DownloadFinishedExecutePath = options.DownloadFinishedExecutePath ?? string.Empty;
-        DownloadFinishedExecute = options.DownloadFinishedExecute;
+        var executeProvider = options.NotificationSettings?.GetOrCreateProvider(NotificationProviderType.Execute);
+        DownloadFinishedExecutePath = executeProvider?.Path ?? string.Empty;
+        DownloadFinishedExecute = executeProvider?.Enabled ?? false;
+
+        var webhookProvider = options.NotificationSettings?.GetOrCreateProvider(NotificationProviderType.Webhook);
+        WebhookEnabled = webhookProvider?.Enabled ?? false;
+        WebhookUrl = webhookProvider?.Url ?? string.Empty;
+        WebhookMethod = string.IsNullOrWhiteSpace(webhookProvider?.Method) ? "POST" : webhookProvider.Method;
+        WebhookContentType = string.IsNullOrWhiteSpace(webhookProvider?.ContentType) ? "application/json" : webhookProvider.ContentType;
+        WebhookHeadersText = SerializeHeaders(webhookProvider?.Headers);
+        WebhookBodyTemplate = webhookProvider?.BodyTemplate ?? string.Empty;
+
+        LoadProviderEvents(webhookProvider, NotificationProviderType.Webhook);
 
         DownloadDirPath = string.IsNullOrEmpty(options.DownloadDirPath) ? CfgManager.PathVIDEOS_DIR : options.DownloadDirPath;
         TempDownloadDirPath = string.IsNullOrEmpty(options.DownloadTempDirPath) ? CfgManager.PathTEMP_DIR : options.DownloadTempDirPath;
@@ -377,6 +446,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         HistoryCountSonarr = options.HistoryCountSonarr;
         HistoryAutoRefreshIntervalMinutes = options.HistoryAutoRefreshIntervalMinutes;
         HistoryAutoRefreshMode = options.HistoryAutoRefreshMode;
+        HistoryAutoRefreshAddToQueue = options.HistoryAutoRefreshAddToQueue;
         HistoryAutoRefreshLastRunTime = ProgramManager.Instance.GetLastRefreshTime() == DateTime.MinValue ? "Never" : ProgramManager.Instance.GetLastRefreshTime().ToString("g", CultureInfo.CurrentCulture);
         DownloadSpeed = options.DownloadSpeedLimit;
         DownloadSpeedInBits = options.DownloadSpeedInBits;
@@ -386,6 +456,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         PersistQueue = options.PersistQueue;
         RetryAttempts = Math.Clamp((options.RetryAttempts), 1, 10);
         RetryDelay = Math.Clamp((options.RetryDelay), 1, 30);
+        PlaybackRateLimitRetryDelaySeconds = Math.Clamp(options.PlaybackRateLimitRetryDelaySeconds, 1, 86400);
+        RetryMaxDelaySeconds = Math.Clamp(options.RetryMaxDelaySeconds, 1, 86400);
         DownloadToTempFolder = options.DownloadToTempFolder;
         SimultaneousDownloads = options.SimultaneousDownloads;
         SimultaneousProcessingJobs = options.SimultaneousProcessingJobs;
@@ -425,9 +497,35 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         var settings = CrunchyrollManager.Instance.CrunOptions;
 
-        settings.DownloadFinishedPlaySound = DownloadFinishedPlaySound;
-        
-        settings.DownloadFinishedExecute = DownloadFinishedExecute;
+        settings.NotificationSettings ??= new NotificationSettings();
+
+        var soundProvider = settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Sound);
+        soundProvider.Enabled = DownloadFinishedPlaySound;
+        soundProvider.Path = DownloadFinishedSoundPath;
+        soundProvider.Events = [NotificationEventType.QueueFinished];
+
+        var executeProvider = settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Execute);
+        executeProvider.Enabled = DownloadFinishedExecute;
+        executeProvider.Path = DownloadFinishedExecutePath;
+        executeProvider.Events = [NotificationEventType.QueueFinished];
+
+        var webhookProvider = settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Webhook);
+        webhookProvider.Enabled = WebhookEnabled;
+        webhookProvider.Url = WebhookUrl?.Trim() ?? string.Empty;
+        webhookProvider.Method = string.IsNullOrWhiteSpace(WebhookMethod) ? "POST" : WebhookMethod.Trim().ToUpperInvariant();
+        webhookProvider.ContentType = string.IsNullOrWhiteSpace(WebhookContentType) ? "application/json" : WebhookContentType.Trim();
+        webhookProvider.Headers = ParseHeaders(WebhookHeadersText);
+        webhookProvider.BodyTemplate = WebhookBodyTemplate ?? string.Empty;
+        webhookProvider.Events = BuildEvents(
+            WebhookNotifyQueueFinished,
+            WebhookNotifyDownloadFinished,
+            WebhookNotifyDownloadFailed,
+            WebhookNotifyTrackedSeriesEpisodeReleased,
+            WebhookNotifyLoginExpired,
+            WebhookNotifyUpdateAvailable
+        );
+
+        settings.SyncLegacyNotificationFields();
 
         settings.DownloadMethodeNew = DownloadMethodeNew;
         settings.DownloadAllowEarlyStart = DownloadAllowEarlyStart;
@@ -439,6 +537,8 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
         settings.RetryAttempts = Math.Clamp((int)(RetryAttempts ?? 0), 1, 10);
         settings.RetryDelay = Math.Clamp((int)(RetryDelay ?? 0), 1, 30);
+        settings.PlaybackRateLimitRetryDelaySeconds = Math.Clamp((int)(PlaybackRateLimitRetryDelaySeconds ?? 0), 1, 86400);
+        settings.RetryMaxDelaySeconds = Math.Clamp((int)(RetryMaxDelaySeconds ?? 0), 1, 86400);
 
         settings.DownloadToTempFolder = DownloadToTempFolder;
         settings.HistoryCountMissing = HistoryCountMissing;
@@ -449,6 +549,7 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
         settings.HistoryCountSonarr = HistoryCountSonarr;
         settings.HistoryAutoRefreshIntervalMinutes =Math.Clamp((int)(HistoryAutoRefreshIntervalMinutes ?? 0), 0, 1000000000) ;
         settings.HistoryAutoRefreshMode = HistoryAutoRefreshMode;
+        settings.HistoryAutoRefreshAddToQueue = HistoryAutoRefreshAddToQueue;
         settings.DownloadSpeedLimit = Math.Clamp((int)(DownloadSpeed ?? 0), 0, 1000000000);
         settings.DownloadSpeedInBits = DownloadSpeedInBits;
         settings.SimultaneousDownloads = Math.Clamp((int)(SimultaneousDownloads ?? 0), 1, 10);
@@ -627,7 +728,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [RelayCommand]
     public void ClearFinishedSoundPath(){
-        CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath = string.Empty;
+        var settings = CrunchyrollManager.Instance.CrunOptions;
+        settings.NotificationSettings ??= new NotificationSettings();
+        settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Sound).Path = string.Empty;
+        settings.SyncLegacyNotificationFields();
         DownloadFinishedSoundPath = string.Empty;
     }
 
@@ -641,12 +745,119 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                 }
             },
             pathSetter: (path) => {
-                CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath = path;
+                var validationResult = AudioPlayer.ValidateSoundFile(path);
+                if (!validationResult.IsValid){
+                    MessageBus.Current.SendMessage(new ToastMessage(validationResult.ErrorMessage, ToastType.Error, 5));
+                    return;
+                }
+
+                var settings = CrunchyrollManager.Instance.CrunOptions;
+                settings.NotificationSettings ??= new NotificationSettings();
+                settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Sound).Path = path;
+                settings.SyncLegacyNotificationFields();
                 DownloadFinishedSoundPath = path;
+                MessageBus.Current.SendMessage(new ToastMessage("Notification sound updated", ToastType.Information, 2));
             },
-            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadFinishedSoundPath ?? string.Empty,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.NotificationSettings?.GetOrCreateProvider(NotificationProviderType.Sound).Path ?? string.Empty,
             defaultPath: string.Empty
         );
+    }
+
+    [RelayCommand]
+    public async Task TestFinishedSoundAsync(){
+        if (IsTestingFinishedSound){
+            return;
+        }
+
+        var path = CrunchyrollManager.Instance.CrunOptions.NotificationSettings?.GetOrCreateProvider(NotificationProviderType.Sound).Path ?? string.Empty;
+        IsTestingFinishedSound = true;
+
+        try{
+            var result = await notificationTestPlayer.ValidatePlaybackAsync(path);
+
+            if (result.IsSuccess){
+                MessageBus.Current.SendMessage(new ToastMessage("Notification sound test succeeded", ToastType.Information, 2));
+                return;
+            }
+
+            MessageBus.Current.SendMessage(new ToastMessage($"Notification sound test failed: {result.ErrorMessage}", ToastType.Error, 5));
+        } finally{
+            IsTestingFinishedSound = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task StopFinishedSoundAsync(){
+        await notificationTestPlayer.StopAsync();
+        IsTestingFinishedSound = false;
+    }
+
+    [RelayCommand]
+    public async Task TestWebhookAsync(){
+        if (IsTestingWebhook){
+            return;
+        }
+
+        var selectedEvents = BuildEvents(
+            WebhookNotifyQueueFinished,
+            WebhookNotifyDownloadFinished,
+            WebhookNotifyDownloadFailed,
+            WebhookNotifyTrackedSeriesEpisodeReleased,
+            WebhookNotifyLoginExpired,
+            WebhookNotifyUpdateAvailable
+        );
+
+        if (!WebhookEnabled){
+            MessageBus.Current.SendMessage(new ToastMessage("Enable the webhook first", ToastType.Error, 4));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(WebhookUrl)){
+            MessageBus.Current.SendMessage(new ToastMessage("Set a webhook URL first", ToastType.Error, 4));
+            return;
+        }
+
+        if (selectedEvents.Count == 0){
+            MessageBus.Current.SendMessage(new ToastMessage("Select at least one webhook event to test", ToastType.Error, 4));
+            return;
+        }
+
+        IsTestingWebhook = true;
+
+        try{
+            var settings = new NotificationSettings{
+                Providers = [
+                    new NotificationProviderConfig{
+                        Type = NotificationProviderType.Webhook,
+                        Enabled = true,
+                        Url = WebhookUrl.Trim(),
+                        Method = string.IsNullOrWhiteSpace(WebhookMethod) ? "POST" : WebhookMethod.Trim().ToUpperInvariant(),
+                        ContentType = string.IsNullOrWhiteSpace(WebhookContentType) ? "application/json" : WebhookContentType.Trim(),
+                        Headers = ParseHeaders(WebhookHeadersText),
+                        BodyTemplate = WebhookBodyTemplate ?? string.Empty,
+                        Events = selectedEvents
+                    }
+                ]
+            };
+
+            var sentCount = 0;
+
+            foreach (var notificationEvent in BuildTestWebhookEvents(selectedEvents)){
+                if (await NotificationDispatcher.Instance.PublishWithResultAsync(settings, notificationEvent)){
+                    sentCount++;
+                }
+            }
+
+            if (sentCount == selectedEvents.Count){
+                MessageBus.Current.SendMessage(new ToastMessage($"Sent {sentCount} test webhook event(s)", ToastType.Information, 3));
+            } else if (sentCount > 0){
+                MessageBus.Current.SendMessage(new ToastMessage($"Sent {sentCount} of {selectedEvents.Count} test webhook event(s)", ToastType.Error, 5));
+            } else{
+                MessageBus.Current.SendMessage(new ToastMessage("Webhook test failed for all selected events", ToastType.Error, 5));
+            }
+        } finally{
+            IsTestingWebhook = false;
+        }
     }
 
     #endregion
@@ -655,7 +866,10 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
 
     [RelayCommand]
     public void ClearFinishedExectuePath(){
-        CrunchyrollManager.Instance.CrunOptions.DownloadFinishedExecutePath = string.Empty;
+        var settings = CrunchyrollManager.Instance.CrunOptions;
+        settings.NotificationSettings ??= new NotificationSettings();
+        settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Execute).Path = string.Empty;
+        settings.SyncLegacyNotificationFields();
         DownloadFinishedExecutePath = string.Empty;
     }
 
@@ -669,10 +883,13 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
                 }
             },
             pathSetter: (path) => {
-                CrunchyrollManager.Instance.CrunOptions.DownloadFinishedExecutePath = path;
+                var settings = CrunchyrollManager.Instance.CrunOptions;
+                settings.NotificationSettings ??= new NotificationSettings();
+                settings.NotificationSettings.GetOrCreateProvider(NotificationProviderType.Execute).Path = path;
+                settings.SyncLegacyNotificationFields();
                 DownloadFinishedExecutePath = path;
             },
-            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.DownloadFinishedExecutePath ?? string.Empty,
+            pathGetter: () => CrunchyrollManager.Instance.CrunOptions.NotificationSettings?.GetOrCreateProvider(NotificationProviderType.Execute).Path ?? string.Empty,
             defaultPath: string.Empty
         );
     }
@@ -704,6 +921,189 @@ public partial class GeneralSettingsViewModel : ViewModelBase{
             pathSetter(finalPath);
             CfgManager.WriteCrSettings();
         }
+    }
+
+    private void LoadProviderEvents(NotificationProviderConfig? provider, NotificationProviderType type){
+        var events = provider?.Events ?? [];
+
+        switch (type){
+            case NotificationProviderType.Webhook:
+                WebhookNotifyQueueFinished = events.Contains(NotificationEventType.QueueFinished);
+                WebhookNotifyDownloadFinished = events.Contains(NotificationEventType.DownloadFinished);
+                WebhookNotifyDownloadFailed = events.Contains(NotificationEventType.DownloadFailed);
+                WebhookNotifyTrackedSeriesEpisodeReleased = events.Contains(NotificationEventType.TrackedSeriesEpisodeReleased);
+                WebhookNotifyLoginExpired = events.Contains(NotificationEventType.LoginExpired);
+                WebhookNotifyUpdateAvailable = events.Contains(NotificationEventType.UpdateAvailable);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        }
+    }
+
+    private static List<NotificationEventType> BuildEvents(
+        bool queueFinished,
+        bool downloadFinished,
+        bool downloadFailed,
+        bool trackedSeriesEpisodeReleased,
+        bool loginExpired,
+        bool updateAvailable){
+        var events = new List<NotificationEventType>();
+
+        if (queueFinished){
+            events.Add(NotificationEventType.QueueFinished);
+        }
+
+        if (downloadFinished){
+            events.Add(NotificationEventType.DownloadFinished);
+        }
+
+        if (downloadFailed){
+            events.Add(NotificationEventType.DownloadFailed);
+        }
+
+        if (trackedSeriesEpisodeReleased){
+            events.Add(NotificationEventType.TrackedSeriesEpisodeReleased);
+        }
+
+        if (loginExpired){
+            events.Add(NotificationEventType.LoginExpired);
+        }
+
+        if (updateAvailable){
+            events.Add(NotificationEventType.UpdateAvailable);
+        }
+
+        return events;
+    }
+
+    private static IEnumerable<NotificationEvent> BuildTestWebhookEvents(IEnumerable<NotificationEventType> selectedEvents){
+        foreach (var eventType in selectedEvents.Distinct()){
+            yield return BuildTestWebhookEvent(eventType);
+        }
+    }
+
+    private static NotificationEvent BuildTestWebhookEvent(NotificationEventType eventType){
+        return eventType switch{
+            NotificationEventType.QueueFinished => new NotificationEvent{
+                Type = NotificationEventType.QueueFinished,
+                Title = "Downloads finished",
+                Message = "All queued downloads have finished processing.",
+                Metadata = []
+            },
+            NotificationEventType.DownloadFinished => new NotificationEvent{
+                Type = NotificationEventType.DownloadFinished,
+                Title = "Download finished",
+                Message = "Finished processing Example Series.",
+                Metadata = BuildTestDownloadMetadata()
+            },
+            NotificationEventType.DownloadFailed => new NotificationEvent{
+                Type = NotificationEventType.DownloadFailed,
+                Title = "Download failed",
+                Message = "Failed to download Example Series: Example failure message",
+                Metadata = BuildTestDownloadMetadata("Example failure message")
+            },
+            NotificationEventType.TrackedSeriesEpisodeReleased => new NotificationEvent{
+                Type = NotificationEventType.TrackedSeriesEpisodeReleased,
+                Title = "Tracked series episode released",
+                Message = "A tracked episode is available for Example Series: Episode Title.",
+                Metadata = new Dictionary<string, string>{
+                    ["seriesTitle"] = "Example Series",
+                    ["seriesId"] = "G6ABC1234",
+                    ["seasonId"] = "G6SEASON01",
+                    ["episodeTitle"] = "Episode Title",
+                    ["episodeId"] = "G6EP0001",
+                    ["episodeNumber"] = "1",
+                    ["seasonNumber"] = "1",
+                    ["releaseDate"] = DateTimeOffset.UtcNow.AddMinutes(-30).ToString("O"),
+                    ["premiumAvailableDate"] = DateTimeOffset.UtcNow.ToString("O"),
+                    ["episodeUrl"] = "https://www.crunchyroll.com/en-US/watch/G6EP0001/episode-title",
+                    ["imageUrl"] = "https://static.crunchyroll.com/example-thumbnail.jpg",
+                    ["description"] = "Example tracked-release description.",
+                    ["durationMs"] = "1440000",
+                    ["availableDubs"] = "en-US, ja-JP",
+                    ["availableSubs"] = "en-US, de-DE"
+                }
+            },
+            NotificationEventType.LoginExpired => new NotificationEvent{
+                Type = NotificationEventType.LoginExpired,
+                Title = "Crunchyroll login expired",
+                Message = "The saved Crunchyroll session could not be refreshed. Please log in again.",
+                Metadata = new Dictionary<string, string>{
+                    ["username"] = "example-user",
+                    ["endpoint"] = "/auth/v1/token"
+                }
+            },
+            NotificationEventType.UpdateAvailable => new NotificationEvent{
+                Type = NotificationEventType.UpdateAvailable,
+                Title = "Update available",
+                Message = "Version v9.9.9 is available. Current version: v1.0.0.",
+                Metadata = new Dictionary<string, string>{
+                    ["currentVersion"] = "v1.0.0",
+                    ["latestVersion"] = "v9.9.9",
+                    ["platform"] = "win-x64",
+                    ["downloadUrl"] = "https://github.com/Crunchy-DL/Crunchy-Downloader/releases/latest"
+                }
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(eventType), eventType, null)
+        };
+    }
+
+    private static Dictionary<string, string> BuildTestDownloadMetadata(string? error = null){
+        var metadata = new Dictionary<string, string>{
+            ["seriesTitle"] = "Example Series",
+            ["seasonTitle"] = "Season 1",
+            ["episodeTitle"] = "Episode Title",
+            ["episodeNumber"] = "1",
+            ["episodeId"] = "G6EP0001",
+            ["downloadPath"] = @"C:\Downloads\Example Series\Season 1",
+            ["seasonNumber"] = "1",
+            ["description"] = "Example download description.",
+            ["imageUrl"] = "https://static.crunchyroll.com/example-thumbnail.jpg",
+            ["imageUrlLarge"] = "https://static.crunchyroll.com/example-poster.jpg",
+            ["downloadSubs"] = "en-US, de-DE",
+            ["downloadDubs"] = "ja-JP",
+            ["hardsub"] = string.Empty,
+            ["seriesId"] = "G6ABC1234",
+            ["seasonId"] = "G6SEASON01",
+            ["episodeUrl"] = "https://www.crunchyroll.com/watch/G6EP0001"
+        };
+
+        if (!string.IsNullOrWhiteSpace(error)){
+            metadata["error"] = error;
+        }
+
+        return metadata;
+    }
+
+    private static string SerializeHeaders(IReadOnlyDictionary<string, string>? headers){
+        if (headers == null || headers.Count == 0){
+            return string.Empty;
+        }
+
+        return string.Join(Environment.NewLine, headers.Select(pair => $"{pair.Key}: {pair.Value}"));
+    }
+
+    private static Dictionary<string, string> ParseHeaders(string? headerText){
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(headerText)){
+            return headers;
+        }
+
+        foreach (var rawLine in headerText.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)){
+            var separatorIndex = rawLine.IndexOf(':');
+            if (separatorIndex <= 0){
+                continue;
+            }
+
+            var key = rawLine[..separatorIndex].Trim();
+            var value = rawLine[(separatorIndex + 1)..].Trim();
+
+            if (!string.IsNullOrWhiteSpace(key)){
+                headers[key] = value;
+            }
+        }
+
+        return headers;
     }
 
 

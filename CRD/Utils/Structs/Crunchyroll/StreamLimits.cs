@@ -11,9 +11,17 @@ public class StreamError{
     [JsonPropertyName("activeStreams")]
     public List<ActiveStream> ActiveStreams{ get; set; } = new ();
 
+    [JsonIgnore]
+    public string? RawJson{ get; set; }
+
     public static StreamError? FromJson(string json){
         try{
-            return Helpers.Deserialize<StreamError>(json,null);
+            var error = Helpers.Deserialize<StreamError>(json,null);
+            if (error != null){
+                error.RawJson = json;
+            }
+
+            return error;
         } catch (Exception e){
             Console.Error.WriteLine(e);
             return null;
@@ -25,7 +33,11 @@ public class StreamError{
     }
 
     public bool IsRateLimitError(){
-        return Error?.Contains("4294") == true;
+        return IsPlaybackRateLimitError();
+    }
+
+    public bool IsPlaybackRateLimitError(){
+        return Error?.Contains("4294") == true || RawJson?.Contains("4294") == true;
     }
 }
 

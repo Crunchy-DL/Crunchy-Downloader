@@ -24,6 +24,7 @@ using CRD.Utils.Http;
 using CRD.Utils.JsonConv;
 using CRD.Utils.Parser;
 using CRD.Utils.Structs;
+using CRD.Utils.Structs.Crunchyroll;
 using FluentAvalonia.UI.Controls;
 using Microsoft.Win32;
 using Newtonsoft.Json;
@@ -85,6 +86,19 @@ public class Helpers{
         }
 
         return clone;
+    }
+
+    public static int GetRetryDelaySeconds(CrDownloadOptions options, int retryAttemptCount){
+        return GetRetryDelaySeconds(options.PlaybackRateLimitRetryDelaySeconds, options.RetryMaxDelaySeconds, retryAttemptCount);
+    }
+
+    public static int GetRetryDelaySeconds(int baseDelaySeconds, int maxDelaySeconds, int retryAttemptCount){
+        int baseDelay = Math.Max(1, baseDelaySeconds);
+        int maxDelay = Math.Max(baseDelay, maxDelaySeconds);
+
+        int attempt = Math.Max(0, retryAttemptCount);
+        double delay = baseDelay * Math.Pow(2, attempt);
+        return (int)Math.Min(maxDelay, delay);
     }
 
     public static T? DeepCopy<T>(T obj){
@@ -376,7 +390,7 @@ public class Helpers{
         }
     }
 
-    private static IEnumerable<string> GetQualityOption(VideoPreset preset){
+    public static IEnumerable<string> GetQualityOption(VideoPreset preset){
         if (preset.Crf is -1)
             return [];
 
@@ -389,12 +403,42 @@ public class Helpers{
             "h264_qsv" or "hevc_qsv"
                 => preset.Crf is >= 1 and <= 51 ? ["-global_quality", q] : [],
 
-            "h264_amf" or "hevc_amf"
-                => preset.Crf is >= 0 and <= 51 ? ["-qp", q] : [],
+            "h264_amf"
+                => preset.Crf is >= 0 and <= 51 ? ["-rc", "cqp", "-qp_i", q, "-qp_p", q, "-qp_b", q] : [],
+
+            "hevc_amf"
+                => preset.Crf is >= 0 and <= 51 ? ["-rc", "cqp", "-qp_i", q, "-qp_p", q] : [],
 
             _ // libx264/libx265/etc.
                 => preset.Crf >= 0 ? ["-crf", q] : []
         };
+    }
+
+    public static List<string> BuildFFmpegArgsForPreset(string inputFilePath, VideoPreset preset, string outputFilePath){
+        var args = new List<string>{
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel", "error",
+            "-i", inputFilePath,
+        };
+
+        if (!string.IsNullOrWhiteSpace(preset.Codec)){
+            args.Add("-c:v");
+            args.Add(preset.Codec);
+
+            args.AddRange(GetQualityOption(preset));
+
+            args.Add("-vf");
+            args.Add($"scale={preset.Resolution},fps={preset.FrameRate}");
+        }
+
+        foreach (var param in preset.AdditionalParameters){
+            args.AddRange(SplitArguments(param));
+        }
+
+        args.Add(outputFilePath);
+
+        return args;
     }
 
     public static async Task<(bool IsOk, int ErrorCode)> RunFFmpegWithPresetAsync(
@@ -409,30 +453,7 @@ public class Helpers{
             string tempOutput = Path.Combine(dir, $"{name}_output{ext}");
 
             TimeSpan? totalDuration = await GetMediaDurationAsync(CfgManager.PathFFMPEG, inputFilePath);
-
-            var args = new List<string>{
-                "-nostdin",
-                "-hide_banner",
-                "-loglevel", "error",
-                "-i", inputFilePath,
-            };
-
-            if (!string.IsNullOrWhiteSpace(preset.Codec)){
-                args.Add("-c:v");
-                args.Add(preset.Codec);
-                
-                args.AddRange(GetQualityOption(preset));
-
-                args.Add("-vf");
-                args.Add($"scale={preset.Resolution},fps={preset.FrameRate}");
-            }
-            
-
-            foreach (var param in preset.AdditionalParameters){
-                args.AddRange(SplitArguments(param));
-            }
-
-            args.Add(tempOutput);
+            var args = BuildFFmpegArgsForPreset(inputFilePath, preset, tempOutput);
 
             string commandString = BuildCommandString(CfgManager.PathFFMPEG, args);
             int exitCode;
@@ -508,7 +529,7 @@ public class Helpers{
         return args;
     }
 
-    private static string BuildCommandString(string exe, IEnumerable<string> args){
+    public static string BuildCommandString(string exe, IEnumerable<string> args){
         static string Quote(string s){
             if (string.IsNullOrWhiteSpace(s))
                 return "\"\"";

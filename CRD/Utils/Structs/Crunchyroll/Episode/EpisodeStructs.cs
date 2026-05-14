@@ -443,6 +443,8 @@ public class DownloadProgress{
     public DownloadState State{ get; set; } = DownloadState.Queued;
     public DownloadState ResumeState{ get; set; } = DownloadState.Downloading;
     public string Doing = string.Empty;
+    public DateTimeOffset? RetryAtUtc{ get; set; }
+    public int RetryAttemptCount{ get; set; }
 
     public int Percent{ get; set; }
     public double Time{ get; set; }
@@ -456,6 +458,7 @@ public class DownloadProgress{
     public bool IsError => State == DownloadState.Error;
     public bool IsFinished => State is DownloadState.Done or DownloadState.Error;
     public bool IsRunnable => State is DownloadState.Queued or DownloadState.Error;
+    public bool IsWaitingForRetry => RetryAtUtc.HasValue && RetryAtUtc.Value > DateTimeOffset.UtcNow;
     
     public void ResetForRetry(){
         State = DownloadState.Queued;
@@ -464,6 +467,24 @@ public class DownloadProgress{
         Time = 0;
         DownloadSpeedBytes = 0;
         Doing = string.Empty;
+        RetryAtUtc = null;
+        RetryAttemptCount = 0;
+    }
+
+    public void ScheduleRetry(TimeSpan delay, string doing){
+        State = DownloadState.Queued;
+        ResumeState = DownloadState.Downloading;
+        Percent = 0;
+        Time = 0;
+        DownloadSpeedBytes = 0;
+        Doing = doing;
+        RetryAtUtc = DateTimeOffset.UtcNow.Add(delay);
+        RetryAttemptCount++;
+    }
+
+    public void ClearRetryState(){
+        RetryAtUtc = null;
+        RetryAttemptCount = 0;
     }
 }
 

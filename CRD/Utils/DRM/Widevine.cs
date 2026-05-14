@@ -114,7 +114,7 @@ public class Widevine{
 
             // var response = await HttpClientReq.Instance.SendHttpRequest(playbackRequest2);
 
-            var response = (IsOk: false, ResponseContent: "", error: "");
+            var response = (IsOk: false, ResponseContent: "", error: "",Headers: new Dictionary<string, string>());
             for (var attempt = 0; attempt < 3 + 1; attempt++){
                 using (var request = Helpers.CloneHttpRequestMessage(playbackRequest2)){
                     response = await HttpClientReq.Instance.SendHttpRequest(request);

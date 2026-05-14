@@ -13,6 +13,7 @@ using System.Web;
 using CRD.Utils;
 using CRD.Utils.Files;
 using CRD.Utils.Http;
+using CRD.Utils.Notifications;
 using CRD.Utils.Structs;
 using CRD.Utils.Structs.Crunchyroll;
 using CRD.Views;
@@ -22,6 +23,8 @@ using ReactiveUI;
 namespace CRD.Downloader.Crunchyroll;
 
 public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings){
+    private static readonly TimeSpan TokenRefreshBuffer = TimeSpan.FromSeconds(60);
+
     public CrToken? Token;
     public CrProfile Profile = new();
     public Subscription? Subscription{ get; set; }
@@ -30,11 +33,14 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
     public CrunchyrollEndpoints EndpointEnum = CrunchyrollEndpoints.Unknown;
 
     public CrAuthSettings AuthSettings = authSettings;
-    
+
     public Dictionary<string, CookieCollection> cookieStore = new();
 
+    private bool IsTokenExpiredOrNearExpiry(){
+        return Token == null || DateTime.Now >= Token.expires - TokenRefreshBuffer;
+    }
+
     public void Init(){
-        
         Profile = new CrProfile{
             Username = "???",
             Avatar = "crbrand_avatars_logo_marks_mangagirl_taupe.png",
@@ -406,7 +412,7 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
 
     public async Task RefreshToken(bool needsToken){
         if (EndpointEnum == CrunchyrollEndpoints.Guest){
-            if (Token != null && !(DateTime.Now > Token.expires)){
+            if (!IsTokenExpiredOrNearExpiry()){
                 return;
             }
 
@@ -418,7 +424,7 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
             Token.access_token != null && Token.refresh_token == null){
             await AuthAnonymous();
         } else{
-            if (!(DateTime.Now > Token.expires) && needsToken){
+            if (!IsTokenExpiredOrNearExpiry() && needsToken){
                 return;
             }
         }
@@ -426,6 +432,8 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
         if (Profile.Username == "???"){
             return;
         }
+
+        var hadUserSession = !string.IsNullOrWhiteSpace(Token?.refresh_token) && !string.IsNullOrWhiteSpace(Profile.Username) && Profile.Username != "???";
 
         string uuid = string.IsNullOrEmpty(Token?.device_id) ? Guid.NewGuid().ToString() : Token.device_id;
 
@@ -464,6 +472,9 @@ public class CrAuth(CrunchyrollManager crunInstance, CrAuthSettings authSettings
             JsonTokenToFileAndVariable(response.ResponseContent, uuid);
         } else{
             Console.Error.WriteLine("Refresh Token Auth Failed");
+            if (hadUserSession){
+                await NotificationPublisher.Instance.PublishLoginExpiredAsync(crunInstance.CrunOptions.NotificationSettings, Profile.Username, AuthSettings.Endpoint);
+            }
         }
     }
 }
